@@ -3,6 +3,19 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-03: An Auto State older than its profile's save is not restored
+
+**Decision.** A library launch restores the newest Auto State for its Build and Save Profile only
+when the profile's battery save has not been written since that state was taken. Otherwise the
+game boots from the battery save and the state stays on disk. Settings > Resume Games
+(`autoResumePolicy`, Always by default, overridable per System, Game or Build) decides whether a
+restorable state is used, offered, or ignored, and the same policy governs returning to the app
+mid-session.
+
+**Why.** A SameBoy state carries the cartridge RAM it was taken with. When two Builds share a
+profile, or a `.sav` is imported, restoring an older state would roll the newer save back, and the
+next flush would write the rollback over it.
+
 ## 2026-10-03: Quick Play is optimized for time to first frame
 
 **Decision.** Quick Play's primary metric is the time from choosing a file to the first emulated

@@ -11,6 +11,13 @@ public enum EmulationSessionState: Equatable, Sendable {
     case stopped
 }
 
+public enum AutoStateRestore: Equatable, Sendable {
+    case notRequested
+    case restored(SaveState)
+    /// The state was rejected and the game booted normally. The state is kept.
+    case failed(SaveState)
+}
+
 public enum EmulationSessionError: Error, Equatable {
     case buildNotFound(UUID)
     case saveProfileNotFound(UUID)
@@ -24,6 +31,7 @@ public enum EmulationSessionError: Error, Equatable {
 public final class EmulationSession: @unchecked Sendable {
     private let builds: any BuildRepository
     private let profiles: any SaveProfileRepository
+    private let states: any SaveStateRepository
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
     private let imageResolver: any BuildImageResolving
@@ -53,6 +61,7 @@ public final class EmulationSession: @unchecked Sendable {
     ) {
         self.builds = builds
         self.profiles = profiles
+        self.states = states
         self.assets = assets
         self.assetStore = assetStore
         self.imageResolver = imageResolver
@@ -74,7 +83,10 @@ public final class EmulationSession: @unchecked Sendable {
         lock.withLock { basePlaytimeSeconds + Double(sessionEmulatedNanoseconds) / 1_000_000_000 }
     }
 
-    public func start(context: LaunchContext) throws {
+    /// Starts the session, restoring `autoState` when one is given. A state that fails to restore
+    /// boots the game normally and stays on disk for diagnosis.
+    @discardableResult
+    public func start(context: LaunchContext, resumeFrom autoState: SaveState? = nil) throws -> AutoStateRestore {
         lock.withLock { _state = .loading(context) }
         do {
             guard let build = try builds.fetchBuild(id: context.buildID) else {
@@ -91,15 +103,36 @@ public final class EmulationSession: @unchecked Sendable {
             }
             let romURL = try imageResolver.resolveImageURL(buildID: build.id)
             let rom = try assetStore.readData(at: romURL)
-            let core = try coreResolver.execute(buildID: build.id)
-            let newWorker = SessionWorker(core: core)
-            try newWorker.perform { try $0.loadImage(rom, system: build.system) }
             let battery = try persistentSaveService.loadPersistentSave(for: profile)
-            try newWorker.perform { try $0.loadPersistentSave(battery) }
-            if skipsBootAnimation(build) {
-                try newWorker.perform { core in
-                    _ = try (core as? any BootSkippingCapability)?.skipBootAnimation()
+
+            func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
+                let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
+                try newWorker.perform { try $0.loadImage(rom, system: build.system) }
+                try newWorker.perform { try $0.loadPersistentSave(battery) }
+                if skipBoot {
+                    try newWorker.perform { core in
+                        _ = try (core as? any BootSkippingCapability)?.skipBootAnimation()
+                    }
                 }
+                return newWorker
+            }
+
+            let newWorker: SessionWorker
+            let restore: AutoStateRestore
+            if let autoState {
+                let candidate = try bootedWorker(skipBoot: false)
+                do {
+                    try stateService.load(autoState, worker: candidate, context: context)
+                    newWorker = candidate
+                    restore = .restored(autoState)
+                } catch {
+                    // The core may hold part of the rejected state, so boot a clean one.
+                    newWorker = try bootedWorker(skipBoot: skipsBootAnimation(build))
+                    restore = .failed(autoState)
+                }
+            } else {
+                newWorker = try bootedWorker(skipBoot: skipsBootAnimation(build))
+                restore = .notRequested
             }
 
             lock.withLock {
@@ -110,6 +143,7 @@ public final class EmulationSession: @unchecked Sendable {
                 latestFrame = nil
                 _state = .running(context)
             }
+            return restore
         } catch {
             lock.withLock {
                 worker = nil
@@ -119,6 +153,42 @@ public final class EmulationSession: @unchecked Sendable {
             }
             throw error
         }
+    }
+
+    /// The newest Auto State for `context` that is safe to restore, or nil.
+    ///
+    /// A state carries the cartridge RAM it was taken with. Once the profile's battery save has been
+    /// written after the state, by this Build or another one sharing the profile, restoring the state
+    /// would roll that save back, so the state is not offered.
+    public func resumableAutoState(for context: LaunchContext) throws -> SaveState? {
+        guard let profile = try profiles.fetchSaveProfile(id: context.saveProfileID) else {
+            throw EmulationSessionError.saveProfileNotFound(context.saveProfileID)
+        }
+        let newest = try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
+            .filter { $0.kind == .auto }
+            .max { ($0.autoSequence ?? 0, $0.createdAt) < ($1.autoSequence ?? 0, $1.createdAt) }
+        guard let newest, profile.modifiedAt <= newest.createdAt else { return nil }
+        return newest
+    }
+
+    /// The resolved launch and foreground policy for `context`. Unset or unreadable means `.always`.
+    public func autoResumePolicy(for context: LaunchContext) -> AutoResumePolicy {
+        guard let build = try? builds.fetchBuild(id: context.buildID) else { return .always }
+        let policy = try? settings?.decode(
+            AutoResumePolicy.self,
+            key: SettingKey.autoResumePolicy.rawValue,
+            system: build.system,
+            gameID: build.gameID,
+            buildID: build.id
+        )
+        return policy ?? .always
+    }
+
+    /// Manual and Auto States for the active Build and profile, newest first.
+    public func saveStates() throws -> [SaveState] {
+        let (_, context, _) = try snapshotActive()
+        return try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     /// The boot logo shows unless the setting resolved for this Build says to skip it. An unreadable
