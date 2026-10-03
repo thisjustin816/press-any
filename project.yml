@@ -27,6 +27,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.thisjustin816.PressAny$(BUNDLE_ID_SUFFIX)
         PRODUCT_NAME: PressAny
         INFOPLIST_KEY_CFBundleDisplayName: Press Any
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
     dependencies:
       - package: EmulatorKit

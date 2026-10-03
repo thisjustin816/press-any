@@ -29,6 +29,13 @@ charcoal on light backgrounds and gray on dark ones:
 `WordmarkView` shows it in SwiftUI (the library's title), and the on-screen controller prints it
 at the bottom in the controller theme's colors.
 
+## App icon
+
+The app icon is a Game Boy A button seen at an angle: a magenta button standing in a recess in
+the Classic controller's gray body, its top face and side wall both showing. A Dark variant sits
+on the Dark body, and a grayscale Tinted variant serves iOS 18. `Scripts/app-icon/icon.html` draws it and `Scripts/render-app-icon.sh` renders it into
+`App/Assets.xcassets/AppIcon.appiconset`. It carries no name, so a rename leaves it unchanged.
+
 ## Values that never carry a brand
 
 These are stored, hashed or compared across versions, or are runtime names with no reason to
