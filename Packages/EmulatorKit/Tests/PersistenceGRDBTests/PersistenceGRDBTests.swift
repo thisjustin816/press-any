@@ -266,6 +266,27 @@ struct PersistenceGRDBTests {
         #expect(try repositories.assets.fetchAsset(id: try #require(fixture.game.artworkAssetID)) == nil)
     }
 
+    @Test("a copy merge leaves the copies depending only on the target")
+    func copyMergeRepointsPatchBases() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let operations = try Self.operations(repositories)
+        let now = Date(timeIntervalSince1970: 1_700_000_100)
+        let target = Game(id: UUID(), primaryTitle: "Target", systemFamily: "gbc", createdAt: now, modifiedAt: now)
+        try repositories.games.insertGame(target)
+
+        try operations.mergeGame(sourceGameID: fixture.game.id, into: target.id, mode: .copy)
+
+        let copies = try repositories.builds.fetchBuilds(gameID: target.id)
+        let baseCopy = try #require(copies.first { $0.imageSHA256 == fixture.build.imageSHA256 })
+        let patchedCopy = try #require(copies.first { $0.imageSHA256 == fixture.patchedBuild.imageSHA256 })
+        #expect(patchedCopy.parentBuildID == baseCopy.id)
+        #expect(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: patchedCopy.id)?.baseBuildID == baseCopy.id)
+        try repositories.games.deleteGame(id: fixture.game.id)
+    }
+
     private static func operations(_ repositories: GRDBRepositorySet) throws -> BuildOperations {
         BuildOperations(
             games: repositories.games,

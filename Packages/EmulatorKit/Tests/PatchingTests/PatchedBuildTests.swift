@@ -122,6 +122,27 @@ final class PatchedBuildTests: XCTestCase {
         XCTAssertEqual(try harness.store.readData(at: rebuilt), Data("AXC".utf8))
     }
 
+    func testApplyingTheSamePatchAgainRepairsADamagedPatchFile() throws {
+        let harness = try PatchBuildHarness.make()
+        let patchURL = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "fix.ips")
+        let first = try harness.creator.execute(
+            .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patchURL)], displayName: "First")
+        )
+        let recipe = try XCTUnwrap(harness.recipes.fetchPatchRecipe(resultBuildID: first.id))
+        let patchAsset = try XCTUnwrap(harness.assets.fetchAsset(id: recipe.items[0].patchAssetID))
+        let stored = try harness.store.managedURL(relativePath: patchAsset.relativePath)
+        try Data("damaged".utf8).write(to: stored)
+
+        let otherPatch = try harness.writePatch(singleByteIPS(offset: 2, value: 0x59), name: "other.ips")
+        _ = try harness.creator.execute(.init(
+            gameID: harness.gameID,
+            baseBuildID: harness.baseBuild.id,
+            patches: [.init(url: otherPatch), .init(url: patchURL)],
+            displayName: "Second"
+        ))
+        XCTAssertEqual(try harness.store.hashFile(at: stored), patchAsset.contentSHA256)
+    }
+
     func testTheSamePatchTwiceInOneStackIsOneSourceAsset() throws {
         let harness = try PatchBuildHarness.make()
         let first = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "a.ips")

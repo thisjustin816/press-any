@@ -59,7 +59,7 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertEqual(resolver.input, EmulatorInputState())
     }
 
-    func testStandardLayoutControlsDoNotOverlapOnCommonScreens() {
+    func testStandardLayoutControlsNeitherOverlapNorCoverTheGame() {
         func overlaps(_ lhs: TouchRect, _ rhs: TouchRect) -> Bool {
             lhs.x < rhs.x + rhs.width && rhs.x < lhs.x + lhs.width &&
                 lhs.y < rhs.y + rhs.height && rhs.y < lhs.y + lhs.height
@@ -71,7 +71,10 @@ final class TouchInputResolverTests: XCTestCase {
                 ("D-pad", layout.dpad), ("A", layout.a), ("B", layout.b),
                 ("Start", layout.start), ("Select", layout.select),
             ]
+            // The game picture is aspect-fit across the width and centered vertically.
+            let pictureBottom = (height + width * 144 / 160) / 2
             for (index, (name, rect)) in controls.enumerated() {
+                XCTAssertGreaterThanOrEqual(rect.y, pictureBottom, "\(name) covers the game picture at \(width)x\(height)")
                 XCTAssertTrue(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width && rect.y + rect.height <= height,
                               "\(name) is on screen at \(width)x\(height)")
                 for (otherName, other) in controls[(index + 1)...] {

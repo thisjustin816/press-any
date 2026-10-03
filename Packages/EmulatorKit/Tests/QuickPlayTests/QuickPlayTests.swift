@@ -145,6 +145,41 @@ final class QuickPlayTests: XCTestCase {
         XCTAssertEqual(try harness.libraryBatteryData(profileID: XCTUnwrap(promoted.saveProfile).id), Data([4]))
     }
 
+    func testAFailedReplaceLeavesNoSafetyCopyBehind() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let rom = try harness.writeExternalROM(TestROM.make(title: "REPLACE", cgb: false, payloadByte: 11))
+        let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
+        try harness.workspace.writeTemporaryBattery(Data([5]), sessionID: session.id)
+        let refusing = PromoteQuickPlay(
+            analyzer: ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store),
+            committer: ImportCommitter(
+                games: harness.games,
+                builds: harness.builds,
+                assets: harness.assets,
+                assetStore: harness.store,
+                transactions: PassthroughTransactionRunner()
+            ),
+            workspace: harness.workspace,
+            profiles: UpdateRefusingProfiles(inner: harness.profiles),
+            assets: harness.assets,
+            assetStore: harness.store
+        )
+        let plan = ROMImportPlan(
+            analysis: try refusing.analyze(session, targetGameID: harness.game.id),
+            disposition: .addBuild(gameID: harness.game.id),
+            buildDisplayName: "Replace",
+            markAsBase: false
+        )
+
+        XCTAssertThrowsError(try refusing.promote(
+            session: session,
+            plan: plan,
+            saveDisposition: .replaceExisting(profileID: harness.profile.id)
+        ))
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).map(\.id), [harness.profile.id])
+        XCTAssertEqual(try harness.libraryBatteryData(), Data([1]))
+    }
+
     func testKeptSessionsListWithTheDatesTheyWereSavedWith() throws {
         let harness = try QuickPlayHarness.make()
         let rom = try harness.writeExternalROM(TestROM.make(title: "KEEP", cgb: false, payloadByte: 6))
@@ -422,5 +457,17 @@ private struct InsertRefusingProfiles: SaveProfileRepository {
     func fetchSaveProfiles(gameID: UUID) throws -> [SaveProfile] { try inner.fetchSaveProfiles(gameID: gameID) }
     func insertSaveProfile(_ profile: SaveProfile) throws { throw Refused() }
     func updateSaveProfile(_ profile: SaveProfile) throws { try inner.updateSaveProfile(profile) }
+    func deleteSaveProfile(id: UUID) throws { try inner.deleteSaveProfile(id: id) }
+}
+
+/// Refuses profile updates, so replacing a profile's save fails after its safety copy exists.
+private struct UpdateRefusingProfiles: SaveProfileRepository {
+    let inner: InMemorySaveProfileRepository
+    struct Refused: Error {}
+
+    func fetchSaveProfile(id: UUID) throws -> SaveProfile? { try inner.fetchSaveProfile(id: id) }
+    func fetchSaveProfiles(gameID: UUID) throws -> [SaveProfile] { try inner.fetchSaveProfiles(gameID: gameID) }
+    func insertSaveProfile(_ profile: SaveProfile) throws { try inner.insertSaveProfile(profile) }
+    func updateSaveProfile(_ profile: SaveProfile) throws { throw Refused() }
     func deleteSaveProfile(id: UUID) throws { try inner.deleteSaveProfile(id: id) }
 }

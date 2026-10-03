@@ -115,10 +115,17 @@ public struct PromoteQuickPlay: Sendable {
                     sourceProfileID: profileID,
                     name: "\(replacement.profile.displayName) before Quick Play"
                 )
-                promotedProfile = try persistentSaveService.replacePersistentSaveData(
-                    replacement.battery,
-                    profileID: profileID
-                )
+                do {
+                    promotedProfile = try persistentSaveService.replacePersistentSaveData(
+                        replacement.battery,
+                        profileID: profileID
+                    )
+                } catch {
+                    // The profile still has its old save, so the copy isn't needed, and a retry
+                    // would otherwise make another.
+                    if let copy = safetyCopy { discardProfile(copy) }
+                    throw error
+                }
             case .createProfile(let name):
                 promotedProfile = try createProfile(
                     gameID: result.game.id,
@@ -134,6 +141,16 @@ public struct PromoteQuickPlay: Sendable {
         // Promotion is complete; a sandbox left behind is removed by retention.
         try? workspace.discard(sessionID: session.id)
         return QuickPlayPromotionResult(importResult: result, saveProfile: promotedProfile, safetyCopy: safetyCopy)
+    }
+
+    private func discardProfile(_ profile: SaveProfile) {
+        try? profiles.deleteSaveProfile(id: profile.id)
+        guard let assetID = profile.persistentSaveAssetID,
+              let asset = try? assets.fetchAsset(id: assetID) else { return }
+        try? assets.deleteAsset(id: asset.id)
+        if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
+            try? assetStore.removeIfExists(url)
+        }
     }
 
     private func createProfile(gameID: UUID, name: String, temporaryBattery: Data?) throws -> SaveProfile {

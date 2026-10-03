@@ -217,6 +217,9 @@ public struct CreatePatchedBuild: Sendable {
 
         let sha = try assetStore.hashFile(at: stagedURL)
         if let existing = try assets.fetchSourceAsset(kind: .sourcePatch, sha256: sha) {
+            // Committing again checks the stored file and repairs it if it was damaged.
+            let storedExtension = URL(fileURLWithPath: existing.relativePath).pathExtension
+            _ = try assetStore.commitSourcePatch(stagedURL: stagedURL, sha256: sha, extension: storedExtension)
             return ImportedPatch(asset: existing, needsAssetInsert: false, newlyCommittedURL: nil)
         }
 
