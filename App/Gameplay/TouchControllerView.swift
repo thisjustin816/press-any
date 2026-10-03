@@ -79,6 +79,7 @@ final class TouchControllerView: UIView {
         let palette = self.palette
         drawBody(around: layout.screen, palette: palette, in: context)
         if style == .gameBoy { drawBezel(around: layout.screen, palette: palette, in: context) }
+        drawLogo(palette: palette, in: context)
         guard showsControls else { return }
 
         switch style {
@@ -187,6 +188,25 @@ final class TouchControllerView: UIView {
         path.addClip()
         fillVerticalGradient(bounds, from: palette.bodyTop, to: palette.bodyBottom, in: context)
         context.restoreGState()
+    }
+
+    /// "Press Any" printed at the bottom of the body, its A in magenta like the A button.
+    private func drawLogo(palette: ControllerPalette, in context: CGContext) {
+        let size: CGFloat = 18
+        var font = UIFont.systemFont(ofSize: size, weight: .black)
+        if let italic = font.fontDescriptor.withSymbolicTraits(.traitItalic) {
+            font = UIFont(descriptor: italic, size: size)
+        }
+        let string = NSMutableAttributedString(string: "Press Any", attributes: [
+            .font: font,
+            .kern: 0.5,
+            .foregroundColor: palette.logo,
+        ])
+        string.addAttribute(.foregroundColor, value: palette.logoAccent, range: NSRange(location: 6, length: 1))
+        let textSize = string.size()
+        // Just above the home indicator, or the bottom edge on phones without one.
+        let bottom = bounds.height - max(safeAreaInsets.bottom, 12)
+        string.draw(at: CGPoint(x: bounds.midX - textSize.width / 2, y: bottom - textSize.height - 4))
     }
 
     /// The dark glass around the game picture, rounded more at the bottom right, as on a Game Boy.

@@ -16,8 +16,9 @@ picture showing through, in one of two color themes chosen by Settings > Control
 
 Match System picks Classic in Light Mode and Dark in Dark Mode. On the Game Boy layout, the
 names are printed below the controls in small capitals along the tilt of A and B, as on a Game
-Boy, and START, SELECT and Menu are slim pills on the same tilt. Playtiles keeps its unlabeled
-buttons and labeled pills. With a game controller connected the controls hide and the body stays.
+Boy, and START, SELECT and Menu are slim pills on the same tilt. Both layouts print "Press Any"
+at the bottom of the body, in the D-pad's charcoal on Classic and gray on Dark, with its A in
+the A button's magenta. Playtiles keeps its unlabeled buttons and labeled pills. With a game controller connected the controls hide and the body stays.
 
 ## 2026-10-03: Sound follows the silent switch by default
 

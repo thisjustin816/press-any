@@ -24,6 +24,9 @@ struct ControllerPalette {
     let pillText: UIColor
     /// Lettering printed on the body, such as A, B, SELECT and START.
     let lettering: UIColor
+    /// The Press Any logo, with its A in the A button's magenta.
+    let logo: UIColor
+    let logoAccent: UIColor
     let usesDarkStatusBar: Bool
 
     static let classic = ControllerPalette(
@@ -42,6 +45,8 @@ struct ControllerPalette {
         pillPressed: rgb(66, 66, 70),
         pillText: rgb(222, 224, 228),
         lettering: rgb(0, 70, 141),
+        logo: rgb(50, 50, 53),
+        logoAccent: rgb(166, 58, 112),
         usesDarkStatusBar: true
     )
 
@@ -61,6 +66,8 @@ struct ControllerPalette {
         pillPressed: rgb(104, 104, 110),
         pillText: rgb(210, 212, 218),
         lettering: rgb(132, 160, 205),
+        logo: rgb(128, 128, 134),
+        logoAccent: rgb(164, 62, 116),
         usesDarkStatusBar: false
     )
 
