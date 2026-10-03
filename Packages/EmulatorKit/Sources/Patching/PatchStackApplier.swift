@@ -16,7 +16,12 @@ public struct PatchStackItem: Equatable, Sendable {
 public struct PatchStackApplier: PatchApplying, Sendable {
     public init() {}
 
-    public func apply(patch: Data, fileExtension: String, to source: Data) throws -> Data {
+    public func apply(
+        patch: Data,
+        fileExtension: String,
+        to source: Data,
+        ignoringBaseMismatch: Bool
+    ) throws -> Data {
         let normalized = fileExtension
             .trimmingCharacters(in: CharacterSet(charactersIn: "."))
             .lowercased()
@@ -24,7 +29,7 @@ public struct PatchStackApplier: PatchApplying, Sendable {
         case "ips":
             return try IPSPatchApplier().apply(patch: patch, to: source)
         case "bps":
-            return try BPSPatchApplier().apply(patch: patch, to: source)
+            return try BPSPatchApplier().apply(patch: patch, to: source, ignoringBaseMismatch: ignoringBaseMismatch)
         default:
             throw PatchError.unsupportedFormat(normalized)
         }

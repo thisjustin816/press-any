@@ -14,6 +14,14 @@ final class GameDetailViewModel: ObservableObject {
     @Published private(set) var infoMessage: String?
     /// Set once a move leaves this Game deleted, so the screen can close.
     @Published private(set) var gameRemoved = false
+    /// Patches refused because they expect a different base, waiting on Apply Anyway.
+    @Published var baseMismatch: PendingPatch?
+
+    struct PendingPatch: Identifiable {
+        let id = UUID()
+        let urls: [URL]
+        let build: Build
+    }
 
     let gameID: UUID
 
@@ -139,7 +147,7 @@ final class GameDetailViewModel: ObservableObject {
         }
     }
 
-    func applyPatches(_ urls: [URL], to build: Build) {
+    func applyPatches(_ urls: [URL], to build: Build, ignoringBaseMismatch: Bool = false) {
         guard !urls.isEmpty else { return }
         let scoped = urls.map { $0.startAccessingSecurityScopedResource() }
         defer {
@@ -151,13 +159,13 @@ final class GameDetailViewModel: ObservableObject {
             let patched = try patchCreator.execute(.init(
                 gameID: gameID,
                 baseBuildID: build.id,
-                patchURLs: urls,
+                patches: urls.map { .init(url: $0, ignoreBaseMismatch: ignoringBaseMismatch) },
                 displayName: urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + ")
             ))
             reload()
             infoMessage = "Created \(patched.displayName) from \(build.displayName)."
         } catch PatchError.sourceCRC32Mismatch, PatchError.sourceSizeMismatch {
-            errorMessage = "This patch was made for a different base ROM than \(build.displayName)."
+            baseMismatch = PendingPatch(urls: urls, build: build)
         } catch {
             errorMessage = error.localizedDescription
         }

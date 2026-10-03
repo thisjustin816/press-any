@@ -6,6 +6,9 @@ extension AppDatabase {
         migrator.registerMigration("mvp-v1") { db in
             try db.execute(sql: MVPV1Schema.sql)
         }
+        migrator.registerMigration("mvp-v2") { db in
+            try db.execute(sql: MVPV2Schema.sql)
+        }
         return migrator
     }
 }
@@ -127,5 +130,13 @@ enum MVPV1Schema {
         value_json TEXT NOT NULL,
         PRIMARY KEY(scope_type, scope_id, key)
     );
+    """#
+}
+
+/// Apply Anyway on patch recipes.
+enum MVPV2Schema {
+    static let sql = #"""
+    ALTER TABLE patch_recipe_items
+    ADD COLUMN ignores_base_mismatch INTEGER NOT NULL DEFAULT 0 CHECK (ignores_base_mismatch IN (0, 1));
     """#
 }

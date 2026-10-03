@@ -4,11 +4,14 @@ public struct PatchRecipeItem: Codable, Equatable, Sendable {
     public let position: Int
     public let patchAssetID: UUID
     public let enabled: Bool
+    /// Applied with Apply Anyway over a base the patch does not expect. Rebuilds repeat it.
+    public let ignoresBaseMismatch: Bool
 
-    public init(position: Int, patchAssetID: UUID, enabled: Bool = true) {
+    public init(position: Int, patchAssetID: UUID, enabled: Bool = true, ignoresBaseMismatch: Bool = false) {
         self.position = position
         self.patchAssetID = patchAssetID
         self.enabled = enabled
+        self.ignoresBaseMismatch = ignoresBaseMismatch
     }
 }
 

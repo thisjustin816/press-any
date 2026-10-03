@@ -3,7 +3,9 @@ import Foundation
 public struct BPSPatchApplier: Sendable {
     public init() {}
 
-    public func apply(patch: Data, to source: Data) throws -> Data {
+    /// With `ignoringBaseMismatch`, the source size and CRC and the resulting target CRC are not
+    /// enforced, since a different base cannot produce the recorded target. The patch CRC is.
+    public func apply(patch: Data, to source: Data, ignoringBaseMismatch: Bool = false) throws -> Data {
         guard patch.count >= 16, patch.prefix(4) == Data("BPS1".utf8) else {
             throw PatchError.malformedPatch
         }
@@ -23,14 +25,14 @@ public struct BPSPatchApplier: Sendable {
         let targetSize = try reader.readInt()
         let metadataSize = try reader.readInt()
 
-        guard sourceSize == source.count else {
+        guard ignoringBaseMismatch || sourceSize == source.count else {
             throw PatchError.sourceSizeMismatch(expected: sourceSize, actual: source.count)
         }
         guard reader.index + metadataSize <= trailerStart else { throw PatchError.malformedPatch }
         reader.index += metadataSize
 
         let actualSourceCRC = CRC32.checksum(source)
-        guard actualSourceCRC == expectedSourceCRC else {
+        guard ignoringBaseMismatch || actualSourceCRC == expectedSourceCRC else {
             throw PatchError.sourceCRC32Mismatch(expected: expectedSourceCRC, actual: actualSourceCRC)
         }
 
@@ -92,7 +94,7 @@ public struct BPSPatchApplier: Sendable {
 
         let result = Data(output)
         let actualTargetCRC = CRC32.checksum(result)
-        guard actualTargetCRC == expectedTargetCRC else {
+        guard ignoringBaseMismatch || actualTargetCRC == expectedTargetCRC else {
             throw PatchError.targetCRC32Mismatch(expected: expectedTargetCRC, actual: actualTargetCRC)
         }
         return result

@@ -69,6 +69,36 @@ final class PatchedBuildTests: XCTestCase {
         XCTAssertEqual(try harness.store.hashFile(at: resolved), build.imageSHA256)
     }
 
+    func testWrongBaseNeedsApplyAnywayAndRebuildsTheSameWay() throws {
+        let harness = try PatchBuildHarness.make()
+        let patchURL = try harness.writePatch(
+            bpsReplacingWholeImage(expectedSource: Data("ZZZ".utf8), target: Data("QRS".utf8)),
+            name: "other-base.bps"
+        )
+
+        XCTAssertThrowsError(try harness.creator.execute(
+            .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patchURL)], displayName: "Hack")
+        )) { error in
+            guard case .sourceCRC32Mismatch = error as? PatchError else {
+                return XCTFail("Expected source CRC mismatch, got \(error)")
+            }
+        }
+        XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.gameID).count, 1, "nothing was created")
+
+        let build = try harness.creator.execute(.init(
+            gameID: harness.gameID,
+            baseBuildID: harness.baseBuild.id,
+            patches: [.init(url: patchURL, ignoreBaseMismatch: true)],
+            displayName: "Hack"
+        ))
+        let recipe = try XCTUnwrap(harness.recipes.fetchPatchRecipe(resultBuildID: build.id))
+        XCTAssertEqual(recipe.items.map(\.ignoresBaseMismatch), [true])
+
+        try harness.store.removeIfExists(harness.store.generatedImageURL(sha256: build.imageSHA256))
+        let rebuilt = try harness.resolver.resolveImageForLaunch(buildID: build.id)
+        XCTAssertEqual(try harness.store.readData(at: rebuilt), Data("QRS".utf8))
+    }
+
     func testPatchStackOrderIsPersistedAndReplayed() throws {
         let harness = try PatchBuildHarness.make()
         let first = try harness.writePatch(singleByteIPS(offset: 0, value: 0x58), name: "first.ips")
@@ -187,6 +217,38 @@ private struct PatchBuildHarness {
         let asset = try XCTUnwrap(assets.fetchAsset(id: build.imageAssetID))
         return try store.readData(at: store.managedURL(relativePath: asset.relativePath))
     }
+}
+
+/// A BPS patch that writes `target` wholesale and records `expectedSource` as its base.
+private func bpsReplacingWholeImage(expectedSource: Data, target: Data) -> Data {
+    func number(_ value: Int) -> [UInt8] {
+        var data = UInt64(value)
+        var bytes: [UInt8] = []
+        while true {
+            let low = UInt8(data & 0x7f)
+            data >>= 7
+            if data == 0 {
+                bytes.append(0x80 | low)
+                return bytes
+            }
+            bytes.append(low)
+            data -= 1
+        }
+    }
+    func littleEndian(_ value: UInt32) -> [UInt8] {
+        (0..<4).map { UInt8(truncatingIfNeeded: value >> (8 * $0)) }
+    }
+
+    var patch = Data("BPS1".utf8)
+    patch.append(contentsOf: number(expectedSource.count))
+    patch.append(contentsOf: number(target.count))
+    patch.append(contentsOf: number(0))
+    patch.append(contentsOf: number(((target.count - 1) << 2) | 1))
+    patch.append(target)
+    patch.append(contentsOf: littleEndian(CRC32.checksum(expectedSource)))
+    patch.append(contentsOf: littleEndian(CRC32.checksum(target)))
+    patch.append(contentsOf: littleEndian(CRC32.checksum(patch)))
+    return patch
 }
 
 private func singleByteIPS(offset: Int, value: UInt8) -> Data {

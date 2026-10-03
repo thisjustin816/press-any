@@ -12,10 +12,13 @@ public struct CreatePatchedBuild: Sendable {
     public struct PatchInput: Sendable {
         public let url: URL
         public let enabled: Bool
+        /// Apply Anyway: the user chose to apply the patch to a base it does not expect.
+        public let ignoreBaseMismatch: Bool
 
-        public init(url: URL, enabled: Bool = true) {
+        public init(url: URL, enabled: Bool = true, ignoreBaseMismatch: Bool = false) {
             self.url = url
             self.enabled = enabled
+            self.ignoreBaseMismatch = ignoreBaseMismatch
         }
     }
 
@@ -130,7 +133,8 @@ public struct CreatePatchedBuild: Sendable {
                         at: try assetStore.managedURL(relativePath: patch.asset.relativePath)
                     ),
                     fileExtension: patchInput.url.pathExtension,
-                    to: output
+                    to: output,
+                    ignoringBaseMismatch: patchInput.ignoreBaseMismatch
                 )
             }
 
@@ -174,7 +178,8 @@ public struct CreatePatchedBuild: Sendable {
                     PatchRecipeItem(
                         position: index,
                         patchAssetID: asset.id,
-                        enabled: input.patches[index].enabled
+                        enabled: input.patches[index].enabled,
+                        ignoresBaseMismatch: input.patches[index].ignoreBaseMismatch
                     )
                 },
                 createdAt: timestamp

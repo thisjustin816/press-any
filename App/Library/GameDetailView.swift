@@ -140,6 +140,18 @@ struct GameDetailView: View {
         } message: { _ in
             Text("Move takes this Build out of this Game. Copy leaves it here as well.")
         }
+        .alert("Different Base ROM", isPresented: Binding(
+            get: { model.baseMismatch != nil },
+            set: { if !$0 { model.baseMismatch = nil } }
+        ), presenting: model.baseMismatch) { pending in
+            Button("Apply Anyway") {
+                model.baseMismatch = nil
+                model.applyPatches(pending.urls, to: pending.build, ignoringBaseMismatch: true)
+            }
+            Button("Cancel", role: .cancel) { model.baseMismatch = nil }
+        } message: { pending in
+            Text("This patch was made for a different ROM than \(pending.build.displayName). Applying it anyway may produce a Build that doesn’t work. The original ROM and patch are kept either way.")
+        }
         .alert(model.errorMessage == nil ? "Done" : "Game Error", isPresented: Binding(
             get: { model.errorMessage != nil || model.infoMessage != nil },
             set: { if !$0 { model.clearMessages() } }

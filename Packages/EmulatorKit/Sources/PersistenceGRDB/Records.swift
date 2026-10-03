@@ -425,11 +425,13 @@ struct PatchRecipeItemRecord: Codable, FetchableRecord, PersistableRecord {
     var position: Int
     var patchAssetID: String
     var enabled: Bool
+    var ignoresBaseMismatch: Bool
 
     enum CodingKeys: String, CodingKey {
         case position, enabled
         case recipeID = "recipe_id"
         case patchAssetID = "patch_asset_id"
+        case ignoresBaseMismatch = "ignores_base_mismatch"
     }
 
     init(recipeID: UUID, value: PatchRecipeItem) {
@@ -437,13 +439,15 @@ struct PatchRecipeItemRecord: Codable, FetchableRecord, PersistableRecord {
         position = value.position
         patchAssetID = PersistenceCodec.uuid(value.patchAssetID)
         enabled = value.enabled
+        ignoresBaseMismatch = value.ignoresBaseMismatch
     }
 
     func domain() throws -> PatchRecipeItem {
         PatchRecipeItem(
             position: position,
             patchAssetID: try PersistenceCodec.uuid(patchAssetID),
-            enabled: enabled
+            enabled: enabled,
+            ignoresBaseMismatch: ignoresBaseMismatch
         )
     }
 }

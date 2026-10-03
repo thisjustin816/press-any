@@ -348,7 +348,7 @@ private struct Fixture {
             resultBuildID: patchedBuild.id,
             baseBuildID: build.id,
             expectedResultSHA256: generatedROM.contentSHA256,
-            items: [PatchRecipeItem(position: 0, patchAssetID: patch.id, enabled: true)],
+            items: [PatchRecipeItem(position: 0, patchAssetID: patch.id, enabled: true, ignoresBaseMismatch: true)],
             createdAt: now
         )
         try repositories.patchRecipes.insertPatchRecipe(recipe)
