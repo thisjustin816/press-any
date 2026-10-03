@@ -62,178 +62,213 @@ struct GameDetailView: View {
     }
 
     var body: some View {
+        withAlerts(withPresentations(list))
+            .navigationTitle(model.game?.primaryTitle ?? "Game")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { toolbarContent }
+            .task { model.reload() }
+    }
+
+    // The screen is split into pieces the compiler type-checks one at a time; as one expression
+    // it does not type-check in reasonable time.
+    private var list: some View {
         List {
-            if let game = model.game, let artworkURL = container.artworkURL(for: game) {
-                Section {
-                    AsyncImage(url: artworkURL) { image in
-                        image.resizable().scaledToFit()
-                    } placeholder: {
-                        ProgressView()
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: 220)
-                }
-                .listRowBackground(Color.clear)
-            }
+            artworkSection
+            playSection
+            buildsSection
+            profilesSection
+        }
+    }
 
+    @ViewBuilder
+    private var artworkSection: some View {
+        if let game = model.game, let artworkURL = container.artworkURL(for: game) {
             Section {
-                Button {
-                    launch(build: model.preferredBuild)
-                } label: {
-                    Label("Play", systemImage: "play.fill")
-                        .frame(maxWidth: .infinity)
+                AsyncImage(url: artworkURL) { image in
+                    image.resizable().scaledToFit()
+                } placeholder: {
+                    ProgressView()
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(model.preferredBuild == nil)
+                .frame(maxWidth: .infinity, maxHeight: 220)
+            }
+            .listRowBackground(Color.clear)
+        }
+    }
+
+    private var playSection: some View {
+        Section {
+            Button {
+                launch(build: model.preferredBuild)
+            } label: {
+                Label("Play", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(model.preferredBuild == nil)
+        }
+    }
+
+    private var buildsSection: some View {
+        Section {
+            ForEach(model.builds) { build in
+                buildRow(build)
+            }
+        } header: {
+            Text("Builds")
+        } footer: {
+            Text("Touch and hold a Build to pick its save, apply a patch or move it to its own Game.")
+        }
+    }
+
+    private var profilesSection: some View {
+        Section("Save Profiles") {
+            ForEach(model.saveProfiles) { profile in
+                profileRow(profile)
             }
 
-            Section {
-                ForEach(model.builds) { build in
-                    buildRow(build)
-                }
-            } header: {
-                Text("Builds")
-            } footer: {
-                Text("Touch and hold a Build to pick its save, apply a patch or move it to its own Game.")
+            Button {
+                newProfileName = "New Save"
+                showNewProfile = true
+            } label: {
+                Label("New Blank Save", systemImage: "plus.circle")
             }
+            Button {
+                request(.batterySave)
+            } label: {
+                Label("Import .sav", systemImage: "square.and.arrow.down")
+            }
+        }
+    }
 
-            Section("Save Profiles") {
-                ForEach(model.saveProfiles) { profile in
-                    profileRow(profile)
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    settingsTarget = SettingsTarget(
+                        title: "Game Settings",
+                        scope: .game(model.gameID),
+                        system: model.preferredBuild?.system ?? .gameBoy,
+                        buildID: nil
+                    )
+                } label: {
+                    Label("Game Settings…", systemImage: "gearshape")
                 }
+                artworkMenu
+                Button {
+                    showMerge = true
+                } label: {
+                    Label("Merge Into Another Game…", systemImage: "arrow.triangle.merge")
+                }
+                .disabled(model.otherGames.isEmpty)
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+        }
+    }
 
-                Button {
-                    newProfileName = "New Save"
-                    showNewProfile = true
-                } label: {
-                    Label("New Blank Save", systemImage: "plus.circle")
-                }
-                Button {
-                    request(.batterySave)
-                } label: {
-                    Label("Import .sav", systemImage: "square.and.arrow.down")
-                }
+    private var artworkMenu: some View {
+        Menu {
+            Button {
+                showPhotoPicker = true
+            } label: {
+                Label("From Photos…", systemImage: "photo")
             }
-        }
-        .navigationTitle(model.game?.primaryTitle ?? "Game")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        settingsTarget = SettingsTarget(
-                            title: "Game Settings",
-                            scope: .game(model.gameID),
-                            system: model.preferredBuild?.system ?? .gameBoy,
-                            buildID: nil
-                        )
-                    } label: {
-                        Label("Game Settings…", systemImage: "gearshape")
-                    }
-                    Menu {
-                        Button {
-                            showPhotoPicker = true
-                        } label: {
-                            Label("From Photos…", systemImage: "photo")
-                        }
-                        Button {
-                            request(.artwork)
-                        } label: {
-                            Label("From Files…", systemImage: "folder")
-                        }
-                        if model.game?.artworkAssetID != nil {
-                            Button(role: .destructive) {
-                                model.removeArtwork()
-                            } label: {
-                                Label("Remove Artwork", systemImage: "trash")
-                            }
-                        }
-                    } label: {
-                        Label("Artwork", systemImage: "photo.on.rectangle")
-                    }
-                    Button {
-                        showMerge = true
-                    } label: {
-                        Label("Merge Into Another Game…", systemImage: "arrow.triangle.merge")
-                    }
-                    .disabled(model.otherGames.isEmpty)
+            Button {
+                request(.artwork)
+            } label: {
+                Label("From Files…", systemImage: "folder")
+            }
+            if model.game?.artworkAssetID != nil {
+                Button(role: .destructive) {
+                    model.removeArtwork()
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Label("Remove Artwork", systemImage: "trash")
                 }
             }
+        } label: {
+            Label("Artwork", systemImage: "photo.on.rectangle")
         }
-        .task { model.reload() }
-        .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images)
-        .onChange(of: photoItem) { _, item in
-            guard let item else { return }
-            photoItem = nil
-            Task { await loadArtwork(item) }
-        }
-        .onChange(of: model.gameRemoved) { _, removed in
-            if removed { dismiss() }
-        }
-        .fileImporter(
-            isPresented: $showFileImporter,
-            allowedContentTypes: fileRequest?.contentTypes ?? [],
-            allowsMultipleSelection: { if case .patch = fileRequest { true } else { false } }()
-        ) { result in
-            handleFiles(result)
-        }
-        .sheet(item: $settingsTarget) { target in
-            ScopedSettingsView(
-                title: target.title,
-                scope: target.scope,
-                system: target.system,
-                gameID: model.gameID,
-                buildID: target.buildID,
-                store: container.repositories.settings
-            )
-        }
-        .sheet(isPresented: $showMerge) {
-            MergeGameSheet(
-                sourceTitle: model.game?.primaryTitle ?? "",
-                targets: model.otherGames
-            ) { target, mode in
-                model.merge(into: target, mode: mode)
+    }
+
+    private func withPresentations(_ content: some View) -> some View {
+        content
+            .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images)
+            .onChange(of: photoItem) { _, item in
+                guard let item else { return }
+                photoItem = nil
+                Task { await loadArtwork(item) }
             }
-        }
-        .alert("New Save Profile", isPresented: $showNewProfile) {
-            TextField("Name", text: $newProfileName)
-            Button("Create") {
-                model.createBlankProfile(name: newProfileName)
+            .onChange(of: model.gameRemoved) { _, removed in
+                if removed { dismiss() }
             }
-            Button("Cancel", role: .cancel) {}
-        }
-        .alert("Make Separate Game", isPresented: Binding(
-            get: { promotion != nil },
-            set: { if !$0 { promotion = nil } }
-        ), presenting: promotion) { build in
-            TextField("Game Title", text: $promotionTitle)
-            Button("Move") { model.promote(build, title: promotionTitle, mode: .move) }
-            Button("Copy") { model.promote(build, title: promotionTitle, mode: .copy) }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("Move takes this Build out of this Game. Copy leaves it here as well.")
-        }
-        .alert("Different Base ROM", isPresented: Binding(
-            get: { model.baseMismatch != nil },
-            set: { if !$0 { model.baseMismatch = nil } }
-        ), presenting: model.baseMismatch) { pending in
-            Button("Apply Anyway") {
-                model.baseMismatch = nil
-                model.applyPatches(pending.urls, to: pending.build, ignoringBaseMismatch: true)
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: fileRequest?.contentTypes ?? [],
+                allowsMultipleSelection: { if case .patch = fileRequest { true } else { false } }()
+            ) { result in
+                handleFiles(result)
             }
-            Button("Cancel", role: .cancel) { model.baseMismatch = nil }
-        } message: { pending in
-            Text("This patch was made for a different ROM than \(pending.build.displayName). Applying it anyway may produce a Build that doesn’t work. The original ROM and patch are kept either way.")
-        }
-        .alert(model.errorMessage == nil ? "Done" : "Game Error", isPresented: Binding(
-            get: { model.errorMessage != nil || model.infoMessage != nil },
-            set: { if !$0 { model.clearMessages() } }
-        )) {
-            Button("OK", role: .cancel) { model.clearMessages() }
-        } message: {
-            Text(model.errorMessage ?? model.infoMessage ?? "")
-        }
+            .sheet(item: $settingsTarget) { target in
+                ScopedSettingsView(
+                    title: target.title,
+                    scope: target.scope,
+                    system: target.system,
+                    gameID: model.gameID,
+                    buildID: target.buildID,
+                    store: container.repositories.settings
+                )
+            }
+            .sheet(isPresented: $showMerge) {
+                MergeGameSheet(
+                    sourceTitle: model.game?.primaryTitle ?? "",
+                    targets: model.otherGames
+                ) { target, mode in
+                    model.merge(into: target, mode: mode)
+                }
+            }
+    }
+
+    private func withAlerts(_ content: some View) -> some View {
+        content
+            .alert("New Save Profile", isPresented: $showNewProfile) {
+                TextField("Name", text: $newProfileName)
+                Button("Create") {
+                    model.createBlankProfile(name: newProfileName)
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .alert("Make Separate Game", isPresented: Binding(
+                get: { promotion != nil },
+                set: { if !$0 { promotion = nil } }
+            ), presenting: promotion) { build in
+                TextField("Game Title", text: $promotionTitle)
+                Button("Move") { model.promote(build, title: promotionTitle, mode: .move) }
+                Button("Copy") { model.promote(build, title: promotionTitle, mode: .copy) }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("Move takes this Build out of this Game. Copy leaves it here as well.")
+            }
+            .alert("Different Base ROM", isPresented: Binding(
+                get: { model.baseMismatch != nil },
+                set: { if !$0 { model.baseMismatch = nil } }
+            ), presenting: model.baseMismatch) { pending in
+                Button("Apply Anyway") {
+                    model.baseMismatch = nil
+                    model.applyPatches(pending.urls, to: pending.build, ignoringBaseMismatch: true)
+                }
+                Button("Cancel", role: .cancel) { model.baseMismatch = nil }
+            } message: { pending in
+                Text("This patch was made for a different ROM than \(pending.build.displayName). Applying it anyway may produce a Build that doesn’t work. The original ROM and patch are kept either way.")
+            }
+            .alert(model.errorMessage == nil ? "Done" : "Game Error", isPresented: Binding(
+                get: { model.errorMessage != nil || model.infoMessage != nil },
+                set: { if !$0 { model.clearMessages() } }
+            )) {
+                Button("OK", role: .cancel) { model.clearMessages() }
+            } message: {
+                Text(model.errorMessage ?? model.infoMessage ?? "")
+            }
     }
 
     private func buildRow(_ build: Build) -> some View {
@@ -270,53 +305,56 @@ struct GameDetailView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { launch(build: build) }
-        .contextMenu {
-            Button("Play") { launch(build: build) }
-            Menu("Play with Save") {
-                ForEach(model.saveProfiles) { profile in
-                    Button(profile.displayName) { launch(build: build, profile: profile) }
+        .contextMenu { buildMenu(build) }
+    }
+
+    @ViewBuilder
+    private func buildMenu(_ build: Build) -> some View {
+        Button("Play") { launch(build: build) }
+        Menu("Play with Save") {
+            ForEach(model.saveProfiles) { profile in
+                Button(profile.displayName) { launch(build: build, profile: profile) }
+            }
+        }
+        Menu("Default Save") {
+            Button {
+                model.setDefaultProfile(nil, for: build)
+            } label: {
+                if build.preferredSaveProfileID == nil {
+                    Label("Game Default", systemImage: "checkmark")
+                } else {
+                    Text("Game Default")
                 }
             }
-            Menu("Default Save") {
+            ForEach(model.saveProfiles) { profile in
                 Button {
-                    model.setDefaultProfile(nil, for: build)
+                    model.setDefaultProfile(profile, for: build)
                 } label: {
-                    if build.preferredSaveProfileID == nil {
-                        Label("Game Default", systemImage: "checkmark")
+                    if build.preferredSaveProfileID == profile.id {
+                        Label(profile.displayName, systemImage: "checkmark")
                     } else {
-                        Text("Game Default")
-                    }
-                }
-                ForEach(model.saveProfiles) { profile in
-                    Button {
-                        model.setDefaultProfile(profile, for: build)
-                    } label: {
-                        if build.preferredSaveProfileID == profile.id {
-                            Label(profile.displayName, systemImage: "checkmark")
-                        } else {
-                            Text(profile.displayName)
-                        }
+                        Text(profile.displayName)
                     }
                 }
             }
-            Button("Set as Preferred") { model.setPreferredBuild(build) }
-            Button("Build Settings…") {
-                settingsTarget = SettingsTarget(
-                    title: "\(build.displayName) Settings",
-                    scope: .build(build.id),
-                    system: build.system,
-                    buildID: build.id
-                )
-            }
-            Divider()
-            Button("Apply Patch…") { request(.patch(build)) }
-            if build.sourceKind == .patchRecipe {
-                Button("Remove Generated Image") { model.removeGeneratedImage(of: build) }
-            }
-            Button("Make Separate Game…") {
-                promotionTitle = build.displayName
-                promotion = build
-            }
+        }
+        Button("Set as Preferred") { model.setPreferredBuild(build) }
+        Button("Build Settings…") {
+            settingsTarget = SettingsTarget(
+                title: "\(build.displayName) Settings",
+                scope: .build(build.id),
+                system: build.system,
+                buildID: build.id
+            )
+        }
+        Divider()
+        Button("Apply Patch…") { request(.patch(build)) }
+        if build.sourceKind == .patchRecipe {
+            Button("Remove Generated Image") { model.removeGeneratedImage(of: build) }
+        }
+        Button("Make Separate Game…") {
+            promotionTitle = build.displayName
+            promotion = build
         }
     }
 
