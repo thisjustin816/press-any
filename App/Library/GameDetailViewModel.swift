@@ -2,13 +2,18 @@ import Combine
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import Patching
 
 @MainActor
 final class GameDetailViewModel: ObservableObject {
     @Published private(set) var game: Game?
     @Published private(set) var builds: [Build] = []
     @Published private(set) var saveProfiles: [SaveProfile] = []
+    @Published private(set) var otherGames: [Game] = []
     @Published private(set) var errorMessage: String?
+    @Published private(set) var infoMessage: String?
+    /// Set once a move leaves this Game deleted, so the screen can close.
+    @Published private(set) var gameRemoved = false
 
     let gameID: UUID
 
@@ -18,6 +23,9 @@ final class GameDetailViewModel: ObservableObject {
     private let buildOperations: BuildOperations
     private let createBlank: CreateBlankSaveProfile
     private let duplicateProfile: DuplicateSaveProfile
+    private let saveImporter: ImportBatterySave
+    private let patchCreator: CreatePatchedBuild
+    private let evictImage: EvictGeneratedImage
 
     init(
         gameID: UUID,
@@ -26,7 +34,10 @@ final class GameDetailViewModel: ObservableObject {
         profiles: any SaveProfileRepository,
         buildOperations: BuildOperations,
         createBlank: CreateBlankSaveProfile,
-        duplicateProfile: DuplicateSaveProfile
+        duplicateProfile: DuplicateSaveProfile,
+        importSave: ImportBatterySave,
+        patchCreator: CreatePatchedBuild,
+        evictImage: EvictGeneratedImage
     ) {
         self.gameID = gameID
         self.games = games
@@ -35,6 +46,9 @@ final class GameDetailViewModel: ObservableObject {
         self.buildOperations = buildOperations
         self.createBlank = createBlank
         self.duplicateProfile = duplicateProfile
+        self.saveImporter = importSave
+        self.patchCreator = patchCreator
+        self.evictImage = evictImage
     }
 
     var preferredBuild: Build? {
@@ -44,11 +58,18 @@ final class GameDetailViewModel: ObservableObject {
 
     func reload() {
         do {
-            game = try games.fetchGame(id: gameID)
+            guard let fetched = try games.fetchGame(id: gameID) else {
+                gameRemoved = true
+                return
+            }
+            game = fetched
             builds = try buildRepository.fetchBuilds(gameID: gameID).sorted(by: Self.buildSort)
             saveProfiles = try profiles.fetchSaveProfiles(gameID: gameID).sorted {
                 $0.createdAt < $1.createdAt
             }
+            otherGames = try games.fetchGames()
+                .filter { $0.id != gameID }
+                .sorted { $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending }
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -78,37 +99,105 @@ final class GameDetailViewModel: ObservableObject {
         )
     }
 
+    func buildName(id: UUID?) -> String? {
+        guard let id else { return nil }
+        return builds.first { $0.id == id }?.displayName
+    }
+
+    func profileName(id: UUID?) -> String? {
+        guard let id else { return nil }
+        return saveProfiles.first { $0.id == id }?.displayName
+    }
+
     func setPreferredBuild(_ build: Build) {
-        do {
-            try buildOperations.setPreferredBuild(gameID: gameID, buildID: build.id)
-            reload()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        perform { try buildOperations.setPreferredBuild(gameID: gameID, buildID: build.id) }
+    }
+
+    /// Sharing a profile between Builds is this choice: each Build names the profile it plays.
+    func setDefaultProfile(_ profile: SaveProfile?, for build: Build) {
+        perform { try buildOperations.setPreferredSaveProfile(buildID: build.id, profileID: profile?.id) }
     }
 
     func createBlankProfile(name: String) {
-        do {
-            _ = try createBlank.execute(gameID: gameID, name: name)
-            reload()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        perform { _ = try createBlank.execute(gameID: gameID, name: name) }
     }
 
     func duplicate(_ profile: SaveProfile, name: String) {
+        perform { _ = try duplicateProfile.execute(sourceProfileID: profile.id, name: name) }
+    }
+
+    func importSave(from url: URL) {
+        perform {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            let profile = try saveImporter.execute(
+                gameID: gameID,
+                sourceURL: url,
+                name: url.deletingPathExtension().lastPathComponent
+            )
+            infoMessage = "Imported the save as \(profile.displayName)."
+        }
+    }
+
+    func applyPatches(_ urls: [URL], to build: Build) {
+        guard !urls.isEmpty else { return }
+        let scoped = urls.map { $0.startAccessingSecurityScopedResource() }
+        defer {
+            for (url, didStart) in zip(urls, scoped) where didStart {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
         do {
-            _ = try duplicateProfile.execute(sourceProfileID: profile.id, name: name)
+            let patched = try patchCreator.execute(.init(
+                gameID: gameID,
+                baseBuildID: build.id,
+                patchURLs: urls,
+                displayName: urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + ")
+            ))
             reload()
+            infoMessage = "Created \(patched.displayName) from \(build.displayName)."
+        } catch PatchError.sourceCRC32Mismatch, PatchError.sourceSizeMismatch {
+            errorMessage = "This patch was made for a different base ROM than \(build.displayName)."
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    func promote(_ build: Build, title: String, mode: ReorganizationMode) throws -> Game {
-        let result = try buildOperations.promoteBuild(buildID: build.id, title: title, mode: mode)
-        reload()
-        return result
+    func removeGeneratedImage(of build: Build) {
+        perform {
+            let removed = try evictImage.execute(buildID: build.id)
+            infoMessage = removed
+                ? "Removed the generated image. The next launch rebuilds it and checks its hash."
+                : "The generated image wasn’t cached. The next launch rebuilds it."
+        }
+    }
+
+    func promote(_ build: Build, title: String, mode: ReorganizationMode) {
+        perform {
+            let newGame = try buildOperations.promoteBuild(buildID: build.id, title: title, mode: mode)
+            infoMessage = "\(build.displayName) is now the Game \(newGame.primaryTitle)."
+        }
+    }
+
+    func merge(into target: Game, mode: ReorganizationMode) {
+        perform {
+            try buildOperations.mergeGame(sourceGameID: gameID, into: target.id, mode: mode)
+            infoMessage = "Merged into \(target.primaryTitle)."
+        }
+    }
+
+    func clearMessages() {
+        errorMessage = nil
+        infoMessage = nil
+    }
+
+    private func perform(_ operation: () throws -> Void) {
+        do {
+            try operation()
+            reload()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private static func buildSort(_ lhs: Build, _ rhs: Build) -> Bool {

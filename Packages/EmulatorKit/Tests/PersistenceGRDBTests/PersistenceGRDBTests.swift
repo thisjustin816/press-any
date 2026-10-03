@@ -135,6 +135,67 @@ struct PersistenceGRDBTests {
         #expect(try repositories.games.fetchGame(id: fixture.game.id) == fixture.game)
         #expect(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: externalBuild.id) == externalRecipe)
     }
+
+    @Test("merging a game by move keeps its save profiles and states")
+    func mergeMoveKeepsSaveProfiles() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let now = Date(timeIntervalSince1970: 1_700_000_100)
+        let target = Game(
+            id: UUID(),
+            primaryTitle: "Target",
+            systemFamily: "gbc",
+            createdAt: now,
+            modifiedAt: now
+        )
+        try repositories.games.insertGame(target)
+        var source = fixture.game
+        source.preferredSaveProfileID = fixture.profile.id
+        try repositories.games.updateGame(source)
+        let operations = BuildOperations(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            transactions: repositories.transactions,
+            now: { now }
+        )
+
+        try operations.mergeGame(sourceGameID: fixture.game.id, into: target.id, mode: .move)
+
+        #expect(try repositories.games.fetchGame(id: fixture.game.id) == nil)
+        var movedProfile = fixture.profile
+        movedProfile.gameID = target.id
+        #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id) == movedProfile)
+        #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: fixture.profile.id) == [fixture.state])
+        #expect(try repositories.games.fetchGame(id: target.id)?.preferredSaveProfileID == fixture.profile.id)
+    }
+
+    @Test("promoting a game's last build by move keeps its save profiles")
+    func promoteLastBuildKeepsSaveProfiles() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let now = Date(timeIntervalSince1970: 1_700_000_100)
+        let operations = BuildOperations(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            transactions: repositories.transactions,
+            now: { now }
+        )
+
+        let separated = try operations.promoteBuild(buildID: fixture.patchedBuild.id, title: "Hack", mode: .move)
+        #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id)?.gameID == fixture.game.id)
+
+        let last = try operations.promoteBuild(buildID: fixture.build.id, title: "Original", mode: .move)
+        #expect(try repositories.games.fetchGame(id: fixture.game.id) == nil)
+        #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id)?.gameID == last.id)
+        #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: fixture.profile.id) == [fixture.state])
+        #expect(try repositories.builds.fetchBuild(id: fixture.patchedBuild.id)?.gameID == separated.id)
+    }
 }
 
 private enum TestFailure: Error {

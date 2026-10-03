@@ -73,7 +73,7 @@ public struct BuildOperations: Sendable {
             throw BuildOperationError.buildNotFound(buildID)
         }
         let timestamp = now()
-        return try transactions.run { [games, builds, sourceBuild, makeID] in
+        return try transactions.run { [games, builds, profiles, sourceBuild, makeID] in
             let newGame = Game(
                 id: makeID(),
                 primaryTitle: title,
@@ -103,6 +103,17 @@ public struct BuildOperations: Sendable {
             if mode == .move, var oldGame = try games.fetchGame(id: sourceBuild.gameID) {
                 let remaining = try builds.fetchBuilds(gameID: oldGame.id).sorted(by: Self.preferredBuildSort)
                 if remaining.isEmpty {
+                    // The emptied Game is deleted, which would cascade to its Save Profiles, so
+                    // they follow the Build. As in a merge, modifiedAt stays put.
+                    for profile in try profiles.fetchSaveProfiles(gameID: oldGame.id) {
+                        var moved = profile
+                        moved.gameID = updatedNewGame.id
+                        try profiles.updateSaveProfile(moved)
+                    }
+                    if let preferredProfile = oldGame.preferredSaveProfileID {
+                        updatedNewGame.preferredSaveProfileID = preferredProfile
+                        try games.updateGame(updatedNewGame)
+                    }
                     try games.deleteGame(id: oldGame.id)
                 } else if oldGame.preferredBuildID == sourceBuild.id {
                     oldGame.preferredBuildID = remaining.first?.id
@@ -119,9 +130,13 @@ public struct BuildOperations: Sendable {
         guard let sourceGame = try games.fetchGame(id: sourceGameID) else { throw BuildOperationError.gameNotFound(sourceGameID) }
         guard let targetGame = try games.fetchGame(id: targetGameID) else { throw BuildOperationError.gameNotFound(targetGameID) }
         let sourceBuilds = try builds.fetchBuilds(gameID: sourceGame.id).sorted(by: Self.preferredBuildSort)
+        // Deleting the source Game cascades to its Save Profiles and their states, so a move
+        // takes the profiles along. modifiedAt stays put: the battery saves are unchanged, and
+        // it decides whether an Auto State is still safe to restore.
+        let sourceProfiles = mode == .move ? try profiles.fetchSaveProfiles(gameID: sourceGame.id) : []
         let timestamp = now()
 
-        try transactions.run { [games, builds, makeID, targetGame] in
+        try transactions.run { [games, builds, profiles, makeID, targetGame] in
             var updatedTargetGame = targetGame
             var firstMergedBuildID: UUID?
             for source in sourceBuilds {
@@ -135,8 +150,22 @@ public struct BuildOperations: Sendable {
                     if firstMergedBuildID == nil { firstMergedBuildID = copy.id }
                 }
             }
+            for profile in sourceProfiles {
+                var moved = profile
+                moved.gameID = targetGameID
+                try profiles.updateSaveProfile(moved)
+            }
+            var targetChanged = false
             if updatedTargetGame.preferredBuildID == nil {
                 updatedTargetGame.preferredBuildID = firstMergedBuildID
+                targetChanged = true
+            }
+            if mode == .move, updatedTargetGame.preferredSaveProfileID == nil,
+               let preferredProfile = sourceGame.preferredSaveProfileID {
+                updatedTargetGame.preferredSaveProfileID = preferredProfile
+                targetChanged = true
+            }
+            if targetChanged {
                 updatedTargetGame.modifiedAt = timestamp
                 try games.updateGame(updatedTargetGame)
             }
