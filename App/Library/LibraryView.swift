@@ -81,8 +81,12 @@ struct LibraryView: View {
                 }
             }
             .navigationTitle(AppBrand.displayName)
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $model.searchText, prompt: "Search games")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    WordmarkView()
+                }
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         showSettings = true

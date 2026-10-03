@@ -191,19 +191,9 @@ final class TouchControllerView: UIView {
         context.restoreGState()
     }
 
-    /// "Press Any" printed at the bottom of the body, its A in magenta like the A button.
+    /// The app's wordmark, printed at the bottom of the body.
     private func drawLogo(in rect: CGRect, palette: ControllerPalette) {
-        let size: CGFloat = 18
-        var font = UIFont.systemFont(ofSize: size, weight: .black)
-        if let italic = font.fontDescriptor.withSymbolicTraits(.traitItalic) {
-            font = UIFont(descriptor: italic, size: size)
-        }
-        let string = NSMutableAttributedString(string: "Press Any", attributes: [
-            .font: font,
-            .kern: 0.5,
-            .foregroundColor: palette.logo,
-        ])
-        string.addAttribute(.foregroundColor, value: palette.logoAccent, range: NSRange(location: 6, length: 1))
+        let string = AppBrand.Wordmark.attributedString(size: 18, ink: palette.logo, accent: palette.logoAccent)
         let textSize = string.size()
         string.draw(at: CGPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2))
     }

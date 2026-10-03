@@ -6,4 +6,10 @@ final class PressAnyAppTests: XCTestCase {
     func testDisplayNameComesFromTheBundle() {
         XCTAssertEqual(AppBrand.displayName, "Press Any")
     }
+
+    func testWordmarkAccentsTheFirstLetterOfTheLastWord() {
+        XCTAssertTrue(AppBrand.Wordmark.parts == ("Press ", "A", "ny"))
+        XCTAssertTrue(AppBrand.Wordmark.split("Pocket") == ("", "P", "ocket"))
+        XCTAssertTrue(AppBrand.Wordmark.split("") == ("", "", ""))
+    }
 }

@@ -14,6 +14,21 @@ technical identifiers, and which values must never carry a brand.
 | Repository | `thisjustin816/press-any` | GitHub |
 | Swift package and modules | `EmulatorKit`, `EmulatorDomain`, `AssetStorage`, ... | `Packages/EmulatorKit/Package.swift`; deliberately brand-free |
 
+## Wordmark
+
+The wordmark is the product name in heavy italic system type with slight tracking, the first
+letter of its last word (the "A" in "Any") in the magenta of a Game Boy A button. The rest is
+charcoal on light backgrounds and gray on dark ones:
+
+| | Light | Dark |
+|---|---|---|
+| Letters | `#323235` | `#808086` |
+| Accent letter | `#A63A70` | `#A43E74` |
+
+`AppBrand.Wordmark` in `App/AppBrand.swift` is its one definition, built from the display name:
+`WordmarkView` shows it in SwiftUI (the library's title), and the on-screen controller prints it
+at the bottom in the controller theme's colors.
+
 ## Values that never carry a brand
 
 These are stored, hashed or compared across versions, or are runtime names with no reason to
@@ -47,7 +62,8 @@ registered with Apple.
 
 A future rename changes:
 
-1. `INFOPLIST_KEY_CFBundleDisplayName` in `project.yml` (the only user-facing string).
+1. `INFOPLIST_KEY_CFBundleDisplayName` in `project.yml` (the only user-facing string). The
+   wordmark follows it, accenting the first letter of the new name's last word.
 2. If the technical name also changes: the project `name`, target, scheme and `PRODUCT_NAME`
    in `project.yml`, `PROJECT_NAME` in the `Makefile`, and the `App/` entry point and
    `AppTests/` file names.

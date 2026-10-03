@@ -24,52 +24,53 @@ struct ControllerPalette {
     let pillText: UIColor
     /// Lettering printed on the body, such as A, B, SELECT and START.
     let lettering: UIColor
-    /// The Press Any logo, with its A in the A button's magenta.
+    /// The app's wordmark (`AppBrand.Wordmark`) in this theme's colors.
     let logo: UIColor
     let logoAccent: UIColor
-    let usesDarkStatusBar: Bool
 
-    static let classic = ControllerPalette(
-        bodyTop: rgb(192, 195, 199),
-        bodyBottom: rgb(174, 176, 180),
-        bezelTop: rgb(53, 53, 53),
-        bezelBottom: rgb(45, 45, 45),
-        dpad: rgb(50, 50, 53),
-        dpadPressed: rgb(32, 32, 34),
-        dpadDimple: rgb(40, 40, 43),
-        groove: rgb(162, 164, 169),
-        buttonTop: rgb(166, 58, 112),
-        buttonBottom: rgb(136, 44, 90),
-        buttonPressed: rgb(112, 36, 74),
-        pill: rgb(90, 90, 94),
-        pillPressed: rgb(66, 66, 70),
-        pillText: rgb(222, 224, 228),
-        lettering: rgb(0, 70, 141),
-        logo: rgb(50, 50, 53),
-        logoAccent: rgb(166, 58, 112),
-        usesDarkStatusBar: true
-    )
+    static var classic: ControllerPalette {
+        ControllerPalette(
+            bodyTop: rgb(192, 195, 199),
+            bodyBottom: rgb(174, 176, 180),
+            bezelTop: rgb(53, 53, 53),
+            bezelBottom: rgb(45, 45, 45),
+            dpad: rgb(50, 50, 53),
+            dpadPressed: rgb(32, 32, 34),
+            dpadDimple: rgb(40, 40, 43),
+            groove: rgb(162, 164, 169),
+            buttonTop: rgb(166, 58, 112),
+            buttonBottom: rgb(136, 44, 90),
+            buttonPressed: rgb(112, 36, 74),
+            pill: rgb(90, 90, 94),
+            pillPressed: rgb(66, 66, 70),
+            pillText: rgb(222, 224, 228),
+            lettering: rgb(0, 70, 141),
+            logo: AppBrand.Wordmark.lightInk,
+            logoAccent: AppBrand.Wordmark.lightAccent
+        )
+    }
 
-    static let dark = ControllerPalette(
-        bodyTop: rgb(36, 37, 40),
-        bodyBottom: rgb(22, 22, 24),
-        bezelTop: rgb(12, 12, 13),
-        bezelBottom: rgb(8, 8, 9),
-        dpad: rgb(70, 70, 75),
-        dpadPressed: rgb(96, 96, 102),
-        dpadDimple: rgb(58, 58, 62),
-        groove: rgb(13, 13, 15),
-        buttonTop: rgb(140, 50, 96),
-        buttonBottom: rgb(112, 38, 76),
-        buttonPressed: rgb(164, 64, 116),
-        pill: rgb(78, 78, 83),
-        pillPressed: rgb(104, 104, 110),
-        pillText: rgb(210, 212, 218),
-        lettering: rgb(132, 160, 205),
-        logo: rgb(128, 128, 134),
-        logoAccent: rgb(164, 62, 116),
-        usesDarkStatusBar: false
-    )
+    static var dark: ControllerPalette {
+        ControllerPalette(
+            bodyTop: rgb(36, 37, 40),
+            bodyBottom: rgb(22, 22, 24),
+            bezelTop: rgb(12, 12, 13),
+            bezelBottom: rgb(8, 8, 9),
+            dpad: rgb(70, 70, 75),
+            dpadPressed: rgb(96, 96, 102),
+            dpadDimple: rgb(58, 58, 62),
+            groove: rgb(13, 13, 15),
+            buttonTop: rgb(140, 50, 96),
+            buttonBottom: rgb(112, 38, 76),
+            buttonPressed: rgb(164, 64, 116),
+            pill: rgb(78, 78, 83),
+            pillPressed: rgb(104, 104, 110),
+            pillText: rgb(210, 212, 218),
+            lettering: rgb(132, 160, 205),
+            logo: AppBrand.Wordmark.darkInk,
+            logoAccent: AppBrand.Wordmark.darkAccent
+        )
+    }
 
     static func resolve(_ theme: ControllerTheme, for traits: UITraitCollection) -> ControllerPalette {
         switch theme {
