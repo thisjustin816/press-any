@@ -13,15 +13,21 @@ public enum QuickPlaySaveDisposition: Equatable, Sendable {
 public struct QuickPlayPromotionResult: Equatable, Sendable {
     public let importResult: ROMImportResult
     public let saveProfile: SaveProfile?
+    /// The copy of a replaced profile taken before its save was overwritten.
+    public let safetyCopy: SaveProfile?
 
-    public init(importResult: ROMImportResult, saveProfile: SaveProfile?) {
+    public init(importResult: ROMImportResult, saveProfile: SaveProfile?, safetyCopy: SaveProfile? = nil) {
         self.importResult = importResult
         self.saveProfile = saveProfile
+        self.safetyCopy = safetyCopy
     }
 }
 
 public enum PromoteQuickPlayError: Error, Equatable {
     case temporaryBatteryMissing(UUID)
+    case profileNotFound(UUID)
+    /// A save can only replace a profile of the Game the Build is promoted into.
+    case profileInDifferentGame(profileID: UUID)
 }
 
 public struct PromoteQuickPlay: Sendable {
@@ -65,16 +71,50 @@ public struct PromoteQuickPlay: Sendable {
         plan: ROMImportPlan,
         saveDisposition: QuickPlaySaveDisposition
     ) throws -> QuickPlayPromotionResult {
+        // Check a replacement before committing, so a refused one leaves nothing half-imported.
+        var replacement: (profile: SaveProfile, battery: Data)?
+        if case .replaceExisting(let profileID) = saveDisposition {
+            guard let profile = try profiles.fetchSaveProfile(id: profileID) else {
+                throw PromoteQuickPlayError.profileNotFound(profileID)
+            }
+            switch plan.disposition {
+            case .createGame:
+                throw PromoteQuickPlayError.profileInDifferentGame(profileID: profileID)
+            case .addBuild(let gameID) where gameID != profile.gameID:
+                throw PromoteQuickPlayError.profileInDifferentGame(profileID: profileID)
+            default:
+                break
+            }
+            guard let battery = try workspace.temporaryBatteryData(sessionID: session.id) else {
+                throw PromoteQuickPlayError.temporaryBatteryMissing(session.id)
+            }
+            replacement = (profile, battery)
+        }
+
         let result = try committer.commit(plan)
         let promotedProfile: SaveProfile?
+        var safetyCopy: SaveProfile?
         switch saveDisposition {
         case .keepExisting:
             promotedProfile = nil
         case .replaceExisting(let profileID):
-            guard let battery = try workspace.temporaryBatteryData(sessionID: session.id) else {
-                throw PromoteQuickPlayError.temporaryBatteryMissing(session.id)
+            guard let replacement, replacement.profile.gameID == result.game.id else {
+                throw PromoteQuickPlayError.profileInDifferentGame(profileID: profileID)
             }
-            promotedProfile = try persistentSaveService.replacePersistentSaveData(battery, profileID: profileID)
+            safetyCopy = try DuplicateSaveProfile(
+                profiles: profiles,
+                assets: assets,
+                assetStore: assetStore,
+                now: now,
+                makeID: makeID
+            ).execute(
+                sourceProfileID: profileID,
+                name: "\(replacement.profile.displayName) before Quick Play"
+            )
+            promotedProfile = try persistentSaveService.replacePersistentSaveData(
+                replacement.battery,
+                profileID: profileID
+            )
         case .createProfile(let name):
             promotedProfile = try createProfile(
                 gameID: result.game.id,
@@ -83,7 +123,7 @@ public struct PromoteQuickPlay: Sendable {
             )
         }
         try workspace.discard(sessionID: session.id)
-        return QuickPlayPromotionResult(importResult: result, saveProfile: promotedProfile)
+        return QuickPlayPromotionResult(importResult: result, saveProfile: promotedProfile, safetyCopy: safetyCopy)
     }
 
     private func createProfile(gameID: UUID, name: String, temporaryBattery: Data?) throws -> SaveProfile {

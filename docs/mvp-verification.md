@@ -23,6 +23,6 @@ Verify with a user-supplied legal ROM:
 - [ ] Remove its generated-ROM cache, relaunch, and confirm deterministic rebuild.
 - [ ] Quick Play a new test build using a copy of Main; mutate the temporary save; Main remains unchanged.
 - [ ] Promote the Quick Play session and choose whether its save becomes a new/default profile.
-- [ ] Quick Play an 8 MB image on device and record the time from choosing the file to the first frame; it opens on the game, not the boot logo, and nothing optional (shaders, skins, custom layouts, detection) loads before it. Then play for a minute and confirm normal speed and audio.
+- [ ] Quick Play an 8 MB image on device and record the time from choosing the file to the first frame, which the game screen shows as "First frame in N ms"; it opens on the game, not the boot logo, and nothing optional (shaders, skins, custom layouts, detection) loads before it. Then play for a minute and confirm normal speed and audio.
 - [ ] A library game shows the boot logo by default; with Settings > Skip Boot Logo on, it opens on the game.
 - [ ] Move a Build to its own Game and merge it back; Build identity and data remain intact.

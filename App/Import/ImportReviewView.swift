@@ -22,27 +22,7 @@ struct ImportReviewView: View {
                     }
                 }
 
-                if model.isExactDuplicate {
-                    Section {
-                        Label("This exact ROM is already in your library.", systemImage: "checkmark.circle")
-                    }
-                } else {
-                    Section("Destination") {
-                        Picker("Import as", selection: $model.destination) {
-                            Text("New Game").tag(ImportReviewViewModel.Destination.newGame)
-                            ForEach(model.games) { game in
-                                Text("Add Build to \(game.primaryTitle)")
-                                    .tag(ImportReviewViewModel.Destination.existing(game.id))
-                            }
-                        }
-
-                        if model.destination == .newGame {
-                            TextField("Game title", text: $model.gameTitle)
-                        }
-                        TextField("Build name", text: $model.buildDisplayName)
-                        Toggle("Base Build", isOn: $model.markAsBase)
-                    }
-                }
+                ImportDestinationSection(model: model)
 
                 if let message = model.errorMessage {
                     Section {
@@ -71,10 +51,40 @@ struct ImportReviewView: View {
                             // The model owns the visible error message.
                         }
                     }
-                    .disabled(!model.isExactDuplicate && model.buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!model.canCommit)
                 }
             }
         }
         .interactiveDismissDisabled()
+    }
+}
+
+/// Where an analyzed image goes: a new Game, a Build of an existing one, or nowhere for an exact
+/// duplicate. Shared by import and Quick Play promotion.
+struct ImportDestinationSection: View {
+    @ObservedObject var model: ImportReviewViewModel
+
+    var body: some View {
+        if model.isExactDuplicate {
+            Section {
+                Label("This exact ROM is already in your library.", systemImage: "checkmark.circle")
+            }
+        } else {
+            Section("Destination") {
+                Picker("Import as", selection: $model.destination) {
+                    Text("New Game").tag(ImportReviewViewModel.Destination.newGame)
+                    ForEach(model.games) { game in
+                        Text("Add Build to \(game.primaryTitle)")
+                            .tag(ImportReviewViewModel.Destination.existing(game.id))
+                    }
+                }
+
+                if model.destination == .newGame {
+                    TextField("Game title", text: $model.gameTitle)
+                }
+                TextField("Build name", text: $model.buildDisplayName)
+                Toggle("Base Build", isOn: $model.markAsBase)
+            }
+        }
     }
 }

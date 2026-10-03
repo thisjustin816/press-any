@@ -1,5 +1,6 @@
 import EmulatorDomain
 import Importing
+import QuickPlay
 import SwiftUI
 
 struct LibraryView: View {
@@ -10,7 +11,8 @@ struct LibraryView: View {
 
     private enum FileAction {
         case importROM
-        case quickPlay
+        /// Carries the library save the session gets a copy of, if any.
+        case quickPlay(copiedSaveProfileID: UUID?)
     }
 
     @StateObject private var model: LibraryViewModel
@@ -19,21 +21,28 @@ struct LibraryView: View {
     @State private var pendingFileAction: FileAction = .importROM
     @State private var importReview: ImportReviewPresentation?
     @State private var showSettings = false
+    @State private var showSaveChooser = false
+    @State private var chosenQuickPlaySave: UUID?
+    @State private var showQuickPlaySessions = false
+    @State private var quickPlayToResume: QuickPlaySession?
 
     let container: AppContainer
     let onPlay: (LaunchContext) -> Void
-    let onQuickPlayROM: (URL) -> Void
+    let onQuickPlay: (QuickPlayRequest) -> Void
+    let onResumeQuickPlay: (QuickPlaySession) -> Void
 
     private let importCoordinator: ImportCoordinator
 
     init(
         container: AppContainer,
         onPlay: @escaping (LaunchContext) -> Void,
-        onQuickPlayROM: @escaping (URL) -> Void
+        onQuickPlay: @escaping (QuickPlayRequest) -> Void,
+        onResumeQuickPlay: @escaping (QuickPlaySession) -> Void
     ) {
         self.container = container
         self.onPlay = onPlay
-        self.onQuickPlayROM = onQuickPlayROM
+        self.onQuickPlay = onQuickPlay
+        self.onResumeQuickPlay = onResumeQuickPlay
         let coordinator = ImportCoordinator(
             analyzer: container.importAnalyzer,
             committer: container.importCommitter,
@@ -98,11 +107,23 @@ struct LibraryView: View {
                         } label: {
                             Label("Import ROM", systemImage: "square.and.arrow.down")
                         }
-                        Button {
-                            pendingFileAction = .quickPlay
-                            showROMImporter = true
-                        } label: {
-                            Label("Quick Play ROM", systemImage: "play.circle")
+                        Section("Quick Play") {
+                            Button {
+                                pendingFileAction = .quickPlay(copiedSaveProfileID: nil)
+                                showROMImporter = true
+                            } label: {
+                                Label("Quick Play ROM", systemImage: "play.circle")
+                            }
+                            Button {
+                                showSaveChooser = true
+                            } label: {
+                                Label("Quick Play with a Save…", systemImage: "play.circle.fill")
+                            }
+                            Button {
+                                showQuickPlaySessions = true
+                            } label: {
+                                Label("Quick Play Sessions…", systemImage: "clock.arrow.circlepath")
+                            }
                         }
                     } label: {
                         Image(systemName: "plus")
@@ -117,6 +138,27 @@ struct LibraryView: View {
                 allowsMultipleSelection: false
             ) { result in
                 handleImportSelection(result)
+            }
+            .sheet(isPresented: $showSaveChooser, onDismiss: {
+                // The file picker opens after the chooser is gone, so choosing the file is the
+                // last step before the session starts and its first-frame time stays clean.
+                guard let profileID = chosenQuickPlaySave else { return }
+                chosenQuickPlaySave = nil
+                pendingFileAction = .quickPlay(copiedSaveProfileID: profileID)
+                showROMImporter = true
+            }) {
+                QuickPlaySaveChooser(container: container) { profile in
+                    chosenQuickPlaySave = profile.id
+                }
+            }
+            .sheet(isPresented: $showQuickPlaySessions, onDismiss: {
+                guard let session = quickPlayToResume else { return }
+                quickPlayToResume = nil
+                onResumeQuickPlay(session)
+            }) {
+                QuickPlaySessionsView(container: container) { session in
+                    quickPlayToResume = session
+                }
             }
             .sheet(item: $importReview) { presentation in
                 ImportReviewView(
@@ -193,10 +235,11 @@ struct LibraryView: View {
     }
 
     private func handleImportSelection(_ result: Result<[URL], Error>) {
+        let chosenAt = DispatchTime.now().uptimeNanoseconds
         guard case .success(let urls) = result, let url = urls.first else { return }
         switch pendingFileAction {
-        case .quickPlay:
-            onQuickPlayROM(url)
+        case .quickPlay(let copiedSaveProfileID):
+            onQuickPlay(QuickPlayRequest(url: url, copiedSaveProfileID: copiedSaveProfileID, chosenAt: chosenAt))
         case .importROM:
             do {
                 let analysis = try importCoordinator.analyzeROM(at: url)

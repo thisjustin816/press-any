@@ -45,33 +45,43 @@ final class ImportReviewViewModel: ObservableObject {
     var isExactDuplicate: Bool { analysis.exactExistingBuildID != nil }
     var shortHash: String { String(analysis.sha256.prefix(12)) }
 
+    var plan: ROMImportPlan {
+        let disposition: ROMImportDisposition
+        if let existing = analysis.exactExistingBuildID {
+            disposition = .duplicateExisting(buildID: existing)
+        } else {
+            switch destination {
+            case .newGame:
+                disposition = .createGame(title: gameTitle.trimmingCharacters(in: .whitespacesAndNewlines))
+            case .existing(let gameID):
+                disposition = .addBuild(gameID: gameID)
+            }
+        }
+        return ROMImportPlan(
+            analysis: analysis,
+            disposition: disposition,
+            buildDisplayName: buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines),
+            markAsBase: markAsBase
+        )
+    }
+
+    var canCommit: Bool {
+        isExactDuplicate || !buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     func commit() throws -> ROMImportResult {
         do {
-            let disposition: ROMImportDisposition
-            if let existing = analysis.exactExistingBuildID {
-                disposition = .duplicateExisting(buildID: existing)
-            } else {
-                switch destination {
-                case .newGame:
-                    disposition = .createGame(title: gameTitle.trimmingCharacters(in: .whitespacesAndNewlines))
-                case .existing(let gameID):
-                    disposition = .addBuild(gameID: gameID)
-                }
-            }
-            let result = try coordinator.committer.commit(
-                ROMImportPlan(
-                    analysis: analysis,
-                    disposition: disposition,
-                    buildDisplayName: buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines),
-                    markAsBase: markAsBase
-                )
-            )
+            let result = try coordinator.committer.commit(plan)
             errorMessage = nil
             return result
         } catch {
             errorMessage = error.localizedDescription
             throw error
         }
+    }
+
+    func report(_ error: Error) {
+        errorMessage = error.localizedDescription
     }
 
     func cancel() {

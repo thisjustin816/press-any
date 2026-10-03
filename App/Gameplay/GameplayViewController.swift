@@ -1,6 +1,7 @@
 import EmulationCore
 import EmulatorDomain
 import MetalKit
+import OSLog
 import UIKit
 
 @MainActor
@@ -17,6 +18,8 @@ final class GameplayViewController: UIViewController {
     private let autoResumePolicy: AutoResumePolicy
     private let launchMessage: String?
     private let pausedOverlay = UIButton(type: .system)
+    /// Uptime when Quick Play's file was chosen, cleared once the first frame is reported.
+    private var firstFrameClock: UInt64?
     private var userPaused = false
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
@@ -26,8 +29,14 @@ final class GameplayViewController: UIViewController {
 
     var onClose: (() -> Void)?
 
-    init(runtime: any GameplayRuntime, autoResumePolicy: AutoResumePolicy, launchMessage: String? = nil) {
+    init(
+        runtime: any GameplayRuntime,
+        autoResumePolicy: AutoResumePolicy,
+        launchMessage: String? = nil,
+        firstFrameClock: UInt64? = nil
+    ) {
         self.runtime = runtime
+        self.firstFrameClock = firstFrameClock
         self.autoResumePolicy = autoResumePolicy
         self.launchMessage = launchMessage
         super.init(nibName: nil, bundle: nil)
@@ -208,6 +217,7 @@ final class GameplayViewController: UIViewController {
             DispatchQueue.main.async {
                 guard let self, let renderer = self.renderer else { return }
                 renderer.submit(frame, to: self.metalView)
+                self.reportFirstFrame()
             }
         }
         driver.onAudio = { [weak self] samples in
@@ -219,6 +229,16 @@ final class GameplayViewController: UIViewController {
         driver.onError = { [weak self] error in
             DispatchQueue.main.async { self?.presentRuntimeError(error) }
         }
+    }
+
+    /// Quick Play's primary metric (docs/decisions.md): time from choosing the file to the first
+    /// frame handed to Metal. The device checklist records this figure.
+    private func reportFirstFrame() {
+        guard let start = firstFrameClock else { return }
+        firstFrameClock = nil
+        let milliseconds = (DispatchTime.now().uptimeNanoseconds &- start) / 1_000_000
+        Logger(subsystem: "Gameplay", category: "QuickPlay").notice("First frame after \(milliseconds) ms")
+        showTransientMessage("First frame in \(milliseconds) ms")
     }
 
     private func configureInput() {
