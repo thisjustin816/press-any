@@ -5,10 +5,18 @@ import UIKit
 @MainActor
 final class TouchControllerView: UIView {
     var onInputChanged: ((EmulatorInputState) -> Void)?
+    /// Taps on app controls such as Menu or Quick Save. They never reach the Game Boy's input.
+    var onAction: ((TouchAction) -> Void)?
+    /// Called with every new layout, so the game picture can follow the layout's screen frame.
+    var onLayoutChanged: ((TouchControlLayout) -> Void)?
     var hapticsEnabled = true
+    var style: TouchControlStyle = .gameBoy {
+        didSet { setNeedsLayout() }
+    }
+    var layout: TouchControlLayout { resolver.layout }
 
     // Replaced with a layout for the real bounds in layoutSubviews, before any touch arrives.
-    private var resolver = TouchInputResolver(layout: TouchControllerView.layout(for: .zero))
+    private var resolver = TouchInputResolver(layout: .make(.gameBoy, width: 0, height: 0))
     private var touchIDs: [ObjectIdentifier: Int] = [:]
     private var nextTouchID = 1
     private var lastInput = EmulatorInputState()
@@ -29,11 +37,23 @@ final class TouchControllerView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        resolver = TouchInputResolver(layout: Self.layout(for: bounds))
+        resolver = TouchInputResolver(layout: .make(
+            style,
+            width: Double(bounds.width),
+            height: Double(bounds.height),
+            safeTop: Double(safeAreaInsets.top),
+            safeBottom: Double(safeAreaInsets.bottom)
+        ))
         touchIDs.removeAll()
         lastInput = .init()
         onInputChanged?(lastInput)
+        onLayoutChanged?(resolver.layout)
         setNeedsDisplay()
+    }
+
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        setNeedsLayout()
     }
 
     override func draw(_ rect: CGRect) {
@@ -43,17 +63,26 @@ final class TouchControllerView: UIView {
         context.setLineWidth(1.5)
 
         let layout = resolver.layout
-        drawControl(layout.dpad, in: context, label: "+", active: lastInput.up || lastInput.down || lastInput.left || lastInput.right)
+        drawDPad(layout.dpad, in: context, active: lastInput.up || lastInput.down || lastInput.left || lastInput.right)
         drawControl(layout.b, in: context, label: "B", active: lastInput.b)
         drawControl(layout.a, in: context, label: "A", active: lastInput.a)
         drawControl(layout.select, in: context, label: "SELECT", active: lastInput.select)
         drawControl(layout.start, in: context, label: "START", active: lastInput.start)
+        let actionLabels: [TouchAction: String] = [.menu: "MENU", .quickSave: "QUICK SAVE", .quickLoad: "QUICK LOAD"]
+        for (action, rect) in layout.actions {
+            guard let label = actionLabels[action] else { continue }
+            drawControl(rect, in: context, label: label, active: false)
+        }
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            let id = id(for: touch)
-            resolver.touchBegan(id: id, point: point(for: touch))
+            let location = point(for: touch)
+            if let action = resolver.layout.action(at: location) {
+                onAction?(action)
+                continue
+            }
+            resolver.touchBegan(id: id(for: touch), point: location)
         }
         publish()
     }
@@ -121,10 +150,23 @@ final class TouchControllerView: UIView {
             || (!previous.start && next.start) || (!previous.select && next.select)
     }
 
+    /// A cross, like the hardware's.
+    private func drawDPad(_ touchRect: TouchRect, in context: CGContext, active: Bool) {
+        let rect = CGRect(x: touchRect.x, y: touchRect.y, width: touchRect.width, height: touchRect.height)
+        let arm = rect.width / 3
+        let path = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: arm), cornerRadius: arm * 0.2)
+        path.append(UIBezierPath(roundedRect: rect.insetBy(dx: arm, dy: 0), cornerRadius: arm * 0.2))
+        path.usesEvenOddFillRule = false
+        context.setFillColor(UIColor.white.withAlphaComponent(active ? 0.28 : 0.13).cgColor)
+        context.addPath(path.cgPath)
+        context.drawPath(using: .fill)
+    }
+
+    /// Square frames draw as circles, like A and B, and wide ones as pills, like START and SELECT.
     private func drawControl(_ touchRect: TouchRect, in context: CGContext, label: String, active: Bool) {
         let rect = CGRect(x: touchRect.x, y: touchRect.y, width: touchRect.width, height: touchRect.height)
         context.setFillColor(UIColor.white.withAlphaComponent(active ? 0.28 : 0.13).cgColor)
-        let path = UIBezierPath(roundedRect: rect, cornerRadius: min(rect.width, rect.height) * 0.28)
+        let path = UIBezierPath(roundedRect: rect, cornerRadius: min(rect.width, rect.height) / 2)
         context.addPath(path.cgPath)
         context.drawPath(using: .fillStroke)
 
@@ -135,9 +177,5 @@ final class TouchControllerView: UIView {
         let string = NSAttributedString(string: label, attributes: attributes)
         let size = string.size()
         string.draw(at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2))
-    }
-
-    private nonisolated static func layout(for bounds: CGRect) -> TouchControlLayout {
-        .standard(width: Double(bounds.width), height: Double(bounds.height))
     }
 }

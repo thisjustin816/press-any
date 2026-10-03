@@ -4,6 +4,7 @@ import EmulationSession
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameplayInput
 import Importing
 import Patching
 import PersistenceGRDB
@@ -170,6 +171,23 @@ final class AppContainer {
         )
         activeSession = launch.session
         return restore
+    }
+
+    /// The controller layout for a launch. Unset or unreadable means the Game Boy layout.
+    func controllerStyle(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> TouchControlStyle {
+        let style = try? settingsResolver.decode(
+            TouchControlStyle.self,
+            key: SettingKey.controllerLayout.rawValue,
+            system: system,
+            gameID: gameID,
+            buildID: buildID
+        )
+        return style ?? .gameBoy
+    }
+
+    func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .gameBoy }
+        return controllerStyle(system: build.system, gameID: build.gameID, buildID: build.id)
     }
 
     func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {

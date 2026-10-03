@@ -40,7 +40,7 @@ public final class TouchInputResolver {
     private func recompute() {
         var next = EmulatorInputState()
         for point in activeTouches.values {
-            if layout.dpad.contains(point) {
+            if layout.dpadHitArea.contains(point) {
                 applyDPad(point, to: &next)
                 continue
             }

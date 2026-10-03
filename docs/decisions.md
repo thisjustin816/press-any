@@ -3,6 +3,21 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-03: Built-in controller layouts
+
+**Decision.** The on-screen controls come in two built-in layouts, chosen by Settings >
+Controller Layout (`controllerLayout`, Game Boy by default, overridable per System, Game or Build):
+
+- **Game Boy** follows the hardware: the game picture across the top, the D-pad lower left, A
+  above and right of B, and SELECT then START centered below.
+- **Playtiles** uses the control frames of the Playtiles GBC Delta skin, scaled to the screen,
+  with START and SELECT swapped into Game Boy order. It keeps the skin's Menu, Quick Save and
+  Quick Load controls and its tap-the-game Fast Forward toggle. The skin's artwork isn't used;
+  the controls are drawn in code.
+
+Each layout also decides where the game picture goes, so the renderer draws into the layout's
+screen frame.
+
 ## 2026-10-03: Merging into a Game that already holds the same image
 
 **Decision.** A Game holds one Build per image. When a merge brings in a Build whose image the

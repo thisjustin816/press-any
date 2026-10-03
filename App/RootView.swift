@@ -1,5 +1,6 @@
 import EmulationSession
 import EmulatorDomain
+import GameplayInput
 import Foundation
 import QuickPlay
 import SwiftUI
@@ -54,6 +55,7 @@ struct RootView: View {
                 autoResumePolicy: presentation.autoResumePolicy,
                 launchMessage: presentation.launchMessage,
                 firstFrameClock: presentation.firstFrameClock,
+                controlStyle: presentation.controlStyle,
                 onClose: { endGameplay(presentation) }
             )
             .ignoresSafeArea()
@@ -121,7 +123,8 @@ struct RootView: View {
                 runtime: launch.session,
                 autoResumePolicy: launch.policy,
                 launchMessage: message,
-                firstFrameClock: nil
+                firstFrameClock: nil,
+                controlStyle: container.controllerStyle(for: launch.context)
             )
         } catch {
             errorMessage = "Could not start the game: \(error)"
@@ -163,7 +166,8 @@ struct RootView: View {
             launchMessage: runtime.autoStateRejected
                 ? "Couldn’t resume where you left off, so the game started over from its save."
                 : nil,
-            firstFrameClock: firstFrameClock
+            firstFrameClock: firstFrameClock,
+            controlStyle: container.controllerStyle(system: session.system)
         )
     }
 
@@ -203,6 +207,7 @@ private struct GameplayPresentation: Identifiable {
     let launchMessage: String?
     /// `DispatchTime` uptime when the file was chosen, for Quick Play's time-to-first-frame report.
     let firstFrameClock: UInt64?
+    let controlStyle: TouchControlStyle
 }
 
 struct QuickPlayRequest {

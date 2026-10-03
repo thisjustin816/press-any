@@ -1,4 +1,5 @@
 import EmulatorDomain
+import GameplayInput
 import SwiftUI
 
 struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
@@ -6,6 +7,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let autoResumePolicy: AutoResumePolicy
     let launchMessage: String?
     let firstFrameClock: UInt64?
+    let controlStyle: TouchControlStyle
     let onClose: () -> Void
 
     func makeUIViewController(context: Context) -> GameplayViewController {
@@ -13,7 +15,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             runtime: runtime,
             autoResumePolicy: autoResumePolicy,
             launchMessage: launchMessage,
-            firstFrameClock: firstFrameClock
+            firstFrameClock: firstFrameClock,
+            controlStyle: controlStyle
         )
         controller.onClose = onClose
         return controller

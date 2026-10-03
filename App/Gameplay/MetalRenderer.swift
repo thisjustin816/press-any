@@ -9,6 +9,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private var texture: MTLTexture?
     private var textureSize = (width: 0, height: 0)
     private var sourceAspect: Double = 160.0 / 144.0
+    /// Where the controller layout puts the game picture, in the view's points. Nil fills the view.
+    var screenRect: CGRect?
 
     init?(view: MTKView) {
         guard let device = MTLCreateSystemDefaultDevice(),
@@ -69,7 +71,16 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             return
         }
 
-        let viewport = aspectFitViewport(drawableSize: view.drawableSize)
+        let pixelsPerPoint = view.bounds.width > 0 ? view.drawableSize.width / view.bounds.width : 1
+        let target = screenRect.map {
+            CGRect(
+                x: $0.minX * pixelsPerPoint,
+                y: $0.minY * pixelsPerPoint,
+                width: $0.width * pixelsPerPoint,
+                height: $0.height * pixelsPerPoint
+            )
+        } ?? CGRect(origin: .zero, size: view.drawableSize)
+        let viewport = aspectFitViewport(in: target)
         encoder.setViewport(viewport)
         encoder.setRenderPipelineState(pipeline)
         encoder.setFragmentTexture(texture, index: 0)
@@ -93,28 +104,16 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         textureSize = (width, height)
     }
 
-    private func aspectFitViewport(drawableSize: CGSize) -> MTLViewport {
-        let width = max(Double(drawableSize.width), 1)
-        let height = max(Double(drawableSize.height), 1)
-        let destinationAspect = width / height
-
-        if destinationAspect > sourceAspect {
-            let fittedWidth = height * sourceAspect
-            return MTLViewport(
-                originX: (width - fittedWidth) / 2,
-                originY: 0,
-                width: fittedWidth,
-                height: height,
-                znear: 0,
-                zfar: 1
-            )
-        }
-
-        let fittedHeight = width / sourceAspect
+    /// The largest viewport with the game's aspect ratio inside `target`, centered in it.
+    private func aspectFitViewport(in target: CGRect) -> MTLViewport {
+        let width = max(Double(target.width), 1)
+        let height = max(Double(target.height), 1)
+        let fittedWidth = min(width, height * sourceAspect)
+        let fittedHeight = fittedWidth / sourceAspect
         return MTLViewport(
-            originX: 0,
-            originY: (height - fittedHeight) / 2,
-            width: width,
+            originX: Double(target.minX) + (width - fittedWidth) / 2,
+            originY: Double(target.minY) + (height - fittedHeight) / 2,
+            width: fittedWidth,
             height: fittedHeight,
             znear: 0,
             zfar: 1

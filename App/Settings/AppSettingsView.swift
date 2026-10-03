@@ -1,6 +1,7 @@
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameplayInput
 import SwiftUI
 
 /// App-wide settings. Values are stored at the app scope, so a System, Game or Build override
@@ -10,6 +11,7 @@ struct AppSettingsView: View {
 
     @State private var skipBootAnimation: Bool
     @State private var autoResumePolicy: AutoResumePolicy
+    @State private var controllerLayout: TouchControlStyle
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
 
@@ -17,6 +19,7 @@ struct AppSettingsView: View {
         self.store = store
         _skipBootAnimation = State(initialValue: Self.stored(Bool.self, .skipBootAnimation, in: store) ?? false)
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
+        _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
     }
 
     var body: some View {
@@ -26,6 +29,15 @@ struct AppSettingsView: View {
                     Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
                 } footer: {
                     Text("Library games open on the game instead of the boot logo. Quick Play always skips it.")
+                }
+
+                Section {
+                    Picker("Controller Layout", selection: $controllerLayout) {
+                        Text("Game Boy").tag(TouchControlStyle.gameBoy)
+                        Text("Playtiles").tag(TouchControlStyle.playtiles)
+                    }
+                } footer: {
+                    Text("The on-screen buttons. Playtiles adds Menu, Quick Save and Quick Load, and tapping the game toggles Fast Forward.")
                 }
 
                 Section {
@@ -54,6 +66,7 @@ struct AppSettingsView: View {
             }
             .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
             .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
+            .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
         }
     }
 

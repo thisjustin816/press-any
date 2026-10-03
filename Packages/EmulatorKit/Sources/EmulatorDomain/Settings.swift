@@ -44,6 +44,9 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// `AutoResumePolicy`, unset means `.always`. Applies when a library game launches with a
     /// resumable Auto State and when the app returns to the foreground mid-session.
     case autoResumePolicy
+    /// The on-screen controller layout's raw value (GameplayInput's `TouchControlStyle`), unset
+    /// means `gameBoy`.
+    case controllerLayout
 }
 
 public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {
