@@ -185,6 +185,23 @@ final class AppContainer {
         return style ?? .gameBoy
     }
 
+    /// The game picture's scaling for a launch. Unset or unreadable means integer scaling.
+    func screenScaling(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ScreenScaling {
+        let scaling = try? settingsResolver.decode(
+            ScreenScaling.self,
+            key: SettingKey.screenScaling.rawValue,
+            system: system,
+            gameID: gameID,
+            buildID: buildID
+        )
+        return scaling ?? .integer
+    }
+
+    func screenScaling(for context: LaunchContext) -> ScreenScaling {
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .integer }
+        return screenScaling(system: build.system, gameID: build.gameID, buildID: build.id)
+    }
+
     /// App-wide. Unset or unreadable means following the silent switch.
     func soundMode() -> SoundMode {
         guard let json = try? repositories.settings.valueJSON(key: SettingKey.soundMode.rawValue, scope: .app) else {

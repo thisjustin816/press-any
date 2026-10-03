@@ -34,6 +34,13 @@ struct ScopedSettingsView: View {
                     context: context
                 )
                 InheritableSettingRow(
+                    title: "Screen Scaling",
+                    key: .screenScaling,
+                    defaultValue: ScreenScaling.integer,
+                    options: [(.integer, "Integer"), (.fill, "Fill")],
+                    context: context
+                )
+                InheritableSettingRow(
                     title: "Resume Games",
                     key: .autoResumePolicy,
                     defaultValue: AutoResumePolicy.always,

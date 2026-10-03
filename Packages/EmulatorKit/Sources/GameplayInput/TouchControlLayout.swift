@@ -9,6 +9,38 @@ public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
     case playtiles
 }
 
+/// How the game picture is scaled into its frame. Raw values are stored in settings.
+public enum ScreenScaling: String, Codable, Sendable, CaseIterable {
+    /// The largest whole number of device pixels per Game Boy pixel, so every pixel is the same size.
+    case integer
+    /// As large as the frame allows at the Game Boy's shape, with pixel edges smoothed so the
+    /// pixels still look even.
+    case fill
+
+    /// Where a `sourceWidth` by `sourceHeight` picture goes in `frame`, centered. Integer scaling
+    /// snaps it to whole device pixels at `pixelsPerPoint`; a frame too small for one whole
+    /// multiple falls back to fill.
+    public func picture(sourceWidth: Double, sourceHeight: Double, in frame: TouchRect, pixelsPerPoint: Double) -> TouchRect {
+        let pixels = max(pixelsPerPoint, 1)
+        let fit = min(frame.width / sourceWidth, frame.height / sourceHeight)
+        var width = sourceWidth * fit, height = sourceHeight * fit
+        if self == .integer {
+            let multiple = floor(fit * pixels + 1e-9)
+            if multiple >= 1 {
+                width = sourceWidth * multiple / pixels
+                height = sourceHeight * multiple / pixels
+            }
+        }
+        var x = frame.x + (frame.width - width) / 2
+        var y = frame.y + (frame.height - height) / 2
+        if self == .integer {
+            x = (x * pixels).rounded(.down) / pixels
+            y = (y * pixels).rounded(.down) / pixels
+        }
+        return TouchRect(x: x, y: y, width: width, height: height)
+    }
+}
+
 /// The on-screen controller's colors, the same across layouts. Raw values are stored in settings.
 public enum ControllerTheme: String, Codable, Sendable, CaseIterable {
     /// Classic in Light Mode, Dark in Dark Mode.
@@ -121,7 +153,7 @@ extension TouchControlLayout {
     /// The layout for `style` in a portrait view of the given size, in points. `safeTop` keeps
     /// the screen clear of the status bar and `safeBottom` the logo clear of the home indicator;
     /// `displayScale` lets the Game Boy layout size the
-    /// picture to whole device pixels. `pictureOpensMenu` makes a tap on the game
+    /// picture to whole device pixels under `scaling`. `pictureOpensMenu` makes a tap on the game
     /// picture open the menu as well as one on the logo.
     public static func make(
         _ style: TouchControlStyle,
@@ -130,6 +162,7 @@ extension TouchControlLayout {
         safeTop: Double = 0,
         safeBottom: Double = 0,
         displayScale: Double = 3,
+        scaling: ScreenScaling = .integer,
         pictureOpensMenu: Bool = false
     ) -> TouchControlLayout {
         switch style {
@@ -140,6 +173,7 @@ extension TouchControlLayout {
                 safeTop: safeTop,
                 safeBottom: safeBottom,
                 displayScale: displayScale,
+                scaling: scaling,
                 pictureOpensMenu: pictureOpensMenu
             )
         case .playtiles:
@@ -182,27 +216,30 @@ extension TouchControlLayout {
 
     /// The Game Boy layout. The D-pad, buttons and START and SELECT are drawn at the hardware's
     /// size, with its spacing and angles; across the width they keep the Game Boy's proportions,
-    /// pulled in as needed so nothing leaves the screen. The game picture sits at the top at a
-    /// whole number of device pixels per Game Boy pixel, and the controls are centered between
-    /// its bezel and the logo. Touch areas reach past the drawn controls without overlapping.
+    /// pulled in as needed so nothing leaves the screen, and START and SELECT are centered under
+    /// the logo. The game picture sits at the top, as wide as the edge margins allow, or at a whole
+    /// number of device pixels per Game Boy pixel under integer scaling, and the controls are
+    /// centered between its bezel and the logo. Touch areas reach past the drawn controls without overlapping.
     static func gameBoy(
         width: Double,
         height: Double,
         safeTop: Double,
         safeBottom: Double,
         displayScale: Double,
+        scaling: ScreenScaling,
         pictureOpensMenu: Bool
     ) -> TouchControlLayout {
         let mm = pointsPerMillimeter
         let panel = GameBoyPanel.self
         let edgeMargin = 8.0
 
-        // The largest whole multiple of the 160x144 picture that fits with the edge margins, with
-        // the bezel taking up to 12 points of what's left on each side.
-        let scale = max(displayScale, 1)
-        let multiple = max(floor((width - 2 * edgeMargin) * scale / 160), 1)
-        let pictureWidth = multiple * 160 / scale
-        let pictureHeight = pictureWidth * 144 / 160
+        // The picture fits inside the edge margins, and the bezel takes up to 12 points of what's
+        // left on each side.
+        // Only the width limits it: the height given is more than the picture can use.
+        let available = TouchRect(x: edgeMargin, y: 0, width: max(width - 2 * edgeMargin, 1), height: width)
+        let fitted = scaling.picture(sourceWidth: 160, sourceHeight: 144, in: available, pixelsPerPoint: displayScale)
+        let pictureWidth = fitted.width
+        let pictureHeight = fitted.height
         let bezelPadding = min(12, (width - pictureWidth) / 2)
         let screen = TouchRect(
             x: (width - pictureWidth) / 2,
@@ -232,7 +269,8 @@ extension TouchControlLayout {
             let shrink = max((aX - bLimit) / aToB.x, (buttonSize + 6) / (aToB.x * aToB.x + aToB.y * aToB.y).squareRoot())
             aToB = (aToB.x * shrink, aToB.y * shrink)
         }
-        let pillsX = width * (panel.select.x + panel.start.x) / 2 / panel.width
+        // The hardware puts START and SELECT a little left of center; here they center under the logo.
+        let pillsX = width / 2
         let pillSpacing = (panel.start.x - panel.select.x) * mm
 
         // Down, relative to the D-pad's center: A and B a little higher and lower, START and

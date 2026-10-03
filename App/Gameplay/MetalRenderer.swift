@@ -1,37 +1,45 @@
 import EmulationCore
+import GameplayInput
 import MetalKit
 
 @MainActor
 final class MetalRenderer: NSObject, MTKViewDelegate {
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
-    private let pipeline: MTLRenderPipelineState
+    /// Nearest sampling, for integer scaling.
+    private let nearestPipeline: MTLRenderPipelineState
+    /// Edge-smoothed sampling, for fill.
+    private let sharpPipeline: MTLRenderPipelineState
     private var texture: MTLTexture?
     private var textureSize = (width: 0, height: 0)
-    private var sourceAspect: Double = 160.0 / 144.0
+    private var sourceSize = (width: 160.0, height: 144.0)
     /// Where the controller layout puts the game picture, in the view's points. Nil fills the view.
     var screenRect: CGRect?
+    var scaling: ScreenScaling = .integer
 
     init?(view: MTKView) {
         guard let device = MTLCreateSystemDefaultDevice(),
               let queue = device.makeCommandQueue(),
               let library = device.makeDefaultLibrary(),
-              let vertex = library.makeFunction(name: "gameplayFullscreenVertex"),
-              let fragment = library.makeFunction(name: "gameplayTextureFragment") else {
+              let vertex = library.makeFunction(name: "gameplayFullscreenVertex") else {
             return nil
         }
-
-        let descriptor = MTLRenderPipelineDescriptor()
-        descriptor.vertexFunction = vertex
-        descriptor.fragmentFunction = fragment
-        descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-        guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else {
+        func pipeline(_ fragmentName: String) -> MTLRenderPipelineState? {
+            guard let fragment = library.makeFunction(name: fragmentName) else { return nil }
+            let descriptor = MTLRenderPipelineDescriptor()
+            descriptor.vertexFunction = vertex
+            descriptor.fragmentFunction = fragment
+            descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+            return try? device.makeRenderPipelineState(descriptor: descriptor)
+        }
+        guard let nearest = pipeline("gameplayTextureFragment"), let sharp = pipeline("gameplaySharpFragment") else {
             return nil
         }
 
         self.device = device
         self.commandQueue = queue
-        self.pipeline = pipeline
+        self.nearestPipeline = nearest
+        self.sharpPipeline = sharp
         super.init()
 
         view.device = device
@@ -46,7 +54,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     func submit(_ frame: EmulatorVideoFrame, to view: MTKView) {
         ensureTexture(width: frame.width, height: frame.height)
         guard let texture else { return }
-        sourceAspect = Double(frame.width) / Double(max(frame.height, 1))
+        sourceSize = (Double(frame.width), Double(max(frame.height, 1)))
 
         frame.bgra8888.withUnsafeBytes { bytes in
             guard let base = bytes.baseAddress else { return }
@@ -80,9 +88,22 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
                 height: $0.height * pixelsPerPoint
             )
         } ?? CGRect(origin: .zero, size: view.drawableSize)
-        let viewport = aspectFitViewport(in: target)
-        encoder.setViewport(viewport)
-        encoder.setRenderPipelineState(pipeline)
+        // The target is already in device pixels.
+        let picture = scaling.picture(
+            sourceWidth: sourceSize.width,
+            sourceHeight: sourceSize.height,
+            in: TouchRect(x: target.minX, y: target.minY, width: target.width, height: target.height),
+            pixelsPerPoint: 1
+        )
+        encoder.setViewport(MTLViewport(
+            originX: picture.x,
+            originY: picture.y,
+            width: picture.width,
+            height: picture.height,
+            znear: 0,
+            zfar: 1
+        ))
+        encoder.setRenderPipelineState(scaling == .integer ? nearestPipeline : sharpPipeline)
         encoder.setFragmentTexture(texture, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
@@ -102,21 +123,5 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         descriptor.usage = [.shaderRead]
         texture = device.makeTexture(descriptor: descriptor)
         textureSize = (width, height)
-    }
-
-    /// The largest viewport with the game's aspect ratio inside `target`, centered in it.
-    private func aspectFitViewport(in target: CGRect) -> MTLViewport {
-        let width = max(Double(target.width), 1)
-        let height = max(Double(target.height), 1)
-        let fittedWidth = min(width, height * sourceAspect)
-        let fittedHeight = fittedWidth / sourceAspect
-        return MTLViewport(
-            originX: Double(target.minX) + (width - fittedWidth) / 2,
-            originY: Double(target.minY) + (height - fittedHeight) / 2,
-            width: fittedWidth,
-            height: fittedHeight,
-            znear: 0,
-            zfar: 1
-        )
     }
 }

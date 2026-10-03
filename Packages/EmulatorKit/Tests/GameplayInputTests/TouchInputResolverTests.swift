@@ -108,6 +108,7 @@ final class TouchInputResolverTests: XCTestCase {
         // Stored in settings, so renaming a case must not change them.
         XCTAssertEqual(TouchControlStyle.allCases.map(\.rawValue), ["gameBoy", "playtiles"])
         XCTAssertEqual(ControllerTheme.allCases.map(\.rawValue), ["matchSystem", "classic", "dark"])
+        XCTAssertEqual(ScreenScaling.allCases.map(\.rawValue), ["integer", "fill"])
     }
 
     func testGameBoyLayoutFollowsTheHardware() {
@@ -128,12 +129,37 @@ final class TouchInputResolverTests: XCTestCase {
             XCTAssertEqual(hypot(a.x - b.x, a.y - b.y), 16.8 * mm, accuracy: 1, "A and B keep the Game Boy's spacing, \(size)")
             XCTAssertLessThan(a.y, layout.dpad.center.y, "A sits higher than the D-pad's center, \(size)")
             XCTAssertEqual(layout.select.center.y, layout.start.center.y, "SELECT and START sit side by side, \(size)")
-            XCTAssertLessThan((layout.select.center.x + layout.start.center.x) / 2, width / 2, "and left of center, \(size)")
+            XCTAssertEqual((layout.select.center.x + layout.start.center.x) / 2, layout.logo!.center.x, accuracy: 0.001, "centered under the logo, \(size)")
 
             let bezel = layout.bezel!, logo = layout.logo!
             let above = layout.dpad.y - (bezel.y + bezel.height)
             let below = logo.y - (layout.select.center.y + 26)
             XCTAssertEqual(above, below, accuracy: 1, "the controls are centered between the bezel and the logo, \(size)")
+        }
+    }
+
+    func testIntegerScalingUsesWholeDevicePixelsAndFillUsesTheFrame() {
+        // The Playtiles frame on a 393-point, 3x phone: 385 x 346.4 points.
+        let frame = TouchRect(x: 4, y: 60.77, width: 385, height: 346.38)
+        let integer = ScreenScaling.integer.picture(sourceWidth: 160, sourceHeight: 144, in: frame, pixelsPerPoint: 3)
+        XCTAssertEqual(integer.width * 3, 1120, accuracy: 0.001, "7 device pixels per Game Boy pixel")
+        XCTAssertEqual(integer.height * 3, 1008, accuracy: 0.001)
+        XCTAssertEqual(integer.x * 3, (integer.x * 3).rounded(), accuracy: 0.001, "starts on a device pixel")
+        XCTAssertEqual(integer.y * 3, (integer.y * 3).rounded(), accuracy: 0.001)
+        XCTAssertEqual(integer.center.x, frame.center.x, accuracy: 0.34, "centered")
+
+        let fill = ScreenScaling.fill.picture(sourceWidth: 160, sourceHeight: 144, in: frame, pixelsPerPoint: 3)
+        XCTAssertEqual(fill.height, frame.height, accuracy: 0.01, "as tall as the frame, which limits it")
+        XCTAssertEqual(fill.width, frame.height / 0.9, accuracy: 0.01, "at the Game Boy's shape")
+
+        let tiny = ScreenScaling.integer.picture(sourceWidth: 160, sourceHeight: 144, in: TouchRect(x: 0, y: 0, width: 100, height: 90), pixelsPerPoint: 1)
+        XCTAssertEqual(tiny.width, 100, accuracy: 0.001, "too small for a whole multiple, so it fills")
+
+        for (width, displayScale) in [(393.0, 3.0), (440, 3)] {
+            let integerLayout = TouchControlLayout.make(.gameBoy, width: width, height: 900, safeTop: 59, displayScale: displayScale)
+            let fillLayout = TouchControlLayout.make(.gameBoy, width: width, height: 900, safeTop: 59, displayScale: displayScale, scaling: .fill)
+            XCTAssertEqual(fillLayout.screen.width, width - 16, accuracy: 0.001, "Fill uses the width, \(width)")
+            XCTAssertLessThanOrEqual(integerLayout.screen.width, fillLayout.screen.width)
         }
     }
 

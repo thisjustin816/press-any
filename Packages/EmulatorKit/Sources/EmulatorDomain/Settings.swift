@@ -50,6 +50,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// The controller theme's raw value (GameplayInput's `ControllerTheme`), unset means
     /// `matchSystem`.
     case controllerTheme
+    /// The game picture's scaling (GameplayInput's `ScreenScaling`), unset means `integer`.
+    case screenScaling
     /// `SoundMode`, unset means `.followSilentSwitch`.
     case soundMode
     /// Bool, unset means false. When true, tapping the game picture opens the game menu, as tapping

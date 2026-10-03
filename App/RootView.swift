@@ -56,6 +56,7 @@ struct RootView: View {
                 launchMessage: presentation.launchMessage,
                 firstFrameClock: presentation.firstFrameClock,
                 controlStyle: presentation.controlStyle,
+                screenScaling: presentation.screenScaling,
                 controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
                 tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
@@ -129,7 +130,8 @@ struct RootView: View {
                 autoResumePolicy: launch.policy,
                 launchMessage: message,
                 firstFrameClock: nil,
-                controlStyle: container.controllerStyle(for: launch.context)
+                controlStyle: container.controllerStyle(for: launch.context),
+                screenScaling: container.screenScaling(for: launch.context)
             )
         } catch {
             errorMessage = "Could not start the game: \(error)"
@@ -172,7 +174,8 @@ struct RootView: View {
                 ? "Couldn’t resume where you left off, so the game started over from its save."
                 : nil,
             firstFrameClock: firstFrameClock,
-            controlStyle: container.controllerStyle(system: session.system)
+            controlStyle: container.controllerStyle(system: session.system),
+            screenScaling: container.screenScaling(system: session.system)
         )
     }
 
@@ -213,6 +216,7 @@ private struct GameplayPresentation: Identifiable {
     /// `DispatchTime` uptime when the file was chosen, for Quick Play's time-to-first-frame report.
     let firstFrameClock: UInt64?
     let controlStyle: TouchControlStyle
+    let screenScaling: ScreenScaling
 }
 
 struct QuickPlayRequest {

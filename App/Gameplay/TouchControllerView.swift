@@ -17,6 +17,9 @@ final class TouchControllerView: UIView {
     var pictureOpensMenu = false {
         didSet { setNeedsLayout() }
     }
+    var scaling: ScreenScaling = .integer {
+        didSet { setNeedsLayout() }
+    }
     var theme: ControllerTheme = .matchSystem {
         didSet { setNeedsDisplay() }
     }
@@ -72,6 +75,7 @@ final class TouchControllerView: UIView {
             safeTop: Double(safeAreaInsets.top),
             safeBottom: Double(safeAreaInsets.bottom),
             displayScale: Double(traitCollection.displayScale),
+            scaling: scaling,
             pictureOpensMenu: pictureOpensMenu
         ))
         touchIDs.removeAll()

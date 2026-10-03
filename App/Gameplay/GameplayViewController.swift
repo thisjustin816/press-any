@@ -23,6 +23,7 @@ final class GameplayViewController: UIViewController {
     private var firstFrameClock: UInt64?
     private var userPaused = false
     private let controlStyle: TouchControlStyle
+    private let screenScaling: ScreenScaling
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
     private let soundMode: SoundMode
@@ -43,12 +44,14 @@ final class GameplayViewController: UIViewController {
         launchMessage: String? = nil,
         firstFrameClock: UInt64? = nil,
         controlStyle: TouchControlStyle = .gameBoy,
+        screenScaling: ScreenScaling = .integer,
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch
     ) {
         self.runtime = runtime
         self.controlStyle = controlStyle
+        self.screenScaling = screenScaling
         self.controllerTheme = controllerTheme
         self.tapGameForMenu = tapGameForMenu
         self.soundMode = soundMode
@@ -72,6 +75,7 @@ final class GameplayViewController: UIViewController {
         observeLifecycle()
 
         renderer = MetalRenderer(view: metalView)
+        renderer?.scaling = screenScaling
         applyLayout(touchControls.layout)
         // Audio can be unavailable, during a call for example. The game still runs, silently,
         // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
@@ -271,6 +275,7 @@ final class GameplayViewController: UIViewController {
 
     private func configureInput() {
         touchControls.style = controlStyle
+        touchControls.scaling = screenScaling
         touchControls.theme = controllerTheme
         touchControls.pictureOpensMenu = tapGameForMenu
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }

@@ -8,6 +8,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let launchMessage: String?
     let firstFrameClock: UInt64?
     let controlStyle: TouchControlStyle
+    let screenScaling: ScreenScaling
     let controllerTheme: ControllerTheme
     let tapGameForMenu: Bool
     let soundMode: SoundMode
@@ -20,6 +21,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             launchMessage: launchMessage,
             firstFrameClock: firstFrameClock,
             controlStyle: controlStyle,
+            screenScaling: screenScaling,
             controllerTheme: controllerTheme,
             tapGameForMenu: tapGameForMenu,
             soundMode: soundMode

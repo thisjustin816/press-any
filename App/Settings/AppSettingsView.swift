@@ -13,6 +13,7 @@ struct AppSettingsView: View {
     @State private var autoResumePolicy: AutoResumePolicy
     @State private var controllerLayout: TouchControlStyle
     @State private var controllerTheme: ControllerTheme
+    @State private var screenScaling: ScreenScaling
     @State private var tapGameForMenu: Bool
     @State private var soundMode: SoundMode
     @State private var errorMessage: String?
@@ -24,6 +25,7 @@ struct AppSettingsView: View {
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
         _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
         _controllerTheme = State(initialValue: Self.stored(ControllerTheme.self, .controllerTheme, in: store) ?? .matchSystem)
+        _screenScaling = State(initialValue: Self.stored(ScreenScaling.self, .screenScaling, in: store) ?? .integer)
         _tapGameForMenu = State(initialValue: Self.stored(Bool.self, .tapGameForMenu, in: store) ?? false)
         _soundMode = State(initialValue: Self.stored(SoundMode.self, .soundMode, in: store) ?? .followSilentSwitch)
     }
@@ -44,6 +46,15 @@ struct AppSettingsView: View {
                     }
                 } footer: {
                     Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits the Playtiles controller.")
+                }
+
+                Section {
+                    Picker("Screen Scaling", selection: $screenScaling) {
+                        Text("Integer").tag(ScreenScaling.integer)
+                        Text("Fill").tag(ScreenScaling.fill)
+                    }
+                } footer: {
+                    Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
                 }
 
                 Section {
@@ -104,6 +115,7 @@ struct AppSettingsView: View {
             .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
             .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
             .onChange(of: controllerTheme) { _, newValue in save(newValue, .controllerTheme) }
+            .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
             .onChange(of: tapGameForMenu) { _, newValue in save(newValue, .tapGameForMenu) }
             .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
         }

@@ -22,6 +22,23 @@ wordmark (`docs/NAMING.md`) at the bottom of the body, charcoal on Classic and g
 with its A in the A button's magenta. Playtiles keeps its unlabeled buttons and labeled pills.
 With a game controller connected the controls hide and the body stays.
 
+## 2026-10-03: Screen scaling
+
+**Decision.** Settings > Screen Scaling (`screenScaling`, Integer by default, overridable per
+System, Game or Build) chooses how the game picture fills the layout's screen frame:
+
+- **Integer** draws each Game Boy pixel as the same whole number of device pixels, the largest
+  that fits, centered on device pixels, with nearest sampling. A frame too small for one whole
+  multiple falls back to Fill.
+- **Fill** draws the picture as large as the frame allows at the Game Boy's 10:9 shape. At a
+  scale that isn't whole, nearest sampling would make some pixels a device pixel wider than
+  others, so each Game Boy pixel is sampled flat and blended only across its edges, over about
+  one device pixel.
+
+On the Game Boy layout the frame itself follows the setting: a whole multiple under Integer, or
+the full width inside the edge margins under Fill. SameBoy's core only produces the 160x144
+frame; scaling is Press Any's.
+
 ## 2026-10-03: Sound follows the silent switch by default
 
 **Decision.** Settings > Sound (`soundMode`, app-wide) is Follow Silent Switch by default, so a
@@ -36,11 +53,11 @@ Controller Layout (`controllerLayout`, Game Boy by default, overridable per Syst
 - **Game Boy** follows the original Game Boy's front panel, measured from a photograph of a
   DMG-01 and scaled to its specified 90 mm width: the D-pad (22.9 mm) and A and B (10.8 mm) are
   drawn at the hardware's size, about 6.1 points per millimeter, with A and B 16.8 mm apart on a
-  24.6 degree slope and SELECT and START side by side left of center, tilted 18 degrees. Across
-  the width the controls keep the Game Boy's proportions, pulled in so nothing leaves the screen,
-  and A and B close up only if B would crowd the D-pad. The game picture sits at the top at a
-  whole number of device pixels per Game Boy pixel, and the controls are centered between its
-  bezel and the logo. Touch areas reach 10 to 12 points past the drawn controls without
+  24.6 degree slope and SELECT and START side by side, tilted 18 degrees. The hardware puts SELECT
+  and START a little left of center; here they center under the logo. Across the width the
+  controls keep the Game Boy's proportions, pulled in so nothing leaves the screen, and A and B
+  close up only if B would crowd the D-pad. The game picture sits at the top, sized by Screen
+  Scaling, and the controls are centered between its bezel and the logo. Touch areas reach 10 to 12 points past the drawn controls without
   overlapping. SameBoy's iOS layout isn't used: its `iOS/` directory needs the author's written
   permission to ship on the App Store.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with

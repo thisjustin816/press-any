@@ -21,6 +21,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(SettingKey.soundMode.rawValue, "soundMode")
         XCTAssertEqual(SettingKey.controllerTheme.rawValue, "controllerTheme")
         XCTAssertEqual(SettingKey.tapGameForMenu.rawValue, "tapGameForMenu")
+        XCTAssertEqual(SettingKey.screenScaling.rawValue, "screenScaling")
     }
 
     func testSettingValuesAreStable() {
