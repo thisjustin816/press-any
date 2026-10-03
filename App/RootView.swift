@@ -57,6 +57,7 @@ struct RootView: View {
                 firstFrameClock: presentation.firstFrameClock,
                 controlStyle: presentation.controlStyle,
                 controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
+                tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
                 onClose: { endGameplay(presentation) }
             )

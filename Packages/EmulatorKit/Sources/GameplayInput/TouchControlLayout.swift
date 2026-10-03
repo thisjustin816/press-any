@@ -19,12 +19,6 @@ public enum ControllerTheme: String, Codable, Sendable, CaseIterable {
     case dark
 }
 
-/// Controls that drive the app rather than the emulated Game Boy.
-public enum TouchAction: Hashable, Sendable {
-    case menu
-    case toggleFastForward
-}
-
 /// A drawn control, for looking up its artwork.
 public enum TouchControl: Hashable, Sendable {
     case dpad
@@ -32,7 +26,6 @@ public enum TouchControl: Hashable, Sendable {
     case b
     case start
     case select
-    case action(TouchAction)
 }
 
 /// Marks where a physical controller overlay sits on the screen. Drawn only; it takes no touches.
@@ -59,7 +52,9 @@ public struct TouchControlLayout: Equatable, Sendable {
     public let select: TouchRect
     /// Where the game picture goes. The picture is aspect-fit inside it.
     public let screen: TouchRect
-    public let actions: [TouchAction: TouchRect]
+    /// Where a tap opens the app's menu: the logo, and the game picture when that's turned on, as
+    /// SameBoy opens its menu from its logo and picture.
+    public let menuAreas: [TouchRect]
     /// Where a control is drawn, when that differs from where it responds to touches.
     public let artwork: [TouchControl: TouchRect]
     public let alignmentGuide: TouchAlignmentGuide?
@@ -75,7 +70,7 @@ public struct TouchControlLayout: Equatable, Sendable {
         start: TouchRect,
         select: TouchRect,
         screen: TouchRect = .init(x: 0, y: 0, width: 0, height: 0),
-        actions: [TouchAction: TouchRect] = [:],
+        menuAreas: [TouchRect] = [],
         artwork: [TouchControl: TouchRect] = [:],
         alignmentGuide: TouchAlignmentGuide? = nil,
         logo: TouchRect? = nil,
@@ -88,17 +83,17 @@ public struct TouchControlLayout: Equatable, Sendable {
         self.start = start
         self.select = select
         self.screen = screen
-        self.actions = actions
+        self.menuAreas = menuAreas
         self.artwork = artwork
         self.alignmentGuide = alignmentGuide
         self.logo = logo
         self.dpadDeadZoneFraction = min(max(dpadDeadZoneFraction, 0), 0.49)
     }
 
-    /// The app action under `point`, if any. Game Boy controls take precedence.
-    public func action(at point: TouchPoint) -> TouchAction? {
-        guard ![dpadHitArea, a, b, start, select].contains(where: { $0.contains(point) }) else { return nil }
-        return actions.first { $0.value.contains(point) }?.key
+    /// Whether a tap at `point` opens the menu. Game Boy controls take precedence.
+    public func opensMenu(at point: TouchPoint) -> Bool {
+        guard ![dpadHitArea, a, b, start, select].contains(where: { $0.contains(point) }) else { return false }
+        return menuAreas.contains { $0.contains(point) }
     }
 
     /// Where `control` is drawn.
@@ -110,7 +105,6 @@ public struct TouchControlLayout: Equatable, Sendable {
         case .b: return b
         case .start: return start
         case .select: return select
-        case .action(let action): return actions[action]
         }
     }
 }
@@ -119,21 +113,37 @@ extension TouchControlLayout {
     /// The layout for `style` in a portrait view of the given size, in points. `safeTop` keeps
     /// the screen clear of the status bar and `safeBottom` the logo clear of the home indicator;
     /// `displayScale` lets the Game Boy layout size the
-    /// picture to whole device pixels, as SameBoy does.
+    /// picture to whole device pixels, as SameBoy does. `pictureOpensMenu` makes a tap on the game
+    /// picture open the menu as well as one on the logo.
     public static func make(
         _ style: TouchControlStyle,
         width: Double,
         height: Double,
         safeTop: Double = 0,
         safeBottom: Double = 0,
-        displayScale: Double = 3
+        displayScale: Double = 3,
+        pictureOpensMenu: Bool = false
     ) -> TouchControlLayout {
         switch style {
         case .gameBoy:
-            gameBoy(width: width, height: height, safeTop: safeTop, safeBottom: safeBottom, displayScale: displayScale)
+            gameBoy(
+                width: width,
+                height: height,
+                safeTop: safeTop,
+                safeBottom: safeBottom,
+                displayScale: displayScale,
+                pictureOpensMenu: pictureOpensMenu
+            )
         case .playtiles:
-            playtiles(width: width, height: height, safeBottom: safeBottom)
+            playtiles(width: width, height: height, safeBottom: safeBottom, pictureOpensMenu: pictureOpensMenu)
         }
+    }
+
+    /// The logo's tap area, 44 points tall and grown upward, away from the home indicator, and the
+    /// picture when it opens the menu too.
+    static func menuAreas(logo: TouchRect, screen: TouchRect, pictureOpensMenu: Bool) -> [TouchRect] {
+        let logoArea = TouchRect(x: logo.x - 10, y: logo.y - 16, width: logo.width + 20, height: logo.height + 20)
+        return pictureOpensMenu ? [logoArea, screen] : [logoArea]
     }
 
     /// The logo's box, centered just above the home indicator, or the bottom edge without one.
@@ -149,7 +159,8 @@ extension TouchControlLayout {
         height: Double,
         safeTop: Double,
         safeBottom: Double,
-        displayScale: Double
+        displayScale: Double,
+        pictureOpensMenu: Bool
     ) -> TouchControlLayout {
         let scale = max(displayScale, 1)
         let screenWidth = max(floor(width * scale / 160), 1) * 160 / scale
@@ -191,10 +202,6 @@ extension TouchControlLayout {
         func square(_ center: TouchPoint, radius: Double) -> TouchRect {
             TouchRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
         }
-        // SameBoy opens its menu from its logo. Here Menu is a small round button between
-        // SELECT and START, unlike them so it isn't taken for a third Game Boy button.
-        let menu = TouchPoint(x: width / 2, y: select.y)
-
         return TouchControlLayout(
             dpad: square(dpad, radius: 75),
             a: square(a, radius: buttonRadius),
@@ -202,13 +209,12 @@ extension TouchControlLayout {
             start: square(start, radius: buttonRadius),
             select: square(select, radius: buttonRadius),
             screen: screen,
-            actions: [.menu: square(menu, radius: 22)],
+            menuAreas: menuAreas(logo: logo, screen: screen, pictureOpensMenu: pictureOpensMenu),
             artwork: [
                 // SameBoy's images: a 147x151 cross and 75x79 buttons.
                 .dpad: square(dpad, radius: 74),
                 .a: square(a, radius: 37),
                 .b: square(b, radius: 37),
-                .action(.menu): square(menu, radius: 8),
             ],
             logo: logo
         )
@@ -217,7 +223,7 @@ extension TouchControlLayout {
     /// The Playtiles GBC Delta skin (`info.json`, iPhone edge-to-edge portrait) in its 1080x2340
     /// mapping space, scaled to fit the view and centered across it. Touch areas are the skin's
     /// frames joined with its artwork; drawing follows the artwork, measured from the skin's PDF.
-    static func playtiles(width: Double, height: Double, safeBottom: Double) -> TouchControlLayout {
+    static func playtiles(width: Double, height: Double, safeBottom: Double, pictureOpensMenu: Bool) -> TouchControlLayout {
         let scale = min(width / 1080, height / 2340)
         let originX = (width - 1080 * scale) / 2
         func frame(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> TouchRect {
@@ -237,7 +243,8 @@ extension TouchControlLayout {
         // Game Boy order, frames and artwork together.
         let selectArt = frame(691, 1924, 134, 53)
         let startArt = frame(847, 1924, 135, 53)
-        let menuArt = frame(81, 1924, 134, 53)
+        let screen = frame(11, 167, 1058, 951.8717683557)
+        let logo = logo(width: width, height: height, safeBottom: safeBottom)
 
         return TouchControlLayout(
             dpad: frame(70, 1283, 376, 376),
@@ -247,18 +254,16 @@ extension TouchControlLayout {
             b: union(frame(662, 1269, 184, 184), bArt),
             start: union(frame(863, 1900, 108, 108), startArt),
             select: union(frame(702, 1901, 108, 108), selectArt),
-            screen: frame(11, 167, 1058, 951.8717683557),
-            actions: [
-                .menu: union(frame(94, 1899, 108, 108), menuArt),
-                .toggleFastForward: frame(108, 263, 867, 780),
-            ],
+            screen: screen,
+            // The skin's Menu button and tap-the-game Fast Forward are left out: the logo opens
+            // the menu, as on the Game Boy layout.
+            menuAreas: menuAreas(logo: logo, screen: screen, pictureOpensMenu: pictureOpensMenu),
             artwork: [
                 .dpad: dpadArt,
                 .a: aArt,
                 .b: bArt,
                 .start: startArt,
                 .select: selectArt,
-                .action(.menu): menuArt,
             ],
             // The Playtiles controller lines up against the skin's teal bar and the U-shaped tab
             // hanging from its center, measured from the skin's PDF.
@@ -266,7 +271,7 @@ extension TouchControlLayout {
                 bar: frame(0, 1129, 1080, 83),
                 tab: frame(494, 1129, 92, 182)
             ),
-            logo: logo(width: width, height: height, safeBottom: safeBottom)
+            logo: logo
         )
     }
 }

@@ -78,9 +78,12 @@ final class TouchInputResolverTests: XCTestCase {
                 let controls = [
                     ("D-pad", layout.dpadHitArea), ("A", layout.a), ("B", layout.b),
                     ("Start", layout.start), ("Select", layout.select),
-                ] + layout.actions.filter { $0.key != .toggleFastForward }.map { ("\($0.key)", $0.value) }
+                ]
                 let pictureBottom = layout.screen.y + layout.screen.height
                 let logo = try XCTUnwrap(layout.logo)
+                let logoArea = try XCTUnwrap(layout.menuAreas.first)
+                XCTAssertLessThanOrEqual(logoArea.height, 44.0 + 0.001)
+                XCTAssertGreaterThanOrEqual(logoArea.height, 44.0 - 0.001, "the logo's tap area is 44 points tall, \(size)")
                 XCTAssertLessThanOrEqual(logo.y + logo.height, height - max(bottom, 12), "the logo clears the home indicator, \(size)")
 
                 XCTAssertGreaterThanOrEqual(layout.screen.y, top, "the picture clears the status bar, \(size)")
@@ -92,6 +95,7 @@ final class TouchInputResolverTests: XCTestCase {
                     if style == .gameBoy {
                         XCTAssertLessThanOrEqual(rect.y + rect.height, logo.y, "\(name) runs into the logo, \(size)")
                     }
+                    XCTAssertFalse(overlaps(rect, logoArea), "\(name) overlaps the logo's tap area, \(size)")
                     for (otherName, other) in controls[(index + 1)...] {
                         XCTAssertFalse(overlaps(rect, other), "\(name) overlaps \(otherName), \(size)")
                     }
@@ -132,19 +136,33 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertLessThan(layout.select.x, layout.start.x, "SELECT is on the left")
         XCTAssertEqual(layout.drawnRect(.select), TouchRect(x: 691, y: 1924, width: 134, height: 53))
         XCTAssertEqual(layout.dpadHitArea, TouchRect(x: 44, y: 1223, width: 462, height: 496))
-        XCTAssertEqual(Set(layout.actions.keys), [.menu, .toggleFastForward], "no Quick Save or Quick Load")
         let guide = try! XCTUnwrap(layout.alignmentGuide)
         XCTAssertEqual(guide.tab.center.x, 540, accuracy: 0.5, "the U is centered under the screen")
         XCTAssertGreaterThanOrEqual(guide.bar.y, layout.screen.y + layout.screen.height, "the guide is below the picture")
         XCTAssertNil(TouchControlLayout.make(.gameBoy, width: 393, height: 852).alignmentGuide)
 
-        XCTAssertEqual(layout.action(at: TouchPoint(x: 540, y: 650)), .toggleFastForward)
-        XCTAssertEqual(layout.action(at: TouchPoint(x: 148, y: 1950)), .menu)
-        XCTAssertNil(layout.action(at: TouchPoint(x: 892, y: 1561)), "A is a Game Boy control")
+        XCTAssertFalse(layout.opensMenu(at: TouchPoint(x: 148, y: 1950)), "the skin's Menu button is left out")
+        XCTAssertFalse(layout.opensMenu(at: TouchPoint(x: 892, y: 1561)), "A is a Game Boy control")
 
         let resolver = TouchInputResolver(layout: layout)
         resolver.touchBegan(id: 1, point: TouchPoint(x: 60, y: 1471))
         XCTAssertTrue(resolver.input.left, "the extended edge still reads as the D-pad")
+    }
+
+    func testTheLogoOpensTheMenuAndThePictureOnlyWhenTurnedOn() throws {
+        for style in TouchControlStyle.allCases {
+            func layout(pictureOpensMenu: Bool) -> TouchControlLayout {
+                .make(style, width: 393, height: 852, safeTop: 59, safeBottom: 34, displayScale: 3, pictureOpensMenu: pictureOpensMenu)
+            }
+            let standard = layout(pictureOpensMenu: false)
+            let logo = try XCTUnwrap(standard.logo)
+            XCTAssertTrue(standard.opensMenu(at: logo.center), "the logo, \(style)")
+            XCTAssertTrue(standard.opensMenu(at: TouchPoint(x: logo.center.x, y: logo.y - 14)), "just above the logo, \(style)")
+            XCTAssertFalse(standard.opensMenu(at: standard.screen.center), "the picture by default, \(style)")
+            XCTAssertFalse(standard.opensMenu(at: standard.start.center), "START, \(style)")
+            XCTAssertFalse(standard.opensMenu(at: TouchPoint(x: 196.5, y: standard.select.center.y)), "between SELECT and START, \(style)")
+            XCTAssertTrue(layout(pictureOpensMenu: true).opensMenu(at: standard.screen.center), "the picture when on, \(style)")
+        }
     }
 }
 

@@ -201,6 +201,14 @@ final class AppContainer {
         return (try? JSONDecoder().decode(ControllerTheme.self, from: Data(json.utf8))) ?? .matchSystem
     }
 
+    /// App-wide. Unset or unreadable means off: only the logo opens the menu.
+    func tapGameForMenu() -> Bool {
+        guard let json = try? repositories.settings.valueJSON(key: SettingKey.tapGameForMenu.rawValue, scope: .app) else {
+            return false
+        }
+        return (try? JSONDecoder().decode(Bool.self, from: Data(json.utf8))) ?? false
+    }
+
     func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
         guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .gameBoy }
         return controllerStyle(system: build.system, gameID: build.gameID, buildID: build.id)

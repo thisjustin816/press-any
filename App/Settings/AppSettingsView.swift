@@ -13,6 +13,7 @@ struct AppSettingsView: View {
     @State private var autoResumePolicy: AutoResumePolicy
     @State private var controllerLayout: TouchControlStyle
     @State private var controllerTheme: ControllerTheme
+    @State private var tapGameForMenu: Bool
     @State private var soundMode: SoundMode
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
@@ -23,6 +24,7 @@ struct AppSettingsView: View {
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
         _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
         _controllerTheme = State(initialValue: Self.stored(ControllerTheme.self, .controllerTheme, in: store) ?? .matchSystem)
+        _tapGameForMenu = State(initialValue: Self.stored(Bool.self, .tapGameForMenu, in: store) ?? false)
         _soundMode = State(initialValue: Self.stored(SoundMode.self, .soundMode, in: store) ?? .followSilentSwitch)
     }
 
@@ -41,7 +43,13 @@ struct AppSettingsView: View {
                         Text("Playtiles").tag(TouchControlStyle.playtiles)
                     }
                 } footer: {
-                    Text("Game Boy follows SameBoy’s layout. In Playtiles, tapping the game toggles Fast Forward.")
+                    Text("Game Boy follows SameBoy’s layout, and Playtiles fits the Playtiles controller.")
+                }
+
+                Section {
+                    Toggle("Tap Game for Menu", isOn: $tapGameForMenu)
+                } footer: {
+                    Text("Tapping \(AppBrand.displayName) under the controls always opens the game menu. This adds tapping the game itself.")
                 }
 
                 Section {
@@ -92,6 +100,7 @@ struct AppSettingsView: View {
             .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
             .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
             .onChange(of: controllerTheme) { _, newValue in save(newValue, .controllerTheme) }
+            .onChange(of: tapGameForMenu) { _, newValue in save(newValue, .tapGameForMenu) }
             .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
         }
     }

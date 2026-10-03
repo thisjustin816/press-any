@@ -24,6 +24,7 @@ final class GameplayViewController: UIViewController {
     private var userPaused = false
     private let controlStyle: TouchControlStyle
     private let controllerTheme: ControllerTheme
+    private let tapGameForMenu: Bool
     private let soundMode: SoundMode
     /// The close and menu buttons in the corners. A layout with its own Menu control hides them
     /// while its touch controls are showing.
@@ -43,11 +44,13 @@ final class GameplayViewController: UIViewController {
         firstFrameClock: UInt64? = nil,
         controlStyle: TouchControlStyle = .gameBoy,
         controllerTheme: ControllerTheme = .matchSystem,
+        tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch
     ) {
         self.runtime = runtime
         self.controlStyle = controlStyle
         self.controllerTheme = controllerTheme
+        self.tapGameForMenu = tapGameForMenu
         self.soundMode = soundMode
         self.firstFrameClock = firstFrameClock
         self.autoResumePolicy = autoResumePolicy
@@ -79,9 +82,16 @@ final class GameplayViewController: UIViewController {
         } catch {
             message = [launchMessage, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
         }
+        // The menu has no button, so the first game played with the touch controls says where it is.
+        if touchControls.showsControls, !UserDefaults.standard.bool(forKey: Self.menuHintShownKey) {
+            UserDefaults.standard.set(true, forKey: Self.menuHintShownKey)
+            message = [message, "Tap \(AppBrand.displayName) for the menu."].compactMap { $0 }.joined(separator: " ")
+        }
         driver.start()
         if let message { showTransientMessage(message) }
     }
+
+    private static let menuHintShownKey = "gameplay.menuHintShown"
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
@@ -262,8 +272,9 @@ final class GameplayViewController: UIViewController {
     private func configureInput() {
         touchControls.style = controlStyle
         touchControls.theme = controllerTheme
+        touchControls.pictureOpensMenu = tapGameForMenu
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
-        touchControls.onAction = { [weak self] action in self?.perform(action) }
+        touchControls.onMenu = { [weak self] in self?.presentMenuSheet() }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
         controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
@@ -298,21 +309,11 @@ final class GameplayViewController: UIViewController {
             : nil
     }
 
-    /// With a controller connected the touch controls hide, Menu with them, so the corner buttons
+    /// While the touch controls show, tapping the logo opens the menu, so the corner buttons hide. With a controller connected the controls hide and the corner buttons
     /// come back. The controller's body stays, so the game keeps its frame.
     private func updateCornerButtons() {
-        let layoutHasMenu = touchControls.layout.actions[.menu] != nil
+        let layoutHasMenu = !touchControls.layout.menuAreas.isEmpty
         for button in cornerButtons { button.isHidden = layoutHasMenu && touchControls.showsControls }
-    }
-
-    private func perform(_ action: TouchAction) {
-        switch action {
-        case .menu:
-            presentMenuSheet()
-        case .toggleFastForward:
-            toggleFastForward()
-            showTransientMessage(fastForward ? "Fast Forward on" : "Fast Forward off")
-        }
     }
 
     private func toggleFastForward() {
@@ -332,8 +333,8 @@ final class GameplayViewController: UIViewController {
         loadState(latest)
     }
 
-    /// The game menu as a sheet, for a layout's own Menu control. It includes Close, since the
-    /// corner close button is hidden in that layout.
+    /// The game menu as a sheet, opened by tapping the logo, or the game picture when that's turned
+    /// on. It includes Close, since the corner close button is hidden while the touch controls show.
     private func presentMenuSheet() {
         guard presentedViewController == nil else { return }
         let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)

@@ -12,7 +12,8 @@ picture showing through, in one of two color themes chosen by Settings > Control
 - **Classic** uses the Game Boy colors SameBoy uses: a light gray body, a dark bezel around the
   picture, magenta A and B, gray D-pad and pills, and navy lettering. The drawing is Press Any's
   own, not SameBoy's artwork.
-- **Dark** is the same design on a near-black body.
+- **Dark** is the same design on a near-black body, with the channel behind A and B lighter
+  than the body.
 
 Match System picks Classic in Light Mode and Dark in Dark Mode. On the Game Boy layout, the
 names are printed below the controls in small capitals along the tilt of A and B, as on a Game
@@ -35,17 +36,25 @@ Controller Layout (`controllerLayout`, Game Boy by default, overridable per Syst
 - **Game Boy** is SameBoy 1.0.3's portrait layout (`GBVerticalLayout`): the game picture at the
   top at a whole number of device pixels per Game Boy pixel, the D-pad left, A above and right of
   B, and SELECT and START below them. The controls sit centered between the bezel and the logo,
-  higher than SameBoy puts them, so the body has no empty band under the picture. SameBoy opens
-  its menu from its logo; here Menu is a small round button between SELECT and START, unlike
-  them so it isn't taken for a third Game Boy button.
+  higher than SameBoy puts them, so the body has no empty band under the picture.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
   START and SELECT swapped into Game Boy order. Controls are drawn at the skin artwork's sizes,
-  where A is larger than B, and respond across both the frame and the artwork. It keeps the
-  skin's Menu control and tap-the-game Fast Forward toggle; saving and loading states go
-  through the menu. The skin's artwork isn't used; the controls are drawn in code.
+  where A is larger than B, and respond across both the frame and the artwork. The skin's Menu
+  button, Quick Save, Quick Load and tap-the-game Fast Forward are left out. The skin's artwork
+  isn't used; the controls are drawn in code.
 
 Each layout also decides where the game picture goes, so the renderer draws into the layout's
 screen frame.
+
+Neither layout has a Menu button or gestures by default. As SameBoy opens its menu from its
+logo, tapping the wordmark at the bottom opens the game menu, which holds Pause, Fast Forward,
+the save states and Close. Its tap area is 44 points tall. Settings > Tap Game for Menu
+(`tapGameForMenu`, app-wide, off by default) also lets a tap on the game picture open it, as
+SameBoy does. The menu opens when the finger lifts within 10 points of where it landed, so a thumb
+sliding across doesn't open it. The first game played with the touch controls says "Tap Press Any
+for the menu" once.
+With VoiceOver, double-tapping the controls opens the menu. With a game controller connected the
+touch controls hide and the corner Close and Menu buttons come back.
 
 ## 2026-10-03: Merging into a Game that already holds the same image
 
