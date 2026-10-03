@@ -92,6 +92,13 @@ public struct ManagedFileStore: AssetStore, Sendable {
             .appendingPathComponent("battery.sav")
     }
 
+    public func artworkURL(gameID: UUID, sha256: String, extension fileExtension: String) throws -> URL {
+        rootURL
+            .appendingPathComponent("UserData/Artwork", isDirectory: true)
+            .appendingPathComponent(gameID.uuidString.lowercased(), isDirectory: true)
+            .appendingPathComponent("\(try validateSHA256(sha256)).\(try validateFileExtension(fileExtension))")
+    }
+
     public func stateURL(stateID: UUID) -> URL {
         rootURL
             .appendingPathComponent("UserData/States", isDirectory: true)

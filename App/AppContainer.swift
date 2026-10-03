@@ -26,6 +26,7 @@ final class AppContainer {
     let patchCreator: CreatePatchedBuild
     let launchImageResolver: ResolveImageForLaunch
     let evictGeneratedImage: EvictGeneratedImage
+    let gameArtwork: GameArtwork
     let quickPlayWorkspace: QuickPlayWorkspace
     let quickPlayPromoter: PromoteQuickPlay
     let coreRegistry: CoreRegistry
@@ -103,6 +104,11 @@ final class AppContainer {
             assets: repositories.assets,
             assetStore: fileStore
         )
+        gameArtwork = GameArtwork(
+            games: repositories.games,
+            assets: repositories.assets,
+            assetStore: fileStore
+        )
         quickPlayWorkspace = QuickPlayWorkspace(
             profiles: repositories.saveProfiles,
             assets: repositories.assets,
@@ -120,6 +126,15 @@ final class AppContainer {
         settingsResolver = SettingsResolver(store: repositories.settings)
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
+    }
+
+    /// The file behind a Game's artwork, or nil when it has none or the file is missing.
+    func artworkURL(for game: Game) -> URL? {
+        guard let assetID = game.artworkAssetID,
+              let asset = try? repositories.assets.fetchAsset(id: assetID),
+              let url = try? fileStore.managedURL(relativePath: asset.relativePath),
+              fileStore.fileExists(at: url) else { return nil }
+        return url
     }
 
     func makeEmulationSession() -> EmulationSession {

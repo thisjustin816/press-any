@@ -19,7 +19,7 @@ struct PersistenceGRDBTests {
         #expect(try repositories.builds.fetchBuild(gameID: fixture.game.id, imageSHA256: fixture.build.imageSHA256) == fixture.build)
         #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id) == fixture.profile)
         #expect(try repositories.assets.fetchAsset(id: fixture.romAsset.id) == fixture.romAsset)
-        #expect(try repositories.assets.fetchAssets().count == 5)
+        #expect(try repositories.assets.fetchAssets().count == 6)
         #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: fixture.profile.id) == [fixture.state])
         #expect(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: fixture.patchedBuild.id) == fixture.recipe)
     }
@@ -170,6 +170,7 @@ struct PersistenceGRDBTests {
         #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id) == movedProfile)
         #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: fixture.profile.id) == [fixture.state])
         #expect(try repositories.games.fetchGame(id: target.id)?.preferredSaveProfileID == fixture.profile.id)
+        #expect(try repositories.games.fetchGame(id: target.id)?.artworkAssetID == fixture.game.artworkAssetID)
     }
 
     @Test("promoting a game's last build by move keeps its save profiles")
@@ -266,7 +267,17 @@ private struct Fixture {
             integrityStatus: .verified,
             createdAt: now
         )
-        for asset in [sourceROM, generatedROM, patch, battery, stateAsset] {
+        let artwork = ManagedAsset(
+            id: UUID(),
+            kind: .artwork,
+            storageClass: .userData,
+            contentSHA256: String(repeating: "f", count: 64),
+            byteLength: 2_048,
+            relativePath: "UserData/Artwork/cover.png",
+            integrityStatus: .verified,
+            createdAt: now
+        )
+        for asset in [sourceROM, generatedROM, patch, battery, stateAsset, artwork] {
             try repositories.assets.insertAsset(asset)
         }
 
@@ -274,6 +285,7 @@ private struct Fixture {
             id: gameID,
             primaryTitle: "Fixture Game",
             systemFamily: "gbc",
+            artworkAssetID: artwork.id,
             createdAt: now,
             modifiedAt: now
         )

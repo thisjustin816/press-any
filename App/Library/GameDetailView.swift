@@ -1,5 +1,6 @@
 import EmulatorApplication
 import EmulatorDomain
+import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -7,11 +8,13 @@ struct GameDetailView: View {
     private enum FileRequest {
         case patch(Build)
         case batterySave
+        case artwork
 
         var contentTypes: [UTType] {
             switch self {
             case .patch: [.ipsPatch, .bpsPatch]
             case .batterySave: [.gameBoySave]
+            case .artwork: [.image]
             }
         }
     }
@@ -26,6 +29,8 @@ struct GameDetailView: View {
     @State private var promotionTitle = ""
     @State private var showMerge = false
     @State private var settingsTarget: SettingsTarget?
+    @State private var showPhotoPicker = false
+    @State private var photoItem: PhotosPickerItem?
 
     private struct SettingsTarget: Identifiable {
         let id = UUID()
@@ -51,12 +56,25 @@ struct GameDetailView: View {
             duplicateProfile: container.duplicateSaveProfile,
             importSave: container.importBatterySave,
             patchCreator: container.patchCreator,
-            evictImage: container.evictGeneratedImage
+            evictImage: container.evictGeneratedImage,
+            artwork: container.gameArtwork
         ))
     }
 
     var body: some View {
         List {
+            if let game = model.game, let artworkURL = container.artworkURL(for: game) {
+                Section {
+                    AsyncImage(url: artworkURL) { image in
+                        image.resizable().scaledToFit()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: 220)
+                }
+                .listRowBackground(Color.clear)
+            }
+
             Section {
                 Button {
                     launch(build: model.preferredBuild)
@@ -111,6 +129,27 @@ struct GameDetailView: View {
                     } label: {
                         Label("Game Settings…", systemImage: "gearshape")
                     }
+                    Menu {
+                        Button {
+                            showPhotoPicker = true
+                        } label: {
+                            Label("From Photos…", systemImage: "photo")
+                        }
+                        Button {
+                            request(.artwork)
+                        } label: {
+                            Label("From Files…", systemImage: "folder")
+                        }
+                        if model.game?.artworkAssetID != nil {
+                            Button(role: .destructive) {
+                                model.removeArtwork()
+                            } label: {
+                                Label("Remove Artwork", systemImage: "trash")
+                            }
+                        }
+                    } label: {
+                        Label("Artwork", systemImage: "photo.on.rectangle")
+                    }
                     Button {
                         showMerge = true
                     } label: {
@@ -123,6 +162,12 @@ struct GameDetailView: View {
             }
         }
         .task { model.reload() }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images)
+        .onChange(of: photoItem) { _, item in
+            guard let item else { return }
+            photoItem = nil
+            Task { await loadArtwork(item) }
+        }
         .onChange(of: model.gameRemoved) { _, removed in
             if removed { dismiss() }
         }
@@ -312,9 +357,17 @@ struct GameDetailView: View {
             model.applyPatches(urls, to: build)
         case .batterySave:
             if let url = urls.first { model.importSave(from: url) }
+        case .artwork:
+            if let url = urls.first { model.setArtwork(from: url) }
         case nil:
             break
         }
+    }
+
+    private func loadArtwork(_ item: PhotosPickerItem) async {
+        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+        let fileExtension = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
+        model.setArtwork(data, fileExtension: fileExtension)
     }
 
     private func launch(build: Build?, profile: SaveProfile? = nil) {

@@ -34,6 +34,7 @@ final class GameDetailViewModel: ObservableObject {
     private let saveImporter: ImportBatterySave
     private let patchCreator: CreatePatchedBuild
     private let evictImage: EvictGeneratedImage
+    private let artwork: GameArtwork
 
     init(
         gameID: UUID,
@@ -45,7 +46,8 @@ final class GameDetailViewModel: ObservableObject {
         duplicateProfile: DuplicateSaveProfile,
         importSave: ImportBatterySave,
         patchCreator: CreatePatchedBuild,
-        evictImage: EvictGeneratedImage
+        evictImage: EvictGeneratedImage,
+        artwork: GameArtwork
     ) {
         self.gameID = gameID
         self.games = games
@@ -57,6 +59,7 @@ final class GameDetailViewModel: ObservableObject {
         self.saveImporter = importSave
         self.patchCreator = patchCreator
         self.evictImage = evictImage
+        self.artwork = artwork
     }
 
     var preferredBuild: Build? {
@@ -178,6 +181,27 @@ final class GameDetailViewModel: ObservableObject {
                 ? "Removed the generated image. The next launch rebuilds it and checks its hash."
                 : "The generated image wasn’t cached. The next launch rebuilds it."
         }
+    }
+
+    func setArtwork(from url: URL) {
+        perform {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            try artwork.set(
+                gameID: gameID,
+                imageData: Data(contentsOf: url),
+                fileExtension: url.pathExtension.isEmpty ? "img" : url.pathExtension,
+                originalFilename: url.lastPathComponent
+            )
+        }
+    }
+
+    func setArtwork(_ data: Data, fileExtension: String) {
+        perform { try artwork.set(gameID: gameID, imageData: data, fileExtension: fileExtension) }
+    }
+
+    func removeArtwork() {
+        perform { try artwork.remove(gameID: gameID) }
     }
 
     func promote(_ build: Build, title: String, mode: ReorganizationMode) {

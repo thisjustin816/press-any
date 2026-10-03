@@ -53,6 +53,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
     var systemFamily: String
     var preferredBuildID: String?
     var preferredSaveProfileID: String?
+    var artworkAssetID: String?
     var createdAt: String
     var modifiedAt: String
 
@@ -62,6 +63,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         case systemFamily = "system_family"
         case preferredBuildID = "preferred_build_id"
         case preferredSaveProfileID = "preferred_save_profile_id"
+        case artworkAssetID = "artwork_asset_id"
         case createdAt = "created_at"
         case modifiedAt = "modified_at"
     }
@@ -72,6 +74,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         systemFamily = value.systemFamily
         preferredBuildID = value.preferredBuildID.map(PersistenceCodec.uuid)
         preferredSaveProfileID = value.preferredSaveProfileID.map(PersistenceCodec.uuid)
+        artworkAssetID = value.artworkAssetID.map(PersistenceCodec.uuid)
         createdAt = PersistenceCodec.date(value.createdAt)
         modifiedAt = PersistenceCodec.date(value.modifiedAt)
     }
@@ -83,6 +86,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
             systemFamily: systemFamily,
             preferredBuildID: try PersistenceCodec.optionalUUID(preferredBuildID),
             preferredSaveProfileID: try PersistenceCodec.optionalUUID(preferredSaveProfileID),
+            artworkAssetID: try PersistenceCodec.optionalUUID(artworkAssetID),
             createdAt: try PersistenceCodec.date(createdAt),
             modifiedAt: try PersistenceCodec.date(modifiedAt)
         )

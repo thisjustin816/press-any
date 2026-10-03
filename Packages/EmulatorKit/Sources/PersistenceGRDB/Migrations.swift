@@ -133,10 +133,13 @@ enum MVPV1Schema {
     """#
 }
 
-/// Apply Anyway on patch recipes.
+/// Apply Anyway on patch recipes, and manually assigned Game artwork.
 enum MVPV2Schema {
     static let sql = #"""
     ALTER TABLE patch_recipe_items
     ADD COLUMN ignores_base_mismatch INTEGER NOT NULL DEFAULT 0 CHECK (ignores_base_mismatch IN (0, 1));
+
+    ALTER TABLE games
+    ADD COLUMN artwork_asset_id TEXT REFERENCES managed_assets(id) ON DELETE SET NULL;
     """#
 }
