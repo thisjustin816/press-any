@@ -1,0 +1,9 @@
+// Signing for the PressAny app target. Per-developer values live in Signing.local.xcconfig,
+// which is git-ignored, so regenerating the project with XcodeGen does not lose them.
+// Copy Signing.local.xcconfig.example to Signing.local.xcconfig to create it.
+
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM =
+BUNDLE_ID_SUFFIX =
+
+#include? "Signing.local.xcconfig"

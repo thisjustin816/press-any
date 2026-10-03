@@ -1,0 +1,148 @@
+import EmulatorApplication
+import EmulatorDomain
+import EmulationCore
+import Foundation
+
+public enum SaveStateServiceError: Error, Equatable {
+    case contextMismatch
+    case coreMismatch(expected: CoreDescriptor, actual: CoreDescriptor)
+    case serializationVersionMismatch(expected: String, actual: String)
+    case assetNotFound(UUID)
+}
+
+public struct SaveStateService: Sendable {
+    private let states: any SaveStateRepository
+    private let assets: any ManagedAssetRepository
+    private let assetStore: any AssetStore
+    private let retention: AutoStateRetention
+    private let now: @Sendable () -> Date
+
+    public init(
+        states: any SaveStateRepository,
+        assets: any ManagedAssetRepository,
+        assetStore: any AssetStore,
+        retention: AutoStateRetention = .init(),
+        now: @escaping @Sendable () -> Date = Date.init
+    ) {
+        self.states = states
+        self.assets = assets
+        self.assetStore = assetStore
+        self.retention = retention
+        self.now = now
+    }
+
+    @discardableResult
+    public func save(
+        worker: SessionWorker,
+        context: LaunchContext,
+        kind: SaveStateKind,
+        label: String? = nil,
+        playtimeSeconds: Double
+    ) throws -> SaveState {
+        let payload = try worker.perform { try $0.serializeState() }
+        let core = try worker.perform { $0.descriptor }
+        let serializationVersion = try worker.perform { $0.stateSerializationVersion }
+        let stateID = UUID()
+        let assetID = UUID()
+        let destination = assetStore.stateURL(stateID: stateID)
+        try assetStore.writeDataAtomically(payload, to: destination)
+
+        let timestamp = now()
+        let asset = ManagedAsset(
+            id: assetID,
+            kind: .saveState,
+            storageClass: .userData,
+            contentSHA256: try assetStore.hashFile(at: destination),
+            byteLength: Int64(payload.count),
+            relativePath: try assetStore.managedRelativePath(for: destination),
+            integrityStatus: .verified,
+            createdAt: timestamp
+        )
+
+        do {
+            try assets.insertAsset(asset)
+            let autoSequence: Int?
+            if kind == .auto {
+                let existing = try states.fetchSaveStates(
+                    buildID: context.buildID,
+                    saveProfileID: context.saveProfileID
+                )
+                autoSequence = (existing.compactMap(\.autoSequence).max() ?? 0) + 1
+            } else {
+                autoSequence = nil
+            }
+
+            let state = SaveState(
+                id: stateID,
+                buildID: context.buildID,
+                saveProfileID: context.saveProfileID,
+                core: core,
+                stateSerializationVersion: serializationVersion,
+                stateAssetID: assetID,
+                kind: kind,
+                autoSequence: autoSequence,
+                label: label,
+                playtimeSeconds: playtimeSeconds,
+                createdAt: timestamp
+            )
+            do {
+                try states.insertSaveState(state)
+            } catch {
+                try? assets.deleteAsset(id: assetID)
+                throw error
+            }
+
+            if kind == .auto {
+                try pruneAutoStates(context: context)
+            }
+            return state
+        } catch {
+            try? assetStore.removeIfExists(destination)
+            throw error
+        }
+    }
+
+    public func load(
+        _ state: SaveState,
+        worker: SessionWorker,
+        context: LaunchContext
+    ) throws {
+        guard state.buildID == context.buildID, state.saveProfileID == context.saveProfileID else {
+            throw SaveStateServiceError.contextMismatch
+        }
+
+        let currentCore = try worker.perform { $0.descriptor }
+        guard state.core == currentCore else {
+            throw SaveStateServiceError.coreMismatch(expected: state.core, actual: currentCore)
+        }
+
+        let currentVersion = try worker.perform { $0.stateSerializationVersion }
+        guard state.stateSerializationVersion == currentVersion else {
+            throw SaveStateServiceError.serializationVersionMismatch(
+                expected: state.stateSerializationVersion,
+                actual: currentVersion
+            )
+        }
+
+        guard let asset = try assets.fetchAsset(id: state.stateAssetID) else {
+            throw SaveStateServiceError.assetNotFound(state.stateAssetID)
+        }
+        let url = try assetStore.managedURL(relativePath: asset.relativePath)
+        let payload = try assetStore.readData(at: url)
+        try worker.perform { try $0.deserializeState(payload) }
+    }
+
+    private func pruneAutoStates(context: LaunchContext) throws {
+        let all = try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
+        for state in retention.expiredStates(from: all) {
+            if let asset = try assets.fetchAsset(id: state.stateAssetID) {
+                let url = try assetStore.managedURL(relativePath: asset.relativePath)
+                try states.deleteSaveState(id: state.id)
+                try assets.deleteAsset(id: asset.id)
+                try? assetStore.removeIfExists(url)
+            } else {
+                try states.deleteSaveState(id: state.id)
+            }
+        }
+    }
+}

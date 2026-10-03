@@ -1,0 +1,116 @@
+name: CI
+
+# Host-level checks that run on Linux without Xcode. Apple SDK, simulator and device
+# gates live in ios-build.yml and docs/mvp-verification.md.
+#
+# Layers follow docs/acceptance-matrix.md:
+#   L1 domain and application logic, L2 real storage and persistence,
+#   L3 headless SameBoy.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  l1-domain:
+    name: L1 domain and application
+    runs-on: ubuntu-24.04
+    container: swift:6.1.2-noble
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install SQLite headers for GRDB
+        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev
+      - name: Run L1 tests
+        run: >-
+          swift test --package-path Packages/EmulatorKit --filter
+          '^(EmulatorDomainTests|EmulatorApplicationTests|EmulationCoreTests|EmulationSessionTests|GameplayInputTests|ImportingTests|PatchingTests|QuickPlayTests|ToolchainDetectionTests)\.'
+
+  l2-storage:
+    name: L2 storage and persistence
+    runs-on: ubuntu-24.04
+    container: swift:6.1.2-noble
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install SQLite headers for GRDB
+        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev
+      - name: Run L2 tests
+        run: >-
+          swift test --package-path Packages/EmulatorKit --filter
+          '^(AssetStorageTests|PersistenceGRDBTests|ArchitectureProofTests)\.'
+
+  l3-sameboy-headless:
+    name: L3 headless SameBoy
+    runs-on: ubuntu-24.04
+    container: swift:6.1.2-noble
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install SQLite headers for GRDB
+        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev
+      - name: Run adapter tests
+        run: swift test --package-path Packages/EmulatorKit --filter '^SameBoyAdapterTests\.'
+      - name: Run C bridge smoke test
+        run: ./Scripts/test-sameboy-bridge-linux.sh
+
+  # The gbtoolsid port must match the C tool at the pinned revision. The L1 job runs the
+  # synthetic detector tests; this job adds the comparison, which needs the C tool built.
+  toolchain-detection:
+    name: Toolchain detection matches gbtoolsid
+    runs-on: ubuntu-24.04
+    container: swift:6.1.2-noble
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install SQLite headers, make and Python
+        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev make python3
+      - name: Compare with gbtoolsid
+        run: CC=clang ./Scripts/test-toolchain-detection-differential.sh
+
+  # Every test target must belong to a layer above. A new target that no job runs would
+  # otherwise pass CI without ever executing.
+  test-target-coverage:
+    name: All test targets are covered
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Compare test directories with the layer filters
+        run: ./Scripts/verify-ci-test-coverage.sh
+
+  repo-hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Reject tracked game images, saves and generated Xcode projects
+        run: ./Scripts/verify-repo-hygiene.sh
+      - name: Lint shell scripts
+        run: shellcheck -x --severity=error Scripts/*.sh Scripts/lib/*.sh

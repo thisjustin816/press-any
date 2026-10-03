@@ -1,0 +1,175 @@
+import EmulatorApplication
+import EmulatorDomain
+import Foundation
+
+// In-memory implementations of the library ports for tests. Fetches return the order the GRDB
+// repositories use, so tests see the same order the app does.
+
+public final class InMemoryGameRepository: GameRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: Game]
+
+    public init(_ games: [Game] = []) {
+        values = Dictionary(uniqueKeysWithValues: games.map { ($0.id, $0) })
+    }
+
+    public func fetchGame(id: UUID) throws -> Game? { lock.withLock { values[id] } }
+
+    public func fetchGames() throws -> [Game] {
+        lock.withLock {
+            values.values.sorted {
+                let order = $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle)
+                return order == .orderedSame ? $0.createdAt < $1.createdAt : order == .orderedAscending
+            }
+        }
+    }
+
+    public func insertGame(_ game: Game) throws { lock.withLock { values[game.id] = game } }
+    public func updateGame(_ game: Game) throws { lock.withLock { values[game.id] = game } }
+    public func deleteGame(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+}
+
+public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: Build]
+
+    public init(_ builds: [Build] = []) {
+        values = Dictionary(uniqueKeysWithValues: builds.map { ($0.id, $0) })
+    }
+
+    public func fetchBuild(id: UUID) throws -> Build? { lock.withLock { values[id] } }
+
+    public func fetchBuilds(gameID: UUID) throws -> [Build] {
+        lock.withLock {
+            values.values.filter { $0.gameID == gameID }.sorted {
+                if $0.isBase != $1.isBase { return $0.isBase }
+                if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
+                return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+            }
+        }
+    }
+
+    public func fetchBuild(gameID: UUID, imageSHA256: String) throws -> Build? {
+        lock.withLock {
+            values.values.filter { $0.gameID == gameID && $0.imageSHA256 == imageSHA256 }
+                .min { $0.createdAt < $1.createdAt }
+        }
+    }
+
+    public func fetchBuild(imageSHA256: String) throws -> Build? {
+        lock.withLock { values.values.filter { $0.imageSHA256 == imageSHA256 }.min { $0.createdAt < $1.createdAt } }
+    }
+
+    public func insertBuild(_ build: Build) throws { lock.withLock { values[build.id] = build } }
+    public func updateBuildMetadata(_ build: Build) throws { lock.withLock { values[build.id] = build } }
+
+    public func moveBuild(id: UUID, toGameID: UUID) throws {
+        lock.withLock { values[id]?.gameID = toGameID }
+    }
+}
+
+public final class InMemorySaveProfileRepository: SaveProfileRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: SaveProfile]
+
+    public init(_ profiles: [SaveProfile] = []) {
+        values = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+    }
+
+    public func fetchSaveProfile(id: UUID) throws -> SaveProfile? { lock.withLock { values[id] } }
+
+    public func fetchSaveProfiles(gameID: UUID) throws -> [SaveProfile] {
+        lock.withLock {
+            values.values.filter { $0.gameID == gameID }.sorted {
+                if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
+                return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+            }
+        }
+    }
+
+    public func insertSaveProfile(_ profile: SaveProfile) throws { lock.withLock { values[profile.id] = profile } }
+    public func updateSaveProfile(_ profile: SaveProfile) throws { lock.withLock { values[profile.id] = profile } }
+    public func deleteSaveProfile(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+}
+
+public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: SaveState] = [:]
+
+    public init() {}
+
+    public func insertSaveState(_ state: SaveState) throws { lock.withLock { values[state.id] = state } }
+
+    /// Newest first.
+    public func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
+        lock.withLock {
+            values.values.filter { $0.buildID == buildID && $0.saveProfileID == saveProfileID }.sorted {
+                $0.createdAt != $1.createdAt ? $0.createdAt > $1.createdAt : $0.id.uuidString < $1.id.uuidString
+            }
+        }
+    }
+
+    public func deleteSaveState(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+}
+
+public final class InMemoryPatchRecipeRepository: PatchRecipeRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: PatchRecipe] = [:]
+
+    public init() {}
+
+    public func insertPatchRecipe(_ recipe: PatchRecipe) throws { lock.withLock { values[recipe.id] = recipe } }
+
+    public func fetchPatchRecipe(resultBuildID: UUID) throws -> PatchRecipe? {
+        lock.withLock { values.values.first { $0.resultBuildID == resultBuildID } }
+    }
+}
+
+public final class InMemoryAssetRepository: ManagedAssetInventoryRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: ManagedAsset] = [:]
+
+    public init() {}
+
+    public func fetchAsset(id: UUID) throws -> ManagedAsset? { lock.withLock { values[id] } }
+
+    public func fetchAssets() throws -> [ManagedAsset] {
+        lock.withLock {
+            values.values.sorted {
+                $0.createdAt != $1.createdAt ? $0.createdAt < $1.createdAt : $0.id.uuidString < $1.id.uuidString
+            }
+        }
+    }
+
+    public func fetchSourceAsset(kind: ManagedAssetKind, sha256: String) throws -> ManagedAsset? {
+        lock.withLock { values.values.first { $0.kind == kind && $0.contentSHA256 == sha256 } }
+    }
+
+    public func insertAsset(_ asset: ManagedAsset) throws { lock.withLock { values[asset.id] = asset } }
+    public func updateMutableAsset(_ asset: ManagedAsset) throws { lock.withLock { values[asset.id] = asset } }
+    public func deleteAsset(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+}
+
+public final class InMemorySettingsStore: SettingsStore, @unchecked Sendable {
+    private struct Key: Hashable {
+        let key: String
+        let scope: SettingsScope
+    }
+
+    private let lock = NSLock()
+    private var values: [Key: String] = [:]
+
+    public init() {}
+
+    public func valueJSON(key: String, scope: SettingsScope) throws -> String? {
+        lock.withLock { values[Key(key: key, scope: scope)] }
+    }
+
+    public func setValueJSON(_ valueJSON: String, key: String, scope: SettingsScope) throws {
+        lock.withLock { values[Key(key: key, scope: scope)] = valueJSON }
+    }
+
+    public func removeValue(key: String, scope: SettingsScope) throws {
+        _ = lock.withLock { values.removeValue(forKey: Key(key: key, scope: scope)) }
+    }
+}

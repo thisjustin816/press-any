@@ -1,0 +1,95 @@
+import EmulationCore
+import GameController
+import UIKit
+
+@MainActor
+final class PhysicalControllerMonitor {
+    var onInputChanged: ((EmulatorInputState) -> Void)?
+    var onConnectionChanged: ((Bool) -> Void)?
+    var onUnexpectedDisconnect: (() -> Void)?
+
+    private(set) var activeController: GCController?
+    // Written only during init and read only in deinit, which runs once nothing else can reach
+    // the monitor, so the nonisolated deinit can remove the observers without a hop.
+    nonisolated(unsafe) private var observers: [NSObjectProtocol] = []
+
+    init() {
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(
+            forName: .GCControllerDidConnect,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            // queue: .main delivers on the main thread, so the controller never crosses threads.
+            nonisolated(unsafe) let controller = note.object as? GCController
+            MainActor.assumeIsolated {
+                guard let controller else { return }
+                self?.activate(controller)
+            }
+        })
+        observers.append(center.addObserver(
+            forName: .GCControllerDidDisconnect,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            nonisolated(unsafe) let controller = note.object as? GCController
+            MainActor.assumeIsolated {
+                guard let self, let controller else { return }
+                self.handleDisconnect(controller)
+            }
+        })
+
+        if let controller = GCController.controllers().first {
+            activate(controller)
+        }
+    }
+
+    deinit {
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+    }
+
+    func selectPlayerOne(_ controller: GCController) {
+        activate(controller)
+    }
+
+    private func activate(_ controller: GCController) {
+        activeController = controller
+        installHandlers(on: controller)
+        onConnectionChanged?(true)
+        publish(from: controller)
+    }
+
+    private func handleDisconnect(_ controller: GCController) {
+        guard activeController === controller else { return }
+        activeController = nil
+        onInputChanged?(.init())
+        onConnectionChanged?(false)
+        onUnexpectedDisconnect?()
+
+        if let replacement = GCController.controllers().first {
+            activate(replacement)
+        }
+    }
+
+    private func installHandlers(on controller: GCController) {
+        guard let pad = controller.extendedGamepad else { return }
+        pad.valueChangedHandler = { [weak self, weak controller] _, _ in
+            guard let self, let controller else { return }
+            Task { @MainActor in self.publish(from: controller) }
+        }
+    }
+
+    private func publish(from controller: GCController) {
+        guard let pad = controller.extendedGamepad else { return }
+        onInputChanged?(EmulatorInputState(
+            up: pad.dpad.up.isPressed,
+            down: pad.dpad.down.isPressed,
+            left: pad.dpad.left.isPressed,
+            right: pad.dpad.right.isPressed,
+            a: pad.buttonA.isPressed,
+            b: pad.buttonB.isPressed,
+            start: pad.buttonMenu.isPressed,
+            select: pad.buttonOptions?.isPressed == true || pad.leftShoulder.isPressed
+        ))
+    }
+}

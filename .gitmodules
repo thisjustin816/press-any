@@ -1,0 +1,4 @@
+[submodule "Packages/EmulatorKit/Dependencies/SameBoy"]
+	path = Packages/EmulatorKit/Dependencies/SameBoy
+	url = https://github.com/LIJI32/SameBoy.git
+	ignore = untracked

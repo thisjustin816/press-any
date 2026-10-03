@@ -1,0 +1,122 @@
+import EmulatorApplication
+import EmulatorDomain
+import Foundation
+
+public enum ResolveImageForLaunchError: Error, Equatable {
+    case buildNotFound(UUID)
+    case assetNotFound(UUID)
+    case recipeNotFound(UUID)
+    case integrityMismatch(expected: String, actual: String)
+    case cyclicBuildLineage(UUID)
+    case patchFilenameMissing(UUID)
+}
+
+public struct ResolveImageForLaunch: Sendable {
+    private let builds: any BuildRepository
+    private let recipes: any PatchRecipeRepository
+    private let assets: any ManagedAssetRepository
+    private let assetStore: any AssetStore
+    private let patcher: any PatchApplying
+
+    public init(
+        builds: any BuildRepository,
+        recipes: any PatchRecipeRepository,
+        assets: any ManagedAssetRepository,
+        assetStore: any AssetStore,
+        patcher: any PatchApplying = PatchStackApplier()
+    ) {
+        self.builds = builds
+        self.recipes = recipes
+        self.assets = assets
+        self.assetStore = assetStore
+        self.patcher = patcher
+    }
+
+    public func resolve(buildID: UUID) throws -> URL {
+        try resolve(buildID: buildID, visited: [])
+    }
+
+    public func resolveImageForLaunch(buildID: UUID) throws -> URL {
+        try resolve(buildID: buildID)
+    }
+
+    private func resolve(buildID: UUID, visited: Set<UUID>) throws -> URL {
+        guard !visited.contains(buildID) else {
+            throw ResolveImageForLaunchError.cyclicBuildLineage(buildID)
+        }
+        guard let build = try builds.fetchBuild(id: buildID) else {
+            throw ResolveImageForLaunchError.buildNotFound(buildID)
+        }
+        guard let asset = try assets.fetchAsset(id: build.imageAssetID) else {
+            throw ResolveImageForLaunchError.assetNotFound(build.imageAssetID)
+        }
+
+        let assetURL = try assetStore.managedURL(relativePath: asset.relativePath)
+        if assetStore.fileExists(at: assetURL) {
+            let actual = try assetStore.hashFile(at: assetURL)
+            if actual == build.imageSHA256 { return assetURL }
+            if build.sourceKind == .importedImage {
+                throw ResolveImageForLaunchError.integrityMismatch(expected: build.imageSHA256, actual: actual)
+            }
+        } else if build.sourceKind == .importedImage {
+            throw ResolveImageForLaunchError.assetNotFound(build.imageAssetID)
+        }
+
+        guard let recipe = try recipes.fetchPatchRecipe(resultBuildID: build.id) else {
+            throw ResolveImageForLaunchError.recipeNotFound(build.id)
+        }
+
+        var nextVisited = visited
+        nextVisited.insert(buildID)
+        let baseURL = try resolve(buildID: recipe.baseBuildID, visited: nextVisited)
+        var output = try assetStore.readData(at: baseURL)
+
+        for item in recipe.items.filter(\.enabled).sorted(by: { $0.position < $1.position }) {
+            guard let patchAsset = try assets.fetchAsset(id: item.patchAssetID) else {
+                throw ResolveImageForLaunchError.assetNotFound(item.patchAssetID)
+            }
+            let patchURL = try assetStore.managedURL(relativePath: patchAsset.relativePath)
+            guard assetStore.fileExists(at: patchURL) else {
+                throw ResolveImageForLaunchError.assetNotFound(item.patchAssetID)
+            }
+            let actualPatchHash = try assetStore.hashFile(at: patchURL)
+            guard actualPatchHash == patchAsset.contentSHA256 else {
+                throw ResolveImageForLaunchError.integrityMismatch(
+                    expected: patchAsset.contentSHA256,
+                    actual: actualPatchHash
+                )
+            }
+            let filename = patchAsset.originalFilename ?? patchURL.lastPathComponent
+            let fileExtension = URL(fileURLWithPath: filename).pathExtension
+            guard !fileExtension.isEmpty else {
+                throw ResolveImageForLaunchError.patchFilenameMissing(patchAsset.id)
+            }
+            output = try patcher.apply(
+                patch: assetStore.readData(at: patchURL),
+                fileExtension: fileExtension,
+                to: output
+            )
+        }
+
+        let actualResultHash = assetStore.hashData(output)
+        guard actualResultHash == recipe.expectedResultSHA256,
+              actualResultHash == build.imageSHA256 else {
+            throw ResolveImageForLaunchError.integrityMismatch(
+                expected: recipe.expectedResultSHA256,
+                actual: actualResultHash
+            )
+        }
+
+        let generatedURL = assetStore.generatedImageURL(sha256: actualResultHash)
+        try assetStore.writeDataAtomically(output, to: generatedURL)
+        return generatedURL
+    }
+}
+
+public typealias PatchDerivedImageResolver = ResolveImageForLaunch
+
+extension ResolveImageForLaunch: BuildImageResolving {
+    public func resolveImageURL(buildID: UUID) throws -> URL {
+        try resolve(buildID: buildID)
+    }
+}

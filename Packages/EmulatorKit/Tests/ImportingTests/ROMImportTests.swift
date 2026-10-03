@@ -1,0 +1,142 @@
+import AssetStorage
+import EmulatorApplication
+import EmulatorDomain
+import EmulatorKitTestSupport
+import Foundation
+import XCTest
+@testable import Importing
+
+final class ROMImportTests: XCTestCase {
+    func testImportSameROMTwiceDetectsExistingBuildAndDeduplicatesBlob() throws {
+        let harness = try ImportHarness.make()
+        let romURL = try harness.writeExternalROM(TestROM.make(title: "SAME", cgb: false))
+
+        let firstAnalysis = try harness.analyzer.analyzeROM(at: romURL, targetGameID: nil)
+        let first = try harness.committer.commit(
+            ROMImportPlan(
+                analysis: firstAnalysis,
+                disposition: .createGame(title: "Same"),
+                buildDisplayName: "Original",
+                markAsBase: true
+            )
+        )
+        let secondAnalysis = try harness.analyzer.analyzeROM(at: romURL, targetGameID: nil)
+
+        XCTAssertEqual(secondAnalysis.exactExistingBuildID, first.build.id)
+        XCTAssertEqual(try harness.sourceROMFileCount(), 1)
+    }
+
+    func testModifiedROMCanAttachAsSecondBuildWithoutChangingGameIdentity() throws {
+        let harness = try ImportHarness.make()
+        let baseURL = try harness.writeExternalROM(TestROM.make(title: "TEST", cgb: true, payloadByte: 1))
+        let baseAnalysis = try harness.analyzer.analyzeROM(at: baseURL, targetGameID: nil)
+        let base = try harness.committer.commit(
+            ROMImportPlan(
+                analysis: baseAnalysis,
+                disposition: .createGame(title: "Test"),
+                buildDisplayName: "Original",
+                markAsBase: true
+            )
+        )
+
+        let modifiedURL = try harness.writeExternalROM(TestROM.make(title: "TEST", cgb: true, payloadByte: 2))
+        let analysis = try harness.analyzer.analyzeROM(at: modifiedURL, targetGameID: base.game.id)
+        let result = try harness.committer.commit(
+            ROMImportPlan(
+                analysis: analysis,
+                disposition: .addBuild(gameID: base.game.id),
+                buildDisplayName: "Test Build 2",
+                markAsBase: false
+            )
+        )
+
+        XCTAssertEqual(result.game.id, base.game.id)
+        XCTAssertNotEqual(result.build.id, base.build.id)
+        XCTAssertEqual(try harness.builds.fetchBuilds(gameID: base.game.id).count, 2)
+    }
+
+    func testFailedTransactionRemovesOnlyNewlyCreatedManagedFile() throws {
+        let harness = try ImportHarness.make(transactionRunner: FailingTransactionRunner())
+        let romURL = try harness.writeExternalROM(TestROM.make(title: "FAIL", cgb: false))
+        let analysis = try harness.analyzer.analyzeROM(at: romURL, targetGameID: nil)
+
+        XCTAssertThrowsError(
+            try harness.committer.commit(
+                ROMImportPlan(
+                    analysis: analysis,
+                    disposition: .createGame(title: "Fail"),
+                    buildDisplayName: "Original",
+                    markAsBase: true
+                )
+            )
+        )
+        XCTAssertEqual(try harness.sourceROMFileCount(), 0)
+    }
+}
+
+private struct ImportHarness {
+    let root: URL
+    let external: URL
+    let store: ManagedFileStore
+    let games: InMemoryGameRepository
+    let builds: InMemoryBuildRepository
+    let assets: InMemoryAssetRepository
+    let analyzer: ROMImportAnalyzer
+    let committer: ImportCommitter
+
+    static func make(transactionRunner: any LibraryTransactionRunner = PassthroughTransactionRunner()) throws -> ImportHarness {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("EmulatorKit-ImportTests-\(UUID().uuidString)", isDirectory: true)
+        let external = root.appendingPathComponent("External", isDirectory: true)
+        try FileManager.default.createDirectory(at: external, withIntermediateDirectories: true)
+        let store = try ManagedFileStore(rootURL: root.appendingPathComponent("Managed", isDirectory: true))
+        let games = InMemoryGameRepository()
+        let builds = InMemoryBuildRepository()
+        let assets = InMemoryAssetRepository()
+        let analyzer = ROMImportAnalyzer(builds: builds, assetStore: store)
+        let committer = ImportCommitter(
+            games: games,
+            builds: builds,
+            assets: assets,
+            assetStore: store,
+            transactions: transactionRunner,
+            now: { Date(timeIntervalSince1970: 100) }
+        )
+        return ImportHarness(
+            root: root,
+            external: external,
+            store: store,
+            games: games,
+            builds: builds,
+            assets: assets,
+            analyzer: analyzer,
+            committer: committer
+        )
+    }
+
+    func writeExternalROM(_ data: Data) throws -> URL {
+        let url = external.appendingPathComponent("\(UUID().uuidString).gb")
+        try data.write(to: url)
+        return url
+    }
+
+    func sourceROMFileCount() throws -> Int {
+        let root = store.rootURL.appendingPathComponent("Source/ROM", isDirectory: true)
+        guard FileManager.default.fileExists(atPath: root.path) else { return 0 }
+        let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
+        var count = 0
+        while let item = enumerator?.nextObject() as? URL {
+            if !item.hasDirectoryPath { count += 1 }
+        }
+        return count
+    }
+}
+
+private struct TransactionFailure: Error {}
+
+private struct FailingTransactionRunner: LibraryTransactionRunner {
+    func run<T: Sendable>(_ operation: @Sendable () throws -> T) throws -> T {
+        _ = operation
+        throw TransactionFailure()
+    }
+}

@@ -1,0 +1,50 @@
+import Foundation
+
+public enum SettingsScope: Hashable, Sendable {
+    case app
+    case system(GameSystem)
+    case game(UUID)
+    case build(UUID)
+
+    public var databaseType: String {
+        switch self {
+        case .app: "app"
+        case .system: "system"
+        case .game: "game"
+        case .build: "build"
+        }
+    }
+
+    public var databaseID: String {
+        switch self {
+        case .app: "app"
+        case .system(let system): system.rawValue
+        case .game(let id), .build(let id): id.uuidString.lowercased()
+        }
+    }
+}
+
+public struct LaunchContext: Hashable, Sendable {
+    public let gameID: UUID
+    public let buildID: UUID
+    public let saveProfileID: UUID
+
+    public init(gameID: UUID, buildID: UUID, saveProfileID: UUID) {
+        self.gameID = gameID
+        self.buildID = buildID
+        self.saveProfileID = saveProfileID
+    }
+}
+
+/// Keys in the settings store. The raw values are stored, so renaming a case must not change them.
+public enum SettingKey: String, Sendable, CaseIterable {
+    /// Bool, unset means false. Library launches start past the boot logo when true; Quick Play
+    /// always skips it (docs/decisions.md).
+    case skipBootAnimation
+}
+
+public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {
+    case always
+    case ask
+    case never
+}
