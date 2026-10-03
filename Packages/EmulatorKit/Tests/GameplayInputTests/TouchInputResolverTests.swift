@@ -59,25 +59,29 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertEqual(resolver.input, EmulatorInputState())
     }
 
-    func testBuiltInLayoutsKeepControlsApartAndOffTheGame() {
+    func testBuiltInLayoutsKeepControlsApartAndOffTheGame() throws {
         func overlaps(_ lhs: TouchRect, _ rhs: TouchRect) -> Bool {
             lhs.x < rhs.x + rhs.width && rhs.x < lhs.x + lhs.width &&
                 lhs.y < rhs.y + rhs.height && rhs.y < lhs.y + lhs.height
         }
-        // iPhone SE, 16, 16 Pro and 16 Pro Max: points, safe-area top and display scale. iOS 17
-        // runs on nothing narrower than 375 points.
-        let screens: [(Double, Double, Double, Double)] = [
-            (375, 667, 20, 2), (393, 852, 59, 3), (402, 874, 62, 3), (440, 956, 62, 3),
+        // iPhone SE, 16, 16 Pro and 16 Pro Max: points, safe-area top and bottom, and display
+        // scale. iOS 17 runs on nothing narrower than 375 points.
+        let screens: [(Double, Double, Double, Double, Double)] = [
+            (375, 667, 20, 0, 2), (393, 852, 59, 34, 3), (402, 874, 62, 34, 3), (440, 956, 62, 34, 3),
         ]
         for style in TouchControlStyle.allCases {
-            for (width, height, top, displayScale) in screens {
-                let layout = TouchControlLayout.make(style, width: width, height: height, safeTop: top, displayScale: displayScale)
+            for (width, height, top, bottom, displayScale) in screens {
+                let layout = TouchControlLayout.make(
+                    style, width: width, height: height, safeTop: top, safeBottom: bottom, displayScale: displayScale
+                )
                 let size = "\(style) at \(width)x\(height)"
                 let controls = [
                     ("D-pad", layout.dpadHitArea), ("A", layout.a), ("B", layout.b),
                     ("Start", layout.start), ("Select", layout.select),
                 ] + layout.actions.filter { $0.key != .toggleFastForward }.map { ("\($0.key)", $0.value) }
                 let pictureBottom = layout.screen.y + layout.screen.height
+                let logo = try XCTUnwrap(layout.logo)
+                XCTAssertLessThanOrEqual(logo.y + logo.height, height - max(bottom, 12), "the logo clears the home indicator, \(size)")
 
                 XCTAssertGreaterThanOrEqual(layout.screen.y, top, "the picture clears the status bar, \(size)")
                 XCTAssertLessThanOrEqual(layout.select.x + layout.select.width, layout.start.x, "SELECT is left of START, \(size)")
@@ -85,6 +89,9 @@ final class TouchInputResolverTests: XCTestCase {
                     XCTAssertTrue(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width && rect.y + rect.height <= height,
                                   "\(name) is on screen, \(size)")
                     XCTAssertGreaterThanOrEqual(rect.y, pictureBottom, "\(name) covers the game picture, \(size)")
+                    if style == .gameBoy {
+                        XCTAssertLessThanOrEqual(rect.y + rect.height, logo.y, "\(name) runs into the logo, \(size)")
+                    }
                     for (otherName, other) in controls[(index + 1)...] {
                         XCTAssertFalse(overlaps(rect, other), "\(name) overlaps \(otherName), \(size)")
                     }
@@ -99,21 +106,22 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertEqual(ControllerTheme.allCases.map(\.rawValue), ["matchSystem", "classic", "dark"])
     }
 
-    func testGameBoyLayoutIsSameBoysVerticalLayout() {
-        // SameBoy's GBVerticalLayout on a 393x852-point, 3x iPhone, worked through by hand.
-        let layout = TouchControlLayout.make(.gameBoy, width: 393, height: 852, safeTop: 59, displayScale: 3)
+    func testGameBoyLayoutIsSameBoysVerticalLayoutCentered() {
+        // SameBoy's GBVerticalLayout on a 393x852-point, 3x iPhone, worked through by hand, with
+        // the controls centered between the bezel (bottom at 423) and the logo (top at 790).
+        let layout = TouchControlLayout.make(.gameBoy, width: 393, height: 852, safeTop: 59, safeBottom: 34, displayScale: 3)
         func center(_ rect: TouchRect) -> (Double, Double) { (rect.center.x, rect.center.y) }
 
         XCTAssertEqual(layout.screen.width, 1120.0 / 3, accuracy: 0.001, "a whole number of pixels per Game Boy pixel")
         XCTAssertEqual(layout.screen.y, 59 + 2 * (1120.0 / 3 / 40), accuracy: 0.001)
         XCTAssertEqual(center(layout.select).0, 98.25, accuracy: 0.001)
-        XCTAssertEqual(center(layout.select).1, 747.08, accuracy: 0.01)
+        XCTAssertEqual(center(layout.select).1, 698.5, accuracy: 0.01)
         XCTAssertEqual(center(layout.start).0, 294.75, accuracy: 0.001)
-        XCTAssertEqual(center(layout.dpad).1, 607.08, accuracy: 0.01)
+        XCTAssertEqual(center(layout.dpad).1, 558.5, accuracy: 0.01)
         XCTAssertEqual(center(layout.a).0, 339.75, accuracy: 0.001)
-        XCTAssertEqual(center(layout.a).1, 584.58, accuracy: 0.01)
+        XCTAssertEqual(center(layout.a).1, 536, accuracy: 0.01)
         XCTAssertEqual(center(layout.b).0, 249.75, accuracy: 0.001)
-        XCTAssertEqual(center(layout.b).1, 629.58, accuracy: 0.01)
+        XCTAssertEqual(center(layout.b).1, 581, accuracy: 0.01)
         XCTAssertEqual(layout.a.width, 72)
         XCTAssertEqual(layout.dpad.width, 150)
     }

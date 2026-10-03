@@ -79,7 +79,7 @@ final class TouchControllerView: UIView {
         let palette = self.palette
         drawBody(around: layout.screen, palette: palette, in: context)
         if style == .gameBoy { drawBezel(around: layout.screen, palette: palette, in: context) }
-        drawLogo(palette: palette, in: context)
+        if let logo = layout.logo { drawLogo(in: cgRect(logo), palette: palette) }
         guard showsControls else { return }
 
         switch style {
@@ -91,7 +91,8 @@ final class TouchControllerView: UIView {
             drawTiltedPill(at: layout.select.center, label: "SELECT", active: lastInput.select, palette: palette, in: context)
             drawTiltedPill(at: layout.start.center, label: "START", active: lastInput.start, palette: palette, in: context)
             if let menu = layout.drawnRect(.action(.menu)) {
-                drawTiltedPill(at: menu.center, label: "MENU", active: false, palette: palette, in: context)
+                context.setFillColor(palette.pill.cgColor)
+                context.fillEllipse(in: cgRect(menu))
             }
         case .playtiles:
             if let guide = layout.alignmentGuide { drawAlignmentGuide(guide, palette: palette, in: context) }
@@ -191,7 +192,7 @@ final class TouchControllerView: UIView {
     }
 
     /// "Press Any" printed at the bottom of the body, its A in magenta like the A button.
-    private func drawLogo(palette: ControllerPalette, in context: CGContext) {
+    private func drawLogo(in rect: CGRect, palette: ControllerPalette) {
         let size: CGFloat = 18
         var font = UIFont.systemFont(ofSize: size, weight: .black)
         if let italic = font.fontDescriptor.withSymbolicTraits(.traitItalic) {
@@ -204,9 +205,7 @@ final class TouchControllerView: UIView {
         ])
         string.addAttribute(.foregroundColor, value: palette.logoAccent, range: NSRange(location: 6, length: 1))
         let textSize = string.size()
-        // Just above the home indicator, or the bottom edge on phones without one.
-        let bottom = bounds.height - max(safeAreaInsets.bottom, 12)
-        string.draw(at: CGPoint(x: bounds.midX - textSize.width / 2, y: bottom - textSize.height - 4))
+        string.draw(at: CGPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2))
     }
 
     /// The dark glass around the game picture, rounded more at the bottom right, as on a Game Boy.
@@ -317,7 +316,7 @@ final class TouchControllerView: UIView {
         drawLettering(label, size: 15, at: CGPoint(x: rect.midX, y: rect.midY), distance: rect.height / 2 + 5, in: context, palette: palette)
     }
 
-    /// START, SELECT and Menu on the Game Boy layout: a slim pill on the A and B tilt, its name
+    /// START and SELECT on the Game Boy layout: a slim pill on the A and B tilt, its name
     /// printed below.
     private func drawTiltedPill(at center: TouchPoint, label: String, active: Bool, palette: ControllerPalette, in context: CGContext) {
         let origin = CGPoint(x: center.x, y: center.y)

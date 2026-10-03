@@ -16,7 +16,7 @@ picture showing through, in one of two color themes chosen by Settings > Control
 
 Match System picks Classic in Light Mode and Dark in Dark Mode. On the Game Boy layout, the
 names are printed below the controls in small capitals along the tilt of A and B, as on a Game
-Boy, and START, SELECT and Menu are slim pills on the same tilt. Both layouts print "Press Any"
+Boy, and START and SELECT are slim pills on the same tilt. Both layouts print "Press Any"
 at the bottom of the body, in the D-pad's charcoal on Classic and gray on Dark, with its A in
 the A button's magenta. Playtiles keeps its unlabeled buttons and labeled pills. With a game controller connected the controls hide and the body stays.
 
@@ -33,8 +33,10 @@ Controller Layout (`controllerLayout`, Game Boy by default, overridable per Syst
 
 - **Game Boy** is SameBoy 1.0.3's portrait layout (`GBVerticalLayout`): the game picture at the
   top at a whole number of device pixels per Game Boy pixel, the D-pad left, A above and right of
-  B, and SELECT and START below them. SameBoy opens its menu from its logo; here a small Menu
-  pill sits between SELECT and START.
+  B, and SELECT and START below them. The controls sit centered between the bezel and the logo,
+  higher than SameBoy puts them, so the body has no empty band under the picture. SameBoy opens
+  its menu from its logo; here Menu is a small round button between SELECT and START, unlike
+  them so it isn't taken for a third Game Boy button.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
   START and SELECT swapped into Game Boy order. Controls are drawn at the skin artwork's sizes,
   where A is larger than B, and respond across both the frame and the artwork. It keeps the

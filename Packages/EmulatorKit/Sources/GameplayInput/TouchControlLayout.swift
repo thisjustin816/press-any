@@ -63,6 +63,8 @@ public struct TouchControlLayout: Equatable, Sendable {
     /// Where a control is drawn, when that differs from where it responds to touches.
     public let artwork: [TouchControl: TouchRect]
     public let alignmentGuide: TouchAlignmentGuide?
+    /// Where the Press Any logo is printed. Drawn only; it takes no touches.
+    public let logo: TouchRect?
     public let dpadDeadZoneFraction: Double
 
     public init(
@@ -76,6 +78,7 @@ public struct TouchControlLayout: Equatable, Sendable {
         actions: [TouchAction: TouchRect] = [:],
         artwork: [TouchControl: TouchRect] = [:],
         alignmentGuide: TouchAlignmentGuide? = nil,
+        logo: TouchRect? = nil,
         dpadDeadZoneFraction: Double = 0.16
     ) {
         self.dpad = dpad
@@ -88,6 +91,7 @@ public struct TouchControlLayout: Equatable, Sendable {
         self.actions = actions
         self.artwork = artwork
         self.alignmentGuide = alignmentGuide
+        self.logo = logo
         self.dpadDeadZoneFraction = min(max(dpadDeadZoneFraction, 0), 0.49)
     }
 
@@ -113,7 +117,8 @@ public struct TouchControlLayout: Equatable, Sendable {
 
 extension TouchControlLayout {
     /// The layout for `style` in a portrait view of the given size, in points. `safeTop` keeps
-    /// the screen clear of the status bar; `displayScale` lets the Game Boy layout size the
+    /// the screen clear of the status bar and `safeBottom` the logo clear of the home indicator;
+    /// `displayScale` lets the Game Boy layout size the
     /// picture to whole device pixels, as SameBoy does.
     public static func make(
         _ style: TouchControlStyle,
@@ -125,15 +130,27 @@ extension TouchControlLayout {
     ) -> TouchControlLayout {
         switch style {
         case .gameBoy:
-            gameBoy(width: width, height: height, safeTop: safeTop, displayScale: displayScale)
+            gameBoy(width: width, height: height, safeTop: safeTop, safeBottom: safeBottom, displayScale: displayScale)
         case .playtiles:
-            playtiles(width: width, height: height)
+            playtiles(width: width, height: height, safeBottom: safeBottom)
         }
     }
 
-    /// SameBoy 1.0.3's `GBVerticalLayout`, in points rather than pixels. Positions are the
-    /// controls' centers; sizes are SameBoy's touch radii (36 for buttons, 75 for the D-pad).
-    static func gameBoy(width: Double, height: Double, safeTop: Double, displayScale: Double) -> TouchControlLayout {
+    /// The logo's box, centered just above the home indicator, or the bottom edge without one.
+    static func logo(width: Double, height: Double, safeBottom: Double) -> TouchRect {
+        TouchRect(x: width / 2 - 60, y: height - max(safeBottom, 12) - 28, width: 120, height: 24)
+    }
+
+    /// SameBoy 1.0.3's `GBVerticalLayout`, in points rather than pixels, with the controls moved
+    /// up to sit centered between the bezel and the logo. Positions are the controls' centers;
+    /// sizes are SameBoy's touch radii (36 for buttons, 75 for the D-pad).
+    static func gameBoy(
+        width: Double,
+        height: Double,
+        safeTop: Double,
+        safeBottom: Double,
+        displayScale: Double
+    ) -> TouchControlLayout {
         let scale = max(displayScale, 1)
         let screenWidth = max(floor(width * scale / 160), 1) * 160 / scale
         let screenHeight = screenWidth / 160 * 144
@@ -147,9 +164,16 @@ extension TouchControlLayout {
         )
         let controlAreaStart = screen.y + screenHeight + min(border * 2, 20)
 
+        // The controls run from the D-pad's top, 214 above SELECT, to the lettering under SELECT
+        // and START, about 30 below it. Center that block between the bezel and the logo, never
+        // lower than SameBoy puts it and never so high the D-pad reaches the picture.
+        let logo = logo(width: width, height: height, safeBottom: safeBottom)
+        let bezelBottom = screen.y + screenHeight + border
+        let centered = bezelBottom + (logo.y - bezelBottom - 244) / 2 + 214
+        let sameBoy = min(height - 80, (height - controlAreaStart) * 0.75 + controlAreaStart)
         let select = TouchPoint(
             x: min(width / 4, 120),
-            y: min(height - 80, (height - controlAreaStart) * 0.75 + controlAreaStart)
+            y: min(sameBoy, max(controlAreaStart + 215, centered))
         )
         let start = TouchPoint(x: width - select.x, y: select.y)
 
@@ -167,9 +191,9 @@ extension TouchControlLayout {
         func square(_ center: TouchPoint, radius: Double) -> TouchRect {
             TouchRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
         }
-        // SameBoy opens its menu from its logo. Here Menu is a small pill between SELECT and
-        // START, which nothing else uses.
-        let menu = TouchRect(x: width / 2 - 26, y: select.y - 12, width: 52, height: 24)
+        // SameBoy opens its menu from its logo. Here Menu is a small round button between
+        // SELECT and START, unlike them so it isn't taken for a third Game Boy button.
+        let menu = TouchPoint(x: width / 2, y: select.y)
 
         return TouchControlLayout(
             dpad: square(dpad, radius: 75),
@@ -178,20 +202,22 @@ extension TouchControlLayout {
             start: square(start, radius: buttonRadius),
             select: square(select, radius: buttonRadius),
             screen: screen,
-            actions: [.menu: menu],
+            actions: [.menu: square(menu, radius: 22)],
             artwork: [
                 // SameBoy's images: a 147x151 cross and 75x79 buttons.
                 .dpad: square(dpad, radius: 74),
                 .a: square(a, radius: 37),
                 .b: square(b, radius: 37),
-            ]
+                .action(.menu): square(menu, radius: 8),
+            ],
+            logo: logo
         )
     }
 
     /// The Playtiles GBC Delta skin (`info.json`, iPhone edge-to-edge portrait) in its 1080x2340
     /// mapping space, scaled to fit the view and centered across it. Touch areas are the skin's
     /// frames joined with its artwork; drawing follows the artwork, measured from the skin's PDF.
-    static func playtiles(width: Double, height: Double) -> TouchControlLayout {
+    static func playtiles(width: Double, height: Double, safeBottom: Double) -> TouchControlLayout {
         let scale = min(width / 1080, height / 2340)
         let originX = (width - 1080 * scale) / 2
         func frame(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> TouchRect {
@@ -239,7 +265,8 @@ extension TouchControlLayout {
             alignmentGuide: TouchAlignmentGuide(
                 bar: frame(0, 1129, 1080, 83),
                 tab: frame(494, 1129, 92, 182)
-            )
+            ),
+            logo: logo(width: width, height: height, safeBottom: safeBottom)
         )
     }
 }
