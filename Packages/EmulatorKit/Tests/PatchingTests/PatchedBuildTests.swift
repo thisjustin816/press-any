@@ -49,6 +49,26 @@ final class PatchedBuildTests: XCTestCase {
         XCTAssertEqual(try harness.store.hashFile(at: resolved), build.imageSHA256)
     }
 
+    func testEvictRemovesOnlyAPatchDerivedImageAndLaunchRebuildsIt() throws {
+        let harness = try PatchBuildHarness.make()
+        let patchURL = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "test.ips")
+        let build = try harness.creator.execute(
+            .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patchURL)], displayName: "Patched")
+        )
+        let evict = EvictGeneratedImage(builds: harness.builds, assets: harness.assets, assetStore: harness.store)
+        let generatedURL = harness.store.generatedImageURL(sha256: build.imageSHA256)
+
+        XCTAssertTrue(try evict.execute(buildID: build.id))
+        XCTAssertFalse(harness.store.fileExists(at: generatedURL))
+        XCTAssertFalse(try evict.execute(buildID: build.id), "nothing left to evict")
+        XCTAssertThrowsError(try evict.execute(buildID: harness.baseBuild.id)) { error in
+            XCTAssertEqual(error as? EvictGeneratedImageError, .notRebuildable(harness.baseBuild.id))
+        }
+
+        let resolved = try harness.resolver.resolveImageForLaunch(buildID: build.id)
+        XCTAssertEqual(try harness.store.hashFile(at: resolved), build.imageSHA256)
+    }
+
     func testPatchStackOrderIsPersistedAndReplayed() throws {
         let harness = try PatchBuildHarness.make()
         let first = try harness.writePatch(singleByteIPS(offset: 0, value: 0x58), name: "first.ips")

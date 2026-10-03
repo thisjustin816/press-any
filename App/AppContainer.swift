@@ -25,6 +25,7 @@ final class AppContainer {
     let preferredLaunchResolver: ResolvePreferredLaunchContext
     let patchCreator: CreatePatchedBuild
     let launchImageResolver: ResolveImageForLaunch
+    let evictGeneratedImage: EvictGeneratedImage
     let quickPlayWorkspace: QuickPlayWorkspace
     let quickPlayPromoter: PromoteQuickPlay
     let coreRegistry: CoreRegistry
@@ -94,6 +95,11 @@ final class AppContainer {
         launchImageResolver = ResolveImageForLaunch(
             builds: repositories.builds,
             recipes: repositories.patchRecipes,
+            assets: repositories.assets,
+            assetStore: fileStore
+        )
+        evictGeneratedImage = EvictGeneratedImage(
+            builds: repositories.builds,
             assets: repositories.assets,
             assetStore: fileStore
         )

@@ -109,7 +109,7 @@ struct LibraryView: View {
                     }
                 }
             }
-            .task { model.reload() }
+            .onAppear { model.reload() }
             .refreshable { model.reload() }
             .fileImporter(
                 isPresented: $showROMImporter,
