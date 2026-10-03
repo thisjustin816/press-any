@@ -72,6 +72,43 @@ final class QuickPlayTests: XCTestCase {
         XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.game.id).count, 1)
         XCTAssertEqual(try harness.libraryBatteryData(), Data([7, 7, 7]))
         XCTAssertFalse(harness.store.fileExists(at: session.rootURL))
+        let safetyCopy = try XCTUnwrap(promoted.safetyCopy)
+        XCTAssertEqual(safetyCopy.copiedFromProfileID, harness.profile.id)
+        XCTAssertEqual(try harness.libraryBatteryData(profileID: safetyCopy.id), Data([1, 2, 3]))
+    }
+
+    func testReplacingAProfileOfAnotherGameIsRefusedBeforeAnythingIsImported() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let rom = try harness.writeExternalROM(TestROM.make(title: "OTHER", cgb: false, payloadByte: 5))
+        let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
+        try harness.workspace.writeTemporaryBattery(Data([3]), sessionID: session.id)
+
+        let analysis = try harness.promoter.analyze(session, targetGameID: nil)
+        XCTAssertThrowsError(try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: analysis,
+                disposition: .createGame(title: "Other"),
+                buildDisplayName: "Other",
+                markAsBase: true
+            ),
+            saveDisposition: .replaceExisting(profileID: harness.profile.id)
+        )) { error in
+            XCTAssertEqual(error as? PromoteQuickPlayError, .profileInDifferentGame(profileID: harness.profile.id))
+        }
+
+        XCTAssertEqual(try harness.games.fetchGames().count, 1)
+        XCTAssertEqual(try harness.libraryBatteryData(), Data([1]))
+        XCTAssertTrue(harness.store.fileExists(at: session.rootURL), "the session stays for another try")
+    }
+
+    func testKeptSessionsListWithTheDatesTheyWereSavedWith() throws {
+        let harness = try QuickPlayHarness.make()
+        let rom = try harness.writeExternalROM(TestROM.make(title: "KEEP", cgb: false, payloadByte: 6))
+        let session = try harness.workspace.start(romURL: rom)
+
+        XCTAssertEqual(try harness.workspace.load(sessionID: session.id), session)
+        XCTAssertEqual(try harness.workspace.sessions(), [session])
     }
 
     func testPromotionCanCreateIndependentSaveProfile() throws {

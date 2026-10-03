@@ -79,10 +79,19 @@ public struct QuickPlayWorkspace: Sendable {
             throw QuickPlayWorkspaceError.sessionNotFound(sessionID)
         }
         do {
-            return try JSONDecoder().decode(QuickPlaySession.self, from: assetStore.readData(at: manifest))
+            return try Self.decoder.decode(QuickPlaySession.self, from: assetStore.readData(at: manifest))
         } catch {
             throw QuickPlayWorkspaceError.malformedManifest(sessionID)
         }
+    }
+
+    /// Sessions still within retention, newest first. Unreadable manifests are skipped.
+    public func sessions() throws -> [QuickPlaySession] {
+        let current = now()
+        return try assetStore.quickPlaySessionIDs()
+            .compactMap { try? load(sessionID: $0) }
+            .filter { $0.expiresAt > current }
+            .sorted { $0.startedAt > $1.startedAt }
     }
 
     public func writeTemporaryBattery(_ data: Data, sessionID: UUID) throws {
@@ -113,9 +122,19 @@ public struct QuickPlayWorkspace: Sendable {
     }
 
     private func persist(_ session: QuickPlaySession) throws {
+        try assetStore.writeDataAtomically(try Self.encoder.encode(session), to: session.manifestURL)
+    }
+
+    private static var encoder: JSONEncoder {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .millisecondsSince1970
         encoder.outputFormatting = [.sortedKeys]
-        try assetStore.writeDataAtomically(try encoder.encode(session), to: session.manifestURL)
+        return encoder
+    }
+
+    private static var decoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        return decoder
     }
 }

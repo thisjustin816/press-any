@@ -1,7 +1,7 @@
 import EmulatorDomain
 import Foundation
 
-public struct QuickPlaySession: Identifiable, Codable, Equatable, Sendable {
+public struct QuickPlaySession: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public let imageSHA256: String
     public let originalFilename: String

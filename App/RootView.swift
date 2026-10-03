@@ -26,6 +26,10 @@ struct RootView: View {
     @State private var gameplay: GameplayPresentation?
     @State private var errorMessage: String?
     @State private var pendingResume: PreparedLaunch?
+    /// The Quick Play session whose gameplay screen is closing, shown once the cover is gone.
+    @State private var closingQuickPlayID: UUID?
+    @State private var endedQuickPlay: QuickPlaySession?
+    @State private var quickPlayToResume: QuickPlaySession?
 
     var body: some View {
         Group {
@@ -33,7 +37,8 @@ struct RootView: View {
                 LibraryView(
                     container: container,
                     onPlay: { context in launch(context, container: container) },
-                    onQuickPlayROM: { url in quickPlay(url, container: container) }
+                    onQuickPlay: { request in quickPlay(request, container: container) },
+                    onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) }
                 )
             } else {
                 ContentUnavailableView {
@@ -43,14 +48,36 @@ struct RootView: View {
                 }
             }
         }
-        .fullScreenCover(item: $gameplay) { presentation in
+        .fullScreenCover(item: $gameplay, onDismiss: showClosingQuickPlay) { presentation in
             GameplayViewControllerRepresentable(
                 runtime: presentation.runtime,
                 autoResumePolicy: presentation.autoResumePolicy,
                 launchMessage: presentation.launchMessage,
+                firstFrameClock: presentation.firstFrameClock,
                 onClose: { endGameplay(presentation) }
             )
             .ignoresSafeArea()
+        }
+        .sheet(item: $endedQuickPlay, onDismiss: resumeChosenQuickPlay) { session in
+            if let container = bootstrap.container {
+                NavigationStack {
+                    QuickPlaySessionView(
+                        session: session,
+                        container: container,
+                        onResume: { resumed in
+                            quickPlayToResume = resumed
+                            endedQuickPlay = nil
+                        },
+                        onFinished: { endedQuickPlay = nil }
+                    )
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Keep for Later") { endedQuickPlay = nil }
+                        }
+                    }
+                }
+                .interactiveDismissDisabled()
+            }
         }
         .alert("Resume where you left off?", isPresented: Binding(
             get: { pendingResume != nil },
@@ -93,35 +120,69 @@ struct RootView: View {
                 kind: .library,
                 runtime: launch.session,
                 autoResumePolicy: launch.policy,
-                launchMessage: message
+                launchMessage: message,
+                firstFrameClock: nil
             )
         } catch {
             errorMessage = "Could not start the game: \(error)"
         }
     }
 
-    private func quickPlay(_ url: URL, container: AppContainer) {
+    private func quickPlay(_ request: QuickPlayRequest, container: AppContainer) {
+        let url = request.url
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
         do {
-            let temporary = try container.quickPlayWorkspace.start(romURL: url)
-            let runtime = QuickPlayRuntimeSession(session: temporary, coreRegistry: container.coreRegistry)
-            try runtime.start()
-            gameplay = GameplayPresentation(
-                kind: .quickPlay(temporary.id),
-                runtime: runtime,
-                autoResumePolicy: container.quickPlayAutoResumePolicy(system: temporary.system),
-                launchMessage: nil
+            let temporary = try container.quickPlayWorkspace.start(
+                romURL: url,
+                copiedSaveProfileID: request.copiedSaveProfileID
             )
+            try present(temporary, container: container, firstFrameClock: request.chosenAt)
         } catch {
             errorMessage = "Could not start Quick Play: \(error)"
         }
     }
 
+    /// A kept session picks up from its autosave, so there is no first-frame time to report.
+    private func resumeQuickPlay(_ session: QuickPlaySession, container: AppContainer) {
+        do {
+            try present(session, container: container, firstFrameClock: nil)
+        } catch {
+            errorMessage = "Could not resume Quick Play: \(error)"
+        }
+    }
+
+    private func present(_ session: QuickPlaySession, container: AppContainer, firstFrameClock: UInt64?) throws {
+        let runtime = QuickPlayRuntimeSession(session: session, coreRegistry: container.coreRegistry)
+        try runtime.start()
+        gameplay = GameplayPresentation(
+            kind: .quickPlay(session.id),
+            runtime: runtime,
+            autoResumePolicy: container.quickPlayAutoResumePolicy(system: session.system),
+            launchMessage: nil,
+            firstFrameClock: firstFrameClock
+        )
+    }
+
+    private func showClosingQuickPlay() {
+        guard let id = closingQuickPlayID else { return }
+        closingQuickPlayID = nil
+        endedQuickPlay = try? bootstrap.container?.quickPlayWorkspace.load(sessionID: id)
+    }
+
+    private func resumeChosenQuickPlay() {
+        guard let session = quickPlayToResume, let container = bootstrap.container else { return }
+        quickPlayToResume = nil
+        resumeQuickPlay(session, container: container)
+    }
+
     private func endGameplay(_ presentation: GameplayPresentation) {
-        if case .library = presentation.kind {
+        switch presentation.kind {
+        case .library:
             bootstrap.container?.stopActiveSession(createAutoState: false)
+        case .quickPlay(let id):
+            closingQuickPlayID = id
         }
         gameplay = nil
     }
@@ -138,4 +199,13 @@ private struct GameplayPresentation: Identifiable {
     let runtime: any GameplayRuntime
     let autoResumePolicy: AutoResumePolicy
     let launchMessage: String?
+    /// `DispatchTime` uptime when the file was chosen, for Quick Play's time-to-first-frame report.
+    let firstFrameClock: UInt64?
+}
+
+struct QuickPlayRequest {
+    let url: URL
+    let copiedSaveProfileID: UUID?
+    /// `DispatchTime` uptime when the file was chosen.
+    let chosenAt: UInt64
 }
