@@ -212,10 +212,20 @@ final class GameDetailViewModel: ObservableObject {
     }
 
     func merge(into target: Game, mode: ReorganizationMode) {
-        perform {
+        do {
             try buildOperations.mergeGame(sourceGameID: gameID, into: target.id, mode: mode)
+            reload()
             infoMessage = "Merged into \(target.primaryTitle)."
+        } catch BuildOperationError.duplicateImagesInTarget(let buildIDs) {
+            let names = buildIDs.compactMap { buildName(id: $0) }.joined(separator: ", ")
+            errorMessage = "\(target.primaryTitle) already has the same ROM as \(names). Move can’t combine them without losing that Build’s save states. Use Copy, or remove one first."
+        } catch {
+            errorMessage = error.localizedDescription
         }
+    }
+
+    func report(_ error: Error) {
+        errorMessage = error.localizedDescription
     }
 
     func clearMessages() {

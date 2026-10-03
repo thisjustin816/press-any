@@ -131,6 +131,8 @@ struct LibraryView: View {
                 }
             }
             .onAppear { model.reload() }
+            // Quick Play promotion adds Games from sheets this screen doesn't own.
+            .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in model.reload() }
             .refreshable { model.reload() }
             .fileImporter(
                 isPresented: $showROMImporter,
@@ -229,8 +231,7 @@ struct LibraryView: View {
         do {
             onPlay(try model.launchContext(for: game))
         } catch {
-            // Reload will surface repository failures. Gameplay startup reports its own errors.
-            model.reload()
+            model.report("Couldn’t start \(game.primaryTitle): \(error.localizedDescription)")
         }
     }
 
@@ -250,7 +251,7 @@ struct LibraryView: View {
                 )
                 importReview = ImportReviewPresentation(model: reviewModel)
             } catch {
-                model.reload()
+                model.report("Couldn’t read \(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
     }

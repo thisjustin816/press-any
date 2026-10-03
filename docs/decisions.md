@@ -3,6 +3,15 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-03: Merging into a Game that already holds the same image
+
+**Decision.** A Game holds one Build per image. When a merge brings in a Build whose image the
+target already holds, Copy skips that Build and Move is refused, naming the Builds involved.
+
+**Why.** The source keeps its Build in a copy, so skipping loses nothing. A move would have to
+drop the source Build, and the save states made with it, or fold its states into the target's
+Build, which would let states cross Build boundaries.
+
 ## 2026-10-03: An Auto State older than its profile's save is not restored
 
 **Decision.** A library launch restores the newest Auto State for its Build and Save Profile only

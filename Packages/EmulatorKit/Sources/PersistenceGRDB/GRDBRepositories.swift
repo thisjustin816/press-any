@@ -308,6 +308,16 @@ public final class GRDBManagedAssetRepository: ManagedAssetInventoryRepository, 
         }
     }
 
+    public func fetchAsset(relativePath: String) throws -> ManagedAsset? {
+        try read { db in
+            try ManagedAssetRecord.fetchOne(
+                db,
+                sql: "SELECT * FROM managed_assets WHERE relative_path = ?",
+                arguments: [relativePath]
+            )?.domain()
+        }
+    }
+
     public func fetchSourceAsset(kind: ManagedAssetKind, sha256: String) throws -> ManagedAsset? {
         try read { db in
             try ManagedAssetRecord.fetchOne(

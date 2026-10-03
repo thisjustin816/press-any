@@ -102,6 +102,49 @@ final class QuickPlayTests: XCTestCase {
         XCTAssertTrue(harness.store.fileExists(at: session.rootURL), "the session stays for another try")
     }
 
+    func testASaveFailureAfterImportKeepsTheSessionForARetry() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let rom = try harness.writeExternalROM(TestROM.make(title: "RETRY", cgb: false, payloadByte: 9))
+        let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
+        try harness.workspace.writeTemporaryBattery(Data([4]), sessionID: session.id)
+        let refusing = PromoteQuickPlay(
+            analyzer: ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store),
+            committer: ImportCommitter(
+                games: harness.games,
+                builds: harness.builds,
+                assets: harness.assets,
+                assetStore: harness.store,
+                transactions: PassthroughTransactionRunner()
+            ),
+            workspace: harness.workspace,
+            profiles: InsertRefusingProfiles(inner: harness.profiles),
+            assets: harness.assets,
+            assetStore: harness.store
+        )
+        let plan = ROMImportPlan(
+            analysis: try refusing.analyze(session, targetGameID: harness.game.id),
+            disposition: .addBuild(gameID: harness.game.id),
+            buildDisplayName: "Retry",
+            markAsBase: false
+        )
+
+        XCTAssertThrowsError(try refusing.promote(session: session, plan: plan, saveDisposition: .createProfile(name: "New"))) { error in
+            guard case .importedButSaveFailed(let gameID, _) = error as? PromoteQuickPlayError else {
+                return XCTFail("Expected importedButSaveFailed, got \(error)")
+            }
+            XCTAssertEqual(gameID, harness.game.id)
+        }
+        XCTAssertTrue(harness.store.fileExists(at: session.rootURL), "the session stays for a retry")
+
+        let retry = try harness.promoter.analyze(session, targetGameID: harness.game.id)
+        let promoted = try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(analysis: retry, disposition: .duplicateExisting(buildID: XCTUnwrap(retry.exactExistingBuildID)), buildDisplayName: "Retry", markAsBase: false),
+            saveDisposition: .createProfile(name: "New")
+        )
+        XCTAssertEqual(try harness.libraryBatteryData(profileID: XCTUnwrap(promoted.saveProfile).id), Data([4]))
+    }
+
     func testKeptSessionsListWithTheDatesTheyWereSavedWith() throws {
         let harness = try QuickPlayHarness.make()
         let rom = try harness.writeExternalROM(TestROM.make(title: "KEEP", cgb: false, payloadByte: 6))
@@ -109,6 +152,21 @@ final class QuickPlayTests: XCTestCase {
 
         XCTAssertEqual(try harness.workspace.load(sessionID: session.id), session)
         XCTAssertEqual(try harness.workspace.sessions(), [session])
+    }
+
+    func testALoadedSessionLivesWhereTheWorkspaceIsNowNotWhereItWasRecorded() throws {
+        let harness = try QuickPlayHarness.make()
+        let rom = try harness.writeExternalROM(TestROM.make(title: "MOVED", cgb: false))
+        let session = try harness.workspace.start(romURL: rom)
+        let manifest = try String(contentsOf: session.manifestURL, encoding: .utf8)
+        let stale = manifest.replacingOccurrences(
+            of: session.rootURL.absoluteString.replacingOccurrences(of: "/", with: "\\/"),
+            with: "file:\\/\\/\\/old-container\\/QuickPlay\\/"
+        )
+        XCTAssertNotEqual(stale, manifest, "the fixture rewrote the recorded root")
+        try stale.write(to: session.manifestURL, atomically: true, encoding: .utf8)
+
+        XCTAssertEqual(try harness.workspace.load(sessionID: session.id).rootURL, session.rootURL)
     }
 
     func testPromotionCanCreateIndependentSaveProfile() throws {
@@ -291,6 +349,31 @@ extension QuickPlayTests {
 }
 
 extension QuickPlayTests {
+    func testARejectedAutosaveBootsTheGameAndIsSetAside() throws {
+        let harness = try QuickPlayHarness.make()
+        let rom = try harness.writeExternalROM(TestROM.make(title: "BROKEN", cgb: false))
+        let session = try harness.workspace.start(romURL: rom)
+        let autoStateURL = session.rootURL.appendingPathComponent("autosave.state")
+        try Data("not a state".utf8).write(to: autoStateURL)
+
+        let runtime = QuickPlayRuntimeSession(
+            session: session,
+            coreRegistry: CoreRegistry(factories: [QuickPlayFakeFactory()])
+        )
+        try runtime.start()
+
+        XCTAssertTrue(runtime.autoStateRejected)
+        XCTAssertEqual(runtime.state, .running(session.id))
+        XCTAssertEqual(try runtime.stepFrame().bgra8888[0], 1, "the game booted from the start")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: autoStateURL.path))
+        XCTAssertEqual(
+            try Data(contentsOf: session.rootURL.appendingPathComponent("autosave.rejected.state")),
+            Data("not a state".utf8)
+        )
+    }
+}
+
+extension QuickPlayTests {
     func testFreshStartSkipsBootAnimationButResumeDoesNot() throws {
         let harness = try QuickPlayHarness.make()
         let rom = try harness.writeExternalROM(TestROM.make(title: "BOOT", cgb: false))
@@ -328,4 +411,16 @@ private struct QuickPlayFakeFactory: EmulatorCoreFactory {
     func makeCore() throws -> any EmulatorCore {
         FakeEmulatorCore(descriptor: descriptor)
     }
+}
+
+/// Refuses new profiles, so creating one during promotion fails after the import.
+private struct InsertRefusingProfiles: SaveProfileRepository {
+    let inner: InMemorySaveProfileRepository
+    struct Refused: Error {}
+
+    func fetchSaveProfile(id: UUID) throws -> SaveProfile? { try inner.fetchSaveProfile(id: id) }
+    func fetchSaveProfiles(gameID: UUID) throws -> [SaveProfile] { try inner.fetchSaveProfiles(gameID: gameID) }
+    func insertSaveProfile(_ profile: SaveProfile) throws { throw Refused() }
+    func updateSaveProfile(_ profile: SaveProfile) throws { try inner.updateSaveProfile(profile) }
+    func deleteSaveProfile(id: UUID) throws { try inner.deleteSaveProfile(id: id) }
 }

@@ -52,54 +52,56 @@ public struct SaveStateService: Sendable {
             id: assetID,
             kind: .saveState,
             storageClass: .userData,
-            contentSHA256: try assetStore.hashFile(at: destination),
+            contentSHA256: assetStore.hashData(payload),
             byteLength: Int64(payload.count),
             relativePath: try assetStore.managedRelativePath(for: destination),
             integrityStatus: .verified,
             createdAt: timestamp
         )
 
+        let state: SaveState
         do {
             try assets.insertAsset(asset)
-            let autoSequence: Int?
-            if kind == .auto {
-                let existing = try states.fetchSaveStates(
-                    buildID: context.buildID,
-                    saveProfileID: context.saveProfileID
-                )
-                autoSequence = (existing.compactMap(\.autoSequence).max() ?? 0) + 1
-            } else {
-                autoSequence = nil
-            }
-
-            let state = SaveState(
-                id: stateID,
-                buildID: context.buildID,
-                saveProfileID: context.saveProfileID,
-                core: core,
-                stateSerializationVersion: serializationVersion,
-                stateAssetID: assetID,
-                kind: kind,
-                autoSequence: autoSequence,
-                label: label,
-                playtimeSeconds: playtimeSeconds,
-                createdAt: timestamp
-            )
             do {
+                let autoSequence: Int?
+                if kind == .auto {
+                    let existing = try states.fetchSaveStates(
+                        buildID: context.buildID,
+                        saveProfileID: context.saveProfileID
+                    )
+                    autoSequence = (existing.compactMap(\.autoSequence).max() ?? 0) + 1
+                } else {
+                    autoSequence = nil
+                }
+                state = SaveState(
+                    id: stateID,
+                    buildID: context.buildID,
+                    saveProfileID: context.saveProfileID,
+                    core: core,
+                    stateSerializationVersion: serializationVersion,
+                    stateAssetID: assetID,
+                    kind: kind,
+                    autoSequence: autoSequence,
+                    label: label,
+                    playtimeSeconds: playtimeSeconds,
+                    createdAt: timestamp
+                )
                 try states.insertSaveState(state)
             } catch {
                 try? assets.deleteAsset(id: assetID)
                 throw error
             }
-
-            if kind == .auto {
-                try pruneAutoStates(context: context)
-            }
-            return state
         } catch {
             try? assetStore.removeIfExists(destination)
             throw error
         }
+
+        // The new state is complete. Pruning older ones is housekeeping, and a failure there must
+        // not take the new state with it; the next save prunes again.
+        if kind == .auto {
+            try? pruneAutoStates(context: context)
+        }
+        return state
     }
 
     public func load(

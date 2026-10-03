@@ -153,7 +153,15 @@ private struct Harness {
     }
 
     func buildOperations() -> BuildOperations {
-        BuildOperations(games: games, builds: builds, profiles: profiles, now: { now })
+        BuildOperations(
+            games: games,
+            builds: builds,
+            profiles: profiles,
+            recipes: InMemoryPatchRecipeRepository(),
+            assets: assets,
+            assetStore: store,
+            now: { now }
+        )
     }
 
     func setPreferredBuild(_ id: UUID) throws {

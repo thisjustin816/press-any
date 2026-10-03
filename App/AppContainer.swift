@@ -63,6 +63,9 @@ final class AppContainer {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            recipes: repositories.patchRecipes,
+            assets: repositories.assets,
+            assetStore: fileStore,
             transactions: repositories.transactions
         )
         createBlankSaveProfile = CreateBlankSaveProfile(
@@ -183,6 +186,11 @@ final class AppContainer {
         try? activeSession.stop(createAutoState: createAutoState)
         self.activeSession = nil
     }
+}
+
+extension Notification.Name {
+    /// Posted when Games are added or removed outside the library screen.
+    static let libraryDidChange = Notification.Name("libraryDidChange")
 }
 
 struct PreparedLaunch {

@@ -99,6 +99,65 @@ final class PatchedBuildTests: XCTestCase {
         XCTAssertEqual(try harness.store.readData(at: rebuilt), Data("QRS".utf8))
     }
 
+    func testACopiedPatchBuildRebuildsItsImageOnItsOwn() throws {
+        let harness = try PatchBuildHarness.make()
+        let patchURL = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "test.ips")
+        let patched = try harness.creator.execute(
+            .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patchURL)], displayName: "Patched")
+        )
+        let operations = BuildOperations(
+            games: harness.games,
+            builds: harness.builds,
+            profiles: InMemorySaveProfileRepository(),
+            recipes: harness.recipes,
+            assets: harness.assets,
+            assetStore: harness.store
+        )
+        let separate = try operations.promoteBuild(buildID: patched.id, title: "Hack", mode: .copy)
+        let copy = try XCTUnwrap(harness.builds.fetchBuilds(gameID: separate.id).first)
+
+        try EvictGeneratedImage(builds: harness.builds, assets: harness.assets, assetStore: harness.store)
+            .execute(buildID: patched.id)
+        let rebuilt = try harness.resolver.resolveImageForLaunch(buildID: copy.id)
+        XCTAssertEqual(try harness.store.readData(at: rebuilt), Data("AXC".utf8))
+    }
+
+    func testTheSamePatchTwiceInOneStackIsOneSourceAsset() throws {
+        let harness = try PatchBuildHarness.make()
+        let first = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "a.ips")
+        let second = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "b.ips")
+
+        let build = try harness.creator.execute(
+            .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: first), .init(url: second)], displayName: "Twice")
+        )
+        let recipe = try XCTUnwrap(harness.recipes.fetchPatchRecipe(resultBuildID: build.id))
+        XCTAssertEqual(Set(recipe.items.map(\.patchAssetID)).count, 1)
+        XCTAssertEqual(recipe.items.count, 2)
+    }
+
+    func testBuildsWithTheSamePatchedResultShareOneCacheRecord() throws {
+        let harness = try PatchBuildHarness.make()
+        let patchURL = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "test.ips")
+        let operations = BuildOperations(
+            games: harness.games,
+            builds: harness.builds,
+            profiles: InMemorySaveProfileRepository(),
+            recipes: harness.recipes,
+            assets: harness.assets,
+            assetStore: harness.store
+        )
+        let otherGame = try operations.promoteBuild(buildID: harness.baseBuild.id, title: "Copy", mode: .copy)
+        let otherBase = try XCTUnwrap(harness.builds.fetchBuilds(gameID: otherGame.id).first)
+
+        let here = try harness.creator.execute(
+            .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patchURL)], displayName: "Here")
+        )
+        let there = try harness.creator.execute(
+            .init(gameID: otherGame.id, baseBuildID: otherBase.id, patches: [.init(url: patchURL)], displayName: "There")
+        )
+        XCTAssertEqual(here.imageAssetID, there.imageAssetID)
+    }
+
     func testPatchStackOrderIsPersistedAndReplayed() throws {
         let harness = try PatchBuildHarness.make()
         let first = try harness.writePatch(singleByteIPS(offset: 0, value: 0x58), name: "first.ips")
@@ -119,6 +178,7 @@ private struct PatchBuildHarness {
     let gameID: UUID
     let baseBuild: Build
     let store: ManagedFileStore
+    let games: InMemoryGameRepository
     let builds: InMemoryBuildRepository
     let assets: InMemoryAssetRepository
     let recipes: InMemoryPatchRecipeRepository
@@ -199,6 +259,7 @@ private struct PatchBuildHarness {
             gameID: gameID,
             baseBuild: baseBuild,
             store: store,
+            games: games,
             builds: builds,
             assets: assets,
             recipes: recipes,

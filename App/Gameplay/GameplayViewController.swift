@@ -56,13 +56,16 @@ final class GameplayViewController: UIViewController {
         observeLifecycle()
 
         renderer = MetalRenderer(view: metalView)
+        // Audio can be unavailable, during a call for example. The game still runs, silently,
+        // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
+        var message = launchMessage
         do {
             try audio.start()
-            driver.start()
         } catch {
-            presentRuntimeError(error)
+            message = [launchMessage, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
         }
-        if let launchMessage { showTransientMessage(launchMessage) }
+        driver.start()
+        if let message { showTransientMessage(message) }
     }
 
     override func viewDidDisappear(_ animated: Bool) {
@@ -301,7 +304,7 @@ final class GameplayViewController: UIViewController {
         }
         do {
             if try runtime.foreground(policy: autoResumePolicy) {
-                try audio.resume()
+                resumeAudio()
                 driver.start()
                 pausedOverlay.isHidden = true
                 return
@@ -321,6 +324,15 @@ final class GameplayViewController: UIViewController {
         }
     }
 
+    /// Sound is optional: the game keeps running silently when audio can't start.
+    private func resumeAudio() {
+        do {
+            try audio.resume()
+        } catch {
+            showTransientMessage("Sound is unavailable right now.")
+        }
+    }
+
     private func pauseGameplay() {
         driver.stop()
         audio.pause()
@@ -333,7 +345,7 @@ final class GameplayViewController: UIViewController {
     private func resumeTapped() {
         do {
             try runtime.resume()
-            try audio.resume()
+            resumeAudio()
             userPaused = false
             pausedOverlay.isHidden = true
             driver.start()

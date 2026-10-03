@@ -138,20 +138,6 @@ final class TouchControllerView: UIView {
     }
 
     private nonisolated static func layout(for bounds: CGRect) -> TouchControlLayout {
-        let width = Double(bounds.width)
-        let height = Double(bounds.height)
-        let scale = max(0.75, min(width / 390.0, 1.35))
-        let dpadSize = 126.0 * scale
-        let button = 66.0 * scale
-        let bottom = max(20.0, min(56.0, height * 0.055))
-        let controlsY = height - bottom - dpadSize
-
-        return TouchControlLayout(
-            dpad: .init(x: 24 * scale, y: controlsY, width: dpadSize, height: dpadSize),
-            a: .init(x: width - 24 * scale - button, y: controlsY + 8 * scale, width: button, height: button),
-            b: .init(x: width - 42 * scale - button * 2, y: controlsY + 42 * scale, width: button, height: button),
-            start: .init(x: width / 2 + 8 * scale, y: height - bottom - 26 * scale, width: 70 * scale, height: 24 * scale),
-            select: .init(x: width / 2 - 78 * scale, y: height - bottom - 26 * scale, width: 70 * scale, height: 24 * scale)
-        )
+        .standard(width: Double(bounds.width), height: Double(bounds.height))
     }
 }

@@ -58,6 +58,28 @@ final class TouchInputResolverTests: XCTestCase {
         resolver.cancelAllTouches()
         XCTAssertEqual(resolver.input, EmulatorInputState())
     }
+
+    func testStandardLayoutControlsDoNotOverlapOnCommonScreens() {
+        func overlaps(_ lhs: TouchRect, _ rhs: TouchRect) -> Bool {
+            lhs.x < rhs.x + rhs.width && rhs.x < lhs.x + lhs.width &&
+                lhs.y < rhs.y + rhs.height && rhs.y < lhs.y + lhs.height
+        }
+        // iPhone SE, 8, 15/16, 16 Pro Max portrait sizes in points.
+        for (width, height) in [(320.0, 568.0), (375.0, 667.0), (393.0, 852.0), (440.0, 956.0)] {
+            let layout = TouchControlLayout.standard(width: width, height: height)
+            let controls = [
+                ("D-pad", layout.dpad), ("A", layout.a), ("B", layout.b),
+                ("Start", layout.start), ("Select", layout.select),
+            ]
+            for (index, (name, rect)) in controls.enumerated() {
+                XCTAssertTrue(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width && rect.y + rect.height <= height,
+                              "\(name) is on screen at \(width)x\(height)")
+                for (otherName, other) in controls[(index + 1)...] {
+                    XCTAssertFalse(overlaps(rect, other), "\(name) overlaps \(otherName) at \(width)x\(height)")
+                }
+            }
+        }
+    }
 }
 
 private extension TouchControlLayout {

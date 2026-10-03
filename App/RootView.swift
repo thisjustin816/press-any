@@ -160,7 +160,9 @@ struct RootView: View {
             kind: .quickPlay(session.id),
             runtime: runtime,
             autoResumePolicy: container.quickPlayAutoResumePolicy(system: session.system),
-            launchMessage: nil,
+            launchMessage: runtime.autoStateRejected
+                ? "Couldn’t resume where you left off, so the game started over from its save."
+                : nil,
             firstFrameClock: firstFrameClock
         )
     }

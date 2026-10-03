@@ -1,6 +1,10 @@
 import Foundation
 
 public struct BPSPatchApplier: Sendable {
+    /// Far above the 8 MB GB/GBC maximum. Sizes come from the patch, so they are capped before
+    /// anything is allocated for them.
+    public static let maximumTargetSize = 64 * 1024 * 1024
+
     public init() {}
 
     /// With `ignoringBaseMismatch`, the source size and CRC and the resulting target CRC are not
@@ -28,7 +32,8 @@ public struct BPSPatchApplier: Sendable {
         guard ignoringBaseMismatch || sourceSize == source.count else {
             throw PatchError.sourceSizeMismatch(expected: sourceSize, actual: source.count)
         }
-        guard reader.index + metadataSize <= trailerStart else { throw PatchError.malformedPatch }
+        guard targetSize <= Self.maximumTargetSize else { throw PatchError.targetTooLarge(targetSize) }
+        guard metadataSize <= trailerStart - reader.index else { throw PatchError.malformedPatch }
         reader.index += metadataSize
 
         let actualSourceCRC = CRC32.checksum(source)
@@ -66,16 +71,19 @@ public struct BPSPatchApplier: Sendable {
                 reader.index += length
 
             case 2:
-                sourceRelativeOffset += try reader.readSignedNumber()
-                guard sourceRelativeOffset >= 0 else { throw PatchError.outOfBoundsRead }
+                let moved = sourceRelativeOffset.addingReportingOverflow(try reader.readSignedNumber())
+                guard !moved.overflow, moved.partialValue >= 0 else { throw PatchError.outOfBoundsRead }
+                sourceRelativeOffset = moved.partialValue
+                guard sourceRelativeOffset <= Int64(sourceBytes.count) else { throw PatchError.outOfBoundsRead }
                 let offset = Int(sourceRelativeOffset)
-                guard offset + length <= sourceBytes.count else { throw PatchError.outOfBoundsRead }
+                guard length <= sourceBytes.count - offset else { throw PatchError.outOfBoundsRead }
                 output.append(contentsOf: sourceBytes[offset..<(offset + length)])
                 sourceRelativeOffset += Int64(length)
 
             case 3:
-                targetRelativeOffset += try reader.readSignedNumber()
-                guard targetRelativeOffset >= 0 else { throw PatchError.outOfBoundsRead }
+                let moved = targetRelativeOffset.addingReportingOverflow(try reader.readSignedNumber())
+                guard !moved.overflow, moved.partialValue >= 0 else { throw PatchError.outOfBoundsRead }
+                targetRelativeOffset = moved.partialValue
                 for _ in 0..<length {
                     let offset = Int(targetRelativeOffset)
                     guard offset < output.count else { throw PatchError.outOfBoundsRead }

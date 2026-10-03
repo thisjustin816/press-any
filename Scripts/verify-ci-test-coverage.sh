@@ -9,7 +9,8 @@ workflow="$repo_root/.github/workflows/ci.yml"
 missing=()
 for dir in "$repo_root"/Packages/EmulatorKit/Tests/*/; do
   target="$(basename "$dir")"
-  if ! grep -q "$target" "$workflow"; then
+  # Match the whole name: CoreTests must not pass because EmulationCoreTests is listed.
+  if ! grep -Eq "(^|[^A-Za-z0-9_])${target}([^A-Za-z0-9_]|\$)" "$workflow"; then
     missing+=("$target")
   fi
 done

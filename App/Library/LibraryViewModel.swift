@@ -42,6 +42,11 @@ final class LibraryViewModel: ObservableObject {
         try launchResolver.execute(gameID: game.id)
     }
 
+    /// Shown in the library's alert. A reload clears it, so report after reloading, never before.
+    func report(_ message: String) {
+        errorMessage = message
+    }
+
     func clearError() {
         errorMessage = nil
     }
