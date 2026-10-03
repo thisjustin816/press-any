@@ -41,6 +41,8 @@ public protocol PatchRecipeRepository: Sendable {
 public protocol ManagedAssetRepository: Sendable {
     func fetchAsset(id: UUID) throws -> ManagedAsset?
     func fetchSourceAsset(kind: ManagedAssetKind, sha256: String) throws -> ManagedAsset?
+    /// Managed paths are unique, so this finds the record a content-addressed file already has.
+    func fetchAsset(relativePath: String) throws -> ManagedAsset?
     func insertAsset(_ asset: ManagedAsset) throws
     func updateMutableAsset(_ asset: ManagedAsset) throws
     func deleteAsset(id: UUID) throws

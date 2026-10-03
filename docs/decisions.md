@@ -3,6 +3,90 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-03: Controller themes
+
+**Decision.** Both controller layouts draw a controller body behind the controls, with the game
+picture showing through, in one of two color themes chosen by Settings > Controller Theme
+(`controllerTheme`, app-wide, Match System by default):
+
+- **Classic** uses an original Game Boy's colors, sampled from a photograph of one: a warm gray
+  body, a gray lens around the picture, maroon-magenta A and B, a dark D-pad, gray rubber pills
+  and navy lettering.
+- **Dark** is the same design on a near-black body, with the channel behind A and B lighter
+  than the body.
+
+Match System picks Classic in Light Mode and Dark in Dark Mode. On the Game Boy layout, as on
+the hardware, "A" and "B" are printed below the buttons along their tilt, and "SELECT" and
+"START" are printed level below their tilted pills. Both layouts print the app's wordmark
+(`docs/NAMING.md`) at the bottom of the body, charcoal on Classic and gray on Dark, with its A in
+the A button's magenta. Playtiles keeps its unlabeled buttons and labeled pills. With a game
+controller connected the controls hide and the body stays.
+
+## 2026-10-03: Screen scaling
+
+**Decision.** Settings > Screen Scaling (`screenScaling`, Integer by default, overridable per
+System, Game or Build) chooses how the game picture fills the layout's screen frame:
+
+- **Integer** draws each Game Boy pixel as the same whole number of device pixels, the largest
+  that fits, centered on device pixels, with nearest sampling. A frame too small for one whole
+  multiple falls back to Fill.
+- **Fill** draws the picture as large as the frame allows at the Game Boy's 10:9 shape. At a
+  scale that isn't whole, nearest sampling would make some pixels a device pixel wider than
+  others, so each Game Boy pixel is sampled flat and blended only across its edges, over about
+  one device pixel.
+
+On the Game Boy layout the frame itself follows the setting: a whole multiple under Integer, or
+the full width inside the edge margins under Fill. SameBoy's core only produces the 160x144
+frame; scaling is Press Any's.
+
+## 2026-10-03: Sound follows the silent switch by default
+
+**Decision.** Settings > Sound (`soundMode`, app-wide) is Follow Silent Switch by default, so a
+phone set to silent plays no game sound. Always On plays through the switch, and Always Off mutes
+the game while leaving other apps' audio playing.
+
+## 2026-10-03: Built-in controller layouts
+
+**Decision.** The on-screen controls come in two built-in layouts, chosen by Settings >
+Controller Layout (`controllerLayout`, Game Boy by default, overridable per System, Game or Build):
+
+- **Game Boy** follows the original Game Boy's front panel, measured from a photograph of a
+  DMG-01 and scaled to its specified 90 mm width: the D-pad (22.9 mm) and A and B (10.8 mm) are
+  drawn at the hardware's size, about 6.1 points per millimeter, with A and B 16.8 mm apart on a
+  24.6 degree slope and SELECT and START side by side, tilted 18 degrees. The hardware puts SELECT
+  and START a little left of center; here they center under the logo. Across the width the
+  controls keep the Game Boy's proportions, pulled in so nothing leaves the screen, and A and B
+  close up only if B would crowd the D-pad. The game picture sits at the top, sized by Screen
+  Scaling, and the controls are centered between its bezel and the logo. Touch areas reach 10 to
+  12 points past the drawn controls without overlapping. SameBoy's iOS layout isn't used: its
+  `iOS/` directory needs the author's written permission to ship on the App Store.
+- **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
+  START and SELECT swapped into Game Boy order. Controls are drawn at the skin artwork's sizes,
+  where A is larger than B, and respond across both the frame and the artwork. The skin's Menu
+  button, Quick Save, Quick Load and tap-the-game Fast Forward are left out. The skin's artwork
+  isn't used; the controls are drawn in code.
+
+Each layout also decides where the game picture goes, so the renderer draws into the layout's
+screen frame.
+
+Neither layout has a Menu button or gestures by default. As SameBoy opens its menu from its
+logo, tapping the wordmark at the bottom opens the game menu, which holds Pause, Fast Forward,
+the save states and Close. Its tap area is 44 points tall. Settings > Tap Game for Menu
+(`tapGameForMenu`, app-wide, off by default) also lets a tap on the game picture open it, as
+SameBoy does. The menu opens when the finger lifts within 10 points of where it landed, so a thumb
+sliding across doesn't open it. The first game played with the touch controls says "Tap Press Any
+for the menu" once. With VoiceOver, double-tapping the controls opens the menu. With a game
+controller connected the touch controls hide and the corner Close and Menu buttons come back.
+
+## 2026-10-03: Merging into a Game that already holds the same image
+
+**Decision.** A Game holds one Build per image. When a merge brings in a Build whose image the
+target already holds, Copy skips that Build and Move is refused, naming the Builds involved.
+
+**Why.** The source keeps its Build in a copy, so skipping loses nothing. A move would have to
+drop the source Build, and the save states made with it, or fold its states into the target's
+Build, which would let states cross Build boundaries.
+
 ## 2026-10-03: An Auto State older than its profile's save is not restored
 
 **Decision.** A library launch restores the newest Auto State for its Build and Save Profile only

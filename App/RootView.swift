@@ -1,5 +1,6 @@
 import EmulationSession
 import EmulatorDomain
+import GameplayInput
 import Foundation
 import QuickPlay
 import SwiftUI
@@ -54,9 +55,16 @@ struct RootView: View {
                 autoResumePolicy: presentation.autoResumePolicy,
                 launchMessage: presentation.launchMessage,
                 firstFrameClock: presentation.firstFrameClock,
+                controlStyle: presentation.controlStyle,
+                screenScaling: presentation.screenScaling,
+                controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
+                tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
+                soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
                 onClose: { endGameplay(presentation) }
             )
             .ignoresSafeArea()
+            // The status bar sits on the controller's body: dark text on Classic, light on Dark.
+            .preferredColorScheme(bootstrap.container?.controllerTheme().colorScheme)
         }
         .sheet(item: $endedQuickPlay, onDismiss: resumeChosenQuickPlay) { session in
             if let container = bootstrap.container {
@@ -121,7 +129,9 @@ struct RootView: View {
                 runtime: launch.session,
                 autoResumePolicy: launch.policy,
                 launchMessage: message,
-                firstFrameClock: nil
+                firstFrameClock: nil,
+                controlStyle: container.controllerStyle(for: launch.context),
+                screenScaling: container.screenScaling(for: launch.context)
             )
         } catch {
             errorMessage = "Could not start the game: \(error)"
@@ -160,8 +170,12 @@ struct RootView: View {
             kind: .quickPlay(session.id),
             runtime: runtime,
             autoResumePolicy: container.quickPlayAutoResumePolicy(system: session.system),
-            launchMessage: nil,
-            firstFrameClock: firstFrameClock
+            launchMessage: runtime.autoStateRejected
+                ? "Couldn’t resume where you left off, so the game started over from its save."
+                : nil,
+            firstFrameClock: firstFrameClock,
+            controlStyle: container.controllerStyle(system: session.system),
+            screenScaling: container.screenScaling(system: session.system)
         )
     }
 
@@ -201,6 +215,8 @@ private struct GameplayPresentation: Identifiable {
     let launchMessage: String?
     /// `DispatchTime` uptime when the file was chosen, for Quick Play's time-to-first-frame report.
     let firstFrameClock: UInt64?
+    let controlStyle: TouchControlStyle
+    let screenScaling: ScreenScaling
 }
 
 struct QuickPlayRequest {
@@ -208,4 +224,15 @@ struct QuickPlayRequest {
     let copiedSaveProfileID: UUID?
     /// `DispatchTime` uptime when the file was chosen.
     let chosenAt: UInt64
+}
+
+private extension ControllerTheme {
+    /// Nil follows the system.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .matchSystem: nil
+        case .classic: .light
+        case .dark: .dark
+        }
+    }
 }

@@ -215,6 +215,9 @@ private struct ArchitectureHarness {
             games: games,
             builds: builds,
             profiles: profiles,
+            recipes: recipes,
+            assets: assets,
+            assetStore: store,
             transactions: PassthroughTransactionRunner(),
             now: now
         )

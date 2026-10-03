@@ -1,6 +1,7 @@
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameplayInput
 import SwiftUI
 
 /// Settings overridden for one Game or Build. Each setting either inherits, showing the value it
@@ -23,6 +24,20 @@ struct ScopedSettingsView: View {
                     key: .skipBootAnimation,
                     defaultValue: false,
                     options: [(true, "On"), (false, "Off")],
+                    context: context
+                )
+                InheritableSettingRow(
+                    title: "Controller Layout",
+                    key: .controllerLayout,
+                    defaultValue: TouchControlStyle.gameBoy,
+                    options: [(.gameBoy, "Game Boy"), (.playtiles, "Playtiles")],
+                    context: context
+                )
+                InheritableSettingRow(
+                    title: "Screen Scaling",
+                    key: .screenScaling,
+                    defaultValue: ScreenScaling.integer,
+                    options: [(.integer, "Integer"), (.fill, "Fill")],
                     context: context
                 )
                 InheritableSettingRow(

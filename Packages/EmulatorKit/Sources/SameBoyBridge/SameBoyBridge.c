@@ -119,6 +119,9 @@ SBInstance *SBCreate(SBModel model)
     GB_set_sample_rate(instance->gb, SB_SAMPLE_RATE);
     GB_apu_set_sample_callback(instance->gb, sb_audio_callback);
     GB_set_rumble_callback(instance->gb, sb_rumble_callback);
+    // SameBoy starts with rumble disabled, which never calls the callback. Only cartridges that
+    // have a motor rumble; the app routes it to a controller or the phone.
+    GB_set_rumble_mode(instance->gb, GB_RUMBLE_CARTRIDGE_ONLY);
     GB_set_vblank_callback(instance->gb, sb_vblank_callback);
     // GameplayDriver paces frames itself, so the core must never sleep to keep real time. Turbo with
     // no cap and no frame skipping is that mode; a reset keeps it.

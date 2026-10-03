@@ -68,6 +68,35 @@ static void test_boot_skip(const uint8_t *rom, size_t rom_size)
     SBDestroy(instance);
 }
 
+// An MBC5+Rumble cartridge (type $1C) whose program turns the motor on: bit 3 of the ROM bank
+// register at $4000 drives it.
+static void test_cartridge_rumble(void)
+{
+    static uint8_t rom[32768];
+    memset(rom, 0, sizeof(rom));
+    const uint8_t program[] = {
+        0x3e, 0x08,       // ld a, $08
+        0xea, 0x00, 0x40, // ld [$4000], a
+        0x18, 0xfe,       // jr @
+    };
+    memcpy(&rom[0x100], program, sizeof(program));
+    memcpy(&rom[0x134], "RUMBLE", 6);
+    rom[0x147] = 0x1c;
+    uint8_t checksum = 0;
+    for (size_t i = 0x134; i <= 0x14c; i++) checksum = checksum - rom[i] - 1;
+    rom[0x14d] = checksum;
+
+    uint8_t boot[256] = {0};
+    boot[0] = 0xc3; boot[1] = 0x00; boot[2] = 0x01; // jp $0100
+
+    SBInstance *instance = SBCreate(SB_MODEL_DMG);
+    assert(SBLoadBootROM(instance, boot, sizeof(boot)));
+    assert(SBLoadROM(instance, rom, sizeof(rom)));
+    (void)SBRunFrame(instance);
+    assert(SBConsumeRumbleAmplitude(instance) > 0);
+    SBDestroy(instance);
+}
+
 int main(void)
 {
     SBInstance *instance = SBCreate(SB_MODEL_DMG);
@@ -102,6 +131,7 @@ int main(void)
     SBDestroy(instance);
 
     test_boot_skip(rom, sizeof(rom));
+    test_cartridge_rumble();
     puts("sameboy bridge smoke: ok");
     return 0;
 }

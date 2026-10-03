@@ -44,6 +44,29 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// `AutoResumePolicy`, unset means `.always`. Applies when a library game launches with a
     /// resumable Auto State and when the app returns to the foreground mid-session.
     case autoResumePolicy
+    /// The on-screen controller layout's raw value (GameplayInput's `TouchControlStyle`), unset
+    /// means `gameBoy`.
+    case controllerLayout
+    /// The controller theme's raw value (GameplayInput's `ControllerTheme`), unset means
+    /// `matchSystem`.
+    case controllerTheme
+    /// The game picture's scaling (GameplayInput's `ScreenScaling`), unset means `integer`.
+    case screenScaling
+    /// `SoundMode`, unset means `.followSilentSwitch`.
+    case soundMode
+    /// Bool, unset means false. When true, tapping the game picture opens the game menu, as tapping
+    /// the logo always does.
+    case tapGameForMenu
+}
+
+/// Whether game sound plays. Raw values are stored in settings.
+public enum SoundMode: String, Codable, Sendable, CaseIterable {
+    /// Silent when the ring/silent switch is set to silent.
+    case followSilentSwitch
+    /// Plays even when the phone is set to silent.
+    case alwaysOn
+    /// Never plays, and leaves other apps' audio playing.
+    case alwaysOff
 }
 
 public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {

@@ -412,7 +412,7 @@ struct GameDetailView: View {
         do {
             onPlay(try model.launchContext(build: build, saveProfile: profile))
         } catch {
-            model.reload()
+            model.report(error)
         }
     }
 }

@@ -216,6 +216,70 @@ extension EmulationSessionTests {
     }
 }
 
+extension EmulationSessionTests {
+    func testAFailedPruneKeepsTheAutoStateJustSaved() throws {
+        let store = try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("emulatorkit-prune-tests-\(UUID().uuidString)", isDirectory: true))
+        let assets = InMemoryAssetRepository()
+        let states = UndeletableSaveStateRepository()
+        let service = SaveStateService(states: states, assets: assets, assetStore: store, retention: .init(keepCount: 1))
+        let core = FakeEmulatorCore()
+        try core.loadImage(Data(count: 0x8000), system: .gameBoy)
+        let worker = SessionWorker(core: core)
+        let context = LaunchContext(gameID: UUID(), buildID: UUID(), saveProfileID: UUID())
+
+        _ = try service.save(worker: worker, context: context, kind: .auto, playtimeSeconds: 0)
+        let second = try service.save(worker: worker, context: context, kind: .auto, playtimeSeconds: 1)
+
+        let asset = try XCTUnwrap(assets.fetchAsset(id: second.stateAssetID))
+        XCTAssertTrue(store.fileExists(at: try store.managedURL(relativePath: asset.relativePath)))
+        XCTAssertTrue(try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
+            .contains { $0.id == second.id })
+    }
+}
+
+extension EmulationSessionTests {
+    func testPlaytimeAndSessionCountAreRecordedWithoutTouchingModifiedAt() throws {
+        let harness = try SessionHarness.make()
+        let frame = 0.016742706
+        let session = harness.makeSession(now: Date(timeIntervalSince1970: 1_700_000_500))
+        try session.start(context: harness.contextA)
+        _ = try session.stepFrame()
+        _ = try session.stepFrame()
+        try session.background()
+
+        var profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
+        XCTAssertEqual(profile.totalPlaytimeSeconds, 2 * frame, accuracy: 1e-9)
+        XCTAssertEqual(profile.sessionCount, 1)
+        XCTAssertEqual(profile.lastPlayedAt, Date(timeIntervalSince1970: 1_700_000_500))
+        XCTAssertEqual(profile.modifiedAt, harness.profile.modifiedAt)
+
+        try session.resume()
+        _ = try session.stepFrame()
+        try session.stop()
+        profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
+        XCTAssertEqual(profile.totalPlaytimeSeconds, 3 * frame, accuracy: 1e-9, "time isn't counted twice")
+        XCTAssertEqual(profile.sessionCount, 1, "one session, however many times it backgrounds")
+
+        let next = harness.makeSession()
+        try next.start(context: harness.contextA)
+        _ = try next.stepFrame()
+        XCTAssertEqual(next.playtimeSeconds, 4 * frame, accuracy: 1e-9)
+    }
+}
+
+/// Fails every delete, so pruning old Auto States fails.
+private final class UndeletableSaveStateRepository: SaveStateRepository, @unchecked Sendable {
+    private let inner = InMemorySaveStateRepository()
+    struct Refused: Error {}
+
+    func insertSaveState(_ state: SaveState) throws { try inner.insertSaveState(state) }
+    func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
+        try inner.fetchSaveStates(buildID: buildID, saveProfileID: saveProfileID)
+    }
+    func deleteSaveState(id: UUID) throws { throw Refused() }
+}
+
 private struct SessionHarness {
     let game: Game
     let buildA: Build

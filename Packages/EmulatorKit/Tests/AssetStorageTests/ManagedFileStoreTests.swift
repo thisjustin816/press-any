@@ -64,6 +64,28 @@ final class ManagedFileStoreTests: XCTestCase {
         XCTAssertThrowsError(try harness.store.resolveManagedPath("/tmp/outside"))
     }
 
+    func testCommittingAgainRepairsADamagedSourceFile() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("emulatorkit-repair-\(UUID().uuidString)", isDirectory: true)
+        let store = try ManagedFileStore(rootURL: root)
+        let source = root.appendingPathComponent("good.gb")
+        try Data(repeating: 7, count: 64).write(to: source)
+
+        let hash = try store.hashFile(at: source)
+        let committed = try store.commitSourceROM(
+            stagedURL: store.stageCopy(from: source, transactionID: UUID()),
+            sha256: hash
+        )
+        try Data("damaged".utf8).write(to: committed)
+
+        let again = try store.commitSourceROM(
+            stagedURL: store.stageCopy(from: source, transactionID: UUID()),
+            sha256: hash
+        )
+        XCTAssertEqual(again, committed)
+        XCTAssertEqual(try store.hashFile(at: committed), hash)
+    }
+
     func testSourceROMPathUsesContentAddressedLayout() throws {
         let harness = try StorageHarness.make()
         let source = try harness.write(Data([1, 2, 3]), named: "game.gb")

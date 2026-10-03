@@ -146,7 +146,7 @@ struct QuickPlayPromotionView: View {
                 Button("Add") {
                     if (try? model.promote()) != nil { onPromoted() }
                 }
-                .disabled(!model.review.canCommit)
+                .disabled(!model.review.canCommit || model.needsFreshReview)
             }
         }
     }

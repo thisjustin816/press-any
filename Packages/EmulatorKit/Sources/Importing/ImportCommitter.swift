@@ -47,6 +47,11 @@ public struct ImportCommitter: Sendable {
             guard let asset = try assets.fetchAsset(id: build.imageAssetID) else {
                 throw ImportCommitterError.sourceAssetMissing(build.imageAssetID)
             }
+            // Importing the same image again is how a damaged or missing source file gets
+            // repaired: committing checks the stored file and replaces it if it doesn't match.
+            if asset.storageClass == .source {
+                _ = try assetStore.commitSourceROM(stagedURL: plan.analysis.stagedURL, sha256: plan.analysis.sha256)
+            }
             return ROMImportResult(
                 game: game,
                 build: build,

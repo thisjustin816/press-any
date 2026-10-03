@@ -125,7 +125,11 @@ public struct CreatePatchedBuild: Sendable {
 
         do {
             for patchInput in input.patches {
-                let patch = try importPatch(at: patchInput.url)
+                var patch = try importPatch(at: patchInput.url)
+                // The same file twice in one stack is one source asset.
+                if let earlier = imported.first(where: { $0.asset.contentSHA256 == patch.asset.contentSHA256 }) {
+                    patch = ImportedPatch(asset: earlier.asset, needsAssetInsert: false, newlyCommittedURL: nil)
+                }
                 imported.append(patch)
                 guard patchInput.enabled else { continue }
                 output = try patcher.apply(
@@ -144,13 +148,16 @@ public struct CreatePatchedBuild: Sendable {
             try assetStore.writeDataAtomically(output, to: generatedURL)
 
             let timestamp = now()
-            let generatedAsset = ManagedAsset(
+            let generatedPath = try assetStore.managedRelativePath(for: generatedURL)
+            // Another Build with the same result already records this cache file; share it.
+            let existingGenerated = try assets.fetchAsset(relativePath: generatedPath)
+            let generatedAsset = existingGenerated ?? ManagedAsset(
                 id: makeID(),
                 kind: .generatedImage,
                 storageClass: .cache,
                 contentSHA256: resultSHA,
                 byteLength: Int64(output.count),
-                relativePath: try assetStore.managedRelativePath(for: generatedURL),
+                relativePath: generatedPath,
                 integrityStatus: .verified,
                 createdAt: timestamp
             )
@@ -188,7 +195,7 @@ public struct CreatePatchedBuild: Sendable {
             do {
                 try transactions.run { [assets, builds, recipes, assetsToInsert] in
                     for asset in assetsToInsert { try assets.insertAsset(asset) }
-                    try assets.insertAsset(generatedAsset)
+                    if existingGenerated == nil { try assets.insertAsset(generatedAsset) }
                     try builds.insertBuild(build)
                     try recipes.insertPatchRecipe(recipe)
                 }
@@ -210,6 +217,9 @@ public struct CreatePatchedBuild: Sendable {
 
         let sha = try assetStore.hashFile(at: stagedURL)
         if let existing = try assets.fetchSourceAsset(kind: .sourcePatch, sha256: sha) {
+            // Committing again checks the stored file and repairs it if it was damaged.
+            let storedExtension = URL(fileURLWithPath: existing.relativePath).pathExtension
+            _ = try assetStore.commitSourcePatch(stagedURL: stagedURL, sha256: sha, extension: storedExtension)
             return ImportedPatch(asset: existing, needsAssetInsert: false, newlyCommittedURL: nil)
         }
 

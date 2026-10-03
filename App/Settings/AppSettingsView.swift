@@ -1,6 +1,7 @@
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameplayInput
 import SwiftUI
 
 /// App-wide settings. Values are stored at the app scope, so a System, Game or Build override
@@ -10,6 +11,11 @@ struct AppSettingsView: View {
 
     @State private var skipBootAnimation: Bool
     @State private var autoResumePolicy: AutoResumePolicy
+    @State private var controllerLayout: TouchControlStyle
+    @State private var controllerTheme: ControllerTheme
+    @State private var screenScaling: ScreenScaling
+    @State private var tapGameForMenu: Bool
+    @State private var soundMode: SoundMode
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
 
@@ -17,6 +23,11 @@ struct AppSettingsView: View {
         self.store = store
         _skipBootAnimation = State(initialValue: Self.stored(Bool.self, .skipBootAnimation, in: store) ?? false)
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
+        _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
+        _controllerTheme = State(initialValue: Self.stored(ControllerTheme.self, .controllerTheme, in: store) ?? .matchSystem)
+        _screenScaling = State(initialValue: Self.stored(ScreenScaling.self, .screenScaling, in: store) ?? .integer)
+        _tapGameForMenu = State(initialValue: Self.stored(Bool.self, .tapGameForMenu, in: store) ?? false)
+        _soundMode = State(initialValue: Self.stored(SoundMode.self, .soundMode, in: store) ?? .followSilentSwitch)
     }
 
     var body: some View {
@@ -29,6 +40,50 @@ struct AppSettingsView: View {
                 }
 
                 Section {
+                    Picker("Controller Layout", selection: $controllerLayout) {
+                        Text("Game Boy").tag(TouchControlStyle.gameBoy)
+                        Text("Playtiles").tag(TouchControlStyle.playtiles)
+                    }
+                } footer: {
+                    Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits the Playtiles controller.")
+                }
+
+                Section {
+                    Picker("Screen Scaling", selection: $screenScaling) {
+                        Text("Integer").tag(ScreenScaling.integer)
+                        Text("Fill").tag(ScreenScaling.fill)
+                    }
+                } footer: {
+                    Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
+                }
+
+                Section {
+                    Toggle("Tap Game for Menu", isOn: $tapGameForMenu)
+                } footer: {
+                    Text("Tapping \(AppBrand.displayName) under the controls always opens the game menu. This adds tapping the game itself.")
+                }
+
+                Section {
+                    Picker("Controller Theme", selection: $controllerTheme) {
+                        Text("Match System").tag(ControllerTheme.matchSystem)
+                        Text("Classic").tag(ControllerTheme.classic)
+                        Text("Dark").tag(ControllerTheme.dark)
+                    }
+                } footer: {
+                    Text("Match System uses Classic in Light Mode and Dark in Dark Mode.")
+                }
+
+                Section {
+                    Picker("Sound", selection: $soundMode) {
+                        Text("Follow Silent Switch").tag(SoundMode.followSilentSwitch)
+                        Text("Always On").tag(SoundMode.alwaysOn)
+                        Text("Always Off").tag(SoundMode.alwaysOff)
+                    }
+                } footer: {
+                    Text("Always Off leaves music from other apps playing.")
+                }
+
+                Section {
                     Picker("Resume Games", selection: $autoResumePolicy) {
                         Text("Always").tag(AutoResumePolicy.always)
                         Text("Ask").tag(AutoResumePolicy.ask)
@@ -36,6 +91,10 @@ struct AppSettingsView: View {
                     }
                 } footer: {
                     Text("Whether a game picks up where you left off when you open it again or return to the app.")
+                }
+
+                Section {
+                    NavigationLink("Acknowledgements") { AcknowledgementsView() }
                 }
 
                 if let errorMessage {
@@ -54,6 +113,11 @@ struct AppSettingsView: View {
             }
             .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
             .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
+            .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
+            .onChange(of: controllerTheme) { _, newValue in save(newValue, .controllerTheme) }
+            .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
+            .onChange(of: tapGameForMenu) { _, newValue in save(newValue, .tapGameForMenu) }
+            .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
         }
     }
 

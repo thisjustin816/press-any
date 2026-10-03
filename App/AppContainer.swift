@@ -4,6 +4,7 @@ import EmulationSession
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameplayInput
 import Importing
 import Patching
 import PersistenceGRDB
@@ -63,6 +64,9 @@ final class AppContainer {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            recipes: repositories.patchRecipes,
+            assets: repositories.assets,
+            assetStore: fileStore,
             transactions: repositories.transactions
         )
         createBlankSaveProfile = CreateBlankSaveProfile(
@@ -169,13 +173,72 @@ final class AppContainer {
         return restore
     }
 
-    func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {
-        let policy = try? settingsResolver.decode(
-            AutoResumePolicy.self,
-            key: SettingKey.autoResumePolicy.rawValue,
-            system: system
+    /// The controller layout for a launch. Unset or unreadable means the Game Boy layout.
+    func controllerStyle(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> TouchControlStyle {
+        let style = launchSetting(
+            TouchControlStyle.self, .controllerLayout, system: system, gameID: gameID, buildID: buildID
         )
-        return policy ?? .always
+        return style ?? .gameBoy
+    }
+
+    func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
+        launchSetting(TouchControlStyle.self, .controllerLayout, for: context) ?? .gameBoy
+    }
+
+    /// The game picture's scaling for a launch. Unset or unreadable means integer scaling.
+    func screenScaling(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ScreenScaling {
+        launchSetting(ScreenScaling.self, .screenScaling, system: system, gameID: gameID, buildID: buildID) ?? .integer
+    }
+
+    func screenScaling(for context: LaunchContext) -> ScreenScaling {
+        launchSetting(ScreenScaling.self, .screenScaling, for: context) ?? .integer
+    }
+
+    /// App-wide. Unset or unreadable means following the silent switch.
+    func soundMode() -> SoundMode {
+        appSetting(SoundMode.self, .soundMode) ?? .followSilentSwitch
+    }
+
+    /// App-wide. Unset or unreadable means matching Light or Dark Mode.
+    func controllerTheme() -> ControllerTheme {
+        appSetting(ControllerTheme.self, .controllerTheme) ?? .matchSystem
+    }
+
+    /// App-wide. Unset or unreadable means off: only the logo opens the menu.
+    func tapGameForMenu() -> Bool {
+        appSetting(Bool.self, .tapGameForMenu) ?? false
+    }
+
+    /// A setting stored at the app scope only, or nil when it's unset or unreadable.
+    private func appSetting<Value: Decodable>(_ type: Value.Type, _ key: SettingKey) -> Value? {
+        guard let json = try? repositories.settings.valueJSON(key: key.rawValue, scope: .app) else { return nil }
+        return try? JSONDecoder().decode(type, from: Data(json.utf8))
+    }
+
+    /// A setting resolved through the App, System, Game and Build scopes, or nil when none sets it
+    /// or it's unreadable.
+    private func launchSetting<Value: Decodable>(
+        _ type: Value.Type,
+        _ key: SettingKey,
+        system: GameSystem,
+        gameID: UUID?,
+        buildID: UUID?
+    ) -> Value? {
+        try? settingsResolver.decode(type, key: key.rawValue, system: system, gameID: gameID, buildID: buildID)
+    }
+
+    /// The same, for the Build a library launch plays.
+    private func launchSetting<Value: Decodable>(
+        _ type: Value.Type,
+        _ key: SettingKey,
+        for context: LaunchContext
+    ) -> Value? {
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return nil }
+        return launchSetting(type, key, system: build.system, gameID: build.gameID, buildID: build.id)
+    }
+
+    func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {
+        launchSetting(AutoResumePolicy.self, .autoResumePolicy, system: system, gameID: nil, buildID: nil) ?? .always
     }
 
     func stopActiveSession(createAutoState: Bool = true) {
@@ -183,6 +246,11 @@ final class AppContainer {
         try? activeSession.stop(createAutoState: createAutoState)
         self.activeSession = nil
     }
+}
+
+extension Notification.Name {
+    /// Posted when Games are added or removed outside the library screen.
+    static let libraryDidChange = Notification.Name("libraryDidChange")
 }
 
 struct PreparedLaunch {

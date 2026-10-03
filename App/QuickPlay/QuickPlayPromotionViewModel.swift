@@ -16,6 +16,8 @@ final class QuickPlayPromotionViewModel: ObservableObject {
     @Published var saveChoice: SaveChoice
     @Published var newProfileName = "Quick Play"
     @Published private(set) var errorMessage: String?
+    /// The import already happened, so this review's analysis is spent; a retry starts over.
+    @Published private(set) var needsFreshReview = false
 
     let review: ImportReviewViewModel
     let session: QuickPlaySession
@@ -94,7 +96,17 @@ final class QuickPlayPromotionViewModel: ObservableObject {
                 saveDisposition: disposition
             )
             errorMessage = nil
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
             return result
+        } catch let error as PromoteQuickPlayError {
+            if case .importedButSaveFailed = error {
+                needsFreshReview = true
+                NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+                errorMessage = "The Build was added, but its save couldn’t be stored. The session is kept: go back and choose Add to Library again to retry the save."
+            } else {
+                errorMessage = error.localizedDescription
+            }
+            throw error
         } catch {
             errorMessage = error.localizedDescription
             throw error

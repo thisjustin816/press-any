@@ -1,5 +1,6 @@
 import AVFoundation
 import EmulationCore
+import EmulatorDomain
 import Foundation
 
 /// Small lock-protected PCM queue feeding an AVAudioSourceNode at SameBoy's configured 48 kHz.
@@ -10,9 +11,35 @@ final class AudioOutputEngine: @unchecked Sendable {
     private var readIndex = 0
     private var sourceNode: AVAudioSourceNode?
     private let maximumQueuedFrames = 48_000 / 4 // ~250 ms hard ceiling
+    /// Whether gameplay wants sound. A route change or an interruption stops the engine on its own,
+    /// and this decides whether to start it again. Touched only on the main queue.
+    private var wantsRunning = false
+    private var observers: [NSObjectProtocol] = []
+
+    /// Sets how game sound relates to the silent switch and other apps' audio. Call before start.
+    func apply(_ mode: SoundMode) {
+        let session = AVAudioSession.sharedInstance()
+        switch mode {
+        case .followSilentSwitch:
+            // Silenced by the switch, and stops other apps' audio while a game plays.
+            try? session.setCategory(.soloAmbient)
+        case .alwaysOn:
+            try? session.setCategory(.playback)
+        case .alwaysOff:
+            // Ambient mixes with other apps, so their audio keeps playing; the game is muted.
+            try? session.setCategory(.ambient)
+        }
+        engine.mainMixerNode.outputVolume = mode == .alwaysOff ? 0 : 1
+    }
 
     func start() throws {
+        wantsRunning = true
+        observeSystemChanges()
         guard !engine.isRunning else { return }
+        guard sourceNode == nil else {
+            try engine.start()
+            return
+        }
         let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2)!
         let source = AVAudioSourceNode(format: format) { [weak self] _, _, frameCount, audioBufferList -> OSStatus in
             guard let self else { return noErr }
@@ -60,19 +87,53 @@ final class AudioOutputEngine: @unchecked Sendable {
     }
 
     func pause() {
+        wantsRunning = false
         engine.pause()
     }
 
     func resume() throws {
+        wantsRunning = true
         if !engine.isRunning { try engine.start() }
     }
 
     func stop() {
+        wantsRunning = false
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        observers.removeAll()
         engine.stop()
         lock.lock()
         samples.removeAll(keepingCapacity: false)
         readIndex = 0
         lock.unlock()
+    }
+
+    /// Headphones, Bluetooth and other route changes reconfigure the engine and stop it, and a call
+    /// or Siri interrupts it. Either way it stays silent until started again.
+    private func observeSystemChanges() {
+        guard observers.isEmpty else { return }
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine,
+            queue: .main
+        ) { [weak self] _ in
+            self?.restartIfWanted()
+        })
+        observers.append(center.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            if raw.flatMap(AVAudioSession.InterruptionType.init(rawValue:)) == .ended {
+                self?.restartIfWanted()
+            }
+        })
+    }
+
+    private func restartIfWanted() {
+        guard wantsRunning, !engine.isRunning else { return }
+        try? engine.start()
     }
 
     private func compactIfNeededLocked() {

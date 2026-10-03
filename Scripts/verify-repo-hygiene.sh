@@ -22,5 +22,12 @@ if [[ -n "$generated" ]]; then
   status=1
 fi
 
+# The app shows SameBoy's license verbatim (Settings > Acknowledgements).
+sameboy_license="Packages/EmulatorKit/Dependencies/SameBoy/LICENSE"
+if [[ -f "$sameboy_license" ]] && ! cmp -s "$sameboy_license" App/Acknowledgements/SameBoy-LICENSE.txt; then
+  echo "App/Acknowledgements/SameBoy-LICENSE.txt differs from the SameBoy submodule's LICENSE; copy it again." >&2
+  status=1
+fi
+
 (( status == 0 )) && echo "Repository hygiene checks passed."
 exit "$status"

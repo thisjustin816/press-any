@@ -46,6 +46,10 @@ public final class EmulationSession: @unchecked Sendable {
     private var activeContext: LaunchContext?
     private var sessionEmulatedNanoseconds: UInt64 = 0
     private var basePlaytimeSeconds: Double = 0
+    /// Session time already added to the profile, and whether this session has been counted.
+    private var recordedNanoseconds: UInt64 = 0
+    private var sessionCounted = false
+    private let now: @Sendable () -> Date
     private var latestFrame: EmulatorVideoFrame?
 
     public init(
@@ -65,6 +69,7 @@ public final class EmulationSession: @unchecked Sendable {
         self.assets = assets
         self.assetStore = assetStore
         self.imageResolver = imageResolver
+        self.now = now
         self.coreResolver = ResolveCoreForBuild(builds: builds, registry: coreRegistry, now: now)
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
         self.stateService = SaveStateService(states: states, assets: assets, assetStore: assetStore, now: now)
@@ -139,6 +144,8 @@ public final class EmulationSession: @unchecked Sendable {
                 worker = newWorker
                 activeContext = context
                 sessionEmulatedNanoseconds = 0
+                recordedNanoseconds = 0
+                sessionCounted = false
                 basePlaytimeSeconds = profile.totalPlaytimeSeconds
                 latestFrame = nil
                 _state = .running(context)
@@ -282,6 +289,7 @@ public final class EmulationSession: @unchecked Sendable {
     public func background() throws {
         try pause()
         _ = try flushBattery()
+        try recordPlaytime()
         _ = try saveAutoState()
     }
 
@@ -304,6 +312,7 @@ public final class EmulationSession: @unchecked Sendable {
         }
         try pause()
         _ = try flushBattery()
+        try recordPlaytime()
         if createAutoState {
             _ = try saveAutoState()
         }
@@ -313,6 +322,26 @@ public final class EmulationSession: @unchecked Sendable {
             latestFrame = nil
             _state = .stopped
         }
+    }
+
+    /// Adds the time played since the last call to the profile, counts the session once, and
+    /// stamps lastPlayedAt. modifiedAt is left alone: it marks battery writes, which decide
+    /// whether an Auto State is still safe to restore.
+    private func recordPlaytime() throws {
+        let (_, context, _) = try snapshotActive()
+        let (unrecorded, firstRecord) = lock.withLock { () -> (UInt64, Bool) in
+            let delta = sessionEmulatedNanoseconds &- recordedNanoseconds
+            recordedNanoseconds = sessionEmulatedNanoseconds
+            defer { sessionCounted = true }
+            return (delta, !sessionCounted)
+        }
+        guard var profile = try profiles.fetchSaveProfile(id: context.saveProfileID) else {
+            throw EmulationSessionError.saveProfileNotFound(context.saveProfileID)
+        }
+        profile.totalPlaytimeSeconds += Double(unrecorded) / 1_000_000_000
+        if firstRecord { profile.sessionCount += 1 }
+        profile.lastPlayedAt = now()
+        try profiles.updateSaveProfile(profile)
     }
 
     private func snapshotActive() throws -> (SessionWorker, LaunchContext, Bool) {

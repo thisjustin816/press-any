@@ -78,11 +78,24 @@ public struct QuickPlayWorkspace: Sendable {
         guard assetStore.fileExists(at: manifest) else {
             throw QuickPlayWorkspaceError.sessionNotFound(sessionID)
         }
+        let stored: QuickPlaySession
         do {
-            return try Self.decoder.decode(QuickPlaySession.self, from: assetStore.readData(at: manifest))
+            stored = try Self.decoder.decode(QuickPlaySession.self, from: assetStore.readData(at: manifest))
         } catch {
             throw QuickPlayWorkspaceError.malformedManifest(sessionID)
         }
+        // The app's data directory can move between launches, for example after an update, so
+        // the recorded absolute root is replaced by the session's current location.
+        return QuickPlaySession(
+            id: stored.id,
+            imageSHA256: stored.imageSHA256,
+            originalFilename: stored.originalFilename,
+            system: stored.system,
+            rootURL: root,
+            startedAt: stored.startedAt,
+            expiresAt: stored.expiresAt,
+            sourceSaveProfileID: stored.sourceSaveProfileID
+        )
     }
 
     /// Sessions still within retention, newest first. Unreadable manifests are skipped.

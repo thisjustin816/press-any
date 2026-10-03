@@ -26,6 +26,28 @@ final class ROMImportTests: XCTestCase {
         XCTAssertEqual(try harness.sourceROMFileCount(), 1)
     }
 
+    func testImportingTheSameROMAgainRepairsADamagedSourceFile() throws {
+        let harness = try ImportHarness.make()
+        let romURL = try harness.writeExternalROM(TestROM.make(title: "REPAIR", cgb: false))
+        let first = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(at: romURL, targetGameID: nil),
+            disposition: .createGame(title: "Repair"),
+            buildDisplayName: "Original",
+            markAsBase: true
+        ))
+        let stored = try harness.store.managedURL(relativePath: first.sourceAsset.relativePath)
+        try Data("damaged".utf8).write(to: stored)
+
+        let again = try harness.analyzer.analyzeROM(at: romURL, targetGameID: nil)
+        _ = try harness.committer.commit(ROMImportPlan(
+            analysis: again,
+            disposition: .duplicateExisting(buildID: try XCTUnwrap(again.exactExistingBuildID)),
+            buildDisplayName: "Original",
+            markAsBase: false
+        ))
+        XCTAssertEqual(try harness.store.hashFile(at: stored), first.build.imageSHA256)
+    }
+
     func testModifiedROMCanAttachAsSecondBuildWithoutChangingGameIdentity() throws {
         let harness = try ImportHarness.make()
         let baseURL = try harness.writeExternalROM(TestROM.make(title: "TEST", cgb: true, payloadByte: 1))

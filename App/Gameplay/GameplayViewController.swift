@@ -1,5 +1,6 @@
 import EmulationCore
 import EmulatorDomain
+import GameplayInput
 import MetalKit
 import OSLog
 import UIKit
@@ -21,6 +22,14 @@ final class GameplayViewController: UIViewController {
     /// Uptime when Quick Play's file was chosen, cleared once the first frame is reported.
     private var firstFrameClock: UInt64?
     private var userPaused = false
+    private let controlStyle: TouchControlStyle
+    private let screenScaling: ScreenScaling
+    private let controllerTheme: ControllerTheme
+    private let tapGameForMenu: Bool
+    private let soundMode: SoundMode
+    /// The close and menu buttons in the corners. They hide while the touch controls show, since
+    /// the logo opens the menu then.
+    private var cornerButtons: [UIButton] = []
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
     // reach the controller, so the nonisolated deinit can remove the observers without a hop.
@@ -33,9 +42,19 @@ final class GameplayViewController: UIViewController {
         runtime: any GameplayRuntime,
         autoResumePolicy: AutoResumePolicy,
         launchMessage: String? = nil,
-        firstFrameClock: UInt64? = nil
+        firstFrameClock: UInt64? = nil,
+        controlStyle: TouchControlStyle = .gameBoy,
+        screenScaling: ScreenScaling = .integer,
+        controllerTheme: ControllerTheme = .matchSystem,
+        tapGameForMenu: Bool = false,
+        soundMode: SoundMode = .followSilentSwitch
     ) {
         self.runtime = runtime
+        self.controlStyle = controlStyle
+        self.screenScaling = screenScaling
+        self.controllerTheme = controllerTheme
+        self.tapGameForMenu = tapGameForMenu
+        self.soundMode = soundMode
         self.firstFrameClock = firstFrameClock
         self.autoResumePolicy = autoResumePolicy
         self.launchMessage = launchMessage
@@ -56,14 +75,27 @@ final class GameplayViewController: UIViewController {
         observeLifecycle()
 
         renderer = MetalRenderer(view: metalView)
+        renderer?.scaling = screenScaling
+        applyLayout(touchControls.layout)
+        // Audio can be unavailable, during a call for example. The game still runs, silently,
+        // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
+        var message = launchMessage
+        audio.apply(soundMode)
         do {
             try audio.start()
-            driver.start()
         } catch {
-            presentRuntimeError(error)
+            message = [launchMessage, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
         }
-        if let launchMessage { showTransientMessage(launchMessage) }
+        // The menu has no button, so the first game played with the touch controls says where it is.
+        if touchControls.showsControls, !UserDefaults.standard.bool(forKey: Self.menuHintShownKey) {
+            UserDefaults.standard.set(true, forKey: Self.menuHintShownKey)
+            message = [message, "Tap \(AppBrand.displayName) for the menu."].compactMap { $0 }.joined(separator: " ")
+        }
+        driver.start()
+        if let message { showTransientMessage(message) }
     }
+
+    private static let menuHintShownKey = "gameplay.menuHintShown"
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
@@ -117,6 +149,7 @@ final class GameplayViewController: UIViewController {
             },
         ])
         view.addSubview(menu)
+        cornerButtons = [close, menu]
 
         var resumeConfiguration = UIButton.Configuration.filled()
         resumeConfiguration.title = "Resume"
@@ -162,8 +195,7 @@ final class GameplayViewController: UIViewController {
             state: fastForward ? .on : .off
         ) { [weak self] _ in
             guard let self else { return }
-            self.fastForward.toggle()
-            self.driver.setSpeed(self.fastForward ? .multiplier(2) : .normal)
+            self.toggleFastForward()
         })
 
         if let states = runtime as? any SaveStateRuntime {
@@ -242,28 +274,94 @@ final class GameplayViewController: UIViewController {
     }
 
     private func configureInput() {
+        touchControls.style = controlStyle
+        touchControls.scaling = screenScaling
+        touchControls.theme = controllerTheme
+        touchControls.pictureOpensMenu = tapGameForMenu
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
+        touchControls.onMenu = { [weak self] in self?.presentMenuSheet() }
+        touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
         controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }
-            self.touchControls.isHidden = connected
+            self.touchControls.showsControls = !connected
             self.touchControls.hapticsEnabled = !connected
             self.rumble.setController(self.controllerMonitor.activeController)
+            self.updateCornerButtons()
         }
         controllerMonitor.onUnexpectedDisconnect = { [weak self] in
             guard let self else { return }
             self.userPaused = true
             self.pauseGameplay()
-            self.touchControls.isHidden = false
+            self.touchControls.showsControls = true
             self.touchControls.hapticsEnabled = true
+            self.updateCornerButtons()
             self.input.resetController()
             self.showTransientMessage("Controller disconnected. Game paused.")
         }
 
         let connected = controllerMonitor.activeController != nil
-        touchControls.isHidden = connected
+        touchControls.showsControls = !connected
         touchControls.hapticsEnabled = !connected
         rumble.setController(controllerMonitor.activeController)
+        updateCornerButtons()
+    }
+
+    private func applyLayout(_ layout: TouchControlLayout) {
+        let screen = layout.screen
+        renderer?.screenRect = screen.width > 0
+            ? CGRect(x: screen.x, y: screen.y, width: screen.width, height: screen.height)
+            : nil
+    }
+
+    /// While the touch controls show, tapping the logo opens the menu, so the corner buttons hide.
+    /// With a controller connected the controls hide and the corner buttons come back. The
+    /// controller's body stays, so the game keeps its frame.
+    private func updateCornerButtons() {
+        let layoutHasMenu = !touchControls.layout.menuAreas.isEmpty
+        for button in cornerButtons { button.isHidden = layoutHasMenu && touchControls.showsControls }
+    }
+
+    private func toggleFastForward() {
+        fastForward.toggle()
+        driver.setSpeed(fastForward ? .multiplier(2) : .normal)
+    }
+
+    private func loadLatestState() {
+        guard let states = runtime as? any SaveStateRuntime else {
+            showTransientMessage("Save states aren’t kept in Quick Play.")
+            return
+        }
+        guard let latest = (try? states.saveStates())?.first(where: { $0.kind != .auto }) else {
+            showTransientMessage("No saved state yet.")
+            return
+        }
+        loadState(latest)
+    }
+
+    /// The game menu as a sheet, opened by tapping the logo, or the game picture when that's turned
+    /// on. It includes Close, since the corner close button is hidden while the touch controls show.
+    private func presentMenuSheet() {
+        guard presentedViewController == nil else { return }
+        let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        if pausedOverlay.isHidden {
+            sheet.addAction(UIAlertAction(title: "Pause", style: .default) { [weak self] _ in
+                self?.userPaused = true
+                self?.pauseGameplay()
+            })
+        } else {
+            sheet.addAction(UIAlertAction(title: "Resume", style: .default) { [weak self] _ in self?.resumeTapped() })
+        }
+        sheet.addAction(UIAlertAction(title: fastForward ? "Stop Fast Forward" : "Fast Forward", style: .default) { [weak self] _ in
+            self?.toggleFastForward()
+        })
+        if runtime is any SaveStateRuntime {
+            sheet.addAction(UIAlertAction(title: "Save State", style: .default) { [weak self] _ in self?.saveState() })
+            sheet.addAction(UIAlertAction(title: "Load Latest State", style: .default) { [weak self] _ in self?.loadLatestState() })
+        }
+        sheet.addAction(UIAlertAction(title: "Close Game", style: .destructive) { [weak self] _ in self?.closeTapped() })
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(sheet, animated: true)
     }
 
     private func observeLifecycle() {
@@ -301,7 +399,7 @@ final class GameplayViewController: UIViewController {
         }
         do {
             if try runtime.foreground(policy: autoResumePolicy) {
-                try audio.resume()
+                resumeAudio()
                 driver.start()
                 pausedOverlay.isHidden = true
                 return
@@ -321,6 +419,15 @@ final class GameplayViewController: UIViewController {
         }
     }
 
+    /// Sound is optional: the game keeps running silently when audio can't start.
+    private func resumeAudio() {
+        do {
+            try audio.resume()
+        } catch {
+            showTransientMessage("Sound is unavailable right now.")
+        }
+    }
+
     private func pauseGameplay() {
         driver.stop()
         audio.pause()
@@ -333,7 +440,7 @@ final class GameplayViewController: UIViewController {
     private func resumeTapped() {
         do {
             try runtime.resume()
-            try audio.resume()
+            resumeAudio()
             userPaused = false
             pausedOverlay.isHidden = true
             driver.start()

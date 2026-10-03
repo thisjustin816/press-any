@@ -194,8 +194,14 @@ public struct ManagedFileStore: AssetStore, Sendable {
             .appendingPathComponent(String(normalizedHash.prefix(2)), isDirectory: true)
             .appendingPathComponent("\(normalizedHash).\(filenameExtension)")
 
+        // A file already at the content-addressed path is reused only if it still has that
+        // content. A damaged one is replaced, so importing the good file again repairs it.
+        let damaged: Bool
         if FileManager.default.fileExists(atPath: destination.path) {
-            return destination
+            guard (try? hashFile(at: destination)) != normalizedHash else { return destination }
+            damaged = true
+        } else {
+            damaged = false
         }
 
         let directory = destination.deletingLastPathComponent()
@@ -207,6 +213,9 @@ public struct ManagedFileStore: AssetStore, Sendable {
             try handle.synchronize()
             try handle.close()
 
+            if damaged {
+                try FileManager.default.removeItem(at: destination)
+            }
             do {
                 try FileManager.default.moveItem(at: temporary, to: destination)
             } catch {

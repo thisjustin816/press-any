@@ -1,3 +1,4 @@
+import AssetStorage
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
@@ -158,6 +159,10 @@ struct PersistenceGRDBTests {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            recipes: repositories.patchRecipes,
+            assets: repositories.assets,
+            assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("grdb-operations-\(UUID().uuidString)", isDirectory: true)),
             transactions: repositories.transactions,
             now: { now }
         )
@@ -184,6 +189,10 @@ struct PersistenceGRDBTests {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            recipes: repositories.patchRecipes,
+            assets: repositories.assets,
+            assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("grdb-operations-\(UUID().uuidString)", isDirectory: true)),
             transactions: repositories.transactions,
             now: { now }
         )
@@ -196,6 +205,100 @@ struct PersistenceGRDBTests {
         #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id)?.gameID == last.id)
         #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: fixture.profile.id) == [fixture.state])
         #expect(try repositories.builds.fetchBuild(id: fixture.patchedBuild.id)?.gameID == separated.id)
+    }
+
+    @Test("merging a Game whose image the target already holds")
+    func mergeWithDuplicateImages() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let operations = try Self.operations(repositories)
+
+        let copied = try operations.promoteBuild(buildID: fixture.build.id, title: "Copy", mode: .copy)
+        let copiedBuild = try #require(try repositories.builds.fetchBuilds(gameID: copied.id).first)
+
+        #expect(throws: BuildOperationError.duplicateImagesInTarget(buildIDs: [copiedBuild.id])) {
+            try operations.mergeGame(sourceGameID: copied.id, into: fixture.game.id, mode: .move)
+        }
+        #expect(try repositories.games.fetchGame(id: copied.id) != nil, "a refused move changes nothing")
+
+        try operations.mergeGame(sourceGameID: copied.id, into: fixture.game.id, mode: .copy)
+        #expect(try repositories.builds.fetchBuilds(gameID: fixture.game.id).count == 2, "the duplicate is skipped")
+    }
+
+    @Test("artwork follows the Game identity and isn't orphaned by a merge")
+    func artworkThroughReorganization() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let operations = try Self.operations(repositories)
+
+        _ = try operations.promoteBuild(buildID: fixture.patchedBuild.id, title: "Hack", mode: .move)
+        let carried = try operations.promoteBuild(buildID: fixture.build.id, title: "Original", mode: .move)
+        #expect(carried.artworkAssetID == fixture.game.artworkAssetID, "the last Build takes the artwork along")
+
+        let now = Date(timeIntervalSince1970: 1_700_000_200)
+        let otherArt = ManagedAsset(
+            id: UUID(),
+            kind: .artwork,
+            storageClass: .userData,
+            contentSHA256: String(repeating: "9", count: 64),
+            byteLength: 1,
+            relativePath: "UserData/Artwork/other.png",
+            integrityStatus: .verified,
+            createdAt: now
+        )
+        try repositories.assets.insertAsset(otherArt)
+        let target = Game(
+            id: UUID(),
+            primaryTitle: "Target",
+            systemFamily: "gbc",
+            artworkAssetID: otherArt.id,
+            createdAt: now,
+            modifiedAt: now
+        )
+        try repositories.games.insertGame(target)
+
+        try operations.mergeGame(sourceGameID: carried.id, into: target.id, mode: .move)
+        #expect(try repositories.games.fetchGame(id: target.id)?.artworkAssetID == otherArt.id)
+        #expect(try repositories.assets.fetchAsset(id: try #require(fixture.game.artworkAssetID)) == nil)
+    }
+
+    @Test("a copy merge leaves the copies depending only on the target")
+    func copyMergeRepointsPatchBases() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let operations = try Self.operations(repositories)
+        let now = Date(timeIntervalSince1970: 1_700_000_100)
+        let target = Game(id: UUID(), primaryTitle: "Target", systemFamily: "gbc", createdAt: now, modifiedAt: now)
+        try repositories.games.insertGame(target)
+
+        try operations.mergeGame(sourceGameID: fixture.game.id, into: target.id, mode: .copy)
+
+        let copies = try repositories.builds.fetchBuilds(gameID: target.id)
+        let baseCopy = try #require(copies.first { $0.imageSHA256 == fixture.build.imageSHA256 })
+        let patchedCopy = try #require(copies.first { $0.imageSHA256 == fixture.patchedBuild.imageSHA256 })
+        #expect(patchedCopy.parentBuildID == baseCopy.id)
+        #expect(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: patchedCopy.id)?.baseBuildID == baseCopy.id)
+        try repositories.games.deleteGame(id: fixture.game.id)
+    }
+
+    private static func operations(_ repositories: GRDBRepositorySet) throws -> BuildOperations {
+        BuildOperations(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            recipes: repositories.patchRecipes,
+            assets: repositories.assets,
+            assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("grdb-operations-\(UUID().uuidString)", isDirectory: true)),
+            transactions: repositories.transactions,
+            now: { Date(timeIntervalSince1970: 1_700_000_100) }
+        )
     }
 }
 

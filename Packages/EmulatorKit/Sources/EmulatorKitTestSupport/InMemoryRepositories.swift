@@ -145,7 +145,19 @@ public final class InMemoryAssetRepository: ManagedAssetInventoryRepository, @un
         lock.withLock { values.values.first { $0.kind == kind && $0.contentSHA256 == sha256 } }
     }
 
-    public func insertAsset(_ asset: ManagedAsset) throws { lock.withLock { values[asset.id] = asset } }
+    public func fetchAsset(relativePath: String) throws -> ManagedAsset? {
+        lock.withLock { values.values.first { $0.relativePath == relativePath } }
+    }
+
+    /// Enforces the database's unique relative_path, so tests catch a second record for one file.
+    public func insertAsset(_ asset: ManagedAsset) throws {
+        try lock.withLock {
+            if values.values.contains(where: { $0.relativePath == asset.relativePath && $0.id != asset.id }) {
+                throw InMemoryRepositoryError.duplicateRelativePath(asset.relativePath)
+            }
+            values[asset.id] = asset
+        }
+    }
     public func updateMutableAsset(_ asset: ManagedAsset) throws { lock.withLock { values[asset.id] = asset } }
     public func deleteAsset(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
 }
@@ -172,4 +184,8 @@ public final class InMemorySettingsStore: SettingsStore, @unchecked Sendable {
     public func removeValue(key: String, scope: SettingsScope) throws {
         _ = lock.withLock { values.removeValue(forKey: Key(key: key, scope: scope)) }
     }
+}
+
+public enum InMemoryRepositoryError: Error, Equatable {
+    case duplicateRelativePath(String)
 }

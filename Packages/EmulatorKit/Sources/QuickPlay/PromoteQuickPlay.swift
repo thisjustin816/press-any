@@ -28,6 +28,9 @@ public enum PromoteQuickPlayError: Error, Equatable {
     case profileNotFound(UUID)
     /// A save can only replace a profile of the Game the Build is promoted into.
     case profileInDifferentGame(profileID: UUID)
+    /// The Build is in the library but the save step failed. The session is kept, so promoting it
+    /// again, from a fresh analysis, finds the Build already imported and only redoes the save.
+    case importedButSaveFailed(gameID: UUID, buildID: UUID)
 }
 
 public struct PromoteQuickPlay: Sendable {
@@ -94,36 +97,60 @@ public struct PromoteQuickPlay: Sendable {
         let result = try committer.commit(plan)
         let promotedProfile: SaveProfile?
         var safetyCopy: SaveProfile?
-        switch saveDisposition {
-        case .keepExisting:
-            promotedProfile = nil
-        case .replaceExisting(let profileID):
-            guard let replacement, replacement.profile.gameID == result.game.id else {
-                throw PromoteQuickPlayError.profileInDifferentGame(profileID: profileID)
+        do {
+            switch saveDisposition {
+            case .keepExisting:
+                promotedProfile = nil
+            case .replaceExisting(let profileID):
+                guard let replacement, replacement.profile.gameID == result.game.id else {
+                    throw PromoteQuickPlayError.profileInDifferentGame(profileID: profileID)
+                }
+                safetyCopy = try DuplicateSaveProfile(
+                    profiles: profiles,
+                    assets: assets,
+                    assetStore: assetStore,
+                    now: now,
+                    makeID: makeID
+                ).execute(
+                    sourceProfileID: profileID,
+                    name: "\(replacement.profile.displayName) before Quick Play"
+                )
+                do {
+                    promotedProfile = try persistentSaveService.replacePersistentSaveData(
+                        replacement.battery,
+                        profileID: profileID
+                    )
+                } catch {
+                    // The profile still has its old save, so the copy isn't needed, and a retry
+                    // would otherwise make another.
+                    if let copy = safetyCopy { discardProfile(copy) }
+                    throw error
+                }
+            case .createProfile(let name):
+                promotedProfile = try createProfile(
+                    gameID: result.game.id,
+                    name: name,
+                    temporaryBattery: try workspace.temporaryBatteryData(sessionID: session.id)
+                )
             }
-            safetyCopy = try DuplicateSaveProfile(
-                profiles: profiles,
-                assets: assets,
-                assetStore: assetStore,
-                now: now,
-                makeID: makeID
-            ).execute(
-                sourceProfileID: profileID,
-                name: "\(replacement.profile.displayName) before Quick Play"
-            )
-            promotedProfile = try persistentSaveService.replacePersistentSaveData(
-                replacement.battery,
-                profileID: profileID
-            )
-        case .createProfile(let name):
-            promotedProfile = try createProfile(
-                gameID: result.game.id,
-                name: name,
-                temporaryBattery: try workspace.temporaryBatteryData(sessionID: session.id)
-            )
+        } catch let error as PromoteQuickPlayError {
+            throw error
+        } catch {
+            throw PromoteQuickPlayError.importedButSaveFailed(gameID: result.game.id, buildID: result.build.id)
         }
-        try workspace.discard(sessionID: session.id)
+        // Promotion is complete; a sandbox left behind is removed by retention.
+        try? workspace.discard(sessionID: session.id)
         return QuickPlayPromotionResult(importResult: result, saveProfile: promotedProfile, safetyCopy: safetyCopy)
+    }
+
+    private func discardProfile(_ profile: SaveProfile) {
+        try? profiles.deleteSaveProfile(id: profile.id)
+        guard let assetID = profile.persistentSaveAssetID,
+              let asset = try? assets.fetchAsset(id: assetID) else { return }
+        try? assets.deleteAsset(id: asset.id)
+        if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
+            try? assetStore.removeIfExists(url)
+        }
     }
 
     private func createProfile(gameID: UUID, name: String, temporaryBattery: Data?) throws -> SaveProfile {
