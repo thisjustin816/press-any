@@ -25,6 +25,19 @@ public enum TouchControl: Hashable, Sendable {
     case action(TouchAction)
 }
 
+/// Marks where a physical controller overlay sits on the screen. Drawn only; it takes no touches.
+public struct TouchAlignmentGuide: Equatable, Sendable {
+    /// A band across the screen.
+    public let bar: TouchRect
+    /// A tab hanging from the bar, its bottom fully rounded.
+    public let tab: TouchRect
+
+    public init(bar: TouchRect, tab: TouchRect) {
+        self.bar = bar
+        self.tab = tab
+    }
+}
+
 public struct TouchControlLayout: Equatable, Sendable {
     /// Directions are measured from the D-pad's center.
     public let dpad: TouchRect
@@ -39,6 +52,7 @@ public struct TouchControlLayout: Equatable, Sendable {
     public let actions: [TouchAction: TouchRect]
     /// Where a control is drawn, when that differs from where it responds to touches.
     public let artwork: [TouchControl: TouchRect]
+    public let alignmentGuide: TouchAlignmentGuide?
     public let dpadDeadZoneFraction: Double
 
     public init(
@@ -51,6 +65,7 @@ public struct TouchControlLayout: Equatable, Sendable {
         screen: TouchRect = .init(x: 0, y: 0, width: 0, height: 0),
         actions: [TouchAction: TouchRect] = [:],
         artwork: [TouchControl: TouchRect] = [:],
+        alignmentGuide: TouchAlignmentGuide? = nil,
         dpadDeadZoneFraction: Double = 0.16
     ) {
         self.dpad = dpad
@@ -62,6 +77,7 @@ public struct TouchControlLayout: Equatable, Sendable {
         self.screen = screen
         self.actions = actions
         self.artwork = artwork
+        self.alignmentGuide = alignmentGuide
         self.dpadDeadZoneFraction = min(max(dpadDeadZoneFraction, 0), 0.49)
     }
 
@@ -207,7 +223,13 @@ extension TouchControlLayout {
                 .start: startArt,
                 .select: selectArt,
                 .action(.menu): menuArt,
-            ]
+            ],
+            // The Playtiles controller lines up against the skin's teal bar and the U-shaped tab
+            // hanging from its center, measured from the skin's PDF.
+            alignmentGuide: TouchAlignmentGuide(
+                bar: frame(0, 1129, 1080, 83),
+                tab: frame(494, 1129, 92, 182)
+            )
         )
     }
 }

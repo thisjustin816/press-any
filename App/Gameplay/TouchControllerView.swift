@@ -63,6 +63,7 @@ final class TouchControllerView: UIView {
         context.setLineWidth(1.5)
 
         let layout = resolver.layout
+        if let guide = layout.alignmentGuide { drawAlignmentGuide(guide, in: context) }
         let dpadActive = lastInput.up || lastInput.down || lastInput.left || lastInput.right
         switch style {
         case .gameBoy:
@@ -154,6 +155,20 @@ final class TouchControllerView: UIView {
             || (!previous.left && next.left) || (!previous.right && next.right)
             || (!previous.a && next.a) || (!previous.b && next.b)
             || (!previous.start && next.start) || (!previous.select && next.select)
+    }
+
+    /// Where the physical controller lines up: a band with a U-shaped tab, in the Playtiles teal.
+    private func drawAlignmentGuide(_ guide: TouchAlignmentGuide, in context: CGContext) {
+        let tab = cgRect(guide.tab)
+        let path = UIBezierPath(rect: cgRect(guide.bar))
+        path.append(UIBezierPath(
+            roundedRect: tab,
+            byRoundingCorners: [.bottomLeft, .bottomRight],
+            cornerRadii: CGSize(width: tab.width / 2, height: tab.width / 2)
+        ))
+        context.setFillColor(UIColor(red: 52 / 255, green: 216 / 255, blue: 214 / 255, alpha: 1).cgColor)
+        context.addPath(path.cgPath)
+        context.fillPath()
     }
 
     private func fill(_ active: Bool) -> CGColor {

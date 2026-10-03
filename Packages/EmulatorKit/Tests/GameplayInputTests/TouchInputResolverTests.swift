@@ -119,6 +119,10 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertEqual(layout.drawnRect(.select), TouchRect(x: 691, y: 1924, width: 134, height: 53))
         XCTAssertEqual(layout.dpadHitArea, TouchRect(x: 44, y: 1223, width: 462, height: 496))
         XCTAssertEqual(Set(layout.actions.keys), [.menu, .toggleFastForward], "no Quick Save or Quick Load")
+        let guide = try! XCTUnwrap(layout.alignmentGuide)
+        XCTAssertEqual(guide.tab.center.x, 540, accuracy: 0.5, "the U is centered under the screen")
+        XCTAssertGreaterThanOrEqual(guide.bar.y, layout.screen.y + layout.screen.height, "the guide is below the picture")
+        XCTAssertNil(TouchControlLayout.make(.gameBoy, width: 393, height: 852).alignmentGuide)
 
         XCTAssertEqual(layout.action(at: TouchPoint(x: 540, y: 650)), .toggleFastForward)
         XCTAssertEqual(layout.action(at: TouchPoint(x: 148, y: 1950)), .menu)
