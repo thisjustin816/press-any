@@ -1,27 +1,44 @@
 <!doctype html><html><body>
-<!-- The app icon: a Game Boy A button seen at an angle, in the Classic controller colors. Scripts/render-app-icon.sh renders it; #light, #dark and #tinted pick the variant. --><canvas id=c width=1024 height=1024></canvas><script>
+<!-- The app icon: a Game Boy A button with an engraved A, seen from below and to the right, in the Classic controller colors. Scripts/render-app-icon.sh renders it; #light, #dark and #tinted pick the variant, and ?azimuth= sets how far round from bottom center it's seen, in degrees (25 by default; negative is from the left). --><canvas id=c width=1024 height=1024></canvas><script>
+const params=new URLSearchParams(location.search);
 const variant=location.hash.slice(1)||'light';
+// How far round from bottom center the camera sits, in degrees: positive toward the bottom-right
+// corner (45 is the corner itself), negative toward the bottom-left.
+const azimuth=Number(params.get('azimuth')??25)*Math.PI/180;
 const c=document.getElementById('c'),g=c.getContext('2d'),S=1024;
-// The button seen from about 35 degrees above: a short cylinder, its top face an ellipse.
-const cx=512, rx=330, ry=rx*0.58, h=78, face=430, base=face+h;
-function ellipse(y,ex,ey){g.beginPath();g.ellipse(cx,y,ex,ey,0,0,Math.PI*2);}
-if(variant==='light'){const gr=g.createLinearGradient(0,0,0,S);gr.addColorStop(0,'rgb(196,199,203)');gr.addColorStop(1,'rgb(166,168,172)');g.fillStyle=gr;g.fillRect(0,0,S,S);}
+// The button seen from below and to the right, 45 degrees above the body: a short cylinder whose top face
+// is an ellipse 0.71 as tall as it is wide, and whose side wall shows at 0.71 of its height.
+const tiltY=Math.SQRT1_2;
+const cx=512, rx=320, ry=rx*tiltY, h=86*tiltY, face=440, base=face+h;
+function ellipse(x,y,ex,ey){g.beginPath();g.ellipse(x,y,ex,ey,0,0,Math.PI*2);}
+if(variant==='light'){const gr=g.createLinearGradient(0,0,0,S);gr.addColorStop(0,'rgb(203,202,199)');gr.addColorStop(1,'rgb(178,176,173)');g.fillStyle=gr;g.fillRect(0,0,S,S);}
 if(variant==='dark'){const gr=g.createLinearGradient(0,0,0,S);gr.addColorStop(0,'rgb(42,43,46)');gr.addColorStop(1,'rgb(18,18,20)');g.fillStyle=gr;g.fillRect(0,0,S,S);}
 // The recess in the body: its far wall in shadow, its near rim catching light.
 {const gr=g.createLinearGradient(0,base-ry-24,0,base+ry+24);
- if(variant==='dark'){gr.addColorStop(0,'rgb(10,10,12)');gr.addColorStop(1,'rgb(60,60,65)');}
- else{gr.addColorStop(0,'rgb(120,122,127)');gr.addColorStop(1,'rgb(214,216,220)');}
- g.fillStyle=gr;ellipse(base,rx+26,ry+18);g.fill();}
+ if(variant==='dark'){gr.addColorStop(0,'rgb(8,8,10)');gr.addColorStop(1,'rgb(62,62,67)');}
+ else{gr.addColorStop(0,'rgb(118,116,113)');gr.addColorStop(1,'rgb(222,220,217)');}
+ g.fillStyle=gr;ellipse(cx,base,rx+24,ry+20);g.fill();}
 // Shadow the button casts toward the viewer.
-g.save();g.shadowColor='rgba(0,0,0,0.38)';g.shadowBlur=36;g.shadowOffsetY=18;g.fillStyle='rgb(96,28,62)';ellipse(base,rx,ry);g.fill();g.restore();
+g.save();g.shadowColor='rgba(0,0,0,0.38)';g.shadowBlur=36;g.shadowOffsetY=18;g.fillStyle='rgb(90,24,58)';ellipse(cx,base,rx,ry);g.fill();g.restore();
 // The side wall: the band between the base and top ellipses, darker toward its edges.
 {g.beginPath();g.ellipse(cx,base,rx,ry,0,0,Math.PI);g.lineTo(cx-rx,face);g.ellipse(cx,face,rx,ry,0,Math.PI,0,true);g.closePath();
- const gr=g.createLinearGradient(cx-rx,0,cx+rx,0);gr.addColorStop(0,'rgb(84,24,56)');gr.addColorStop(0.35,'rgb(128,40,86)');gr.addColorStop(0.65,'rgb(118,36,80)');gr.addColorStop(1,'rgb(70,20,46)');
+ const gr=g.createLinearGradient(cx-rx,0,cx+rx,0);gr.addColorStop(0,'rgb(78,20,50)');gr.addColorStop(0.35,'rgb(120,34,80)');gr.addColorStop(0.65,'rgb(110,30,74)');gr.addColorStop(1,'rgb(64,16,42)');
  g.fillStyle=gr;g.fill();}
-// The top face: lit from above and behind, with a soft highlight on the far half.
-g.save();ellipse(face,rx,ry);g.clip();
-{const gr=g.createLinearGradient(0,face-ry,0,face+ry);gr.addColorStop(0,'rgb(196,80,142)');gr.addColorStop(1,'rgb(150,50,102)');g.fillStyle=gr;g.fillRect(cx-rx,face-ry,2*rx,2*ry);}
-{g.save();g.translate(cx-60,face-50);g.scale(1,0.58);const gr=g.createRadialGradient(0,0,10,0,0,260);gr.addColorStop(0,'rgba(255,255,255,0.30)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(-400,-400,800,800);g.restore();}
+// The top face, lit from above and behind, with a soft highlight on the far half.
+g.save();ellipse(cx,face,rx,ry);g.clip();
+{const gr=g.createLinearGradient(0,face-ry,0,face+ry);gr.addColorStop(0,'rgb(184,64,128)');gr.addColorStop(1,'rgb(138,40,92)');g.fillStyle=gr;g.fillRect(cx-rx,face-ry,2*rx,2*ry);}
+{g.save();g.translate(cx-60,face-55);g.scale(1,tiltY);const gr=g.createRadialGradient(0,0,10,0,0,250);gr.addColorStop(0,'rgba(255,255,255,0.28)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(-400,-400,800,800);g.restore();}
+// An A cut into the face, upright on the button as on the body. Seen from off center, its
+// baseline runs at a slant across the face: the face's right and down directions project to
+// (cos, sin x 0.71) and (-sin, cos x 0.71) of the azimuth on screen. The cut's lower edge catches
+// the light.
+{const cos=Math.cos(azimuth), sin=Math.sin(azimuth);
+ function letter(dy){g.setTransform(cos,sin*tiltY,-sin,cos*tiltY,cx,face+dy);
+   g.font='900 300px Helvetica, Arial, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('A',0,0);}
+ g.save();
+ g.fillStyle='rgba(255,255,255,0.22)';letter(7);
+ g.fillStyle='rgb(92,22,58)';letter(0);
+ g.restore();}
 g.restore();
 // A thin lip where the top face meets the wall.
 g.strokeStyle='rgba(255,255,255,0.18)';g.lineWidth=4;g.beginPath();g.ellipse(cx,face,rx-2,ry-2,0,Math.PI*0.05,Math.PI*0.95);g.stroke();
