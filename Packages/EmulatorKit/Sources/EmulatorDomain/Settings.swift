@@ -47,6 +47,18 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// The on-screen controller layout's raw value (GameplayInput's `TouchControlStyle`), unset
     /// means `gameBoy`.
     case controllerLayout
+    /// `SoundMode`, unset means `.followSilentSwitch`.
+    case soundMode
+}
+
+/// Whether game sound plays. Raw values are stored in settings.
+public enum SoundMode: String, Codable, Sendable, CaseIterable {
+    /// Silent when the ring/silent switch is set to silent.
+    case followSilentSwitch
+    /// Plays even when the phone is set to silent.
+    case alwaysOn
+    /// Never plays, and leaves other apps' audio playing.
+    case alwaysOff
 }
 
 public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {

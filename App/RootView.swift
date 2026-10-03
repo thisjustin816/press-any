@@ -56,6 +56,7 @@ struct RootView: View {
                 launchMessage: presentation.launchMessage,
                 firstFrameClock: presentation.firstFrameClock,
                 controlStyle: presentation.controlStyle,
+                soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
                 onClose: { endGameplay(presentation) }
             )
             .ignoresSafeArea()

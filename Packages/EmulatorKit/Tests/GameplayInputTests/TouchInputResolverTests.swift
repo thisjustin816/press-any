@@ -93,6 +93,11 @@ final class TouchInputResolverTests: XCTestCase {
         }
     }
 
+    func testControllerLayoutRawValuesAreStable() {
+        // Stored in settings, so renaming a case must not change them.
+        XCTAssertEqual(TouchControlStyle.allCases.map(\.rawValue), ["gameBoy", "playtiles"])
+    }
+
     func testGameBoyLayoutIsSameBoysVerticalLayout() {
         // SameBoy's GBVerticalLayout on a 393x852-point, 3x iPhone, worked through by hand.
         let layout = TouchControlLayout.make(.gameBoy, width: 393, height: 852, safeTop: 59, displayScale: 3)

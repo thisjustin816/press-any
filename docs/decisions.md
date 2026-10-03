@@ -3,6 +3,12 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-03: Sound follows the silent switch by default
+
+**Decision.** Settings > Sound (`soundMode`, app-wide) is Follow Silent Switch by default, so a
+phone set to silent plays no game sound. Always On plays through the switch, and Always Off mutes
+the game while leaving other apps' audio playing.
+
 ## 2026-10-03: Built-in controller layouts
 
 **Decision.** The on-screen controls come in two built-in layouts, chosen by Settings >

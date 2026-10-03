@@ -23,6 +23,7 @@ final class GameplayViewController: UIViewController {
     private var firstFrameClock: UInt64?
     private var userPaused = false
     private let controlStyle: TouchControlStyle
+    private let soundMode: SoundMode
     /// The close and menu buttons in the corners. A layout with its own Menu control hides them
     /// while its touch controls are showing.
     private var cornerButtons: [UIButton] = []
@@ -39,10 +40,12 @@ final class GameplayViewController: UIViewController {
         autoResumePolicy: AutoResumePolicy,
         launchMessage: String? = nil,
         firstFrameClock: UInt64? = nil,
-        controlStyle: TouchControlStyle = .gameBoy
+        controlStyle: TouchControlStyle = .gameBoy,
+        soundMode: SoundMode = .followSilentSwitch
     ) {
         self.runtime = runtime
         self.controlStyle = controlStyle
+        self.soundMode = soundMode
         self.firstFrameClock = firstFrameClock
         self.autoResumePolicy = autoResumePolicy
         self.launchMessage = launchMessage
@@ -67,6 +70,7 @@ final class GameplayViewController: UIViewController {
         // Audio can be unavailable, during a call for example. The game still runs, silently,
         // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
         var message = launchMessage
+        audio.apply(soundMode)
         do {
             try audio.start()
         } catch {

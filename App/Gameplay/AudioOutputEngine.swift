@@ -1,5 +1,6 @@
 import AVFoundation
 import EmulationCore
+import EmulatorDomain
 import Foundation
 
 /// Small lock-protected PCM queue feeding an AVAudioSourceNode at SameBoy's configured 48 kHz.
@@ -14,6 +15,22 @@ final class AudioOutputEngine: @unchecked Sendable {
     /// and this decides whether to start it again. Touched only on the main queue.
     private var wantsRunning = false
     private var observers: [NSObjectProtocol] = []
+
+    /// Sets how game sound relates to the silent switch and other apps' audio. Call before start.
+    func apply(_ mode: SoundMode) {
+        let session = AVAudioSession.sharedInstance()
+        switch mode {
+        case .followSilentSwitch:
+            // Silenced by the switch, and stops other apps' audio while a game plays.
+            try? session.setCategory(.soloAmbient)
+        case .alwaysOn:
+            try? session.setCategory(.playback)
+        case .alwaysOff:
+            // Ambient mixes with other apps, so their audio keeps playing; the game is muted.
+            try? session.setCategory(.ambient)
+        }
+        engine.mainMixerNode.outputVolume = mode == .alwaysOff ? 0 : 1
+    }
 
     func start() throws {
         wantsRunning = true

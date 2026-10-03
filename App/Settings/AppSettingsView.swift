@@ -12,6 +12,7 @@ struct AppSettingsView: View {
     @State private var skipBootAnimation: Bool
     @State private var autoResumePolicy: AutoResumePolicy
     @State private var controllerLayout: TouchControlStyle
+    @State private var soundMode: SoundMode
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
 
@@ -20,6 +21,7 @@ struct AppSettingsView: View {
         _skipBootAnimation = State(initialValue: Self.stored(Bool.self, .skipBootAnimation, in: store) ?? false)
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
         _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
+        _soundMode = State(initialValue: Self.stored(SoundMode.self, .soundMode, in: store) ?? .followSilentSwitch)
     }
 
     var body: some View {
@@ -38,6 +40,16 @@ struct AppSettingsView: View {
                     }
                 } footer: {
                     Text("Game Boy follows SameBoy’s layout. In Playtiles, tapping the game toggles Fast Forward.")
+                }
+
+                Section {
+                    Picker("Sound", selection: $soundMode) {
+                        Text("Follow Silent Switch").tag(SoundMode.followSilentSwitch)
+                        Text("Always On").tag(SoundMode.alwaysOn)
+                        Text("Always Off").tag(SoundMode.alwaysOff)
+                    }
+                } footer: {
+                    Text("Always Off leaves music from other apps playing.")
                 }
 
                 Section {
@@ -67,6 +79,7 @@ struct AppSettingsView: View {
             .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
             .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
             .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
+            .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
         }
     }
 

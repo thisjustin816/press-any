@@ -157,7 +157,7 @@ final class TouchControllerView: UIView {
             || (!previous.start && next.start) || (!previous.select && next.select)
     }
 
-    /// Where the physical controller lines up: a band with a U-shaped tab, in the Playtiles teal.
+    /// Where the physical controller lines up: a band with a U-shaped tab, in the controls' fill.
     private func drawAlignmentGuide(_ guide: TouchAlignmentGuide, in context: CGContext) {
         let tab = cgRect(guide.tab)
         let path = UIBezierPath(rect: cgRect(guide.bar))
@@ -166,7 +166,7 @@ final class TouchControllerView: UIView {
             byRoundingCorners: [.bottomLeft, .bottomRight],
             cornerRadii: CGSize(width: tab.width / 2, height: tab.width / 2)
         ))
-        context.setFillColor(UIColor(red: 52 / 255, green: 216 / 255, blue: 214 / 255, alpha: 1).cgColor)
+        context.setFillColor(fill(false))
         context.addPath(path.cgPath)
         context.fillPath()
     }

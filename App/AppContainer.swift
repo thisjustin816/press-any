@@ -185,6 +185,14 @@ final class AppContainer {
         return style ?? .gameBoy
     }
 
+    /// App-wide. Unset or unreadable means following the silent switch.
+    func soundMode() -> SoundMode {
+        guard let json = try? repositories.settings.valueJSON(key: SettingKey.soundMode.rawValue, scope: .app) else {
+            return .followSilentSwitch
+        }
+        return (try? JSONDecoder().decode(SoundMode.self, from: Data(json.utf8))) ?? .followSilentSwitch
+    }
+
     func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
         guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .gameBoy }
         return controllerStyle(system: build.system, gameID: build.gameID, buildID: build.id)
