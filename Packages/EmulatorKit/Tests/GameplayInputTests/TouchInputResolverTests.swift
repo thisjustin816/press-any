@@ -64,13 +64,14 @@ final class TouchInputResolverTests: XCTestCase {
             lhs.x < rhs.x + rhs.width && rhs.x < lhs.x + lhs.width &&
                 lhs.y < rhs.y + rhs.height && rhs.y < lhs.y + lhs.height
         }
-        // iPhone SE, 8, 15/16 and 16 Pro Max portrait sizes and safe-area insets, in points.
+        // iPhone SE, 16, 16 Pro and 16 Pro Max: points, safe-area top and display scale. iOS 17
+        // runs on nothing narrower than 375 points.
         let screens: [(Double, Double, Double, Double)] = [
-            (320, 568, 20, 0), (375, 667, 20, 0), (393, 852, 59, 34), (440, 956, 62, 34),
+            (375, 667, 20, 2), (393, 852, 59, 3), (402, 874, 62, 3), (440, 956, 62, 3),
         ]
         for style in TouchControlStyle.allCases {
-            for (width, height, top, bottom) in screens {
-                let layout = TouchControlLayout.make(style, width: width, height: height, safeTop: top, safeBottom: bottom)
+            for (width, height, top, displayScale) in screens {
+                let layout = TouchControlLayout.make(style, width: width, height: height, safeTop: top, displayScale: displayScale)
                 let size = "\(style) at \(width)x\(height)"
                 let controls = [
                     ("D-pad", layout.dpadHitArea), ("A", layout.a), ("B", layout.b),
@@ -78,7 +79,7 @@ final class TouchInputResolverTests: XCTestCase {
                 ] + layout.actions.filter { $0.key != .toggleFastForward }.map { ("\($0.key)", $0.value) }
                 let pictureBottom = layout.screen.y + layout.screen.height
 
-                XCTAssertGreaterThan(layout.screen.height, 0, size)
+                XCTAssertGreaterThanOrEqual(layout.screen.y, top, "the picture clears the status bar, \(size)")
                 XCTAssertLessThanOrEqual(layout.select.x + layout.select.width, layout.start.x, "SELECT is left of START, \(size)")
                 for (index, (name, rect)) in controls.enumerated() {
                     XCTAssertTrue(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width && rect.y + rect.height <= height,
@@ -92,25 +93,35 @@ final class TouchInputResolverTests: XCTestCase {
         }
     }
 
-    func testGameBoyLayoutFollowsTheHardware() {
-        let layout = TouchControlLayout.make(.gameBoy, width: 393, height: 852, safeTop: 59, safeBottom: 34)
-        XCTAssertLessThan(layout.dpad.x + layout.dpad.width, layout.b.x, "the D-pad is left of the buttons")
-        XCTAssertGreaterThan(layout.a.x, layout.b.x, "A is right of B")
-        XCTAssertLessThan(layout.a.y, layout.b.y, "A is above B")
-        XCTAssertGreaterThan(layout.select.y, layout.dpad.y + layout.dpad.height - 1, "SELECT and START sit below")
-        XCTAssertGreaterThanOrEqual(layout.screen.y, 59, "the picture clears the status bar")
+    func testGameBoyLayoutIsSameBoysVerticalLayout() {
+        // SameBoy's GBVerticalLayout on a 393x852-point, 3x iPhone, worked through by hand.
+        let layout = TouchControlLayout.make(.gameBoy, width: 393, height: 852, safeTop: 59, displayScale: 3)
+        func center(_ rect: TouchRect) -> (Double, Double) { (rect.center.x, rect.center.y) }
+
+        XCTAssertEqual(layout.screen.width, 1120.0 / 3, accuracy: 0.001, "a whole number of pixels per Game Boy pixel")
+        XCTAssertEqual(layout.screen.y, 59 + 2 * (1120.0 / 3 / 40), accuracy: 0.001)
+        XCTAssertEqual(center(layout.select).0, 98.25, accuracy: 0.001)
+        XCTAssertEqual(center(layout.select).1, 747.08, accuracy: 0.01)
+        XCTAssertEqual(center(layout.start).0, 294.75, accuracy: 0.001)
+        XCTAssertEqual(center(layout.dpad).1, 607.08, accuracy: 0.01)
+        XCTAssertEqual(center(layout.a).0, 339.75, accuracy: 0.001)
+        XCTAssertEqual(center(layout.a).1, 584.58, accuracy: 0.01)
+        XCTAssertEqual(center(layout.b).0, 249.75, accuracy: 0.001)
+        XCTAssertEqual(center(layout.b).1, 629.58, accuracy: 0.01)
+        XCTAssertEqual(layout.a.width, 72)
+        XCTAssertEqual(layout.dpad.width, 150)
     }
 
-    func testPlaytilesLayoutUsesTheSkinFramesWithStartAndSelectSwapped() {
+    func testPlaytilesLayoutFollowsTheSkinWithStartAndSelectSwapped() {
         let layout = TouchControlLayout.make(.playtiles, width: 1080, height: 2340)
-        XCTAssertEqual(layout.a, TouchRect(x: 800, y: 1469, width: 184, height: 184))
-        XCTAssertEqual(layout.b, TouchRect(x: 662, y: 1269, width: 184, height: 184))
-        XCTAssertEqual(layout.select, TouchRect(x: 702, y: 1901, width: 108, height: 108))
-        XCTAssertEqual(layout.start, TouchRect(x: 863, y: 1900, width: 108, height: 108))
+        XCTAssertGreaterThan(layout.drawnRect(.a)!.width, layout.drawnRect(.b)!.width, "A is the bigger button")
+        XCTAssertLessThan(layout.select.x, layout.start.x, "SELECT is on the left")
+        XCTAssertEqual(layout.drawnRect(.select), TouchRect(x: 691, y: 1924, width: 134, height: 53))
         XCTAssertEqual(layout.dpadHitArea, TouchRect(x: 44, y: 1223, width: 462, height: 496))
+        XCTAssertEqual(Set(layout.actions.keys), [.menu, .toggleFastForward], "no Quick Save or Quick Load")
 
         XCTAssertEqual(layout.action(at: TouchPoint(x: 540, y: 650)), .toggleFastForward)
-        XCTAssertEqual(layout.action(at: TouchPoint(x: 148, y: 1953)), .menu)
+        XCTAssertEqual(layout.action(at: TouchPoint(x: 148, y: 1950)), .menu)
         XCTAssertNil(layout.action(at: TouchPoint(x: 892, y: 1561)), "A is a Game Boy control")
 
         let resolver = TouchInputResolver(layout: layout)

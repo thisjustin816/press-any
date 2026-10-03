@@ -37,7 +37,7 @@ struct AppSettingsView: View {
                         Text("Playtiles").tag(TouchControlStyle.playtiles)
                     }
                 } footer: {
-                    Text("The on-screen buttons. Playtiles adds Menu, Quick Save and Quick Load, and tapping the game toggles Fast Forward.")
+                    Text("Game Boy follows SameBoy’s layout. In Playtiles, tapping the game toggles Fast Forward.")
                 }
 
                 Section {

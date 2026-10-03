@@ -301,10 +301,6 @@ final class GameplayViewController: UIViewController {
         switch action {
         case .menu:
             presentMenuSheet()
-        case .quickSave:
-            saveState()
-        case .quickLoad:
-            loadLatestState()
         case .toggleFastForward:
             toggleFastForward()
             showTransientMessage(fastForward ? "Fast Forward on" : "Fast Forward off")
