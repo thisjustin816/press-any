@@ -25,6 +25,15 @@ struct GameDetailView: View {
     @State private var promotion: Build?
     @State private var promotionTitle = ""
     @State private var showMerge = false
+    @State private var settingsTarget: SettingsTarget?
+
+    private struct SettingsTarget: Identifiable {
+        let id = UUID()
+        let title: String
+        let scope: SettingsScope
+        let system: GameSystem
+        let buildID: UUID?
+    }
 
     let container: AppContainer
     let onPlay: (LaunchContext) -> Void
@@ -93,6 +102,16 @@ struct GameDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
+                        settingsTarget = SettingsTarget(
+                            title: "Game Settings",
+                            scope: .game(model.gameID),
+                            system: model.preferredBuild?.system ?? .gameBoy,
+                            buildID: nil
+                        )
+                    } label: {
+                        Label("Game Settings…", systemImage: "gearshape")
+                    }
+                    Button {
                         showMerge = true
                     } label: {
                         Label("Merge Into Another Game…", systemImage: "arrow.triangle.merge")
@@ -113,6 +132,16 @@ struct GameDetailView: View {
             allowsMultipleSelection: { if case .patch = fileRequest { true } else { false } }()
         ) { result in
             handleFiles(result)
+        }
+        .sheet(item: $settingsTarget) { target in
+            ScopedSettingsView(
+                title: target.title,
+                scope: target.scope,
+                system: target.system,
+                gameID: model.gameID,
+                buildID: target.buildID,
+                store: container.repositories.settings
+            )
         }
         .sheet(isPresented: $showMerge) {
             MergeGameSheet(
@@ -226,6 +255,14 @@ struct GameDetailView: View {
                 }
             }
             Button("Set as Preferred") { model.setPreferredBuild(build) }
+            Button("Build Settings…") {
+                settingsTarget = SettingsTarget(
+                    title: "\(build.displayName) Settings",
+                    scope: .build(build.id),
+                    system: build.system,
+                    buildID: build.id
+                )
+            }
             Divider()
             Button("Apply Patch…") { request(.patch(build)) }
             if build.sourceKind == .patchRecipe {

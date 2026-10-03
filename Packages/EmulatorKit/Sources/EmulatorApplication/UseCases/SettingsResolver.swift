@@ -60,6 +60,35 @@ public struct SettingsResolver: Sendable {
         return try resolved.decode(type, decoder: decoder)
     }
 
+    /// What an editor for `scope` shows: the override stored at that scope, and the value it
+    /// inherits from the scopes below it, which is what Reset to Inherited would leave in effect.
+    /// `scope` must be one of the scopes `system`, `gameID` and `buildID` describe.
+    public func edit(
+        key: String,
+        at scope: SettingsScope,
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil
+    ) throws -> ScopedSetting {
+        let scopes = Self.precedence(system: system, gameID: gameID, buildID: buildID)
+        guard let index = scopes.firstIndex(of: scope) else {
+            throw SettingsResolverError.scopeOutsideContext(scope)
+        }
+        var inherited: ResolvedSetting?
+        for parent in scopes[(index + 1)...] {
+            if let value = try store.valueJSON(key: key, scope: parent) {
+                inherited = ResolvedSetting(key: key, valueJSON: value, source: parent)
+                break
+            }
+        }
+        return ScopedSetting(
+            key: key,
+            scope: scope,
+            overrideJSON: try store.valueJSON(key: key, scope: scope),
+            inherited: inherited
+        )
+    }
+
     public static func precedence(
         system: GameSystem,
         gameID: UUID?,
@@ -71,5 +100,25 @@ public struct SettingsResolver: Sendable {
         scopes.append(.system(system))
         scopes.append(.app)
         return scopes
+    }
+}
+
+public enum SettingsResolverError: Error, Equatable {
+    case scopeOutsideContext(SettingsScope)
+}
+
+public struct ScopedSetting: Equatable, Sendable {
+    public let key: String
+    public let scope: SettingsScope
+    /// The value stored at `scope`, or nil when the scope inherits.
+    public let overrideJSON: String?
+    /// The nearest value below `scope`, or nil when only the built-in default applies.
+    public let inherited: ResolvedSetting?
+
+    public init(key: String, scope: SettingsScope, overrideJSON: String?, inherited: ResolvedSetting?) {
+        self.key = key
+        self.scope = scope
+        self.overrideJSON = overrideJSON
+        self.inherited = inherited
     }
 }
