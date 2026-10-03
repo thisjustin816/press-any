@@ -193,6 +193,14 @@ final class AppContainer {
         return (try? JSONDecoder().decode(SoundMode.self, from: Data(json.utf8))) ?? .followSilentSwitch
     }
 
+    /// App-wide. Unset or unreadable means matching Light or Dark Mode.
+    func controllerTheme() -> ControllerTheme {
+        guard let json = try? repositories.settings.valueJSON(key: SettingKey.controllerTheme.rawValue, scope: .app) else {
+            return .matchSystem
+        }
+        return (try? JSONDecoder().decode(ControllerTheme.self, from: Data(json.utf8))) ?? .matchSystem
+    }
+
     func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
         guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .gameBoy }
         return controllerStyle(system: build.system, gameID: build.gameID, buildID: build.id)

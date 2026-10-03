@@ -5,7 +5,7 @@ import UIKit
 @MainActor
 final class TouchControllerView: UIView {
     var onInputChanged: ((EmulatorInputState) -> Void)?
-    /// Taps on app controls such as Menu or Quick Save. They never reach the Game Boy's input.
+    /// Taps on app controls such as Menu or Fast Forward. They never reach the Game Boy's input.
     var onAction: ((TouchAction) -> Void)?
     /// Called with every new layout, so the game picture can follow the layout's screen frame.
     var onLayoutChanged: ((TouchControlLayout) -> Void)?
@@ -13,6 +13,19 @@ final class TouchControllerView: UIView {
     var style: TouchControlStyle = .gameBoy {
         didSet { setNeedsLayout() }
     }
+    var theme: ControllerTheme = .matchSystem {
+        didSet { setNeedsDisplay() }
+    }
+    /// With a game controller connected only the body is drawn, and touches pass through.
+    var showsControls = true {
+        didSet {
+            guard showsControls != oldValue else { return }
+            isUserInteractionEnabled = showsControls
+            if !showsControls { cancelInput() }
+            setNeedsDisplay()
+        }
+    }
+    var palette: ControllerPalette { .resolve(theme, for: traitCollection) }
     var layout: TouchControlLayout { resolver.layout }
 
     // Replaced with a layout for the real bounds in layoutSubviews, before any touch arrives.
@@ -29,6 +42,9 @@ final class TouchControllerView: UIView {
         backgroundColor = .clear
         accessibilityIdentifier = "gameplay.touchControls"
         feedback.prepare()
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: TouchControllerView, _: UITraitCollection) in
+            view.setNeedsDisplay()
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -59,27 +75,32 @@ final class TouchControllerView: UIView {
 
     override func draw(_ rect: CGRect) {
         guard let context = UIGraphicsGetCurrentContext() else { return }
-        context.setStrokeColor(UIColor.white.withAlphaComponent(0.34).cgColor)
-        context.setLineWidth(1.5)
-
         let layout = resolver.layout
-        if let guide = layout.alignmentGuide { drawAlignmentGuide(guide, in: context) }
-        let dpadActive = lastInput.up || lastInput.down || lastInput.left || lastInput.right
+        let palette = self.palette
+        drawBody(around: layout.screen, palette: palette, in: context)
+        if style == .gameBoy { drawBezel(around: layout.screen, palette: palette, in: context) }
+        guard showsControls else { return }
+
         switch style {
         case .gameBoy:
-            if let dpad = layout.drawnRect(.dpad) { drawCrossDPad(dpad, in: context, active: dpadActive) }
-            drawRoundButton(.a, label: "A", active: lastInput.a, in: context)
-            drawRoundButton(.b, label: "B", active: lastInput.b, in: context)
-            drawTiltedPill(at: layout.select.center, label: "SELECT", active: lastInput.select, in: context)
-            drawTiltedPill(at: layout.start.center, label: "START", active: lastInput.start, in: context)
+            if let dpad = layout.drawnRect(.dpad) { drawCrossDPad(dpad, input: lastInput, palette: palette, in: context) }
+            drawButtonGroove(palette: palette, in: context)
+            drawRoundButton(.a, label: "A", active: lastInput.a, palette: palette, in: context)
+            drawRoundButton(.b, label: "B", active: lastInput.b, palette: palette, in: context)
+            drawTiltedPill(at: layout.select.center, label: "SELECT", active: lastInput.select, palette: palette, in: context)
+            drawTiltedPill(at: layout.start.center, label: "START", active: lastInput.start, palette: palette, in: context)
+            if let menu = layout.drawnRect(.action(.menu)) {
+                drawTiltedPill(at: menu.center, label: "MENU", active: false, palette: palette, in: context)
+            }
         case .playtiles:
-            if let dpad = layout.drawnRect(.dpad) { drawCircleDPad(dpad, in: context, input: lastInput) }
-            drawRoundButton(.a, label: nil, active: lastInput.a, in: context)
-            drawRoundButton(.b, label: nil, active: lastInput.b, in: context)
-            drawPill(layout.drawnRect(.select), label: "SELECT", active: lastInput.select, in: context)
-            drawPill(layout.drawnRect(.start), label: "START", active: lastInput.start, in: context)
+            if let guide = layout.alignmentGuide { drawAlignmentGuide(guide, palette: palette, in: context) }
+            if let dpad = layout.drawnRect(.dpad) { drawCircleDPad(dpad, input: lastInput, palette: palette, in: context) }
+            drawRoundButton(.a, label: nil, active: lastInput.a, palette: palette, in: context)
+            drawRoundButton(.b, label: nil, active: lastInput.b, palette: palette, in: context)
+            drawPill(layout.drawnRect(.select), label: "SELECT", active: lastInput.select, palette: palette, in: context)
+            drawPill(layout.drawnRect(.start), label: "START", active: lastInput.start, palette: palette, in: context)
+            drawPill(layout.drawnRect(.action(.menu)), label: "MENU", active: false, palette: palette, in: context)
         }
-        drawPill(layout.drawnRect(.action(.menu)), label: "MENU", active: false, in: context)
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -157,8 +178,33 @@ final class TouchControllerView: UIView {
             || (!previous.start && next.start) || (!previous.select && next.select)
     }
 
-    /// Where the physical controller lines up: a band with a U-shaped tab, in the controls' fill.
-    private func drawAlignmentGuide(_ guide: TouchAlignmentGuide, in context: CGContext) {
+    /// The controller's body, everywhere but the game picture, which shows through from below.
+    private func drawBody(around screen: TouchRect, palette: ControllerPalette, in context: CGContext) {
+        context.saveGState()
+        let path = UIBezierPath(rect: bounds)
+        path.append(UIBezierPath(rect: cgRect(screen)))
+        path.usesEvenOddFillRule = true
+        path.addClip()
+        fillVerticalGradient(bounds, from: palette.bodyTop, to: palette.bodyBottom, in: context)
+        context.restoreGState()
+    }
+
+    /// The dark glass around the game picture, rounded more at the bottom right, as on a Game Boy.
+    private func drawBezel(around screen: TouchRect, palette: ControllerPalette, in context: CGContext) {
+        let picture = cgRect(screen)
+        let border = min(picture.width / 40, 16)
+        let bezel = picture.insetBy(dx: -border, dy: -border)
+        let path = roundedRect(bezel, radius: border * 0.8, bottomRightRadius: border * 3.5)
+        path.append(UIBezierPath(rect: picture))
+        path.usesEvenOddFillRule = true
+        context.saveGState()
+        path.addClip()
+        fillVerticalGradient(bezel, from: palette.bezelTop, to: palette.bezelBottom, in: context)
+        context.restoreGState()
+    }
+
+    /// Where the physical controller lines up: a band with a U-shaped tab, pressed into the body.
+    private func drawAlignmentGuide(_ guide: TouchAlignmentGuide, palette: ControllerPalette, in context: CGContext) {
         let tab = cgRect(guide.tab)
         let path = UIBezierPath(rect: cgRect(guide.bar))
         path.append(UIBezierPath(
@@ -166,28 +212,42 @@ final class TouchControllerView: UIView {
             byRoundingCorners: [.bottomLeft, .bottomRight],
             cornerRadii: CGSize(width: tab.width / 2, height: tab.width / 2)
         ))
-        context.setFillColor(fill(false))
+        context.setFillColor(palette.groove.cgColor)
         context.addPath(path.cgPath)
         context.fillPath()
     }
 
-    private func fill(_ active: Bool) -> CGColor {
-        UIColor.white.withAlphaComponent(active ? 0.30 : 0.14).cgColor
-    }
-
-    /// SameBoy's D-pad: a cross.
-    private func drawCrossDPad(_ touchRect: TouchRect, in context: CGContext, active: Bool) {
+    /// A Game Boy's D-pad: a cross, each pressed arm darker.
+    private func drawCrossDPad(_ touchRect: TouchRect, input: EmulatorInputState, palette: ControllerPalette, in context: CGContext) {
         let rect = cgRect(touchRect)
         let arm = rect.width / 3
-        let path = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: arm), cornerRadius: arm * 0.2)
-        path.append(UIBezierPath(roundedRect: rect.insetBy(dx: arm, dy: 0), cornerRadius: arm * 0.2))
-        context.setFillColor(fill(active))
+        let corner = arm * 0.18
+        let path = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: arm), cornerRadius: corner)
+        path.append(UIBezierPath(roundedRect: rect.insetBy(dx: arm, dy: 0), cornerRadius: corner))
+        context.setFillColor(palette.dpad.cgColor)
         context.addPath(path.cgPath)
-        context.drawPath(using: .fill)
+        context.fillPath()
+
+        let arms: [(CGRect, Bool)] = [
+            (CGRect(x: rect.minX + arm, y: rect.minY, width: arm, height: arm), input.up),
+            (CGRect(x: rect.minX + arm, y: rect.maxY - arm, width: arm, height: arm), input.down),
+            (CGRect(x: rect.minX, y: rect.minY + arm, width: arm, height: arm), input.left),
+            (CGRect(x: rect.maxX - arm, y: rect.minY + arm, width: arm, height: arm), input.right),
+        ]
+        context.saveGState()
+        context.addPath(path.cgPath)
+        context.clip()
+        context.setFillColor(palette.dpadPressed.cgColor)
+        for (armRect, pressed) in arms where pressed { context.fill(armRect) }
+        // The shallow dimple at the center.
+        let dimple = arm * 0.55
+        context.setFillColor(palette.dpadDimple.cgColor)
+        context.fillEllipse(in: CGRect(x: rect.midX - dimple / 2, y: rect.midY - dimple / 2, width: dimple, height: dimple))
+        context.restoreGState()
     }
 
     /// The Playtiles D-pad: four circles, each about a third of the pad across.
-    private func drawCircleDPad(_ touchRect: TouchRect, in context: CGContext, input: EmulatorInputState) {
+    private func drawCircleDPad(_ touchRect: TouchRect, input: EmulatorInputState, palette: ControllerPalette, in context: CGContext) {
         let rect = cgRect(touchRect)
         let diameter = rect.width * 121 / 347
         let centers: [(CGPoint, Bool)] = [
@@ -196,63 +256,128 @@ final class TouchControllerView: UIView {
             (CGPoint(x: rect.minX + diameter / 2, y: rect.midY), input.left),
             (CGPoint(x: rect.maxX - diameter / 2, y: rect.midY), input.right),
         ]
-        for (center, active) in centers {
-            context.setFillColor(fill(active))
+        for (center, pressed) in centers {
+            context.setFillColor((pressed ? palette.dpadPressed : palette.dpad).cgColor)
             context.fillEllipse(in: CGRect(x: center.x - diameter / 2, y: center.y - diameter / 2, width: diameter, height: diameter))
         }
     }
 
-    /// A and B as circles at their drawn size, labeled below and to the right as SameBoy does.
-    private func drawRoundButton(_ control: TouchControl, label: String?, active: Bool, in context: CGContext) {
-        guard let touchRect = resolver.layout.drawnRect(control) else { return }
-        let rect = cgRect(touchRect)
-        context.setFillColor(fill(active))
-        context.fillEllipse(in: rect)
-        guard let label else { return }
-        // SameBoy's label size and distance from the button's center.
-        drawRotatedLabel(label, size: 24, at: CGPoint(x: rect.midX, y: rect.midY), distance: 40, in: context)
-    }
-
-    /// SameBoy's START and SELECT: a short pill tilted 30 degrees, labeled underneath.
-    private func drawTiltedPill(at center: TouchPoint, label: String, active: Bool, in context: CGContext) {
+    /// The recessed channel A and B sit in, along the line between them.
+    private func drawButtonGroove(palette: ControllerPalette, in context: CGContext) {
+        guard let a = resolver.layout.drawnRect(.a), let b = resolver.layout.drawnRect(.b) else { return }
+        let from = CGPoint(x: b.center.x, y: b.center.y)
+        let to = CGPoint(x: a.center.x, y: a.center.y)
+        let length = hypot(to.x - from.x, to.y - from.y)
+        let height = CGFloat(a.width) + 10
         context.saveGState()
-        context.translateBy(x: center.x, y: center.y)
-        context.rotate(by: -.pi / 6)
-        let pill = CGRect(x: -30, y: -7, width: 60, height: 14)
-        context.setFillColor(fill(active))
-        context.addPath(UIBezierPath(roundedRect: pill, cornerRadius: 7).cgPath)
+        context.translateBy(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2)
+        context.rotate(by: atan2(to.y - from.y, to.x - from.x))
+        let groove = CGRect(x: -length / 2 - height / 2, y: -height / 2, width: length + height, height: height)
+        context.setFillColor(palette.groove.cgColor)
+        context.addPath(UIBezierPath(roundedRect: groove, cornerRadius: height / 2).cgPath)
         context.fillPath()
         context.restoreGState()
-        drawRotatedLabel(label, size: 20, at: CGPoint(x: center.x, y: center.y), distance: 24, in: context)
+    }
+
+    /// A or B: a domed button, lit from above. On a Game Boy the letter is printed below it.
+    private func drawRoundButton(_ control: TouchControl, label: String?, active: Bool, palette: ControllerPalette, in context: CGContext) {
+        guard let touchRect = resolver.layout.drawnRect(control) else { return }
+        let rect = cgRect(touchRect)
+        context.saveGState()
+        context.addEllipse(in: rect)
+        context.clip()
+        if active {
+            context.setFillColor(palette.buttonPressed.cgColor)
+            context.fill(rect)
+        } else {
+            fillVerticalGradient(rect, from: palette.buttonTop, to: palette.buttonBottom, in: context)
+        }
+        context.restoreGState()
+        guard let label else { return }
+        drawLettering(label, size: 15, at: CGPoint(x: rect.midX, y: rect.midY), distance: rect.height / 2 + 5, in: context, palette: palette)
+    }
+
+    /// START, SELECT and Menu on the Game Boy layout: a slim pill on the A and B tilt, its name
+    /// printed below.
+    private func drawTiltedPill(at center: TouchPoint, label: String, active: Bool, palette: ControllerPalette, in context: CGContext) {
+        let origin = CGPoint(x: center.x, y: center.y)
+        context.saveGState()
+        context.translateBy(x: origin.x, y: origin.y)
+        context.rotate(by: tilt)
+        let pill = CGRect(x: -24, y: -6.5, width: 48, height: 13)
+        context.setFillColor((active ? palette.pillPressed : palette.pill).cgColor)
+        context.addPath(UIBezierPath(roundedRect: pill, cornerRadius: pill.height / 2).cgPath)
+        context.fillPath()
+        context.restoreGState()
+        drawLettering(label, size: 10, at: origin, distance: 11, in: context, palette: palette)
     }
 
     /// A flat pill with its label inside, as in the Playtiles artwork.
-    private func drawPill(_ touchRect: TouchRect?, label: String, active: Bool, in context: CGContext) {
+    private func drawPill(_ touchRect: TouchRect?, label: String, active: Bool, palette: ControllerPalette, in context: CGContext) {
         guard let touchRect else { return }
         let rect = cgRect(touchRect)
-        context.setFillColor(fill(active))
+        context.setFillColor((active ? palette.pillPressed : palette.pill).cgColor)
         context.addPath(UIBezierPath(roundedRect: rect, cornerRadius: rect.height / 2).cgPath)
         context.fillPath()
         let string = NSAttributedString(string: label, attributes: [
-            .font: UIFont.systemFont(ofSize: max(9, rect.height * 0.42), weight: .bold),
-            .foregroundColor: UIColor.white.withAlphaComponent(0.8),
+            .font: UIFont.systemFont(ofSize: max(9, rect.height * 0.36), weight: .bold),
+            .kern: 1.0,
+            .foregroundColor: palette.pillText,
         ])
         let size = string.size()
         string.draw(at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2))
     }
 
-    /// Text rotated with SameBoy's -30 degree tilt, `distance` below `origin` in the tilted frame.
-    private func drawRotatedLabel(_ label: String, size: CGFloat, at origin: CGPoint, distance: CGFloat, in context: CGContext) {
+    /// The Game Boy layout's printed lettering: small spaced capitals on the A and B tilt,
+    /// `distance` below `origin` in the tilted frame.
+    private func drawLettering(_ label: String, size: CGFloat, at origin: CGPoint, distance: CGFloat, in context: CGContext, palette: ControllerPalette) {
         context.saveGState()
         context.translateBy(x: origin.x, y: origin.y)
-        context.rotate(by: -.pi / 6)
+        context.rotate(by: tilt)
         let string = NSAttributedString(string: label, attributes: [
-            .font: UIFont.systemFont(ofSize: size, weight: .bold),
-            .foregroundColor: UIColor.white.withAlphaComponent(0.6),
+            .font: UIFont.systemFont(ofSize: size, weight: .heavy),
+            .kern: size * 0.12,
+            .foregroundColor: palette.lettering,
         ])
         let textSize = string.size()
-        string.draw(at: CGPoint(x: -textSize.width / 2, y: distance))
+        // Kerning adds space after the last letter too; centering ignores it.
+        string.draw(at: CGPoint(x: -(textSize.width - size * 0.12) / 2, y: distance))
         context.restoreGState()
+    }
+
+    /// The tilt of the line from B to A, which START, SELECT and the lettering follow.
+    private var tilt: CGFloat {
+        let layout = resolver.layout
+        return atan2(CGFloat(layout.a.center.y - layout.b.center.y), CGFloat(layout.a.center.x - layout.b.center.x))
+    }
+
+    private func fillVerticalGradient(_ rect: CGRect, from top: UIColor, to bottom: UIColor, in context: CGContext) {
+        guard let gradient = CGGradient(
+            colorsSpace: CGColorSpaceCreateDeviceRGB(),
+            colors: [top.cgColor, bottom.cgColor] as CFArray,
+            locations: [0, 1]
+        ) else { return }
+        context.drawLinearGradient(
+            gradient,
+            start: CGPoint(x: rect.midX, y: rect.minY),
+            end: CGPoint(x: rect.midX, y: rect.maxY),
+            options: [.drawsBeforeStartLocation, .drawsAfterEndLocation]
+        )
+    }
+
+    private func roundedRect(_ rect: CGRect, radius: CGFloat, bottomRightRadius: CGFloat) -> UIBezierPath {
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: rect.minX + radius, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - radius, y: rect.minY))
+        path.addArc(withCenter: CGPoint(x: rect.maxX - radius, y: rect.minY + radius), radius: radius, startAngle: -.pi / 2, endAngle: 0, clockwise: true)
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - bottomRightRadius))
+        path.addArc(withCenter: CGPoint(x: rect.maxX - bottomRightRadius, y: rect.maxY - bottomRightRadius), radius: bottomRightRadius, startAngle: 0, endAngle: .pi / 2, clockwise: true)
+        path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.maxY))
+        path.addArc(withCenter: CGPoint(x: rect.minX + radius, y: rect.maxY - radius), radius: radius, startAngle: .pi / 2, endAngle: .pi, clockwise: true)
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + radius))
+        path.addArc(withCenter: CGPoint(x: rect.minX + radius, y: rect.minY + radius), radius: radius, startAngle: .pi, endAngle: .pi * 1.5, clockwise: true)
+        path.close()
+        return path
     }
 
     private func cgRect(_ rect: TouchRect) -> CGRect {

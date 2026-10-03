@@ -96,6 +96,7 @@ final class TouchInputResolverTests: XCTestCase {
     func testControllerLayoutRawValuesAreStable() {
         // Stored in settings, so renaming a case must not change them.
         XCTAssertEqual(TouchControlStyle.allCases.map(\.rawValue), ["gameBoy", "playtiles"])
+        XCTAssertEqual(ControllerTheme.allCases.map(\.rawValue), ["matchSystem", "classic", "dark"])
     }
 
     func testGameBoyLayoutIsSameBoysVerticalLayout() {

@@ -9,6 +9,16 @@ public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
     case playtiles
 }
 
+/// The on-screen controller's colors, the same across layouts. Raw values are stored in settings.
+public enum ControllerTheme: String, Codable, Sendable, CaseIterable {
+    /// Classic in Light Mode, Dark in Dark Mode.
+    case matchSystem
+    /// Game Boy colors: a light gray body, magenta A and B, and navy lettering.
+    case classic
+    /// The same design on a near-black body.
+    case dark
+}
+
 /// Controls that drive the app rather than the emulated Game Boy.
 public enum TouchAction: Hashable, Sendable {
     case menu

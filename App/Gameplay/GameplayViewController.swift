@@ -23,6 +23,7 @@ final class GameplayViewController: UIViewController {
     private var firstFrameClock: UInt64?
     private var userPaused = false
     private let controlStyle: TouchControlStyle
+    private let controllerTheme: ControllerTheme
     private let soundMode: SoundMode
     /// The close and menu buttons in the corners. A layout with its own Menu control hides them
     /// while its touch controls are showing.
@@ -41,10 +42,12 @@ final class GameplayViewController: UIViewController {
         launchMessage: String? = nil,
         firstFrameClock: UInt64? = nil,
         controlStyle: TouchControlStyle = .gameBoy,
+        controllerTheme: ControllerTheme = .matchSystem,
         soundMode: SoundMode = .followSilentSwitch
     ) {
         self.runtime = runtime
         self.controlStyle = controlStyle
+        self.controllerTheme = controllerTheme
         self.soundMode = soundMode
         self.firstFrameClock = firstFrameClock
         self.autoResumePolicy = autoResumePolicy
@@ -258,13 +261,14 @@ final class GameplayViewController: UIViewController {
 
     private func configureInput() {
         touchControls.style = controlStyle
+        touchControls.theme = controllerTheme
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
         touchControls.onAction = { [weak self] action in self?.perform(action) }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
         controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }
-            self.touchControls.isHidden = connected
+            self.touchControls.showsControls = !connected
             self.touchControls.hapticsEnabled = !connected
             self.rumble.setController(self.controllerMonitor.activeController)
             self.updateCornerButtons()
@@ -273,7 +277,7 @@ final class GameplayViewController: UIViewController {
             guard let self else { return }
             self.userPaused = true
             self.pauseGameplay()
-            self.touchControls.isHidden = false
+            self.touchControls.showsControls = true
             self.touchControls.hapticsEnabled = true
             self.updateCornerButtons()
             self.input.resetController()
@@ -281,7 +285,7 @@ final class GameplayViewController: UIViewController {
         }
 
         let connected = controllerMonitor.activeController != nil
-        touchControls.isHidden = connected
+        touchControls.showsControls = !connected
         touchControls.hapticsEnabled = !connected
         rumble.setController(controllerMonitor.activeController)
         updateCornerButtons()
@@ -295,10 +299,10 @@ final class GameplayViewController: UIViewController {
     }
 
     /// With a controller connected the touch controls hide, Menu with them, so the corner buttons
-    /// come back.
+    /// come back. The controller's body stays, so the game keeps its frame.
     private func updateCornerButtons() {
         let layoutHasMenu = touchControls.layout.actions[.menu] != nil
-        for button in cornerButtons { button.isHidden = layoutHasMenu && !touchControls.isHidden }
+        for button in cornerButtons { button.isHidden = layoutHasMenu && touchControls.showsControls }
     }
 
     private func perform(_ action: TouchAction) {

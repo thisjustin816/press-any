@@ -47,6 +47,9 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// The on-screen controller layout's raw value (GameplayInput's `TouchControlStyle`), unset
     /// means `gameBoy`.
     case controllerLayout
+    /// The controller theme's raw value (GameplayInput's `ControllerTheme`), unset means
+    /// `matchSystem`.
+    case controllerTheme
     /// `SoundMode`, unset means `.followSilentSwitch`.
     case soundMode
 }

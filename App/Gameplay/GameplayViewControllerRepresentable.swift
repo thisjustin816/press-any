@@ -8,6 +8,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let launchMessage: String?
     let firstFrameClock: UInt64?
     let controlStyle: TouchControlStyle
+    let controllerTheme: ControllerTheme
     let soundMode: SoundMode
     let onClose: () -> Void
 
@@ -18,6 +19,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             launchMessage: launchMessage,
             firstFrameClock: firstFrameClock,
             controlStyle: controlStyle,
+            controllerTheme: controllerTheme,
             soundMode: soundMode
         )
         controller.onClose = onClose

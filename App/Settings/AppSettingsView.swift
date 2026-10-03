@@ -12,6 +12,7 @@ struct AppSettingsView: View {
     @State private var skipBootAnimation: Bool
     @State private var autoResumePolicy: AutoResumePolicy
     @State private var controllerLayout: TouchControlStyle
+    @State private var controllerTheme: ControllerTheme
     @State private var soundMode: SoundMode
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
@@ -21,6 +22,7 @@ struct AppSettingsView: View {
         _skipBootAnimation = State(initialValue: Self.stored(Bool.self, .skipBootAnimation, in: store) ?? false)
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
         _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
+        _controllerTheme = State(initialValue: Self.stored(ControllerTheme.self, .controllerTheme, in: store) ?? .matchSystem)
         _soundMode = State(initialValue: Self.stored(SoundMode.self, .soundMode, in: store) ?? .followSilentSwitch)
     }
 
@@ -40,6 +42,16 @@ struct AppSettingsView: View {
                     }
                 } footer: {
                     Text("Game Boy follows SameBoy’s layout. In Playtiles, tapping the game toggles Fast Forward.")
+                }
+
+                Section {
+                    Picker("Controller Theme", selection: $controllerTheme) {
+                        Text("Match System").tag(ControllerTheme.matchSystem)
+                        Text("Classic").tag(ControllerTheme.classic)
+                        Text("Dark").tag(ControllerTheme.dark)
+                    }
+                } footer: {
+                    Text("Match System uses Classic in Light Mode and Dark in Dark Mode.")
                 }
 
                 Section {
@@ -79,6 +91,7 @@ struct AppSettingsView: View {
             .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
             .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
             .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
+            .onChange(of: controllerTheme) { _, newValue in save(newValue, .controllerTheme) }
             .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
         }
     }
