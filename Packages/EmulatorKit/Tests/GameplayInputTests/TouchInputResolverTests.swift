@@ -110,24 +110,31 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertEqual(ControllerTheme.allCases.map(\.rawValue), ["matchSystem", "classic", "dark"])
     }
 
-    func testGameBoyLayoutIsSameBoysVerticalLayoutCentered() {
-        // SameBoy's GBVerticalLayout on a 393x852-point, 3x iPhone, worked through by hand, with
-        // the controls centered between the bezel (bottom at 423) and the logo (top at 790).
-        let layout = TouchControlLayout.make(.gameBoy, width: 393, height: 852, safeTop: 59, safeBottom: 34, displayScale: 3)
-        func center(_ rect: TouchRect) -> (Double, Double) { (rect.center.x, rect.center.y) }
+    func testGameBoyLayoutFollowsTheHardware() {
+        let mm = 6.1 // points per millimeter, as the layout draws
+        for (width, height, top, bottom, displayScale) in [(375.0, 667.0, 20.0, 0.0, 2.0), (393, 852, 59, 34, 3), (440, 956, 62, 34, 3)] {
+            let layout = TouchControlLayout.make(
+                .gameBoy, width: width, height: height, safeTop: top, safeBottom: bottom, displayScale: displayScale
+            )
+            let size = "\(width)x\(height)"
+            let pixelsAcross = layout.screen.width * displayScale / 160
+            XCTAssertEqual(pixelsAcross, pixelsAcross.rounded(), accuracy: 0.001, "whole device pixels per Game Boy pixel, \(size)")
+            XCTAssertEqual(layout.drawnRect(.dpad)!.width, 22.9 * mm, accuracy: 0.01, "the D-pad is life-size, \(size)")
+            XCTAssertEqual(layout.drawnRect(.a)!.width, 10.8 * mm, accuracy: 0.01, "A is life-size, \(size)")
 
-        XCTAssertEqual(layout.screen.width, 1120.0 / 3, accuracy: 0.001, "a whole number of pixels per Game Boy pixel")
-        XCTAssertEqual(layout.screen.y, 59 + 2 * (1120.0 / 3 / 40), accuracy: 0.001)
-        XCTAssertEqual(center(layout.select).0, 98.25, accuracy: 0.001)
-        XCTAssertEqual(center(layout.select).1, 698.5, accuracy: 0.01)
-        XCTAssertEqual(center(layout.start).0, 294.75, accuracy: 0.001)
-        XCTAssertEqual(center(layout.dpad).1, 558.5, accuracy: 0.01)
-        XCTAssertEqual(center(layout.a).0, 339.75, accuracy: 0.001)
-        XCTAssertEqual(center(layout.a).1, 536, accuracy: 0.01)
-        XCTAssertEqual(center(layout.b).0, 249.75, accuracy: 0.001)
-        XCTAssertEqual(center(layout.b).1, 581, accuracy: 0.01)
-        XCTAssertEqual(layout.a.width, 72)
-        XCTAssertEqual(layout.dpad.width, 150)
+            let a = layout.drawnRect(.a)!.center, b = layout.drawnRect(.b)!.center
+            let tilt = atan2(b.y - a.y, a.x - b.x) * 180 / .pi
+            XCTAssertEqual(tilt, 24.6, accuracy: 0.5, "A and B sit on the Game Boy's angle, \(size)")
+            XCTAssertEqual(hypot(a.x - b.x, a.y - b.y), 16.8 * mm, accuracy: 1, "A and B keep the Game Boy's spacing, \(size)")
+            XCTAssertLessThan(a.y, layout.dpad.center.y, "A sits higher than the D-pad's center, \(size)")
+            XCTAssertEqual(layout.select.center.y, layout.start.center.y, "SELECT and START sit side by side, \(size)")
+            XCTAssertLessThan((layout.select.center.x + layout.start.center.x) / 2, width / 2, "and left of center, \(size)")
+
+            let bezel = layout.bezel!, logo = layout.logo!
+            let above = layout.dpad.y - (bezel.y + bezel.height)
+            let below = logo.y - (layout.select.center.y + 26)
+            XCTAssertEqual(above, below, accuracy: 1, "the controls are centered between the bezel and the logo, \(size)")
+        }
     }
 
     func testPlaytilesLayoutFollowsTheSkinWithStartAndSelectSwapped() {

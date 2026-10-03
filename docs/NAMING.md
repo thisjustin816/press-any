@@ -23,7 +23,7 @@ charcoal on light backgrounds and gray on dark ones:
 | | Light | Dark |
 |---|---|---|
 | Letters | `#323235` | `#808086` |
-| Accent letter | `#A63A70` | `#A43E74` |
+| Accent letter | `#962C64` | `#A43E74` |
 
 `AppBrand.Wordmark` in `App/AppBrand.swift` is its one definition, built from the display name:
 `WordmarkView` shows it in SwiftUI (the library's title), and the on-screen controller prints it

@@ -2,8 +2,8 @@ import Foundation
 
 /// The built-in on-screen controller layouts. Raw values are stored in settings.
 public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
-    /// SameBoy's portrait layout: the screen on top, the D-pad left, A above and right of B, and
-    /// SELECT and START below them, as on a Game Boy.
+    /// The original Game Boy's front panel: the screen on top, the D-pad left, A above and right
+    /// of B, and SELECT and START side by side below them, at the hardware's sizes and angles.
     case gameBoy
     /// The Playtiles GBC skin's layout, with START and SELECT swapped into Game Boy order.
     case playtiles
@@ -13,7 +13,7 @@ public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
 public enum ControllerTheme: String, Codable, Sendable, CaseIterable {
     /// Classic in Light Mode, Dark in Dark Mode.
     case matchSystem
-    /// Game Boy colors: a light gray body, magenta A and B, and navy lettering.
+    /// Game Boy colors: a warm gray body, magenta A and B, and navy lettering.
     case classic
     /// The same design on a near-black body.
     case dark
@@ -52,9 +52,13 @@ public struct TouchControlLayout: Equatable, Sendable {
     public let select: TouchRect
     /// Where the game picture goes. The picture is aspect-fit inside it.
     public let screen: TouchRect
-    /// Where a tap opens the app's menu: the logo, and the game picture when that's turned on, as
-    /// SameBoy opens its menu from its logo and picture.
+    /// Where a tap opens the app's menu: the logo, and the game picture when that's turned on.
     public let menuAreas: [TouchRect]
+    /// The glass around the game picture, when the layout draws one. Drawn only.
+    public let bezel: TouchRect?
+    /// How far START and SELECT, and the lettering under them, tilt, in radians. Negative tilts
+    /// rise to the right.
+    public let selectStartTilt: Double
     /// Where a control is drawn, when that differs from where it responds to touches.
     public let artwork: [TouchControl: TouchRect]
     public let alignmentGuide: TouchAlignmentGuide?
@@ -71,6 +75,8 @@ public struct TouchControlLayout: Equatable, Sendable {
         select: TouchRect,
         screen: TouchRect = .init(x: 0, y: 0, width: 0, height: 0),
         menuAreas: [TouchRect] = [],
+        bezel: TouchRect? = nil,
+        selectStartTilt: Double = 0,
         artwork: [TouchControl: TouchRect] = [:],
         alignmentGuide: TouchAlignmentGuide? = nil,
         logo: TouchRect? = nil,
@@ -84,6 +90,8 @@ public struct TouchControlLayout: Equatable, Sendable {
         self.select = select
         self.screen = screen
         self.menuAreas = menuAreas
+        self.bezel = bezel
+        self.selectStartTilt = selectStartTilt
         self.artwork = artwork
         self.alignmentGuide = alignmentGuide
         self.logo = logo
@@ -113,7 +121,7 @@ extension TouchControlLayout {
     /// The layout for `style` in a portrait view of the given size, in points. `safeTop` keeps
     /// the screen clear of the status bar and `safeBottom` the logo clear of the home indicator;
     /// `displayScale` lets the Game Boy layout size the
-    /// picture to whole device pixels, as SameBoy does. `pictureOpensMenu` makes a tap on the game
+    /// picture to whole device pixels. `pictureOpensMenu` makes a tap on the game
     /// picture open the menu as well as one on the logo.
     public static func make(
         _ style: TouchControlStyle,
@@ -151,9 +159,32 @@ extension TouchControlLayout {
         TouchRect(x: width / 2 - 60, y: height - max(safeBottom, 12) - 28, width: 120, height: 24)
     }
 
-    /// SameBoy 1.0.3's `GBVerticalLayout`, in points rather than pixels, with the controls moved
-    /// up to sit centered between the bezel and the logo. Positions are the controls' centers;
-    /// sizes are SameBoy's touch radii (36 for buttons, 75 for the D-pad).
+    /// The original Game Boy (DMG-01) front panel, in millimeters from its left edge and from the
+    /// top of the screen window, measured from a photograph of the hardware and scaled so the
+    /// body is its specified 90 mm wide.
+    enum GameBoyPanel {
+        static let width = 90.0
+        static let dpad = (x: 18.2, y: 84.9)
+        static let dpadSize = 22.9
+        static let a = (x: 79.7, y: 80.4)
+        static let b = (x: 64.4, y: 87.4)
+        static let buttonSize = 10.8
+        static let select = (x: 32.5, y: 107.7)
+        static let start = (x: 48.6, y: 107.7)
+        static let pillSize = (length: 10.3, width: 3.3)
+        /// START and SELECT rise about 18 degrees to the right.
+        static let pillTilt = -18.0 * Double.pi / 180
+    }
+
+    /// Points per millimeter on an iPhone screen, near enough on every model (153 to 163 points
+    /// per inch), so the controls come out at the Game Boy's own size.
+    static let pointsPerMillimeter = 6.1
+
+    /// The Game Boy layout. The D-pad, buttons and START and SELECT are drawn at the hardware's
+    /// size, with its spacing and angles; across the width they keep the Game Boy's proportions,
+    /// pulled in as needed so nothing leaves the screen. The game picture sits at the top at a
+    /// whole number of device pixels per Game Boy pixel, and the controls are centered between
+    /// its bezel and the logo. Touch areas reach past the drawn controls without overlapping.
     static func gameBoy(
         width: Double,
         height: Double,
@@ -162,59 +193,97 @@ extension TouchControlLayout {
         displayScale: Double,
         pictureOpensMenu: Bool
     ) -> TouchControlLayout {
+        let mm = pointsPerMillimeter
+        let panel = GameBoyPanel.self
+        let edgeMargin = 8.0
+
+        // The largest whole multiple of the 160x144 picture that fits with the edge margins, with
+        // the bezel taking up to 12 points of what's left on each side.
         let scale = max(displayScale, 1)
-        let screenWidth = max(floor(width * scale / 160), 1) * 160 / scale
-        let screenHeight = screenWidth / 160 * 144
-        let border = min(screenWidth / 40, 16)
-        let statusBar = safeTop > 0 ? safeTop : 20
+        let multiple = max(floor((width - 2 * edgeMargin) * scale / 160), 1)
+        let pictureWidth = multiple * 160 / scale
+        let pictureHeight = pictureWidth * 144 / 160
+        let bezelPadding = min(12, (width - pictureWidth) / 2)
         let screen = TouchRect(
-            x: (width - screenWidth) / 2,
-            y: statusBar + min(border * 2, 20),
-            width: screenWidth,
-            height: screenHeight
+            x: (width - pictureWidth) / 2,
+            y: max(safeTop, 20) + edgeMargin + bezelPadding,
+            width: pictureWidth,
+            height: pictureHeight
         )
-        let controlAreaStart = screen.y + screenHeight + min(border * 2, 20)
-
-        // The controls run from the D-pad's top, 214 above SELECT, to the lettering under SELECT
-        // and START, about 30 below it. Center that block between the bezel and the logo, never
-        // lower than SameBoy puts it and never so high the D-pad reaches the picture.
+        let bezel = TouchRect(
+            x: screen.x - bezelPadding,
+            y: screen.y - bezelPadding,
+            width: pictureWidth + 2 * bezelPadding,
+            height: pictureHeight + 2 * bezelPadding
+        )
         let logo = logo(width: width, height: height, safeBottom: safeBottom)
-        let bezelBottom = screen.y + screenHeight + border
-        let centered = bezelBottom + (logo.y - bezelBottom - 244) / 2 + 214
-        let sameBoy = min(height - 80, (height - controlAreaStart) * 0.75 + controlAreaStart)
-        let select = TouchPoint(
-            x: min(width / 4, 120),
-            y: min(sameBoy, max(controlAreaStart + 215, centered))
-        )
-        let start = TouchPoint(x: width - select.x, y: select.y)
 
-        let buttonRadius = 36.0
-        let maxDistance = width / 2 - buttonRadius * 2 - border * 2
-        let delta = maxDistance >= 90
-            ? (width: 90.0, height: 45.0)
-            : (width: maxDistance, height: floor((100 * 100 - maxDistance * maxDistance).squareRoot()))
+        let dpadSize = panel.dpadSize * mm
+        let buttonSize = panel.buttonSize * mm
+        let pill = (length: panel.pillSize.length * mm, width: panel.pillSize.width * mm)
 
-        let dpad = TouchPoint(x: select.x, y: select.y - 140)
-        let buttonsCenter = TouchPoint(x: width - dpad.x, y: dpad.y)
-        let a = TouchPoint(x: buttonsCenter.x + delta.width / 2, y: buttonsCenter.y - delta.height / 2)
-        let b = TouchPoint(x: buttonsCenter.x - delta.width / 2, y: buttonsCenter.y + delta.height / 2)
-
-        func square(_ center: TouchPoint, radius: Double) -> TouchRect {
-            TouchRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
+        // Across: the Game Boy's proportions of the width, kept clear of the edges.
+        let dpadX = max(width * panel.dpad.x / panel.width, edgeMargin + dpadSize / 2)
+        let aX = min(width * panel.a.x / panel.width, width - edgeMargin - buttonSize / 2)
+        // A to B at the hardware's spacing and angle, closed up only if B would crowd the D-pad.
+        var aToB = (x: (panel.a.x - panel.b.x) * mm, y: (panel.b.y - panel.a.y) * mm)
+        let bLimit = dpadX + dpadSize / 2 + 12 + buttonSize / 2
+        if aX - aToB.x < bLimit {
+            let shrink = max((aX - bLimit) / aToB.x, (buttonSize + 6) / (aToB.x * aToB.x + aToB.y * aToB.y).squareRoot())
+            aToB = (aToB.x * shrink, aToB.y * shrink)
         }
+        let pillsX = width * (panel.select.x + panel.start.x) / 2 / panel.width
+        let pillSpacing = (panel.start.x - panel.select.x) * mm
+
+        // Down, relative to the D-pad's center: A and B a little higher and lower, START and
+        // SELECT well below. The block runs from the D-pad's top to the lettering under the pills.
+        let aY = (panel.a.y - panel.dpad.y) * mm
+        let lettering = 26.0
+        let space = logo.y - (bezel.y + bezel.height)
+        var pillsY = (panel.select.y - panel.dpad.y) * mm
+        let blockHeight = dpadSize / 2 + pillsY + lettering
+        if space < blockHeight { pillsY = max(100, pillsY - (blockHeight - space)) }
+        let dpadY = bezel.y + bezel.height + max(0, (space - (dpadSize / 2 + pillsY + lettering)) / 2) + dpadSize / 2
+
+        let dpad = TouchPoint(x: dpadX, y: dpadY)
+        let a = TouchPoint(x: aX, y: dpadY + aY)
+        let b = TouchPoint(x: aX - aToB.x, y: a.y + aToB.y)
+        let select = TouchPoint(x: pillsX - pillSpacing / 2, y: dpadY + pillsY)
+        let start = TouchPoint(x: pillsX + pillSpacing / 2, y: dpadY + pillsY)
+
+        // Touch areas stop at the screen's edges.
+        func onScreen(_ r: TouchRect) -> TouchRect {
+            let minX = max(r.x, 0), maxX = min(r.x + r.width, width)
+            return TouchRect(x: minX, y: r.y, width: maxX - minX, height: r.height)
+        }
+        func centered(_ center: TouchPoint, _ width: Double, _ height: Double) -> TouchRect {
+            TouchRect(x: center.x - width / 2, y: center.y - height / 2, width: width, height: height)
+        }
+        func square(_ center: TouchPoint, _ size: Double) -> TouchRect { centered(center, size, size) }
+        // Buttons take touches 10 points past their edge, the D-pad 12, and START and SELECT a
+        // 44-point-tall band, each narrower where it would meet its neighbor.
+        let buttonReach = min(buttonSize + 20, (aToB.x * aToB.x + aToB.y * aToB.y).squareRoot() - 2)
+        let pillReach = (length: min(pill.length + 24, pillSpacing - 4), width: 44.0)
+        let dpadRect = square(dpad, dpadSize)
+
         return TouchControlLayout(
-            dpad: square(dpad, radius: 75),
-            a: square(a, radius: buttonRadius),
-            b: square(b, radius: buttonRadius),
-            start: square(start, radius: buttonRadius),
-            select: square(select, radius: buttonRadius),
+            dpad: dpadRect,
+            dpadHitArea: onScreen(square(dpad, dpadSize + 24)),
+            a: onScreen(square(a, buttonReach)),
+            b: onScreen(square(b, buttonReach)),
+            start: onScreen(centered(start, pillReach.length, pillReach.width)),
+            select: onScreen(centered(select, pillReach.length, pillReach.width)),
             screen: screen,
             menuAreas: menuAreas(logo: logo, screen: screen, pictureOpensMenu: pictureOpensMenu),
+            bezel: bezel,
+            selectStartTilt: panel.pillTilt,
             artwork: [
-                // SameBoy's images: a 147x151 cross and 75x79 buttons.
-                .dpad: square(dpad, radius: 74),
-                .a: square(a, radius: 37),
-                .b: square(b, radius: 37),
+                .dpad: dpadRect,
+                .a: square(a, buttonSize),
+                .b: square(b, buttonSize),
+                // Unrotated; drawn turned by `selectStartTilt` about the center.
+                .select: centered(select, pill.length, pill.width),
+                .start: centered(start, pill.length, pill.width),
             ],
             logo: logo
         )

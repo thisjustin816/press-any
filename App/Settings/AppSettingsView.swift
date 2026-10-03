@@ -43,7 +43,7 @@ struct AppSettingsView: View {
                         Text("Playtiles").tag(TouchControlStyle.playtiles)
                     }
                 } footer: {
-                    Text("Game Boy follows SameBoy’s layout, and Playtiles fits the Playtiles controller.")
+                    Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits the Playtiles controller.")
                 }
 
                 Section {
@@ -80,6 +80,10 @@ struct AppSettingsView: View {
                     }
                 } footer: {
                     Text("Whether a game picks up where you left off when you open it again or return to the app.")
+                }
+
+                Section {
+                    NavigationLink("Acknowledgements") { AcknowledgementsView() }
                 }
 
                 if let errorMessage {

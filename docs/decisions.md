@@ -9,15 +9,15 @@ specs where they conflict; update the spec it touches in the same change.
 picture showing through, in one of two color themes chosen by Settings > Controller Theme
 (`controllerTheme`, app-wide, Match System by default):
 
-- **Classic** uses the Game Boy colors SameBoy uses: a light gray body, a dark bezel around the
-  picture, magenta A and B, gray D-pad and pills, and navy lettering. The drawing is Press Any's
-  own, not SameBoy's artwork.
+- **Classic** uses an original Game Boy's colors, sampled from a photograph of one: a warm gray
+  body, a gray lens around the picture, maroon-magenta A and B, a dark D-pad, gray rubber pills
+  and navy lettering.
 - **Dark** is the same design on a near-black body, with the channel behind A and B lighter
   than the body.
 
-Match System picks Classic in Light Mode and Dark in Dark Mode. On the Game Boy layout, the
-names are printed below the controls in small capitals along the tilt of A and B, as on a Game
-Boy, and START and SELECT are slim pills on the same tilt. Both layouts print the app's
+Match System picks Classic in Light Mode and Dark in Dark Mode. On the Game Boy layout, as on
+the hardware, "A" and "B" are printed below the buttons along their tilt, and "SELECT" and
+"START" are printed level below their tilted pills. Both layouts print the app's
 wordmark (`docs/NAMING.md`) at the bottom of the body, charcoal on Classic and gray on Dark,
 with its A in the A button's magenta. Playtiles keeps its unlabeled buttons and labeled pills.
 With a game controller connected the controls hide and the body stays.
@@ -33,10 +33,16 @@ the game while leaving other apps' audio playing.
 **Decision.** The on-screen controls come in two built-in layouts, chosen by Settings >
 Controller Layout (`controllerLayout`, Game Boy by default, overridable per System, Game or Build):
 
-- **Game Boy** is SameBoy 1.0.3's portrait layout (`GBVerticalLayout`): the game picture at the
-  top at a whole number of device pixels per Game Boy pixel, the D-pad left, A above and right of
-  B, and SELECT and START below them. The controls sit centered between the bezel and the logo,
-  higher than SameBoy puts them, so the body has no empty band under the picture.
+- **Game Boy** follows the original Game Boy's front panel, measured from a photograph of a
+  DMG-01 and scaled to its specified 90 mm width: the D-pad (22.9 mm) and A and B (10.8 mm) are
+  drawn at the hardware's size, about 6.1 points per millimeter, with A and B 16.8 mm apart on a
+  24.6 degree slope and SELECT and START side by side left of center, tilted 18 degrees. Across
+  the width the controls keep the Game Boy's proportions, pulled in so nothing leaves the screen,
+  and A and B close up only if B would crowd the D-pad. The game picture sits at the top at a
+  whole number of device pixels per Game Boy pixel, and the controls are centered between its
+  bezel and the logo. Touch areas reach 10 to 12 points past the drawn controls without
+  overlapping. SameBoy's iOS layout isn't used: its `iOS/` directory needs the author's written
+  permission to ship on the App Store.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
   START and SELECT swapped into Game Boy order. Controls are drawn at the skin artwork's sizes,
   where A is larger than B, and respond across both the frame and the artwork. The skin's Menu

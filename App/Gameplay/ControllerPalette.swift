@@ -1,8 +1,8 @@
 import GameplayInput
 import UIKit
 
-/// Colors for the on-screen controller. Classic takes the Game Boy colors SameBoy uses; the
-/// drawing is Press Any's own.
+/// Colors for the on-screen controller. Classic's are sampled from a photograph of an original
+/// Game Boy; Dark is Press Any's own.
 struct ControllerPalette {
     let bodyTop: UIColor
     let bodyBottom: UIColor
@@ -30,21 +30,22 @@ struct ControllerPalette {
 
     static var classic: ControllerPalette {
         ControllerPalette(
-            bodyTop: rgb(192, 195, 199),
-            bodyBottom: rgb(174, 176, 180),
-            bezelTop: rgb(53, 53, 53),
-            bezelBottom: rgb(45, 45, 45),
-            dpad: rgb(50, 50, 53),
-            dpadPressed: rgb(32, 32, 34),
-            dpadDimple: rgb(40, 40, 43),
-            groove: rgb(162, 164, 169),
-            buttonTop: rgb(166, 58, 112),
-            buttonBottom: rgb(136, 44, 90),
-            buttonPressed: rgb(112, 36, 74),
-            pill: rgb(90, 90, 94),
-            pillPressed: rgb(66, 66, 70),
-            pillText: rgb(222, 224, 228),
-            lettering: rgb(0, 70, 141),
+            // The warm gray case, its gray screen lens, and the maroon-magenta A and B.
+            bodyTop: rgb(199, 198, 195),
+            bodyBottom: rgb(183, 181, 178),
+            bezelTop: rgb(128, 126, 132),
+            bezelBottom: rgb(112, 110, 116),
+            dpad: rgb(48, 48, 50),
+            dpadPressed: rgb(30, 30, 32),
+            dpadDimple: rgb(38, 38, 40),
+            groove: rgb(170, 168, 165),
+            buttonTop: rgb(150, 44, 100),
+            buttonBottom: rgb(124, 32, 80),
+            buttonPressed: rgb(100, 24, 64),
+            pill: rgb(124, 120, 124),
+            pillPressed: rgb(100, 96, 100),
+            pillText: rgb(236, 234, 232),
+            lettering: rgb(52, 52, 136),
             logo: AppBrand.Wordmark.lightInk,
             logoAccent: AppBrand.Wordmark.lightAccent
         )

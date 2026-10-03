@@ -15,7 +15,9 @@ this repository.
   VRAM. The other four commits change only the Cocoa frontend and Workboy emulation, which Press
   Any does not compile or use. Move to a release tag once one contains this fix.
 - Usage: only `Core/` is compiled, behind Press Any's `SameBoyBridge`. The boot ROMs are built
-  from the submodule's `BootROMs/` sources.
+  from the submodule's `BootROMs/` sources. Nothing from SameBoy's iOS frontend (`iOS/`), whose
+  license needs the author's written permission for App Store distribution, is compiled,
+  bundled or adapted; Press Any's controller layouts, artwork and colors are its own.
 - License: Expat (MIT-style); see the submodule's `LICENSE`.
 
 ## GRDB.swift
@@ -40,9 +42,16 @@ this repository.
   synthetic ROMs. The test ROMs are fetched at run time and never committed here.
 - License: public domain, under the Unlicense (https://unlicense.org).
 
+## In the app
+
+Settings > Acknowledgements shows the license of each project whose code ships in the app,
+bundled verbatim from `App/Acknowledgements/`: SameBoy and GRDB.swift. gbtoolsid's port isn't
+linked into the app.
+
 ## Updating a dependency
 
-Updating a pin is an explicit change: update it, run the platform-independent tests and the
-device checks in `docs/mvp-verification.md`, and record the reason here. A SameBoy update is a
+Updating a pin is an explicit change: update it, copy its license into `App/Acknowledgements/`
+if it changed, run the platform-independent tests and the device checks in
+`docs/mvp-verification.md`, and record the reason here. A SameBoy update is a
 core migration candidate: existing Builds keep their pinned core until they are migrated
 deliberately.

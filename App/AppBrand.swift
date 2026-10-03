@@ -20,7 +20,7 @@ enum AppBrand {
         static var lightInk: UIColor { UIColor(red: 50 / 255, green: 50 / 255, blue: 53 / 255, alpha: 1) }
         /// Gray on dark backgrounds.
         static var darkInk: UIColor { UIColor(red: 128 / 255, green: 128 / 255, blue: 134 / 255, alpha: 1) }
-        static var lightAccent: UIColor { UIColor(red: 166 / 255, green: 58 / 255, blue: 112 / 255, alpha: 1) }
+        static var lightAccent: UIColor { UIColor(red: 150 / 255, green: 44 / 255, blue: 100 / 255, alpha: 1) }
         static var darkAccent: UIColor { UIColor(red: 164 / 255, green: 62 / 255, blue: 116 / 255, alpha: 1) }
         static var ink: UIColor { UIColor { $0.userInterfaceStyle == .dark ? darkInk : lightInk } }
         static var accent: UIColor { UIColor { $0.userInterfaceStyle == .dark ? darkAccent : lightAccent } }

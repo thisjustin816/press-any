@@ -92,7 +92,7 @@ final class TouchControllerView: UIView {
         let layout = resolver.layout
         let palette = self.palette
         drawBody(around: layout.screen, palette: palette, in: context)
-        if style == .gameBoy { drawBezel(around: layout.screen, palette: palette, in: context) }
+        if let bezel = layout.bezel { drawBezel(bezel, around: layout.screen, palette: palette, in: context) }
         if let logo = layout.logo { drawLogo(in: cgRect(logo), palette: palette) }
         guard showsControls else { return }
 
@@ -102,8 +102,8 @@ final class TouchControllerView: UIView {
             drawButtonGroove(palette: palette, in: context)
             drawRoundButton(.a, label: "A", active: lastInput.a, palette: palette, in: context)
             drawRoundButton(.b, label: "B", active: lastInput.b, palette: palette, in: context)
-            drawTiltedPill(at: layout.select.center, label: "SELECT", active: lastInput.select, palette: palette, in: context)
-            drawTiltedPill(at: layout.start.center, label: "START", active: lastInput.start, palette: palette, in: context)
+            drawTiltedPill(.select, label: "SELECT", active: lastInput.select, palette: palette, in: context)
+            drawTiltedPill(.start, label: "START", active: lastInput.start, palette: palette, in: context)
         case .playtiles:
             if let guide = layout.alignmentGuide { drawAlignmentGuide(guide, palette: palette, in: context) }
             if let dpad = layout.drawnRect(.dpad) { drawCircleDPad(dpad, input: lastInput, palette: palette, in: context) }
@@ -220,11 +220,11 @@ final class TouchControllerView: UIView {
         string.draw(at: CGPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2))
     }
 
-    /// The dark glass around the game picture, rounded more at the bottom right, as on a Game Boy.
-    private func drawBezel(around screen: TouchRect, palette: ControllerPalette, in context: CGContext) {
+    /// The glass around the game picture, rounded more at the bottom right, as on a Game Boy.
+    private func drawBezel(_ bezelRect: TouchRect, around screen: TouchRect, palette: ControllerPalette, in context: CGContext) {
         let picture = cgRect(screen)
-        let border = min(picture.width / 40, 16)
-        let bezel = picture.insetBy(dx: -border, dy: -border)
+        let bezel = cgRect(bezelRect)
+        let border = max(picture.minY - bezel.minY, 1)
         let path = roundedRect(bezel, radius: border * 0.8, bottomRightRadius: border * 3.5)
         path.append(UIBezierPath(rect: picture))
         path.usesEvenOddFillRule = true
@@ -325,22 +325,27 @@ final class TouchControllerView: UIView {
         }
         context.restoreGState()
         guard let label else { return }
-        drawLettering(label, size: 15, at: CGPoint(x: rect.midX, y: rect.midY), distance: rect.height / 2 + 5, in: context, palette: palette)
+        drawLettering(label, size: 15, at: CGPoint(x: rect.midX, y: rect.midY), distance: rect.height / 2 + 5, tilt: buttonTilt, in: context, palette: palette)
     }
 
-    /// START and SELECT on the Game Boy layout: a slim pill on the A and B tilt, its name
-    /// printed below.
-    private func drawTiltedPill(at center: TouchPoint, label: String, active: Bool, palette: ControllerPalette, in context: CGContext) {
-        let origin = CGPoint(x: center.x, y: center.y)
+    /// START and SELECT on the Game Boy layout: a pill turned by the layout's tilt, its name
+    /// printed level below it, as on a Game Boy.
+    private func drawTiltedPill(_ control: TouchControl, label: String, active: Bool, palette: ControllerPalette, in context: CGContext) {
+        guard let touchRect = resolver.layout.drawnRect(control) else { return }
+        let rect = cgRect(touchRect)
+        let tilt = CGFloat(resolver.layout.selectStartTilt)
+        let origin = CGPoint(x: rect.midX, y: rect.midY)
         context.saveGState()
         context.translateBy(x: origin.x, y: origin.y)
         context.rotate(by: tilt)
-        let pill = CGRect(x: -24, y: -6.5, width: 48, height: 13)
+        let pill = CGRect(x: -rect.width / 2, y: -rect.height / 2, width: rect.width, height: rect.height)
         context.setFillColor((active ? palette.pillPressed : palette.pill).cgColor)
         context.addPath(UIBezierPath(roundedRect: pill, cornerRadius: pill.height / 2).cgPath)
         context.fillPath()
         context.restoreGState()
-        drawLettering(label, size: 10, at: origin, distance: 11, in: context, palette: palette)
+        // Just below the tilted pill's lowest point.
+        let drop = abs(sin(tilt)) * rect.width / 2 + cos(tilt) * rect.height / 2
+        drawLettering(label, size: 11, at: origin, distance: drop + 4, tilt: 0, in: context, palette: palette)
     }
 
     /// A flat pill with its label inside, as in the Playtiles artwork.
@@ -359,9 +364,9 @@ final class TouchControllerView: UIView {
         string.draw(at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2))
     }
 
-    /// The Game Boy layout's printed lettering: small spaced capitals on the A and B tilt,
-    /// `distance` below `origin` in the tilted frame.
-    private func drawLettering(_ label: String, size: CGFloat, at origin: CGPoint, distance: CGFloat, in context: CGContext, palette: ControllerPalette) {
+    /// The Game Boy layout's printed lettering: small spaced capitals, `distance` below `origin`
+    /// in a frame turned by `tilt`.
+    private func drawLettering(_ label: String, size: CGFloat, at origin: CGPoint, distance: CGFloat, tilt: CGFloat, in context: CGContext, palette: ControllerPalette) {
         context.saveGState()
         context.translateBy(x: origin.x, y: origin.y)
         context.rotate(by: tilt)
@@ -376,8 +381,8 @@ final class TouchControllerView: UIView {
         context.restoreGState()
     }
 
-    /// The tilt of the line from B to A, which START, SELECT and the lettering follow.
-    private var tilt: CGFloat {
+    /// The tilt of the line from B to A, which the channel and the A and B lettering follow.
+    private var buttonTilt: CGFloat {
         let layout = resolver.layout
         return atan2(CGFloat(layout.a.center.y - layout.b.center.y), CGFloat(layout.a.center.x - layout.b.center.x))
     }
