@@ -94,7 +94,8 @@ public struct ResolveImageForLaunch: Sendable {
             output = try patcher.apply(
                 patch: assetStore.readData(at: patchURL),
                 fileExtension: fileExtension,
-                to: output
+                to: output,
+                ignoringBaseMismatch: item.ignoresBaseMismatch
             )
         }
 

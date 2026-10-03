@@ -12,6 +12,7 @@ public protocol AssetStore: Sendable {
     func commitSourcePatch(stagedURL: URL, sha256: String, extension fileExtension: String) throws -> URL
     func generatedImageURL(sha256: String) -> URL
     func persistentSaveURL(profileID: UUID) -> URL
+    func artworkURL(gameID: UUID, sha256: String, extension fileExtension: String) throws -> URL
     func stateURL(stateID: UUID) -> URL
     func quickPlayRoot(sessionID: UUID) -> URL
     func quickPlaySessionIDs() throws -> [UUID]

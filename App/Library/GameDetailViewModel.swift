@@ -14,6 +14,14 @@ final class GameDetailViewModel: ObservableObject {
     @Published private(set) var infoMessage: String?
     /// Set once a move leaves this Game deleted, so the screen can close.
     @Published private(set) var gameRemoved = false
+    /// Patches refused because they expect a different base, waiting on Apply Anyway.
+    @Published var baseMismatch: PendingPatch?
+
+    struct PendingPatch: Identifiable {
+        let id = UUID()
+        let urls: [URL]
+        let build: Build
+    }
 
     let gameID: UUID
 
@@ -26,6 +34,7 @@ final class GameDetailViewModel: ObservableObject {
     private let saveImporter: ImportBatterySave
     private let patchCreator: CreatePatchedBuild
     private let evictImage: EvictGeneratedImage
+    private let artwork: GameArtwork
 
     init(
         gameID: UUID,
@@ -37,7 +46,8 @@ final class GameDetailViewModel: ObservableObject {
         duplicateProfile: DuplicateSaveProfile,
         importSave: ImportBatterySave,
         patchCreator: CreatePatchedBuild,
-        evictImage: EvictGeneratedImage
+        evictImage: EvictGeneratedImage,
+        artwork: GameArtwork
     ) {
         self.gameID = gameID
         self.games = games
@@ -49,6 +59,7 @@ final class GameDetailViewModel: ObservableObject {
         self.saveImporter = importSave
         self.patchCreator = patchCreator
         self.evictImage = evictImage
+        self.artwork = artwork
     }
 
     var preferredBuild: Build? {
@@ -139,7 +150,7 @@ final class GameDetailViewModel: ObservableObject {
         }
     }
 
-    func applyPatches(_ urls: [URL], to build: Build) {
+    func applyPatches(_ urls: [URL], to build: Build, ignoringBaseMismatch: Bool = false) {
         guard !urls.isEmpty else { return }
         let scoped = urls.map { $0.startAccessingSecurityScopedResource() }
         defer {
@@ -151,13 +162,13 @@ final class GameDetailViewModel: ObservableObject {
             let patched = try patchCreator.execute(.init(
                 gameID: gameID,
                 baseBuildID: build.id,
-                patchURLs: urls,
+                patches: urls.map { .init(url: $0, ignoreBaseMismatch: ignoringBaseMismatch) },
                 displayName: urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + ")
             ))
             reload()
             infoMessage = "Created \(patched.displayName) from \(build.displayName)."
         } catch PatchError.sourceCRC32Mismatch, PatchError.sourceSizeMismatch {
-            errorMessage = "This patch was made for a different base ROM than \(build.displayName)."
+            baseMismatch = PendingPatch(urls: urls, build: build)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -170,6 +181,27 @@ final class GameDetailViewModel: ObservableObject {
                 ? "Removed the generated image. The next launch rebuilds it and checks its hash."
                 : "The generated image wasn’t cached. The next launch rebuilds it."
         }
+    }
+
+    func setArtwork(from url: URL) {
+        perform {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            try artwork.set(
+                gameID: gameID,
+                imageData: Data(contentsOf: url),
+                fileExtension: url.pathExtension.isEmpty ? "img" : url.pathExtension,
+                originalFilename: url.lastPathComponent
+            )
+        }
+    }
+
+    func setArtwork(_ data: Data, fileExtension: String) {
+        perform { try artwork.set(gameID: gameID, imageData: data, fileExtension: fileExtension) }
+    }
+
+    func removeArtwork() {
+        perform { try artwork.remove(gameID: gameID) }
     }
 
     func promote(_ build: Build, title: String, mode: ReorganizationMode) {

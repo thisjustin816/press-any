@@ -188,7 +188,7 @@ struct LibraryView: View {
                     NavigationLink {
                         GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
                     } label: {
-                        GameLibraryTile(game: game)
+                        GameLibraryTile(game: game, artworkURL: container.artworkURL(for: game))
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
@@ -206,7 +206,7 @@ struct LibraryView: View {
                 GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
             } label: {
                 HStack(spacing: 12) {
-                    GameArtworkPlaceholder(title: game.primaryTitle)
+                    GameArtworkView(title: game.primaryTitle, url: container.artworkURL(for: game))
                         .frame(width: 48, height: 64)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(game.primaryTitle)
@@ -263,10 +263,11 @@ private struct ImportReviewPresentation: Identifiable {
 
 private struct GameLibraryTile: View {
     let game: Game
+    let artworkURL: URL?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            GameArtworkPlaceholder(title: game.primaryTitle)
+            GameArtworkView(title: game.primaryTitle, url: artworkURL)
                 .aspectRatio(0.72, contentMode: .fit)
             Text(game.primaryTitle)
                 .font(.headline)
@@ -276,10 +277,30 @@ private struct GameLibraryTile: View {
     }
 }
 
-private struct GameArtworkPlaceholder: View {
+/// The Game's assigned artwork, or a placeholder with its title.
+private struct GameArtworkView: View {
     let title: String
+    let url: URL?
 
     var body: some View {
+        if let url {
+            // The shape takes the frame the parent offers, and the image fills and is clipped to it.
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.quaternary)
+                .overlay {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        } else {
+            placeholder
+        }
+    }
+
+    private var placeholder: some View {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(.quaternary)
             .overlay {

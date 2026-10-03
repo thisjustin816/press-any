@@ -165,6 +165,11 @@ public struct BuildOperations: Sendable {
                 updatedTargetGame.preferredSaveProfileID = preferredProfile
                 targetChanged = true
             }
+            // The source Game's row goes away, so its artwork follows unless the target has its own.
+            if mode == .move, updatedTargetGame.artworkAssetID == nil, let artwork = sourceGame.artworkAssetID {
+                updatedTargetGame.artworkAssetID = artwork
+                targetChanged = true
+            }
             if targetChanged {
                 updatedTargetGame.modifiedAt = timestamp
                 try games.updateGame(updatedTargetGame)

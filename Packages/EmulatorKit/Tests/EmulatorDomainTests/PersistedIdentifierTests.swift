@@ -11,6 +11,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(ManagedAssetKind.saveState.rawValue, "saveState")
         XCTAssertEqual(ManagedAssetKind.stateThumbnail.rawValue, "stateThumbnail")
         XCTAssertEqual(ManagedAssetKind.quickPlayImage.rawValue, "quickPlayROM")
+        XCTAssertEqual(ManagedAssetKind.artwork.rawValue, "artwork")
     }
 
     func testSettingKeysAreStable() {

@@ -21,6 +21,23 @@ final class BPSPatchApplierTests: XCTestCase {
         }
     }
 
+    func testApplyAnywayAppliesToADifferentBaseButStillChecksThePatch() throws {
+        let patch = try XCTUnwrap(Data(hex: "4250533183838080815880480383a393f9ae1348dc32ee"))
+
+        XCTAssertEqual(
+            try BPSPatchApplier().apply(patch: patch, to: Data("ZBC".utf8), ignoringBaseMismatch: true),
+            Data("ZXC".utf8)
+        )
+
+        var corrupt = patch
+        corrupt[5] ^= 0xff
+        XCTAssertThrowsError(try BPSPatchApplier().apply(patch: corrupt, to: Data("ZBC".utf8), ignoringBaseMismatch: true)) { error in
+            guard case .patchCRC32Mismatch = error as? PatchError else {
+                return XCTFail("Expected patch CRC mismatch, got \(error)")
+            }
+        }
+    }
+
     func testCRC32KnownVector() {
         XCTAssertEqual(CRC32.checksum(Data("123456789".utf8)), 0xcbf43926)
     }

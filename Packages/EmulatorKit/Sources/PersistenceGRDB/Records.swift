@@ -53,6 +53,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
     var systemFamily: String
     var preferredBuildID: String?
     var preferredSaveProfileID: String?
+    var artworkAssetID: String?
     var createdAt: String
     var modifiedAt: String
 
@@ -62,6 +63,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         case systemFamily = "system_family"
         case preferredBuildID = "preferred_build_id"
         case preferredSaveProfileID = "preferred_save_profile_id"
+        case artworkAssetID = "artwork_asset_id"
         case createdAt = "created_at"
         case modifiedAt = "modified_at"
     }
@@ -72,6 +74,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         systemFamily = value.systemFamily
         preferredBuildID = value.preferredBuildID.map(PersistenceCodec.uuid)
         preferredSaveProfileID = value.preferredSaveProfileID.map(PersistenceCodec.uuid)
+        artworkAssetID = value.artworkAssetID.map(PersistenceCodec.uuid)
         createdAt = PersistenceCodec.date(value.createdAt)
         modifiedAt = PersistenceCodec.date(value.modifiedAt)
     }
@@ -83,6 +86,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
             systemFamily: systemFamily,
             preferredBuildID: try PersistenceCodec.optionalUUID(preferredBuildID),
             preferredSaveProfileID: try PersistenceCodec.optionalUUID(preferredSaveProfileID),
+            artworkAssetID: try PersistenceCodec.optionalUUID(artworkAssetID),
             createdAt: try PersistenceCodec.date(createdAt),
             modifiedAt: try PersistenceCodec.date(modifiedAt)
         )
@@ -425,11 +429,13 @@ struct PatchRecipeItemRecord: Codable, FetchableRecord, PersistableRecord {
     var position: Int
     var patchAssetID: String
     var enabled: Bool
+    var ignoresBaseMismatch: Bool
 
     enum CodingKeys: String, CodingKey {
         case position, enabled
         case recipeID = "recipe_id"
         case patchAssetID = "patch_asset_id"
+        case ignoresBaseMismatch = "ignores_base_mismatch"
     }
 
     init(recipeID: UUID, value: PatchRecipeItem) {
@@ -437,13 +443,15 @@ struct PatchRecipeItemRecord: Codable, FetchableRecord, PersistableRecord {
         position = value.position
         patchAssetID = PersistenceCodec.uuid(value.patchAssetID)
         enabled = value.enabled
+        ignoresBaseMismatch = value.ignoresBaseMismatch
     }
 
     func domain() throws -> PatchRecipeItem {
         PatchRecipeItem(
             position: position,
             patchAssetID: try PersistenceCodec.uuid(patchAssetID),
-            enabled: enabled
+            enabled: enabled,
+            ignoresBaseMismatch: ignoresBaseMismatch
         )
     }
 }
