@@ -1,3 +1,4 @@
+import EmulationSession
 import EmulatorDomain
 import Foundation
 import QuickPlay
@@ -24,6 +25,7 @@ struct RootView: View {
     @ObservedObject var bootstrap: AppBootstrap
     @State private var gameplay: GameplayPresentation?
     @State private var errorMessage: String?
+    @State private var pendingResume: PreparedLaunch?
 
     var body: some View {
         Group {
@@ -44,9 +46,20 @@ struct RootView: View {
         .fullScreenCover(item: $gameplay) { presentation in
             GameplayViewControllerRepresentable(
                 runtime: presentation.runtime,
+                autoResumePolicy: presentation.autoResumePolicy,
+                launchMessage: presentation.launchMessage,
                 onClose: { endGameplay(presentation) }
             )
             .ignoresSafeArea()
+        }
+        .alert("Resume where you left off?", isPresented: Binding(
+            get: { pendingResume != nil },
+            set: { if !$0 { pendingResume = nil } }
+        ), presenting: pendingResume) { launch in
+            Button("Resume") { start(launch, resume: true) }
+            Button("Start Over") { start(launch, resume: false) }
+        } message: { _ in
+            Text("Start Over boots the game from its battery save. The resume point is kept.")
         }
         .alert(AppBrand.displayName, isPresented: Binding(
             get: { errorMessage != nil },
@@ -59,9 +72,29 @@ struct RootView: View {
     }
 
     private func launch(_ context: LaunchContext, container: AppContainer) {
+        let prepared = container.prepareLaunch(context: context)
+        if prepared.autoState != nil, prepared.policy == .ask {
+            pendingResume = prepared
+        } else {
+            start(prepared, resume: true)
+        }
+    }
+
+    private func start(_ launch: PreparedLaunch, resume: Bool) {
+        pendingResume = nil
+        guard let container = bootstrap.container else { return }
         do {
-            let session = try container.startPermanentSession(context: context)
-            gameplay = GameplayPresentation(kind: .library, runtime: session)
+            let restore = try container.start(launch, resume: resume)
+            var message: String?
+            if case .failed = restore {
+                message = "Couldn’t restore where you left off, so the game started from its battery save. The resume point was kept."
+            }
+            gameplay = GameplayPresentation(
+                kind: .library,
+                runtime: launch.session,
+                autoResumePolicy: launch.policy,
+                launchMessage: message
+            )
         } catch {
             errorMessage = "Could not start the game: \(error)"
         }
@@ -75,7 +108,12 @@ struct RootView: View {
             let temporary = try container.quickPlayWorkspace.start(romURL: url)
             let runtime = QuickPlayRuntimeSession(session: temporary, coreRegistry: container.coreRegistry)
             try runtime.start()
-            gameplay = GameplayPresentation(kind: .quickPlay(temporary.id), runtime: runtime)
+            gameplay = GameplayPresentation(
+                kind: .quickPlay(temporary.id),
+                runtime: runtime,
+                autoResumePolicy: container.quickPlayAutoResumePolicy(system: temporary.system),
+                launchMessage: nil
+            )
         } catch {
             errorMessage = "Could not start Quick Play: \(error)"
         }
@@ -98,4 +136,6 @@ private struct GameplayPresentation: Identifiable {
     let id = UUID()
     let kind: Kind
     let runtime: any GameplayRuntime
+    let autoResumePolicy: AutoResumePolicy
+    let launchMessage: String?
 }

@@ -138,6 +138,84 @@ extension EmulationSessionTests {
     }
 }
 
+extension EmulationSessionTests {
+    func testLaunchRestoresTheNewestAutoState() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([7]))
+        let first = harness.makeSession()
+        try first.start(context: harness.contextA)
+        for _ in 0..<3 { _ = try first.stepFrame() }
+        try first.stop(createAutoState: true)
+
+        let second = harness.makeSession()
+        let autoState = try XCTUnwrap(second.resumableAutoState(for: harness.contextA))
+        XCTAssertEqual(try second.start(context: harness.contextA, resumeFrom: autoState), .restored(autoState))
+
+        let frame = try second.stepFrame()
+        XCTAssertEqual(frame.bgra8888[0], 4, "emulation continues from the restored frame")
+        XCTAssertEqual(try XCTUnwrap(harness.factory.cores.last).bootAnimationSkips, 0)
+    }
+
+    func testFailedRestoreBootsNormallyAndKeepsTheState() throws {
+        let harness = try SessionHarness.make()
+        let first = harness.makeSession()
+        try first.start(context: harness.contextA)
+        _ = try first.stepFrame()
+        let autoState = try first.saveAutoState()
+        try first.stop()
+
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: autoState.stateAssetID))
+        try harness.store.writeDataAtomically(
+            Data("corrupt".utf8),
+            to: harness.store.managedURL(relativePath: asset.relativePath)
+        )
+
+        let second = harness.makeSession()
+        XCTAssertEqual(try second.start(context: harness.contextA, resumeFrom: autoState), .failed(autoState))
+        XCTAssertEqual(second.state, .running(harness.contextA))
+        XCTAssertEqual(try second.stepFrame().bgra8888[0], 1, "the game booted from the start")
+        XCTAssertEqual(try second.saveStates().map(\.id), [autoState.id], "the rejected state is kept")
+    }
+
+    func testAutoStateIsNotOfferedOnceASharedProfileSaveIsNewer() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
+        let early = Date(timeIntervalSince1970: 1_700_000_000)
+        let later = early.addingTimeInterval(60)
+
+        let sessionA = harness.makeSession(now: early)
+        try sessionA.start(context: harness.contextA)
+        try sessionA.stop(createAutoState: true)
+        XCTAssertNotNil(try sessionA.resumableAutoState(for: harness.contextA))
+
+        let sessionB = harness.makeSession(now: later)
+        try sessionB.start(context: harness.contextB)
+        try sessionB.stop()
+
+        XCTAssertNil(
+            try sessionA.resumableAutoState(for: harness.contextA),
+            "restoring Build A's state would roll back the save Build B wrote"
+        )
+    }
+
+    func testAutoResumePolicyDefaultsToAlwaysAndInherits() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        let key = SettingKey.autoResumePolicy.rawValue
+
+        XCTAssertEqual(session.autoResumePolicy(for: harness.contextA), .always)
+
+        try settings.set(AutoResumePolicy.ask, key: key, scope: .app)
+        XCTAssertEqual(session.autoResumePolicy(for: harness.contextA), .ask)
+
+        try settings.set(AutoResumePolicy.never, key: key, scope: .build(harness.buildB.id))
+        XCTAssertEqual(session.autoResumePolicy(for: harness.contextB), .never)
+        XCTAssertEqual(session.autoResumePolicy(for: harness.contextA), .ask)
+
+        try settings.setValueJSON("not json", key: key, scope: .app)
+        XCTAssertEqual(session.autoResumePolicy(for: harness.contextA), .always)
+    }
+}
+
 private struct SessionHarness {
     let game: Game
     let buildA: Build
@@ -259,7 +337,10 @@ private struct SessionHarness {
         )
     }
 
-    func makeSession(settings: SettingsResolver? = nil) -> EmulationSession {
+    func makeSession(
+        settings: SettingsResolver? = nil,
+        now: Date = Date(timeIntervalSince1970: 1_700_000_000)
+    ) -> EmulationSession {
         EmulationSession(
             builds: builds,
             profiles: profiles,
@@ -269,7 +350,7 @@ private struct SessionHarness {
             imageResolver: TestBuildROMResolver(builds: builds, assets: assets, store: store),
             coreRegistry: CoreRegistry(factories: [factory]),
             settings: settings,
-            now: { Date(timeIntervalSince1970: 1_700_000_000) }
+            now: { now }
         )
     }
 

@@ -170,6 +170,7 @@ For risky Build switches, prefer copying/forking a Save Profile over mutating th
 - On normal background/exit/session switch: flush battery save atomically and update dedicated Auto State.
 - Keep a small rolling Auto State history (product target: 5).
 - Global autoresume default Always; support Always/Ask/Never policy model so later UI can override per Game/Profile.
+- An Auto State is restored only while the profile's battery save is no newer than it (`docs/decisions.md`, 2026-10-03).
 - On restore failure or incompatible context, boot normally and preserve the failed state for diagnosis rather than deleting it.
 - Backgrounding pauses emulation/audio.
 

@@ -36,8 +36,12 @@ final class GameplayDriver: @unchecked Sendable {
         queue.async { [weak self] in self?.runLoop() }
     }
 
+    /// Returns once the loop has exited, so the caller can pause or stop the runtime without a
+    /// frame still in flight. A frame stepped after the pause would fail and end the game.
+    /// Never call this from the driver's own queue.
     func stop() {
         stateLock.withLock { running = false }
+        queue.sync {}
     }
 
     func setSpeed(_ speed: EmulationSpeed) {

@@ -129,14 +129,32 @@ final class AppContainer {
         )
     }
 
-    func startPermanentSession(context: LaunchContext) throws -> EmulationSession {
-        if let activeSession {
-            try activeSession.stop(createAutoState: true)
-        }
+    /// Stops any running library session first, since its final battery flush decides whether
+    /// the new context's Auto State is still safe to restore.
+    func prepareLaunch(context: LaunchContext) -> PreparedLaunch {
+        stopActiveSession(createAutoState: true)
         let session = makeEmulationSession()
-        try session.start(context: context)
-        activeSession = session
-        return session
+        let policy = session.autoResumePolicy(for: context)
+        let autoState = policy == .never ? nil : (try? session.resumableAutoState(for: context)) ?? nil
+        return PreparedLaunch(context: context, session: session, policy: policy, autoState: autoState)
+    }
+
+    func start(_ launch: PreparedLaunch, resume: Bool) throws -> AutoStateRestore {
+        let restore = try launch.session.start(
+            context: launch.context,
+            resumeFrom: resume ? launch.autoState : nil
+        )
+        activeSession = launch.session
+        return restore
+    }
+
+    func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {
+        let policy = try? settingsResolver.decode(
+            AutoResumePolicy.self,
+            key: SettingKey.autoResumePolicy.rawValue,
+            system: system
+        )
+        return policy ?? .always
     }
 
     func stopActiveSession(createAutoState: Bool = true) {
@@ -144,4 +162,12 @@ final class AppContainer {
         try? activeSession.stop(createAutoState: createAutoState)
         self.activeSession = nil
     }
+}
+
+struct PreparedLaunch {
+    let context: LaunchContext
+    let session: EmulationSession
+    let policy: AutoResumePolicy
+    /// Nil when there is nothing safe to restore or the policy is `.never`.
+    let autoState: SaveState?
 }

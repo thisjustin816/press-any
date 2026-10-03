@@ -14,6 +14,11 @@ final class GameplayViewController: UIViewController {
     private let controllerMonitor = PhysicalControllerMonitor()
     private let rumble = RumbleRouter()
     private var renderer: MetalRenderer?
+    private let autoResumePolicy: AutoResumePolicy
+    private let launchMessage: String?
+    private let pausedOverlay = UIButton(type: .system)
+    private var userPaused = false
+    private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
     // reach the controller, so the nonisolated deinit can remove the observers without a hop.
     nonisolated(unsafe) private var lifecycleObservers: [NSObjectProtocol] = []
@@ -21,8 +26,10 @@ final class GameplayViewController: UIViewController {
 
     var onClose: (() -> Void)?
 
-    init(runtime: any GameplayRuntime) {
+    init(runtime: any GameplayRuntime, autoResumePolicy: AutoResumePolicy, launchMessage: String? = nil) {
         self.runtime = runtime
+        self.autoResumePolicy = autoResumePolicy
+        self.launchMessage = launchMessage
         super.init(nibName: nil, bundle: nil)
         modalPresentationStyle = .fullScreen
     }
@@ -46,6 +53,7 @@ final class GameplayViewController: UIViewController {
         } catch {
             presentRuntimeError(error)
         }
+        if let launchMessage { showTransientMessage(launchMessage) }
     }
 
     override func viewDidDisappear(_ animated: Bool) {
@@ -86,12 +94,113 @@ final class GameplayViewController: UIViewController {
         close.accessibilityLabel = "Close Game"
         close.addAction(UIAction { [weak self] _ in self?.closeTapped() }, for: .touchUpInside)
         view.addSubview(close)
+
+        let menu = UIButton(type: .system)
+        menu.translatesAutoresizingMaskIntoConstraints = false
+        var menuConfiguration = configuration
+        menuConfiguration.image = UIImage(systemName: "ellipsis")
+        menu.configuration = menuConfiguration
+        menu.accessibilityLabel = "Game Menu"
+        menu.showsMenuAsPrimaryAction = true
+        menu.menu = UIMenu(children: [
+            UIDeferredMenuElement.uncached { [weak self] completion in
+                MainActor.assumeIsolated { completion(self?.menuElements() ?? []) }
+            },
+        ])
+        view.addSubview(menu)
+
+        var resumeConfiguration = UIButton.Configuration.filled()
+        resumeConfiguration.title = "Resume"
+        resumeConfiguration.image = UIImage(systemName: "play.fill")
+        resumeConfiguration.imagePadding = 8
+        resumeConfiguration.cornerStyle = .capsule
+        resumeConfiguration.buttonSize = .large
+        pausedOverlay.configuration = resumeConfiguration
+        pausedOverlay.translatesAutoresizingMaskIntoConstraints = false
+        pausedOverlay.isHidden = true
+        pausedOverlay.addAction(UIAction { [weak self] _ in self?.resumeTapped() }, for: .touchUpInside)
+        view.addSubview(pausedOverlay)
+
         NSLayoutConstraint.activate([
             close.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 14),
             close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
             close.widthAnchor.constraint(equalToConstant: 42),
             close.heightAnchor.constraint(equalToConstant: 42),
+            menu.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -14),
+            menu.topAnchor.constraint(equalTo: close.topAnchor),
+            menu.widthAnchor.constraint(equalToConstant: 42),
+            menu.heightAnchor.constraint(equalToConstant: 42),
+            pausedOverlay.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            pausedOverlay.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
         ])
+    }
+
+    private func menuElements() -> [UIMenuElement] {
+        var elements: [UIMenuElement] = []
+        if pausedOverlay.isHidden {
+            elements.append(UIAction(title: "Pause", image: UIImage(systemName: "pause.fill")) { [weak self] _ in
+                self?.userPaused = true
+                self?.pauseGameplay()
+            })
+        } else {
+            elements.append(UIAction(title: "Resume", image: UIImage(systemName: "play.fill")) { [weak self] _ in
+                self?.resumeTapped()
+            })
+        }
+        elements.append(UIAction(
+            title: "Fast Forward",
+            image: UIImage(systemName: "forward.fill"),
+            state: fastForward ? .on : .off
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.fastForward.toggle()
+            self.driver.setSpeed(self.fastForward ? .multiplier(2) : .normal)
+        })
+
+        if let states = runtime as? any SaveStateRuntime {
+            elements.append(UIAction(title: "Save State", image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
+                self?.saveState()
+            })
+            let saved = (try? states.saveStates()) ?? []
+            let formatter = DateFormatter()
+            formatter.dateStyle = .short
+            formatter.timeStyle = .medium
+            let loadActions = saved.map { state in
+                UIAction(
+                    title: state.label ?? (state.kind == .auto ? "Auto State" : "State"),
+                    subtitle: formatter.string(from: state.createdAt)
+                ) { [weak self] _ in
+                    self?.loadState(state)
+                }
+            }
+            let loadImage = UIImage(systemName: "square.and.arrow.up")
+            if loadActions.isEmpty {
+                elements.append(UIAction(title: "Load State", image: loadImage, attributes: .disabled) { _ in })
+            } else {
+                elements.append(UIMenu(title: "Load State", image: loadImage, children: loadActions))
+            }
+        }
+        return elements
+    }
+
+    private func saveState() {
+        guard let states = runtime as? any SaveStateRuntime else { return }
+        do {
+            _ = try states.saveManualState(label: nil)
+            showTransientMessage("State saved.")
+        } catch {
+            showTransientMessage("Couldn’t save the state: \(error)")
+        }
+    }
+
+    private func loadState(_ state: SaveState) {
+        guard let states = runtime as? any SaveStateRuntime else { return }
+        do {
+            try states.loadState(state)
+            showTransientMessage("State loaded.")
+        } catch {
+            showTransientMessage("Couldn’t load that state: \(error)")
+        }
     }
 
     private func configureRuntimeLoop() {
@@ -123,9 +232,8 @@ final class GameplayViewController: UIViewController {
         }
         controllerMonitor.onUnexpectedDisconnect = { [weak self] in
             guard let self else { return }
-            self.driver.stop()
-            try? self.runtime.pause()
-            self.audio.pause()
+            self.userPaused = true
+            self.pauseGameplay()
             self.touchControls.isHidden = false
             self.touchControls.hapticsEnabled = true
             self.input.resetController()
@@ -166,12 +274,49 @@ final class GameplayViewController: UIViewController {
     }
 
     private func foregrounded() {
+        guard !stopped else { return }
+        if userPaused {
+            pausedOverlay.isHidden = false
+            return
+        }
         do {
-            let resumed = try runtime.foreground(policy: .always)
-            if resumed {
+            if try runtime.foreground(policy: autoResumePolicy) {
                 try audio.resume()
                 driver.start()
+                pausedOverlay.isHidden = true
+                return
             }
+        } catch {
+            presentRuntimeError(error)
+            return
+        }
+        pausedOverlay.isHidden = false
+        if autoResumePolicy == .ask, presentedViewController == nil {
+            let alert = UIAlertController(title: "Resume Game?", message: nil, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "Not Now", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Resume", style: .default) { [weak self] _ in
+                self?.resumeTapped()
+            })
+            present(alert, animated: true)
+        }
+    }
+
+    private func pauseGameplay() {
+        driver.stop()
+        audio.pause()
+        touchControls.cancelInput()
+        input.resetTouch()
+        try? runtime.pause()
+        pausedOverlay.isHidden = false
+    }
+
+    private func resumeTapped() {
+        do {
+            try runtime.resume()
+            try audio.resume()
+            userPaused = false
+            pausedOverlay.isHidden = true
+            driver.start()
         } catch {
             presentRuntimeError(error)
         }
