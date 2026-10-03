@@ -17,10 +17,10 @@ picture showing through, in one of two color themes chosen by Settings > Control
 
 Match System picks Classic in Light Mode and Dark in Dark Mode. On the Game Boy layout, as on
 the hardware, "A" and "B" are printed below the buttons along their tilt, and "SELECT" and
-"START" are printed level below their tilted pills. Both layouts print the app's
-wordmark (`docs/NAMING.md`) at the bottom of the body, charcoal on Classic and gray on Dark,
-with its A in the A button's magenta. Playtiles keeps its unlabeled buttons and labeled pills.
-With a game controller connected the controls hide and the body stays.
+"START" are printed level below their tilted pills. Both layouts print the app's wordmark
+(`docs/NAMING.md`) at the bottom of the body, charcoal on Classic and gray on Dark, with its A in
+the A button's magenta. Playtiles keeps its unlabeled buttons and labeled pills. With a game
+controller connected the controls hide and the body stays.
 
 ## 2026-10-03: Screen scaling
 
@@ -57,9 +57,9 @@ Controller Layout (`controllerLayout`, Game Boy by default, overridable per Syst
   and START a little left of center; here they center under the logo. Across the width the
   controls keep the Game Boy's proportions, pulled in so nothing leaves the screen, and A and B
   close up only if B would crowd the D-pad. The game picture sits at the top, sized by Screen
-  Scaling, and the controls are centered between its bezel and the logo. Touch areas reach 10 to 12 points past the drawn controls without
-  overlapping. SameBoy's iOS layout isn't used: its `iOS/` directory needs the author's written
-  permission to ship on the App Store.
+  Scaling, and the controls are centered between its bezel and the logo. Touch areas reach 10 to
+  12 points past the drawn controls without overlapping. SameBoy's iOS layout isn't used: its
+  `iOS/` directory needs the author's written permission to ship on the App Store.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
   START and SELECT swapped into Game Boy order. Controls are drawn at the skin artwork's sizes,
   where A is larger than B, and respond across both the frame and the artwork. The skin's Menu
@@ -75,9 +75,8 @@ the save states and Close. Its tap area is 44 points tall. Settings > Tap Game f
 (`tapGameForMenu`, app-wide, off by default) also lets a tap on the game picture open it, as
 SameBoy does. The menu opens when the finger lifts within 10 points of where it landed, so a thumb
 sliding across doesn't open it. The first game played with the touch controls says "Tap Press Any
-for the menu" once.
-With VoiceOver, double-tapping the controls opens the menu. With a game controller connected the
-touch controls hide and the corner Close and Menu buttons come back.
+for the menu" once. With VoiceOver, double-tapping the controls opens the menu. With a game
+controller connected the touch controls hide and the corner Close and Menu buttons come back.
 
 ## 2026-10-03: Merging into a Game that already holds the same image
 

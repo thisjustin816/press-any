@@ -175,69 +175,70 @@ final class AppContainer {
 
     /// The controller layout for a launch. Unset or unreadable means the Game Boy layout.
     func controllerStyle(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> TouchControlStyle {
-        let style = try? settingsResolver.decode(
-            TouchControlStyle.self,
-            key: SettingKey.controllerLayout.rawValue,
-            system: system,
-            gameID: gameID,
-            buildID: buildID
+        let style = launchSetting(
+            TouchControlStyle.self, .controllerLayout, system: system, gameID: gameID, buildID: buildID
         )
         return style ?? .gameBoy
     }
 
+    func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
+        launchSetting(TouchControlStyle.self, .controllerLayout, for: context) ?? .gameBoy
+    }
+
     /// The game picture's scaling for a launch. Unset or unreadable means integer scaling.
     func screenScaling(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ScreenScaling {
-        let scaling = try? settingsResolver.decode(
-            ScreenScaling.self,
-            key: SettingKey.screenScaling.rawValue,
-            system: system,
-            gameID: gameID,
-            buildID: buildID
-        )
-        return scaling ?? .integer
+        launchSetting(ScreenScaling.self, .screenScaling, system: system, gameID: gameID, buildID: buildID) ?? .integer
     }
 
     func screenScaling(for context: LaunchContext) -> ScreenScaling {
-        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .integer }
-        return screenScaling(system: build.system, gameID: build.gameID, buildID: build.id)
+        launchSetting(ScreenScaling.self, .screenScaling, for: context) ?? .integer
     }
 
     /// App-wide. Unset or unreadable means following the silent switch.
     func soundMode() -> SoundMode {
-        guard let json = try? repositories.settings.valueJSON(key: SettingKey.soundMode.rawValue, scope: .app) else {
-            return .followSilentSwitch
-        }
-        return (try? JSONDecoder().decode(SoundMode.self, from: Data(json.utf8))) ?? .followSilentSwitch
+        appSetting(SoundMode.self, .soundMode) ?? .followSilentSwitch
     }
 
     /// App-wide. Unset or unreadable means matching Light or Dark Mode.
     func controllerTheme() -> ControllerTheme {
-        guard let json = try? repositories.settings.valueJSON(key: SettingKey.controllerTheme.rawValue, scope: .app) else {
-            return .matchSystem
-        }
-        return (try? JSONDecoder().decode(ControllerTheme.self, from: Data(json.utf8))) ?? .matchSystem
+        appSetting(ControllerTheme.self, .controllerTheme) ?? .matchSystem
     }
 
     /// App-wide. Unset or unreadable means off: only the logo opens the menu.
     func tapGameForMenu() -> Bool {
-        guard let json = try? repositories.settings.valueJSON(key: SettingKey.tapGameForMenu.rawValue, scope: .app) else {
-            return false
-        }
-        return (try? JSONDecoder().decode(Bool.self, from: Data(json.utf8))) ?? false
+        appSetting(Bool.self, .tapGameForMenu) ?? false
     }
 
-    func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
-        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .gameBoy }
-        return controllerStyle(system: build.system, gameID: build.gameID, buildID: build.id)
+    /// A setting stored at the app scope only, or nil when it's unset or unreadable.
+    private func appSetting<Value: Decodable>(_ type: Value.Type, _ key: SettingKey) -> Value? {
+        guard let json = try? repositories.settings.valueJSON(key: key.rawValue, scope: .app) else { return nil }
+        return try? JSONDecoder().decode(type, from: Data(json.utf8))
+    }
+
+    /// A setting resolved through the App, System, Game and Build scopes, or nil when none sets it
+    /// or it's unreadable.
+    private func launchSetting<Value: Decodable>(
+        _ type: Value.Type,
+        _ key: SettingKey,
+        system: GameSystem,
+        gameID: UUID?,
+        buildID: UUID?
+    ) -> Value? {
+        try? settingsResolver.decode(type, key: key.rawValue, system: system, gameID: gameID, buildID: buildID)
+    }
+
+    /// The same, for the Build a library launch plays.
+    private func launchSetting<Value: Decodable>(
+        _ type: Value.Type,
+        _ key: SettingKey,
+        for context: LaunchContext
+    ) -> Value? {
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return nil }
+        return launchSetting(type, key, system: build.system, gameID: build.gameID, buildID: build.id)
     }
 
     func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {
-        let policy = try? settingsResolver.decode(
-            AutoResumePolicy.self,
-            key: SettingKey.autoResumePolicy.rawValue,
-            system: system
-        )
-        return policy ?? .always
+        launchSetting(AutoResumePolicy.self, .autoResumePolicy, system: system, gameID: nil, buildID: nil) ?? .always
     }
 
     func stopActiveSession(createAutoState: Bool = true) {

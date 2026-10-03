@@ -32,7 +32,7 @@ final class TouchControllerView: UIView {
             setNeedsDisplay()
         }
     }
-    var palette: ControllerPalette { .resolve(theme, for: traitCollection) }
+    private var palette: ControllerPalette { .resolve(theme, for: traitCollection) }
     var layout: TouchControlLayout { resolver.layout }
 
     // Replaced with a layout for the real bounds in layoutSubviews, before any touch arrives.

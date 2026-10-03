@@ -27,8 +27,8 @@ final class GameplayViewController: UIViewController {
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
     private let soundMode: SoundMode
-    /// The close and menu buttons in the corners. A layout with its own Menu control hides them
-    /// while its touch controls are showing.
+    /// The close and menu buttons in the corners. They hide while the touch controls show, since
+    /// the logo opens the menu then.
     private var cornerButtons: [UIButton] = []
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
@@ -314,8 +314,9 @@ final class GameplayViewController: UIViewController {
             : nil
     }
 
-    /// While the touch controls show, tapping the logo opens the menu, so the corner buttons hide. With a controller connected the controls hide and the corner buttons
-    /// come back. The controller's body stays, so the game keeps its frame.
+    /// While the touch controls show, tapping the logo opens the menu, so the corner buttons hide.
+    /// With a controller connected the controls hide and the corner buttons come back. The
+    /// controller's body stays, so the game keeps its frame.
     private func updateCornerButtons() {
         let layoutHasMenu = !touchControls.layout.menuAreas.isEmpty
         for button in cornerButtons { button.isHidden = layoutHasMenu && touchControls.showsControls }

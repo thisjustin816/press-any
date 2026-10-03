@@ -82,7 +82,7 @@ public struct TouchControlLayout: Equatable, Sendable {
     public let b: TouchRect
     public let start: TouchRect
     public let select: TouchRect
-    /// Where the game picture goes. The picture is aspect-fit inside it.
+    /// Where the game picture goes. Screen Scaling decides how the picture fills it.
     public let screen: TouchRect
     /// Where a tap opens the app's menu: the logo, and the game picture when that's turned on.
     public let menuAreas: [TouchRect]
@@ -150,11 +150,11 @@ public struct TouchControlLayout: Equatable, Sendable {
 }
 
 extension TouchControlLayout {
-    /// The layout for `style` in a portrait view of the given size, in points. `safeTop` keeps
-    /// the screen clear of the status bar and `safeBottom` the logo clear of the home indicator;
-    /// `displayScale` lets the Game Boy layout size the
-    /// picture to whole device pixels under `scaling`. `pictureOpensMenu` makes a tap on the game
-    /// picture open the menu as well as one on the logo.
+    /// The layout for `style` in a portrait view of the given size, in points. `safeTop` keeps the
+    /// screen clear of the status bar and `safeBottom` the logo clear of the home indicator.
+    /// `displayScale` lets the Game Boy layout size the picture to whole device pixels under
+    /// `scaling`. `pictureOpensMenu` makes a tap on the game picture open the menu as well as one
+    /// on the logo.
     public static func make(
         _ style: TouchControlStyle,
         width: Double,
@@ -215,11 +215,11 @@ extension TouchControlLayout {
     static let pointsPerMillimeter = 6.1
 
     /// The Game Boy layout. The D-pad, buttons and START and SELECT are drawn at the hardware's
-    /// size, with its spacing and angles; across the width they keep the Game Boy's proportions,
-    /// pulled in as needed so nothing leaves the screen, and START and SELECT are centered under
-    /// the logo. The game picture sits at the top, as wide as the edge margins allow, or at a whole
-    /// number of device pixels per Game Boy pixel under integer scaling, and the controls are
-    /// centered between its bezel and the logo. Touch areas reach past the drawn controls without overlapping.
+    /// size, with its spacing and angles. Across the width they keep the Game Boy's proportions,
+    /// pulled in as needed so nothing leaves the screen, and START and SELECT center under the
+    /// logo. The game picture sits at the top, as wide as the edge margins allow, or at a whole
+    /// number of device pixels per Game Boy pixel under integer scaling. The controls are centered
+    /// between its bezel and the logo, and touch areas reach past them without overlapping.
     static func gameBoy(
         width: Double,
         height: Double,
@@ -233,9 +233,8 @@ extension TouchControlLayout {
         let panel = GameBoyPanel.self
         let edgeMargin = 8.0
 
-        // The picture fits inside the edge margins, and the bezel takes up to 12 points of what's
-        // left on each side.
-        // Only the width limits it: the height given is more than the picture can use.
+        // The picture fits inside the edge margins, which limit only its width: the height given is
+        // more than it can use. The bezel takes up to 12 points of what's left on each side.
         let available = TouchRect(x: edgeMargin, y: 0, width: max(width - 2 * edgeMargin, 1), height: width)
         let fitted = scaling.picture(sourceWidth: 160, sourceHeight: 144, in: available, pixelsPerPoint: displayScale)
         let pictureWidth = fitted.width
