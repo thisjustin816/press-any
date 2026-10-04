@@ -61,23 +61,23 @@ if shots == "every-rom":
     for f in names:
         shot(f"game:{f}", 4, f"game-{stem(f)}")
         shot(f"build-info:{f}", 4, f"build-info-{stem(f)}")
-        shot(f"play:{f}", 8, f"play-{stem(f)}")
+        shot(f"play:{f}", 10, f"play-{stem(f)}")
 elif shots == "summary":
     shot(f"game:{game_rom}", 4, "game")
     # GB Studio shows the most in Made With.
     shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info")
     for system in ("GB", "GBC"):
         if f := first(lambda r: r["system"] == system):
-            shot(f"play:{f}", 8, f"play-{system.lower()}")
+            shot(f"play:{f}", 10, f"play-{system.lower()}")
 else:
     sys.exit(f"SHOTS must be summary or every-rom, not {shots!r}")
-shot(f"play:{names[0]}", 8, "play-gamepad", "-ScreenshotGamepad YES")
+shot(f"play:{names[0]}", 10, "play-gamepad", "-ScreenshotGamepad YES")
 # The Playtiles layout is drawn after a GBC skin, so it shows a GBC game when one was chosen.
 playtiles_rom = first(lambda r: r["system"] == "GBC") or names[0]
-shot(f"play:{playtiles_rom}", 8, "playtiles", "-ScreenshotLayout playtiles")
-shot(f"play:{playtiles_rom}", 8, "playtiles-gamepad", "-ScreenshotLayout playtiles -ScreenshotGamepad YES")
+shot(f"play:{playtiles_rom}", 10, "playtiles", "-ScreenshotLayout playtiles")
+shot(f"play:{playtiles_rom}", 10, "playtiles-gamepad", "-ScreenshotLayout playtiles -ScreenshotGamepad YES")
 shot(f"import:unimported/{import_rom}", 4, "import-review")
-shot(f"quick-play:{names[0]}", 8, "quick-play")
+shot(f"quick-play:{names[0]}", 10, "quick-play")
 shot(f"quick-play-info:{names[0]}", 4, "quick-play-info")
 print("\n".join(lines))
 PY

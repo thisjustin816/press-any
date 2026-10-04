@@ -62,16 +62,25 @@ final class MenuScreenshots: XCTestCase {
         try openGameplayMenu(arguments: ["-ScreenshotGamepad", "YES"], then: "menu-gameplay-gamepad")
     }
 
+    func test8QuickPlayMenu() throws {
+        try openGameplayMenu(scene: "quick-play", expecting: "Add to Library…", then: "menu-quick-play")
+    }
+
     /// Taps the logo, which opens the same menu with or without a controller connected.
-    private func openGameplayMenu(arguments: [String] = [], then name: String) throws {
+    private func openGameplayMenu(
+        scene: String = "play",
+        arguments: [String] = [],
+        expecting item: String = "Close Game",
+        then name: String
+    ) throws {
         let settings = try settings()
-        let app = try launch("play:\(settings.playROM)", arguments: arguments)
+        let app = try launch("\(scene):\(settings.playROM)", arguments: arguments)
         let menu = app.buttons["Game Menu"]
         XCTAssertTrue(menu.waitForExistence(timeout: 10), "the logo is a menu button")
         // Past the boot logo, so the menu opens over the game's own picture.
         sleep(4)
         menu.tap()
-        try expect(app.buttons["Close Game"], then: name)
+        try expect(app.buttons[item], then: name)
     }
 
     private func settings() throws -> Settings {
