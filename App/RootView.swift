@@ -284,7 +284,7 @@ private struct RiskyLaunch {
         for risk in assessment.risks {
             switch risk {
             case .gbStudio:
-                lines.append("GB Studio games can move saved data between builds, even at the same version.")
+                lines.append("A GB Studio game can lay out its saved data differently from one Build to the next, even with the same GB Studio version.")
             case .differentTools(let writtenWith, let playingWith):
                 lines.append("That Build was made with \(Self.list(writtenWith)); this one with \(Self.list(playingWith)).")
             case .differentSaveHardware:

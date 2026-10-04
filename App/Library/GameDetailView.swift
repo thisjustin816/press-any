@@ -143,7 +143,7 @@ struct GameDetailView: View {
     }
 
     private var profilesSection: some View {
-        Section("Save Profiles") {
+        Section {
             ForEach(model.saveProfiles) { profile in
                 profileRow(profile)
             }
@@ -159,6 +159,10 @@ struct GameDetailView: View {
             } label: {
                 Label("Import .sav", systemImage: "square.and.arrow.down")
             }
+        } header: {
+            Text("Save Profiles")
+        } footer: {
+            Text("Touch and hold a profile to duplicate it, give it a badge, replace its save or delete it.")
         }
     }
 

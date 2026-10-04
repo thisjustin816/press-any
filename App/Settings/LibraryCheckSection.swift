@@ -58,20 +58,24 @@ struct LibraryCheckSection: View {
         }
         var lines: [String] = []
         if damaged > 0 {
-            lines.append("\(damaged) ROM or patch files are damaged. Importing the same file again repairs it.")
+            lines.append("\(count(damaged, "ROM or patch file is", "ROM or patch files are")) damaged. Importing the same file again repairs it.")
         }
         if missingSources > 0 {
-            lines.append("\(missingSources) ROM or patch files are missing. Importing the same file again restores it.")
+            lines.append("\(count(missingSources, "ROM or patch file is", "ROM or patch files are")) missing. Importing the same file again restores it.")
         }
         if missingUserData > 0 {
-            lines.append("\(missingUserData) saves, states or artwork files are missing.")
+            lines.append("\(count(missingUserData, "save, state or artwork file is", "save, state or artwork files are")) missing.")
         }
         if missingGenerated > 0 {
-            lines.append("\(missingGenerated) patched images will be rebuilt the next time they’re played.")
+            lines.append("\(count(missingGenerated, "patched Build’s image", "patched Builds’ images")) will be rebuilt when played.")
         }
         if !report.removedRelativePaths.isEmpty {
-            lines.append("Removed \(report.removedRelativePaths.count) leftover files that nothing used.")
+            lines.append("Removed \(count(report.removedRelativePaths.count, "leftover file", "leftover files")) that nothing used.")
         }
         return lines.isEmpty ? "Every library file is present and intact." : lines.joined(separator: "\n")
+    }
+
+    private static func count(_ number: Int, _ singular: String, _ plural: String) -> String {
+        "\(number) \(number == 1 ? singular : plural)"
     }
 }
