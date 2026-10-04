@@ -237,16 +237,29 @@ final class GameDetailViewModel: ObservableObject {
         perform { try artwork.remove(gameID: gameID) }
     }
 
-    func promote(_ build: Build, title: String, mode: ReorganizationMode) {
+    func setBase(_ build: Build, isBase: Bool) {
+        perform { try buildOperations.setBase(buildID: build.id, isBase: isBase) }
+    }
+
+    /// The review step's first selection; when it can't be worked out, nothing is selected.
+    func suggestedCarryOver(promoting build: Build) -> GameCarryOver {
+        (try? buildOperations.suggestedCarryOver(promoting: build.id)) ?? .nothing
+    }
+
+    func suggestedCarryOver(mergingInto target: Game) -> GameCarryOver {
+        (try? buildOperations.suggestedCarryOver(merging: gameID, into: target.id)) ?? .nothing
+    }
+
+    func promote(_ build: Build, title: String, mode: ReorganizationMode, carryOver: GameCarryOver) {
         perform {
-            let newGame = try buildOperations.promoteBuild(buildID: build.id, title: title, mode: mode)
+            let newGame = try buildOperations.promoteBuild(buildID: build.id, title: title, mode: mode, carryOver: carryOver)
             infoMessage = "\(build.displayName) is now the Game \(newGame.primaryTitle)."
         }
     }
 
-    func merge(into target: Game, mode: ReorganizationMode) {
+    func merge(into target: Game, mode: ReorganizationMode, carryOver: GameCarryOver) {
         do {
-            try buildOperations.mergeGame(sourceGameID: gameID, into: target.id, mode: mode)
+            try buildOperations.mergeGame(sourceGameID: gameID, into: target.id, mode: mode, carryOver: carryOver)
             reload()
             infoMessage = "Merged into \(target.primaryTitle)."
         } catch BuildOperationError.duplicateImagesInTarget(let buildIDs) {

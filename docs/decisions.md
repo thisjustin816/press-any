@@ -3,6 +3,29 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Promote and merge review what comes along
+
+**Decision.** Make Separate Game… and Merge Into Another Game… open a review sheet before they
+change anything. Build-scoped data (save states, recipes, toolchain reports, variable maps,
+settings) always follows its Build; the sheet chooses the Game-level things:
+
+- **Promote** offers to copy the Game's artwork and its Save Profiles. It selects the artwork
+  and the profiles the Build plays or last wrote. Copies get their own files, so the two Games'
+  artwork and saves diverge from there. The promoted Build plays the copy of the profile it
+  played, or the new Game's default when that profile stayed behind.
+- **Merge by Move** takes every Save Profile, since the source Game is deleted. When both Games
+  have artwork, the target keeps its own unless Use <source>'s Artwork is on.
+- **Merge by Copy** offers to copy the source's artwork and profiles, selecting the artwork when
+  the target has none and the profiles the source Builds play or last wrote, plus the source
+  Game's default.
+
+A promoted Game records which Game it split from and that Game's title, shown as Split From. The
+title stays after the source Game is deleted. Promoting a Game's only Build by Move renames the
+Game, so it records no lineage.
+
+A Build's menu also has Mark as Base Build / Unmark as Base Build, for imported Builds. A Game
+can have several Base Builds, one per region or revision.
+
 ## 2026-10-04: Importing a .sav into an existing profile keeps a copy
 
 **Decision.** A Save Profile's menu has Replace Save from File…. When the profile already has a

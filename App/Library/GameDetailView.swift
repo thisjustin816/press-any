@@ -30,7 +30,6 @@ struct GameDetailView: View {
     @State private var fileRequest: FileRequest?
     @State private var showFileImporter = false
     @State private var promotion: Build?
-    @State private var promotionTitle = ""
     @State private var showMerge = false
     @State private var settingsTarget: SettingsTarget?
     @State private var showPhotoPicker = false
@@ -82,6 +81,7 @@ struct GameDetailView: View {
     private var list: some View {
         List {
             artworkSection
+            lineageSection
             playSection
             buildsSection
             profilesSection
@@ -100,6 +100,15 @@ struct GameDetailView: View {
                 .frame(maxWidth: .infinity, maxHeight: 220)
             }
             .listRowBackground(Color.clear)
+        }
+    }
+
+    @ViewBuilder
+    private var lineageSection: some View {
+        if let lineage = model.game?.lineage {
+            Section {
+                LabeledContent("Split From", value: lineage.sourceTitle)
+            }
         }
     }
 
@@ -232,10 +241,22 @@ struct GameDetailView: View {
             }
             .sheet(isPresented: $showMerge) {
                 MergeGameSheet(
-                    sourceTitle: model.game?.primaryTitle ?? "",
-                    targets: model.otherGames
-                ) { target, mode in
-                    model.merge(into: target, mode: mode)
+                    source: model.game,
+                    profiles: model.saveProfiles,
+                    targets: model.otherGames,
+                    suggest: { model.suggestedCarryOver(mergingInto: $0) }
+                ) { target, mode, carryOver in
+                    model.merge(into: target, mode: mode, carryOver: carryOver)
+                }
+            }
+            .sheet(item: $promotion) { build in
+                PromoteBuildSheet(
+                    build: build,
+                    sourceHasArtwork: model.game?.artworkAssetID != nil,
+                    profiles: model.saveProfiles,
+                    suggested: model.suggestedCarryOver(promoting: build)
+                ) { title, mode, carryOver in
+                    model.promote(build, title: title, mode: mode, carryOver: carryOver)
                 }
             }
     }
@@ -248,17 +269,6 @@ struct GameDetailView: View {
                     model.createBlankProfile(name: newProfileName)
                 }
                 Button("Cancel", role: .cancel) {}
-            }
-            .alert("Make Separate Game", isPresented: Binding(
-                get: { promotion != nil },
-                set: { if !$0 { promotion = nil } }
-            ), presenting: promotion) { build in
-                TextField("Game Title", text: $promotionTitle)
-                Button("Move") { model.promote(build, title: promotionTitle, mode: .move) }
-                Button("Copy") { model.promote(build, title: promotionTitle, mode: .copy) }
-                Button("Cancel", role: .cancel) {}
-            } message: { _ in
-                Text("Move takes this Build out of this Game. Copy leaves it here as well.")
             }
             .alert("Replace This Save?", isPresented: Binding(
                 get: { pendingReplacement != nil },
@@ -359,6 +369,11 @@ struct GameDetailView: View {
             }
         }
         Button("Set as Preferred") { model.setPreferredBuild(build) }
+        if build.sourceKind != .patchRecipe {
+            Button(build.isBase ? "Unmark as Base Build" : "Mark as Base Build") {
+                model.setBase(build, isBase: !build.isBase)
+            }
+        }
         Button("Technical Info…") { technicalInfo = build }
         Button("Build Settings…") {
             settingsTarget = SettingsTarget(
@@ -374,18 +389,16 @@ struct GameDetailView: View {
         if build.sourceKind == .patchRecipe {
             Button("Remove Generated Image") { model.removeGeneratedImage(of: build) }
         }
-        Button("Make Separate Game…") {
-            promotionTitle = build.displayName
-            promotion = build
-        }
+        Button("Make Separate Game…") { promotion = build }
     }
 
     private func profileRow(_ profile: SaveProfile) -> some View {
         HStack {
             VStack(alignment: .leading) {
                 Text(profile.displayName)
-                if let parent = profile.copiedFromProfileID {
-                    Text("Copied from \(model.profileName(id: parent) ?? String(parent.uuidString.prefix(8)))")
+                // A copy brought from another Game by a promote or merge has its original there.
+                if let parent = model.profileName(id: profile.copiedFromProfileID) {
+                    Text("Copied from \(parent)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -450,17 +463,93 @@ struct GameDetailView: View {
     }
 }
 
-private struct MergeGameSheet: View {
-    let sourceTitle: String
-    let targets: [Game]
-    let onMerge: (Game, ReorganizationMode) -> Void
+/// Promotes a Build to its own Game, with a review of what the new Game brings along.
+private struct PromoteBuildSheet: View {
+    let build: Build
+    let sourceHasArtwork: Bool
+    let profiles: [SaveProfile]
+    let onPromote: (String, ReorganizationMode, GameCarryOver) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var title: String
     @State private var mode: ReorganizationMode = .move
+    @State private var carryOver: GameCarryOver
+
+    init(
+        build: Build,
+        sourceHasArtwork: Bool,
+        profiles: [SaveProfile],
+        suggested: GameCarryOver,
+        onPromote: @escaping (String, ReorganizationMode, GameCarryOver) -> Void
+    ) {
+        self.build = build
+        self.sourceHasArtwork = sourceHasArtwork
+        self.profiles = profiles
+        self.onPromote = onPromote
+        _title = State(initialValue: build.displayName)
+        _carryOver = State(initialValue: suggested)
+    }
 
     var body: some View {
         NavigationStack {
-            List {
+            Form {
+                Section {
+                    TextField("Game Title", text: $title)
+                }
+                Section {
+                    Picker("Build", selection: $mode) {
+                        Text("Move").tag(ReorganizationMode.move)
+                        Text("Copy").tag(ReorganizationMode.copy)
+                    }
+                    .pickerStyle(.segmented)
+                } footer: {
+                    Text(mode == .move
+                         ? "\(build.displayName) leaves this Game, with its save states and settings."
+                         : "\(build.displayName) stays here, and a copy starts the new Game.")
+                }
+                CarryOverSection(
+                    carryOver: $carryOver,
+                    artworkLabel: sourceHasArtwork ? "Copy the Artwork" : nil,
+                    profiles: profiles,
+                    footer: "Chosen Save Profiles are copied; the originals stay here."
+                )
+            }
+            .navigationTitle("Make Separate Game")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Make Game") {
+                        onPromote(title, mode, carryOver)
+                        dismiss()
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+/// Merges this Game into another, with a review of the Game-level things that come along.
+private struct MergeGameSheet: View {
+    let source: Game?
+    let profiles: [SaveProfile]
+    let targets: [Game]
+    let suggest: (Game) -> GameCarryOver
+    let onMerge: (Game, ReorganizationMode, GameCarryOver) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var mode: ReorganizationMode = .move
+    @State private var target: Game?
+    @State private var carryOver = GameCarryOver.nothing
+
+    private var sourceTitle: String { source?.primaryTitle ?? "" }
+
+    var body: some View {
+        NavigationStack {
+            Form {
                 Section {
                     Picker("Builds", selection: $mode) {
                         Text("Move").tag(ReorganizationMode.move)
@@ -475,10 +564,43 @@ private struct MergeGameSheet: View {
 
                 Section("Merge Into") {
                     ForEach(targets) { game in
-                        Button(game.primaryTitle) {
-                            onMerge(game, mode)
-                            dismiss()
+                        Button {
+                            target = game
+                            carryOver = suggest(game)
+                        } label: {
+                            HStack {
+                                Text(game.primaryTitle)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if target?.id == game.id {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
                         }
+                    }
+                }
+
+                if let target {
+                    if mode == .move {
+                        // A move takes every profile, so only the artwork is a choice, and only
+                        // when both Games have some.
+                        if source?.artworkAssetID != nil, target.artworkAssetID != nil {
+                            Section {
+                                Toggle("Use \(sourceTitle)’s Artwork", isOn: $carryOver.artwork)
+                            } header: {
+                                Text("Bring Along")
+                            } footer: {
+                                Text("Otherwise \(target.primaryTitle) keeps its own.")
+                            }
+                        }
+                    } else {
+                        CarryOverSection(
+                            carryOver: $carryOver,
+                            artworkLabel: source?.artworkAssetID == nil ? nil
+                                : target.artworkAssetID == nil ? "Copy the Artwork" : "Replace \(target.primaryTitle)’s Artwork",
+                            profiles: profiles,
+                            footer: "Chosen Save Profiles are copied; the originals stay in \(sourceTitle)."
+                        )
                     }
                 }
             }
@@ -488,6 +610,48 @@ private struct MergeGameSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Merge") {
+                        if let target { onMerge(target, mode, carryOver) }
+                        dismiss()
+                    }
+                    .disabled(target == nil)
+                }
+            }
+        }
+    }
+}
+
+/// The review step's choices: the artwork, and each Save Profile.
+private struct CarryOverSection: View {
+    @Binding var carryOver: GameCarryOver
+    /// Nil when there's no artwork to bring.
+    let artworkLabel: String?
+    let profiles: [SaveProfile]
+    let footer: String
+
+    var body: some View {
+        if artworkLabel != nil || !profiles.isEmpty {
+            Section {
+                if let artworkLabel {
+                    Toggle(artworkLabel, isOn: $carryOver.artwork)
+                }
+                ForEach(profiles) { profile in
+                    Toggle(profile.displayName, isOn: Binding(
+                        get: { carryOver.saveProfileIDs.contains(profile.id) },
+                        set: { isOn in
+                            if isOn {
+                                carryOver.saveProfileIDs.insert(profile.id)
+                            } else {
+                                carryOver.saveProfileIDs.remove(profile.id)
+                            }
+                        }
+                    ))
+                }
+            } header: {
+                Text("Bring Along")
+            } footer: {
+                Text(footer)
             }
         }
     }

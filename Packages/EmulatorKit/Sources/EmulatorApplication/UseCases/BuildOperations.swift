@@ -6,6 +6,25 @@ public enum ReorganizationMode: Equatable, Sendable {
     case copy
 }
 
+/// The Game-level things a promote or merge brings along, chosen in its review step. Build-scoped
+/// data (save states, recipes, toolchain reports, variable maps, settings) always follows its
+/// Build.
+public struct GameCarryOver: Equatable, Sendable {
+    /// Bring the source Game's artwork. A merge that moves everything brings it anyway when the
+    /// target has none.
+    public var artwork: Bool
+    /// Save Profiles copied into the new or target Game. A merge that moves everything moves
+    /// every profile instead.
+    public var saveProfileIDs: Set<UUID>
+
+    public init(artwork: Bool, saveProfileIDs: Set<UUID>) {
+        self.artwork = artwork
+        self.saveProfileIDs = saveProfileIDs
+    }
+
+    public static let nothing = GameCarryOver(artwork: false, saveProfileIDs: [])
+}
+
 public enum BuildOperationError: Error, Equatable {
     case buildNotFound(UUID)
     case gameNotFound(UUID)
@@ -15,6 +34,8 @@ public enum BuildOperationError: Error, Equatable {
     /// A Game holds one Build per image, so these source Builds can't move in beside the
     /// target's Builds of the same image.
     case duplicateImagesInTarget(buildIDs: [UUID])
+    /// Only an imported image can be a Base Build; a patched Build is made from one.
+    case patchedBuildCannotBeBase(UUID)
 }
 
 public struct BuildOperations: Sendable {
@@ -76,20 +97,63 @@ public struct BuildOperations: Sendable {
         try builds.updateBuildMetadata(build)
     }
 
+    /// Marks or unmarks an imported Build as a clean original that patches start from. A Game
+    /// can have several, one per region or revision.
+    public func setBase(buildID: UUID, isBase: Bool) throws {
+        guard var build = try builds.fetchBuild(id: buildID) else { throw BuildOperationError.buildNotFound(buildID) }
+        if isBase, build.sourceKind == .patchRecipe { throw BuildOperationError.patchedBuildCannotBeBase(buildID) }
+        guard build.isBase != isBase else { return }
+        build.isBase = isBase
+        build.modifiedAt = now()
+        try builds.updateBuildMetadata(build)
+    }
+
+    /// What a promotion's review step selects at first: the Game's artwork, and the Save Profiles
+    /// the Build plays or last wrote.
+    public func suggestedCarryOver(promoting buildID: UUID) throws -> GameCarryOver {
+        guard let build = try builds.fetchBuild(id: buildID) else { throw BuildOperationError.buildNotFound(buildID) }
+        let game = try games.fetchGame(id: build.gameID)
+        let profileIDs = try profiles.fetchSaveProfiles(gameID: build.gameID)
+            .filter { $0.id == build.preferredSaveProfileID || $0.saveWrittenByBuildID == build.id }
+            .map(\.id)
+        return GameCarryOver(artwork: game?.artworkAssetID != nil, saveProfileIDs: Set(profileIDs))
+    }
+
+    /// What a merge's review step selects at first. A move takes every profile, and the source's
+    /// artwork when the target has none. A copy selects the same artwork, and the profiles the
+    /// source Builds play or last wrote, plus the source Game's default.
+    public func suggestedCarryOver(merging sourceGameID: UUID, into targetGameID: UUID) throws -> GameCarryOver {
+        guard let source = try games.fetchGame(id: sourceGameID) else { throw BuildOperationError.gameNotFound(sourceGameID) }
+        guard let target = try games.fetchGame(id: targetGameID) else { throw BuildOperationError.gameNotFound(targetGameID) }
+        let sourceBuilds = try builds.fetchBuilds(gameID: sourceGameID)
+        let played = Set(sourceBuilds.compactMap(\.preferredSaveProfileID))
+        let written = Set(sourceBuilds.map(\.id))
+        let profileIDs = try profiles.fetchSaveProfiles(gameID: sourceGameID)
+            .filter { played.contains($0.id) || $0.id == source.preferredSaveProfileID || $0.saveWrittenByBuildID.map(written.contains) == true }
+            .map(\.id)
+        return GameCarryOver(
+            artwork: source.artworkAssetID != nil && target.artworkAssetID == nil,
+            saveProfileIDs: Set(profileIDs)
+        )
+    }
+
     public func promoteBuild(
         buildID: UUID,
         title: String,
-        mode: ReorganizationMode
+        mode: ReorganizationMode,
+        carryOver: GameCarryOver = .nothing
     ) throws -> Game {
         guard let sourceBuild = try builds.fetchBuild(id: buildID) else {
             throw BuildOperationError.buildNotFound(buildID)
         }
+        let sourceGame = try games.fetchGame(id: sourceBuild.gameID)
         let timestamp = now()
-        return try transactions.run { [games, builds, profiles, sourceBuild, makeID] in
+        let promotedGame = try transactions.run { [games, builds, profiles, sourceBuild, makeID] in
             let newGame = Game(
                 id: makeID(),
                 primaryTitle: title,
                 systemFamily: "gameboy",
+                lineage: sourceGame.map { GameLineage(sourceGameID: $0.id, sourceTitle: $0.primaryTitle) },
                 createdAt: timestamp,
                 modifiedAt: timestamp
             )
@@ -111,9 +175,21 @@ public struct BuildOperations: Sendable {
             updatedNewGame.preferredBuildID = promoted.id
             try games.updateGame(updatedNewGame)
 
+            let emptiesSource = try mode == .move && builds.fetchBuilds(gameID: sourceBuild.gameID).isEmpty
+            if !emptiesSource {
+                try copyProfiles(
+                    carryOver.saveProfileIDs,
+                    from: sourceBuild.gameID,
+                    to: &updatedNewGame,
+                    playedBy: [promoted.id: sourceBuild.preferredSaveProfileID]
+                )
+            }
+
             if mode == .move, var oldGame = try games.fetchGame(id: sourceBuild.gameID) {
                 let remaining = try builds.fetchBuilds(gameID: oldGame.id).sorted(by: Self.preferredBuildSort)
                 if remaining.isEmpty {
+                    // Promoting a Game's only Build renames it rather than splitting it.
+                    updatedNewGame.lineage = nil
                     // The emptied Game is deleted, which would cascade to its Save Profiles, so
                     // they follow the Build. As in a merge, modifiedAt stays put.
                     for profile in try profiles.fetchSaveProfiles(gameID: oldGame.id) {
@@ -134,9 +210,18 @@ public struct BuildOperations: Sendable {
             }
             return updatedNewGame
         }
+        if carryOver.artwork, promotedGame.artworkAssetID == nil, let artwork = sourceGame?.artworkAssetID {
+            return try copyArtwork(artwork, to: promotedGame.id) ?? promotedGame
+        }
+        return promotedGame
     }
 
-    public func mergeGame(sourceGameID: UUID, into targetGameID: UUID, mode: ReorganizationMode) throws {
+    public func mergeGame(
+        sourceGameID: UUID,
+        into targetGameID: UUID,
+        mode: ReorganizationMode,
+        carryOver: GameCarryOver = .nothing
+    ) throws {
         guard sourceGameID != targetGameID else { return }
         guard let sourceGame = try games.fetchGame(id: sourceGameID) else { throw BuildOperationError.gameNotFound(sourceGameID) }
         guard let targetGame = try games.fetchGame(id: targetGameID) else { throw BuildOperationError.gameNotFound(targetGameID) }
@@ -166,9 +251,12 @@ public struct BuildOperations: Sendable {
         let sourceProfiles = mode == .move ? try profiles.fetchSaveProfiles(gameID: sourceGame.id) : []
         let timestamp = now()
 
+        // A move's source artwork replaces the target's only when the review asked for it.
+        let replacesArtwork = mode == .move && carryOver.artwork && sourceGame.artworkAssetID != nil
         try transactions.run { [games, builds, profiles, targetGame, replacements] in
             var updatedTargetGame = targetGame
             var firstMergedBuildID: UUID?
+            var played: [UUID: UUID?] = [:]
             for source in sourceBuilds {
                 switch mode {
                 case .move:
@@ -176,6 +264,7 @@ public struct BuildOperations: Sendable {
                     if firstMergedBuildID == nil { firstMergedBuildID = source.id }
                 case .copy:
                     let copied = try copy(source, to: targetGameID, timestamp: timestamp, replacing: replacements)
+                    played[copied.id] = source.preferredSaveProfileID
                     if firstMergedBuildID == nil { firstMergedBuildID = copied.id }
                 }
             }
@@ -185,6 +274,10 @@ public struct BuildOperations: Sendable {
                 try profiles.updateSaveProfile(moved)
             }
             var targetChanged = false
+            if mode == .copy {
+                // copyProfiles saves the target's new default itself.
+                try copyProfiles(carryOver.saveProfileIDs, from: sourceGameID, to: &updatedTargetGame, playedBy: played)
+            }
             if updatedTargetGame.preferredBuildID == nil {
                 updatedTargetGame.preferredBuildID = firstMergedBuildID
                 targetChanged = true
@@ -194,8 +287,9 @@ public struct BuildOperations: Sendable {
                 updatedTargetGame.preferredSaveProfileID = preferredProfile
                 targetChanged = true
             }
-            // The source Game's row goes away, so its artwork follows unless the target has its own.
-            if mode == .move, updatedTargetGame.artworkAssetID == nil, let artwork = sourceGame.artworkAssetID {
+            // The source Game's row goes away, so its artwork follows unless the target keeps its own.
+            if mode == .move, updatedTargetGame.artworkAssetID == nil || replacesArtwork,
+               let artwork = sourceGame.artworkAssetID {
                 updatedTargetGame.artworkAssetID = artwork
                 targetChanged = true
             }
@@ -208,13 +302,66 @@ public struct BuildOperations: Sendable {
             }
         }
 
-        // The target kept its own artwork, so the deleted source Game's image has no owner left.
-        if mode == .move, let orphan = sourceGame.artworkAssetID, targetGame.artworkAssetID != nil,
-           let asset = try? assets.fetchAsset(id: orphan) {
-            try? assets.deleteAsset(id: asset.id)
-            if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
-                try? assetStore.removeIfExists(url)
-            }
+        // Whichever artwork lost has no owner left.
+        if mode == .move, sourceGame.artworkAssetID != nil, let kept = targetGame.artworkAssetID {
+            discardAsset(replacesArtwork ? kept : sourceGame.artworkAssetID)
+        }
+        if mode == .copy, carryOver.artwork, targetGame.artworkAssetID == nil, let artwork = sourceGame.artworkAssetID {
+            _ = try copyArtwork(artwork, to: targetGameID)
+        }
+    }
+
+    /// Copies the chosen profiles of `sourceGameID` into `target` under their own names.
+    /// `playedBy` maps each Build now in the target to the profile its original played, so it
+    /// plays that profile's copy, or no profile when that one stayed behind. The target's default
+    /// becomes the copy of the source's default, or the first copy, when it has none.
+    private func copyProfiles(
+        _ profileIDs: Set<UUID>,
+        from sourceGameID: UUID,
+        to target: inout Game,
+        playedBy: [UUID: UUID?]
+    ) throws {
+        let duplicate = DuplicateSaveProfile(profiles: profiles, assets: assets, assetStore: assetStore, now: now, makeID: makeID)
+        var copies: [UUID: UUID] = [:]
+        var firstCopy: UUID?
+        for profile in try profiles.fetchSaveProfiles(gameID: sourceGameID).sorted(by: { $0.createdAt < $1.createdAt })
+        where profileIDs.contains(profile.id) {
+            let copy = try duplicate.execute(sourceProfileID: profile.id, name: profile.displayName, gameID: target.id)
+            copies[profile.id] = copy.id
+            if firstCopy == nil { firstCopy = copy.id }
+        }
+        for (buildID, original) in playedBy {
+            guard var build = try builds.fetchBuild(id: buildID) else { continue }
+            let preferred = original.flatMap { copies[$0] }
+            guard build.preferredSaveProfileID != preferred else { continue }
+            build.preferredSaveProfileID = preferred
+            try builds.updateBuildMetadata(build)
+        }
+        let sourceDefault = try games.fetchGame(id: sourceGameID)?.preferredSaveProfileID
+        if target.preferredSaveProfileID == nil, let copy = sourceDefault.flatMap({ copies[$0] }) ?? firstCopy {
+            target.preferredSaveProfileID = copy
+            try games.updateGame(target)
+        }
+    }
+
+    /// Copies an artwork image into another Game as that Game's own asset, so replacing or
+    /// removing either Game's artwork leaves the other's alone.
+    private func copyArtwork(_ assetID: UUID, to gameID: UUID) throws -> Game? {
+        guard let asset = try assets.fetchAsset(id: assetID) else { return nil }
+        let data = try assetStore.readData(at: try assetStore.managedURL(relativePath: asset.relativePath))
+        return try GameArtwork(games: games, assets: assets, assetStore: assetStore, now: now, makeID: makeID).set(
+            gameID: gameID,
+            imageData: data,
+            fileExtension: URL(fileURLWithPath: asset.relativePath).pathExtension,
+            originalFilename: asset.originalFilename
+        )
+    }
+
+    private func discardAsset(_ assetID: UUID?) {
+        guard let assetID, let asset = try? assets.fetchAsset(id: assetID) else { return }
+        try? assets.deleteAsset(id: asset.id)
+        if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
+            try? assetStore.removeIfExists(url)
         }
     }
 

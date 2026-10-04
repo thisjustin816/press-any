@@ -172,5 +172,11 @@ enum MVPV3Schema {
         attached_at TEXT NOT NULL,
         UNIQUE (build_id, asset_id)
     );
+
+    ALTER TABLE games
+    ADD COLUMN lineage_source_game_id TEXT REFERENCES games(id) ON DELETE SET NULL;
+
+    ALTER TABLE games
+    ADD COLUMN lineage_source_title TEXT;
     """#
 }

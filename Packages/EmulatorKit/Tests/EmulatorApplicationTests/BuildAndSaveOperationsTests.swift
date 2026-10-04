@@ -81,6 +81,131 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertNil(try harness.games.fetchGame(id: harness.game.id))
     }
 
+    func testABaseBuildCanBeMarkedAfterImportButNotAPatchedOne() throws {
+        let harness = try Harness.make(twoBuilds: true)
+        let hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        let operations = harness.buildOperations()
+
+        try operations.setBase(buildID: hack.id, isBase: true)
+        XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.game.id).filter(\.isBase).count, 2, "a Game can have several")
+        try operations.setBase(buildID: harness.baseBuild.id, isBase: false)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.baseBuild.id)?.isBase, false)
+
+        let patched = Build(
+            id: UUID(),
+            gameID: harness.game.id,
+            system: hack.system,
+            displayName: "Patched",
+            imageAssetID: UUID(),
+            imageSHA256: String(repeating: "d", count: 64),
+            sourceKind: .patchRecipe,
+            parentBuildID: hack.id,
+            createdAt: harness.now,
+            modifiedAt: harness.now
+        )
+        try harness.builds.insertBuild(patched)
+        XCTAssertThrowsError(try operations.setBase(buildID: patched.id, isBase: true)) {
+            XCTAssertEqual($0 as? BuildOperationError, .patchedBuildCannotBeBase(patched.id))
+        }
+    }
+
+    func testPromotingBringsTheChosenProfilesAndArtworkAndRecordsLineage() throws {
+        let harness = try Harness.make(twoBuilds: true)
+        let hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        let main = try harness.createProfile(name: "Main", battery: Data([1]))
+        let hackSave = try harness.createProfile(name: "Hack Run", battery: Data([2]))
+        _ = try harness.setArtwork(Data([7, 7]), gameID: harness.game.id)
+        let operations = harness.buildOperations()
+        try operations.setPreferredSaveProfile(buildID: hack.id, profileID: hackSave.id)
+
+        let suggested = try operations.suggestedCarryOver(promoting: hack.id)
+        XCTAssertEqual(suggested, GameCarryOver(artwork: true, saveProfileIDs: [hackSave.id]), "the profile the Build plays")
+        let newGame = try operations.promoteBuild(buildID: hack.id, title: "Hack", mode: .move, carryOver: suggested)
+
+        XCTAssertEqual(newGame.lineage, GameLineage(sourceGameID: harness.game.id, sourceTitle: "Test"))
+        let copies = try harness.profiles.fetchSaveProfiles(gameID: newGame.id)
+        XCTAssertEqual(copies.map(\.displayName), ["Hack Run"])
+        let copy = try XCTUnwrap(copies.first)
+        XCTAssertEqual(try harness.persistentSaveBytes(profileID: copy.id), Data([2]))
+        XCTAssertEqual(try harness.builds.fetchBuild(id: hack.id)?.preferredSaveProfileID, copy.id, "the Build plays the copy")
+        XCTAssertEqual(try harness.games.fetchGame(id: newGame.id)?.preferredSaveProfileID, copy.id)
+        XCTAssertEqual(Set(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).map(\.id)), [main.id, hackSave.id])
+
+        let promoted = try XCTUnwrap(harness.games.fetchGame(id: newGame.id))
+        XCTAssertNotEqual(promoted.artworkAssetID, try harness.games.fetchGame(id: harness.game.id)?.artworkAssetID, "its own copy")
+        XCTAssertEqual(try harness.artworkBytes(gameID: newGame.id), Data([7, 7]))
+        _ = try GameArtwork(games: harness.games, assets: harness.assets, assetStore: harness.store).remove(gameID: newGame.id)
+        XCTAssertEqual(try harness.artworkBytes(gameID: harness.game.id), Data([7, 7]), "removing one leaves the other")
+    }
+
+    func testPromotingWithNothingCarriedLeavesTheBuildWithoutAnotherGamesProfile() throws {
+        let harness = try Harness.make(twoBuilds: true)
+        let hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        let save = try harness.createProfile(name: "Main", battery: Data([1]))
+        let operations = harness.buildOperations()
+        try operations.setPreferredSaveProfile(buildID: hack.id, profileID: save.id)
+
+        let newGame = try operations.promoteBuild(buildID: hack.id, title: "Hack", mode: .move)
+
+        XCTAssertNil(try harness.builds.fetchBuild(id: hack.id)?.preferredSaveProfileID)
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: newGame.id), [])
+        XCTAssertNil(newGame.artworkAssetID)
+    }
+
+    func testPromotingAGamesOnlyBuildRenamesItWithoutLineage() throws {
+        let harness = try Harness.make()
+        let newGame = try harness.buildOperations().promoteBuild(buildID: harness.baseBuild.id, title: "Renamed", mode: .move)
+        XCTAssertNil(newGame.lineage)
+        XCTAssertNil(try harness.games.fetchGame(id: harness.game.id))
+    }
+
+    func testACopyMergeCopiesTheChosenProfilesAndArtwork() throws {
+        let harness = try Harness.make()
+        let other = try harness.createStandaloneGame(title: "Other")
+        let otherBuild = try XCTUnwrap(harness.builds.fetchBuilds(gameID: other.id).first)
+        let played = try harness.createProfile(name: "Played", battery: Data([3]), gameID: other.id)
+        let spare = try harness.createProfile(name: "Spare", battery: Data([4]), gameID: other.id)
+        _ = try harness.setArtwork(Data([5]), gameID: other.id)
+        let operations = harness.buildOperations()
+        try operations.setPreferredSaveProfile(buildID: otherBuild.id, profileID: played.id)
+        var otherGame = try XCTUnwrap(harness.games.fetchGame(id: other.id))
+        otherGame.preferredSaveProfileID = nil
+        try harness.games.updateGame(otherGame)
+
+        let suggested = try operations.suggestedCarryOver(merging: other.id, into: harness.game.id)
+        XCTAssertEqual(suggested, GameCarryOver(artwork: true, saveProfileIDs: [played.id]))
+        try operations.mergeGame(sourceGameID: other.id, into: harness.game.id, mode: .copy, carryOver: suggested)
+
+        let copiedBuild = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { $0.imageSHA256 == otherBuild.imageSHA256 })
+        let copies = try harness.profiles.fetchSaveProfiles(gameID: harness.game.id)
+        XCTAssertEqual(copies.map(\.displayName), ["Played"])
+        XCTAssertEqual(copiedBuild.preferredSaveProfileID, copies.first?.id)
+        XCTAssertEqual(try harness.artworkBytes(gameID: harness.game.id), Data([5]))
+        XCTAssertEqual(Set(try harness.profiles.fetchSaveProfiles(gameID: other.id).map(\.id)), [played.id, spare.id], "the source is left as it was")
+    }
+
+    func testAMoveMergeUsesTheSourceArtworkOnlyWhenAsked() throws {
+        let harness = try Harness.make()
+        let target = try harness.setArtwork(Data([1]), gameID: harness.game.id)
+        let first = try harness.createStandaloneGame(title: "First")
+        _ = try harness.setArtwork(Data([2]), gameID: first.id)
+        let operations = harness.buildOperations()
+
+        try operations.mergeGame(sourceGameID: first.id, into: harness.game.id, mode: .move)
+        XCTAssertEqual(try harness.artworkBytes(gameID: harness.game.id), Data([1]))
+
+        let second = try harness.createStandaloneGame(title: "Second", imageSHA256: String(repeating: "e", count: 64))
+        let secondArt = try XCTUnwrap(harness.setArtwork(Data([3]), gameID: second.id).artworkAssetID)
+        try operations.mergeGame(
+            sourceGameID: second.id,
+            into: harness.game.id,
+            mode: .move,
+            carryOver: GameCarryOver(artwork: true, saveProfileIDs: [])
+        )
+        XCTAssertEqual(try harness.games.fetchGame(id: harness.game.id)?.artworkAssetID, secondArt)
+        XCTAssertNil(try harness.assets.fetchAsset(id: try XCTUnwrap(target.artworkAssetID)), "the replaced artwork is removed")
+    }
+
     func testPreferredProfileResolverUsesBuildThenGameThenOldest() throws {
         let harness = try Harness.make()
         let create = CreateBlankSaveProfile(games: harness.games, profiles: harness.profiles, now: { harness.now })
@@ -168,7 +293,7 @@ private struct Harness {
         try buildOperations().setPreferredBuild(gameID: game.id, buildID: id)
     }
 
-    func createProfile(name: String, battery: Data) throws -> SaveProfile {
+    func createProfile(name: String, battery: Data, gameID: UUID? = nil) throws -> SaveProfile {
         let source = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).sav")
         try battery.write(to: source)
         return try ImportBatterySave(
@@ -177,7 +302,18 @@ private struct Harness {
             assets: assets,
             assetStore: store,
             now: { now }
-        ).execute(gameID: game.id, sourceURL: source, name: name)
+        ).execute(gameID: gameID ?? game.id, sourceURL: source, name: name)
+    }
+
+    func setArtwork(_ bytes: Data, gameID: UUID) throws -> Game {
+        try GameArtwork(games: games, assets: assets, assetStore: store, now: { now })
+            .set(gameID: gameID, imageData: bytes, fileExtension: "png")
+    }
+
+    func artworkBytes(gameID: UUID) throws -> Data? {
+        guard let assetID = try games.fetchGame(id: gameID)?.artworkAssetID,
+              let asset = try assets.fetchAsset(id: assetID) else { return nil }
+        return try store.readData(at: store.managedURL(relativePath: asset.relativePath))
     }
 
     func persistentSaveBytes(profileID: UUID) throws -> Data? {
@@ -187,7 +323,7 @@ private struct Harness {
         return try store.readData(at: store.managedURL(relativePath: asset.relativePath))
     }
 
-    func createStandaloneGame(title: String) throws -> Game {
+    func createStandaloneGame(title: String, imageSHA256: String = String(repeating: "c", count: 64)) throws -> Game {
         let newGame = Game(id: UUID(), primaryTitle: title, systemFamily: "gameboy", createdAt: now, modifiedAt: now)
         try games.insertGame(newGame)
         let build = Build(
@@ -196,7 +332,7 @@ private struct Harness {
             system: .gameBoy,
             displayName: "Original",
             imageAssetID: UUID(),
-            imageSHA256: String(repeating: "c", count: 64),
+            imageSHA256: imageSHA256,
             sourceKind: .importedImage,
             isBase: true,
             createdAt: now,

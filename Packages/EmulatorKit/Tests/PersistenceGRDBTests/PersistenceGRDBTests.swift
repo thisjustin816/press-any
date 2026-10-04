@@ -295,9 +295,14 @@ struct PersistenceGRDBTests {
         let fixture = try Fixture.create(in: repositories)
         let operations = try Self.operations(repositories)
 
-        _ = try operations.promoteBuild(buildID: fixture.patchedBuild.id, title: "Hack", mode: .move)
+        let hack = try operations.promoteBuild(buildID: fixture.patchedBuild.id, title: "Hack", mode: .move)
+        #expect(try repositories.games.fetchGame(id: hack.id)?.lineage?.sourceGameID == fixture.game.id)
         let carried = try operations.promoteBuild(buildID: fixture.build.id, title: "Original", mode: .move)
         #expect(carried.artworkAssetID == fixture.game.artworkAssetID, "the last Build takes the artwork along")
+        #expect(
+            try repositories.games.fetchGame(id: hack.id)?.lineage == GameLineage(sourceGameID: nil, sourceTitle: fixture.game.primaryTitle),
+            "the lineage keeps the title once its Game is gone"
+        )
 
         let now = Date(timeIntervalSince1970: 1_700_000_200)
         let otherArt = ManagedAsset(

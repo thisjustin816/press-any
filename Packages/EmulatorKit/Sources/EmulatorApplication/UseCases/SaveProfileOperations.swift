@@ -75,7 +75,9 @@ public struct DuplicateSaveProfile: Sendable {
         self.makeID = makeID
     }
 
-    public func execute(sourceProfileID: UUID, name: String) throws -> SaveProfile {
+    /// Copies the profile and its save. `gameID` puts the copy in another Game; by default it
+    /// stays in the source's.
+    public func execute(sourceProfileID: UUID, name: String, gameID: UUID? = nil) throws -> SaveProfile {
         guard let source = try profiles.fetchSaveProfile(id: sourceProfileID) else {
             throw SaveProfileOperationError.sourceProfileNotFound(sourceProfileID)
         }
@@ -119,7 +121,7 @@ public struct DuplicateSaveProfile: Sendable {
 
         let duplicate = SaveProfile(
             id: profileID,
-            gameID: source.gameID,
+            gameID: gameID ?? source.gameID,
             displayName: name,
             badge: source.badge,
             persistentSaveAssetID: persistentSaveAssetID,
