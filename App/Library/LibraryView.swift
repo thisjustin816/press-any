@@ -332,10 +332,61 @@ private struct GameArtworkView: View {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(.quaternary)
             .overlay {
-                Image(systemName: "gamecontroller.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+                GeometryReader { proxy in
+                    CartridgeIcon()
+                        .frame(width: min(proxy.size.width, proxy.size.height) * 0.42)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .clipped()
+    }
+}
+
+/// A Game Boy cartridge seen from the front: the cut top-right corner, the grip lines across the
+/// top, and the recessed label.
+private struct CartridgeIcon: View {
+    var body: some View {
+        ZStack {
+            CartridgeShape()
+                .fill(.tertiary)
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                let height = proxy.size.height
+                VStack(spacing: height * 0.035) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Capsule()
+                            .fill(.background.opacity(0.45))
+                            .frame(width: width * 0.5, height: max(height * 0.02, 1))
+                    }
+                }
+                .position(x: width * 0.45, y: height * 0.12)
+                RoundedRectangle(cornerRadius: width * 0.05, style: .continuous)
+                    .fill(.background.opacity(0.55))
+                    .frame(width: width * 0.74, height: height * 0.48)
+                    .position(x: width * 0.5, y: height * 0.56)
+            }
+        }
+        // A DMG cartridge is 57 mm wide and 65 mm tall.
+        .aspectRatio(57.0 / 65.0, contentMode: .fit)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct CartridgeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let radius = rect.width * 0.06
+        let cut = rect.width * 0.14
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + radius, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - cut, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + cut))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - radius))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - radius, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.maxY))
+        path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY - radius), control: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + radius))
+        path.addQuadCurve(to: CGPoint(x: rect.minX + radius, y: rect.minY), control: CGPoint(x: rect.minX, y: rect.minY))
+        path.closeSubpath()
+        return path
     }
 }
