@@ -85,7 +85,7 @@ let package = Package(
         .testTarget(name: "QuickPlayTests", dependencies: ["QuickPlay", "EmulatorKitTestSupport", "AssetStorage", "Importing"]),
         .testTarget(name: "GameplayInputTests", dependencies: ["GameplayInput", "EmulationCore"]),
         .testTarget(name: "SameBoyAdapterTests", dependencies: ["SameBoyAdapter", "EmulatorKitTestSupport"]),
-        .testTarget(name: "ToolchainDetectionTests", dependencies: ["ToolchainDetection", "EmulatorDomain"]),
+        .testTarget(name: "ToolchainDetectionTests", dependencies: ["ToolchainDetection", "EmulatorDomain", "EmulatorKitTestSupport"]),
         .testTarget(
             name: "ArchitectureProofTests",
             dependencies: [

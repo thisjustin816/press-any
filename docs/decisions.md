@@ -13,7 +13,8 @@ own licenses (`TestROMs/README.md`). `Scripts/verify-repo-hygiene.sh` still reje
 image and saves, and requires each tracked ROM to match `TestROMs/manifest.json`. hUGEDriver's own
 source is fetched at a pinned commit by its build rather than kept here, per the dependency policy.
 The GB Studio ROMs are not byte-reproducible, so a rebuild changes their hashes and the manifest.
-Screenshot runs (manual only) pick ROMs by the manifest's `hero` flag and `tags`.
+Screenshot runs (manual only) pick ROMs by the manifest's `hero` flag and `tags`. Package tests
+check toolchain detection, header parsing and both patches against the manifest.
 
 ## 2026-10-04: Profile badges are one emoji, and profiles can be deleted
 
