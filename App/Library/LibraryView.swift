@@ -252,6 +252,8 @@ struct LibraryView: View {
     /// The library scenes; `RootView` opens the gameplay ones.
     private func openScreenshotScene() {
         switch ScreenshotScene.current {
+        case .settings:
+            showSettings = true
         case .game(let file):
             screenshotGameID = ScreenshotScene.build(romFile: file, in: container)?.gameID
         case .buildInfo(let file):

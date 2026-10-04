@@ -24,8 +24,9 @@ derived_data="build/screenshots/DerivedData"
 app="$derived_data/Build/Products/Debug-iphonesimulator/PressAny.app"
 
 # The plan, tab-separated: `file <name>` for each ROM or patch to copy (the chosen ROMs, then any
-# patch whose source was chosen), then `shot <scene> <seconds to wait> <name> <gamepad>` for each
-# screenshot. The waits let gameplay get past the boot logo with the game's picture moving.
+# patch whose source was chosen), then `shot <scene> <seconds to wait> <name> <flags>` for each
+# screenshot. The waits let gameplay get past the boot logo with the game's picture moving. Flags
+# are the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
 plan="$(python3 - "$roms" "$shots" "$import_rom" <<'PY'
 import json, sys
 wanted_arg, shots, import_rom = sys.argv[1:]
@@ -48,9 +49,10 @@ def stem(filename):
     return filename.rsplit(".", 1)[0]
 
 lines = [f"file\t{f}" for f in names + [p["filename"] for p in patches]]
-shot = lambda scene, wait, name, gamepad=0: lines.append(f"shot\t{scene}\t{wait}\t{name}\t{gamepad}")
+shot = lambda scene, wait, name, flags="-": lines.append(f"shot\t{scene}\t{wait}\t{name}\t{flags}")
 # The first launch seeds the library, so it waits longest.
 shot("library", 8, "library")
+shot("settings", 4, "settings")
 if shots == "every-rom":
     for f in names:
         shot(f"game:{f}", 4, f"game-{stem(f)}")
@@ -65,7 +67,12 @@ elif shots == "summary":
             shot(f"play:{f}", 8, f"play-{system.lower()}")
 else:
     sys.exit(f"SHOTS must be summary or every-rom, not {shots!r}")
-shot(f"play:{names[0]}", 8, "play-gamepad", 1)
+shot(f"play:{names[0]}", 8, "play-gamepad", "-ScreenshotGamepad YES")
+shot(f"play:{names[0]}", 8, "game-menu", "-ScreenshotMenu YES")
+# The Playtiles layout is drawn after a GBC skin, so it shows a GBC game when one was chosen.
+playtiles_rom = first(lambda r: r["system"] == "GBC") or names[0]
+shot(f"play:{playtiles_rom}", 8, "playtiles", "-ScreenshotLayout playtiles")
+shot(f"play:{playtiles_rom}", 8, "playtiles-gamepad", "-ScreenshotLayout playtiles -ScreenshotGamepad YES")
 shot(f"import:unimported/{import_rom}", 4, "import-review")
 shot(f"quick-play:{names[0]}", 8, "quick-play")
 shot(f"quick-play-info:{names[0]}", 4, "quick-play-info")
@@ -139,26 +146,27 @@ collect_diagnostics() {
 }
 
 shot=0
-# capture <scene> <seconds to wait> <name> <gamepad: 1 to act as if one were connected>
+# capture <scene> <seconds to wait> <name> [launch arguments...]
 capture() {
+  local scene="$1" wait="$2" name="$3"
+  shift 3
   shot=$((shot + 1))
   local file
-  file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$3")"
-  echo "== $1" >>"$log"
+  file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$name")"
+  echo "== $scene $*" >>"$log"
   # simctl doesn't truncate the output file, so a launch that prints nothing would repeat the last.
   rm -f "$log.tmp"
   local attempt
   for attempt in 1 2 3; do
     xcrun simctl launch --terminate-running-process --stdout="$PWD/$log.tmp" --stderr="$PWD/$log.tmp" \
-      "$udid" "$bundle_id" -ScreenshotScene "$1" -ScreenshotGamepad "$([[ $4 == 1 ]] && echo YES || echo NO)" \
-      >/dev/null && break
+      "$udid" "$bundle_id" -ScreenshotScene "$scene" "$@" >/dev/null && break
     if ((attempt == 3)); then
       collect_diagnostics
       return 1
     fi
     sleep 5
   done
-  sleep "$2"
+  sleep "$wait"
   xcrun simctl io "$udid" screenshot "$file" >/dev/null
   # Before its first frame the app shows the blank launch screen, a PNG under 100 KB where every
   # real screen is over 150 KB. A slow simulator gets two more chances.
@@ -174,8 +182,11 @@ capture() {
 }
 
 for scene in "${scenes[@]}"; do
-  IFS=$'\t' read -r name_scene wait name gamepad <<<"$scene"
-  capture "$name_scene" "$wait" "$name" "$gamepad"
+  IFS=$'\t' read -r name_scene wait name flags <<<"$scene"
+  arguments=()
+  [[ $flags == - ]] || read -r -a arguments <<<"$flags"
+  # Written so bash 3.2, macOS's, accepts an empty array under `set -u`.
+  capture "$name_scene" "$wait" "$name" ${arguments[@]+"${arguments[@]}"}
 done
 rm -f "$log.tmp"
 

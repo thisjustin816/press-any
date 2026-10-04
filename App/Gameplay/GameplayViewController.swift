@@ -102,6 +102,16 @@ final class GameplayViewController: UIViewController {
         if let message { showTransientMessage(message) }
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard ScreenshotScene.opensGameMenu else { return }
+        // After the boot logo, so the menu opens over the game's own picture.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            self?.presentMenuSheet()
+        }
+    }
+
     private static let menuHintShownKey = "gameplay.menuHintShown"
 
     /// Whether the touch controls are showing, for tests.
