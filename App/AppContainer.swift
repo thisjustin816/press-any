@@ -24,6 +24,7 @@ final class AppContainer {
     let createBlankSaveProfile: CreateBlankSaveProfile
     let duplicateSaveProfile: DuplicateSaveProfile
     let importBatterySave: ImportBatterySave
+    let replaceBatterySave: ReplaceBatterySave
     let preferredLaunchResolver: ResolvePreferredLaunchContext
     let patchCreator: CreatePatchedBuild
     let launchImageResolver: ResolveImageForLaunch
@@ -86,6 +87,11 @@ final class AppContainer {
         )
         importBatterySave = ImportBatterySave(
             games: repositories.games,
+            profiles: repositories.saveProfiles,
+            assets: repositories.assets,
+            assetStore: fileStore
+        )
+        replaceBatterySave = ReplaceBatterySave(
             profiles: repositories.saveProfiles,
             assets: repositories.assets,
             assetStore: fileStore

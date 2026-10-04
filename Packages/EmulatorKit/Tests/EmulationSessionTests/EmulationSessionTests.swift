@@ -190,6 +190,43 @@ extension EmulationSessionTests {
         XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.saveWrittenByBuildID, harness.buildB.id)
     }
 
+    func testImportingASaveIntoAProfileKeepsItsOldSaveAsACopy() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        var profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
+        profile.saveWrittenByBuildID = harness.buildA.id
+        try harness.profiles.updateSaveProfile(profile)
+        let file = try harness.writeExternalFile(Data([9, 9]))
+
+        let result = try harness.replaceSave().execute(profileID: profile.id, sourceURL: file)
+
+        XCTAssertEqual(try harness.batteryData(of: result.profile), Data([9, 9]))
+        XCTAssertNil(result.profile.saveWrittenByBuildID, "an imported file's writer isn't known")
+        let copy = try XCTUnwrap(result.safetyCopy)
+        XCTAssertEqual(copy.displayName, "Main before import")
+        XCTAssertEqual(try harness.batteryData(of: copy), Data([1, 2, 3]))
+    }
+
+    func testImportingASaveIntoABlankProfileMakesNoCopy() throws {
+        let harness = try SessionHarness.make()
+        let result = try harness.replaceSave().execute(
+            profileID: harness.profile.id,
+            sourceURL: try harness.writeExternalFile(Data([7]))
+        )
+        XCTAssertNil(result.safetyCopy)
+        XCTAssertEqual(try harness.batteryData(of: result.profile), Data([7]))
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 1)
+    }
+
+    func testAnEmptyFileReplacesNothing() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        XCTAssertThrowsError(try harness.replaceSave().execute(
+            profileID: harness.profile.id,
+            sourceURL: try harness.writeExternalFile(Data())
+        )) { XCTAssertEqual($0 as? ReplaceBatterySaveError, .emptyFile) }
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 1)
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1, 2, 3]))
+    }
+
     func testAutoStateIsNotOfferedOnceASharedProfileSaveIsNewer() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
         let early = Date(timeIntervalSince1970: 1_700_000_000)
@@ -413,6 +450,22 @@ private struct SessionHarness {
             store: store,
             factory: factory
         )
+    }
+
+    func replaceSave() -> ReplaceBatterySave {
+        ReplaceBatterySave(profiles: profiles, assets: assets, assetStore: store)
+    }
+
+    func writeExternalFile(_ data: Data) throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("import-\(UUID().uuidString).sav")
+        try data.write(to: url)
+        return url
+    }
+
+    func batteryData(of profile: SaveProfile) throws -> Data? {
+        let current = try XCTUnwrap(profiles.fetchSaveProfile(id: profile.id))
+        guard let assetID = current.persistentSaveAssetID, let asset = try assets.fetchAsset(id: assetID) else { return nil }
+        return try store.readData(at: store.managedURL(relativePath: asset.relativePath))
     }
 
     func makeSession(

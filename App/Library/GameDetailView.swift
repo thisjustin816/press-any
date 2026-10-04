@@ -9,6 +9,7 @@ struct GameDetailView: View {
         case patch(Build)
         case variableMap(Build)
         case batterySave
+        case replacementSave(SaveProfile)
         case artwork
 
         var contentTypes: [UTType] {
@@ -16,7 +17,7 @@ struct GameDetailView: View {
             case .patch: [.ipsPatch, .bpsPatch]
             // `.i`, `.sym` and `.noi` files have no system type; the import checks the contents.
             case .variableMap: [.data]
-            case .batterySave: [.gameBoySave]
+            case .batterySave, .replacementSave: [.gameBoySave]
             case .artwork: [.image]
             }
         }
@@ -35,6 +36,7 @@ struct GameDetailView: View {
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
     @State private var technicalInfo: Build?
+    @State private var pendingReplacement: PendingReplacement?
 
     private struct SettingsTarget: Identifiable {
         let id = UUID()
@@ -62,7 +64,8 @@ struct GameDetailView: View {
             patchCreator: container.patchCreator,
             evictImage: container.evictGeneratedImage,
             artwork: container.gameArtwork,
-            variableMaps: container.attachVariableMap
+            variableMaps: container.attachVariableMap,
+            replaceSave: container.replaceBatterySave
         ))
     }
 
@@ -257,6 +260,15 @@ struct GameDetailView: View {
             } message: { _ in
                 Text("Move takes this Build out of this Game. Copy leaves it here as well.")
             }
+            .alert("Replace This Save?", isPresented: Binding(
+                get: { pendingReplacement != nil },
+                set: { if !$0 { pendingReplacement = nil } }
+            ), presenting: pendingReplacement) { pending in
+                Button("Replace", role: .destructive) { model.replaceSave(of: pending.profile, from: pending.url) }
+                Button("Cancel", role: .cancel) {}
+            } message: { pending in
+                Text("\(pending.url.lastPathComponent) replaces the save in \(pending.profile.displayName). Its current save is copied to “\(pending.profile.displayName) before import” first.")
+            }
             .alert("Different Base ROM", isPresented: Binding(
                 get: { model.baseMismatch != nil },
                 set: { if !$0 { model.baseMismatch = nil } }
@@ -389,6 +401,7 @@ struct GameDetailView: View {
             Button("Duplicate") {
                 model.duplicate(profile, name: profile.displayName + " Copy")
             }
+            Button("Replace Save from File…") { request(.replacementSave(profile)) }
         }
     }
 
@@ -407,6 +420,14 @@ struct GameDetailView: View {
             if let url = urls.first { model.attachVariableMap(from: url, to: build) }
         case .batterySave:
             if let url = urls.first { model.importSave(from: url) }
+        case .replacementSave(let profile):
+            guard let url = urls.first else { break }
+            // Replacing a blank profile loses nothing, so only a profile with a save asks first.
+            if profile.persistentSaveAssetID == nil {
+                model.replaceSave(of: profile, from: url)
+            } else {
+                pendingReplacement = PendingReplacement(profile: profile, url: url)
+            }
         case .artwork:
             if let url = urls.first { model.setArtwork(from: url) }
         case nil:
@@ -470,4 +491,9 @@ private struct MergeGameSheet: View {
             }
         }
     }
+}
+
+private struct PendingReplacement {
+    let profile: SaveProfile
+    let url: URL
 }

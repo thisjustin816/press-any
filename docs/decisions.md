@@ -3,6 +3,15 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Importing a .sav into an existing profile keeps a copy
+
+**Decision.** A Save Profile's menu has Replace Save from File…. When the profile already has a
+save, the app asks first, then copies that save to "<profile> before import" before writing the
+file, as Quick Play promotion does with "before Quick Play". A blank profile is filled without
+asking. The imported save records no writing Build, so launching it never raises the
+compatibility warning. Since the profile's save is newer than any Auto State, the next launch
+boots from the imported save.
+
 ## 2026-10-04: A risky Build switch offers a copy of the save
 
 **Decision.** Each Save Profile records which Build last wrote its battery save. Launching a

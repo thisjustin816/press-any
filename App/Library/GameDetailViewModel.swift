@@ -1,4 +1,5 @@
 import Combine
+import EmulationSession
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
@@ -36,6 +37,7 @@ final class GameDetailViewModel: ObservableObject {
     private let evictImage: EvictGeneratedImage
     private let artwork: GameArtwork
     private let variableMaps: AttachVariableMap
+    private let saveReplacer: ReplaceBatterySave
 
     init(
         gameID: UUID,
@@ -49,7 +51,8 @@ final class GameDetailViewModel: ObservableObject {
         patchCreator: CreatePatchedBuild,
         evictImage: EvictGeneratedImage,
         artwork: GameArtwork,
-        variableMaps: AttachVariableMap
+        variableMaps: AttachVariableMap,
+        replaceSave: ReplaceBatterySave
     ) {
         self.gameID = gameID
         self.games = games
@@ -63,6 +66,7 @@ final class GameDetailViewModel: ObservableObject {
         self.evictImage = evictImage
         self.artwork = artwork
         self.variableMaps = variableMaps
+        self.saveReplacer = replaceSave
     }
 
     var preferredBuild: Build? {
@@ -150,6 +154,19 @@ final class GameDetailViewModel: ObservableObject {
                 name: url.deletingPathExtension().lastPathComponent
             )
             infoMessage = "Imported the save as \(profile.displayName)."
+        }
+    }
+
+    func replaceSave(of profile: SaveProfile, from url: URL) {
+        perform {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            let result = try saveReplacer.execute(profileID: profile.id, sourceURL: url)
+            infoMessage = if let copy = result.safetyCopy {
+                "Imported \(url.lastPathComponent) into \(profile.displayName). Its previous save is in \(copy.displayName)."
+            } else {
+                "Imported \(url.lastPathComponent) into \(profile.displayName)."
+            }
         }
     }
 
