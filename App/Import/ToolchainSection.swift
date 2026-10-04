@@ -17,7 +17,9 @@ struct ToolchainSection: View {
             } else {
                 ForEach(Array(components.enumerated()), id: \.offset) { _, component in
                     LabeledContent {
-                        Text(component.version ?? "Version unknown")
+                        if let version = component.version {
+                            Text(version)
+                        }
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(component.name)
