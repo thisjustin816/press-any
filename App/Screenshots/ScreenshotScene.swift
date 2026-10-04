@@ -43,6 +43,11 @@ enum ScreenshotScene: Equatable {
         }
     }
 
+    /// Standard error is unbuffered, so the script's log keeps these when it ends the app.
+    static func log(_ message: String) {
+        FileHandle.standardError.write(Data((message + "\n").utf8))
+    }
+
     static func romURL(_ file: String) -> URL {
         fixtureDirectory.appendingPathComponent(file)
     }
@@ -109,13 +114,8 @@ enum ScreenshotSeeder {
             guard try container.repositories.games.fetchGames().isEmpty else { return }
             try seed(container, manifest: ScreenshotManifest.load())
         } catch {
-            report("Screenshot seeding failed: \(error)")
+            ScreenshotScene.log("Screenshot seeding failed: \(error)")
         }
-    }
-
-    /// Standard error is unbuffered, so the script's log keeps these when it ends the app.
-    private static func report(_ message: String) {
-        FileHandle.standardError.write(Data((message + "\n").utf8))
     }
 
     private static func seed(_ container: AppContainer, manifest: ScreenshotManifest) throws {
@@ -126,9 +126,9 @@ enum ScreenshotSeeder {
         for rom in copied.filter({ !targets.contains($0.filename) }) + copied.filter({ targets.contains($0.filename) }) {
             do {
                 try importROM(rom, manifest: manifest, container: container)
-                report("Seeded \(rom.filename)")
+                ScreenshotScene.log("Seeded \(rom.filename)")
             } catch {
-                report("Couldn't seed \(rom.filename): \(error)")
+                ScreenshotScene.log("Couldn't seed \(rom.filename): \(error)")
             }
         }
 
@@ -143,9 +143,9 @@ enum ScreenshotSeeder {
                     patchURLs: [ScreenshotScene.romURL(patch.filename)],
                     displayName: "\(targetName) (\(patch.format) patch)"
                 ))
-                report("Seeded \(patch.filename)")
+                ScreenshotScene.log("Seeded \(patch.filename)")
             } catch {
-                report("Couldn't seed \(patch.filename): \(error)")
+                ScreenshotScene.log("Couldn't seed \(patch.filename): \(error)")
             }
         }
     }

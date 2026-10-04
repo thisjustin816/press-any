@@ -53,6 +53,11 @@ final class PhysicalControllerMonitor {
     }
 
     private func activate(_ controller: GCController) {
+        // Screenshot runs show the touch controls, which a connected controller hides.
+        if ScreenshotScene.current != nil {
+            ScreenshotScene.log("Ignoring controller: \(controller.vendorName ?? "unnamed")")
+            return
+        }
         activeController = controller
         installHandlers(on: controller)
         onConnectionChanged?(true)
