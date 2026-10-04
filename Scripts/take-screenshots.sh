@@ -24,7 +24,8 @@ derived_data="build/screenshots/DerivedData"
 app="$derived_data/Build/Products/Debug-iphonesimulator/PressAny.app"
 
 # The plan, tab-separated: `file <name>` for each ROM or patch to copy (the chosen ROMs, then any
-# patch whose source was chosen), then `shot <scene> <seconds to wait> <name> <flags>` for each
+# patch whose source was chosen), `menus <game ROM> <gameplay ROM>` for the menu UI tests, then
+# `shot <scene> <seconds to wait> <name> <flags>` for each
 # screenshot. The waits let gameplay get past the boot logo with the game's picture moving. Flags
 # are the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
 plan="$(python3 - "$roms" "$shots" "$import_rom" <<'PY'
@@ -49,6 +50,9 @@ def stem(filename):
     return filename.rsplit(".", 1)[0]
 
 lines = [f"file\t{f}" for f in names + [p["filename"] for p in patches]]
+# A Game with a patched Build shows Builds best.
+game_rom = patches[0]["source"] if patches else names[0]
+lines.append(f"menus\t{game_rom}\t{names[0]}")
 shot = lambda scene, wait, name, flags="-": lines.append(f"shot\t{scene}\t{wait}\t{name}\t{flags}")
 # The first launch seeds the library, so it waits longest.
 shot("library", 8, "library")
@@ -59,8 +63,8 @@ if shots == "every-rom":
         shot(f"build-info:{f}", 4, f"build-info-{stem(f)}")
         shot(f"play:{f}", 8, f"play-{stem(f)}")
 elif shots == "summary":
-    # A Game with a patched Build shows Builds best, and GB Studio shows the most in Made With.
-    shot(f"game:{(patches[0]['source'] if patches else names[0])}", 4, "game")
+    shot(f"game:{game_rom}", 4, "game")
+    # GB Studio shows the most in Made With.
     shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info")
     for system in ("GB", "GBC"):
         if f := first(lambda r: r["system"] == system):
@@ -84,6 +88,7 @@ scenes=()
 while IFS=$'\t' read -r kind rest; do
   case "$kind" in
     file) files+=("$rest") ;;
+    menus) IFS=$'\t' read -r game_rom play_rom <<<"$rest" ;;
     shot) scenes+=("$rest") ;;
   esac
 done <<<"$plan"
@@ -124,18 +129,24 @@ xcrun simctl status_bar "$udid" override --time 9:41 --dataNetwork wifi --wifiBa
   --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
 xcrun simctl install "$udid" "$app"
 
-fixtures="$(xcrun simctl get_app_container "$udid" "$bundle_id" data)/Documents/ScreenshotROMs"
-mkdir -p "$fixtures/unimported"
-cp TestROMs/manifest.json "$fixtures/"
+# Staged on the Mac, then copied into the app. The menu UI tests have the app seed from the
+# staged folder itself, whatever xcodebuild does to the installed app's data.
+staging="$PWD/build/screenshots/fixtures"
+rm -rf "$staging"
+mkdir -p "$staging/unimported"
+cp TestROMs/manifest.json "$staging/"
 for file in "${files[@]}"; do
   if [[ -f "TestROMs/roms/$file" ]]; then
-    cp "TestROMs/roms/$file" "$fixtures/"
+    cp "TestROMs/roms/$file" "$staging/"
   else
-    cp "TestROMs/patches/$file" "$fixtures/"
+    cp "TestROMs/patches/$file" "$staging/"
   fi
 done
 # Kept out of the seeded folder so the review shows a new ROM rather than a duplicate.
-cp "TestROMs/roms/$import_rom" "$fixtures/unimported/"
+cp "TestROMs/roms/$import_rom" "$staging/unimported/"
+fixtures="$(xcrun simctl get_app_container "$udid" "$bundle_id" data)/Documents/ScreenshotROMs"
+mkdir -p "$fixtures"
+cp -R "$staging/." "$fixtures/"
 
 # SpringBoard's and the app's recent log, and any crash report, for a launch that failed.
 collect_diagnostics() {
@@ -190,7 +201,25 @@ for scene in "${scenes[@]}"; do
 done
 rm -f "$log.tmp"
 
+# Pop-up menus open only on a tap, so the UI tests in ScreenshotTests/ open them and save a
+# screenshot of each. A menu that doesn't open fails the run once everything else is saved.
+menus="$PWD/$output/menus"
+menu_status=0
+TEST_RUNNER_SCREENSHOT_ROMS="$staging" TEST_RUNNER_SCREENSHOT_OUTPUT="$menus" \
+  TEST_RUNNER_SCREENSHOT_GAME_ROM="$game_rom" TEST_RUNNER_SCREENSHOT_PLAY_ROM="$play_rom" \
+  xcodebuild -quiet test -project PressAny.xcodeproj -scheme PressAnyScreenshots \
+  -destination "id=$udid" -derivedDataPath "$derived_data" || menu_status=$?
+for file in "$menus"/*.png; do
+  [[ -e $file ]] || continue
+  shot=$((shot + 1))
+  mv "$file" "$(printf '%s/%02d-%s' "$output" "$shot" "$(basename "$file")")"
+  echo "$output/$(printf '%02d' "$shot")-$(basename "$file")"
+done
+rmdir "$menus" 2>/dev/null || true
+((menu_status == 0)) || echo "The menu UI tests failed (exit $menu_status); see the log above." >&2
+
 if grep -q "Couldn't seed\|seeding failed" "$log"; then
   echo "Seeding reported problems; see $log." >&2
 fi
 echo "Screenshots in $output"
+exit "$menu_status"

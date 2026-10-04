@@ -52,9 +52,15 @@ enum ScreenshotScene: Equatable {
         #endif
     }
 
-    /// Where the script copies the ROMs, patches and `manifest.json` from `TestROMs/`.
+    /// Where the script copies the ROMs, patches and `manifest.json` from `TestROMs/`, or the folder
+    /// `-ScreenshotROMs <path>` names, which the menu UI tests pass.
     static var fixtureDirectory: URL {
-        URL.documentsDirectory.appendingPathComponent("ScreenshotROMs", isDirectory: true)
+        #if DEBUG
+        if current != nil, let path = UserDefaults.standard.string(forKey: "ScreenshotROMs") {
+            return URL(fileURLWithPath: path, isDirectory: true)
+        }
+        #endif
+        return URL.documentsDirectory.appendingPathComponent("ScreenshotROMs", isDirectory: true)
     }
 
     init?(argument: String) {

@@ -191,6 +191,7 @@ struct GameDetailView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
+            .accessibilityIdentifier("game.moreMenu")
         }
     }
 

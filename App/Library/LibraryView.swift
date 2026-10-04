@@ -106,6 +106,7 @@ struct LibraryView: View {
                     } label: {
                         Image(systemName: displayMode == .grid ? "square.grid.2x2" : "list.bullet")
                     }
+                    .accessibilityIdentifier("library.viewMenu")
 
                     Menu {
                         Button {
@@ -135,6 +136,7 @@ struct LibraryView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .accessibilityIdentifier("library.addMenu")
                 }
             }
             .onAppear { model.reload() }
