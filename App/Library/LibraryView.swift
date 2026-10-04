@@ -342,9 +342,10 @@ private struct GameArtworkView: View {
     }
 }
 
-/// A DMG Game Pak from the front, 57 by 65.5 mm, after a photograph of one: the app's name in the
-/// raised plaque where the cartridge's logo is, short grip ridges beside it, the lock notch at the
-/// top right, the framed label recess, and the arrow pointing into the slot. Drawn in millimeters.
+/// A DMG Game Pak from the front, 57 by 65.5 mm, after a photograph of one: the app's name in
+/// capitals in the raised plaque, as GAME BOY is on the cartridge, short grip ridges beside it,
+/// the lock notch at the top right, the framed label recess, and the arrow pointing into the slot.
+/// Drawn in millimeters.
 private struct CartridgeIcon: View {
     var body: some View {
         GeometryReader { proxy in
@@ -358,7 +359,7 @@ private struct CartridgeIcon: View {
                 Capsule()
                     .path(in: rect(9, 2, 40, 8.5))
                     .stroke(.background.opacity(0.3), lineWidth: max(0.5 * mm, 0.5))
-                Text(AppBrand.displayName)
+                Text(AppBrand.displayName.uppercased())
                     .font(Font(AppBrand.Wordmark.font(size: 5 * mm)))
                     .foregroundStyle(.background.opacity(0.3))
                     .lineLimit(1)
