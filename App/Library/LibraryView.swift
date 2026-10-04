@@ -342,39 +342,49 @@ private struct GameArtworkView: View {
     }
 }
 
-/// A DMG Game Pak from the front, 57 by 65.5 mm: the lock notch at the top right, the app's name
-/// molded into the band where a cartridge has its logo, the recessed label, and the arrow
-/// pointing into the slot. Drawn in millimeters.
+/// A DMG Game Pak from the front, 57 by 65.5 mm, after a photograph of one: the app's name in the
+/// raised plaque where the cartridge's logo is, short grip ridges beside it, the lock notch at the
+/// top right, the framed label recess, and the arrow pointing into the slot. Drawn in millimeters.
 private struct CartridgeIcon: View {
     var body: some View {
         GeometryReader { proxy in
             let mm = proxy.size.width / 57
+            let rect = { (x: Double, y: Double, width: Double, height: Double) -> CGRect in
+                CGRect(x: x * mm, y: y * mm, width: width * mm, height: height * mm)
+            }
             ZStack {
                 CartridgeShape()
                     .fill(.tertiary)
+                Capsule()
+                    .path(in: rect(9, 2, 40, 8.5))
+                    .stroke(.background.opacity(0.3), lineWidth: max(0.5 * mm, 0.5))
                 Text(AppBrand.displayName)
-                    .font(Font(AppBrand.Wordmark.font(size: 5.5 * mm)))
-                    .foregroundStyle(.background.opacity(0.5))
+                    .font(Font(AppBrand.Wordmark.font(size: 5 * mm)))
+                    .foregroundStyle(.background.opacity(0.3))
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
-                    .frame(width: 40 * mm)
-                    .position(x: 27 * mm, y: 7 * mm)
+                    .frame(width: 34 * mm)
+                    .position(x: 29 * mm, y: 6.25 * mm)
                 Path { path in
-                    path.addPath(UnevenRoundedRectangle(
-                        topLeadingRadius: 4 * mm,
-                        bottomLeadingRadius: 0.5 * mm,
-                        bottomTrailingRadius: 0.5 * mm,
-                        topTrailingRadius: 4 * mm
-                    ).path(in: CGRect(x: 5 * mm, y: 12 * mm, width: 47 * mm, height: 43 * mm)))
+                    let ridges = [(1.8, 2.6), (1.8, 4.6), (1.8, 6.6), (1.8, 8.6), (50.8, 4.6), (50.8, 6.6), (50.8, 8.6)]
+                    for (x, y) in ridges {
+                        path.addRoundedRect(in: rect(x, y, x < 10 ? 5.4 : 4.4, 0.9), cornerSize: CGSize(width: 0.45 * mm, height: 0.45 * mm))
+                    }
                 }
-                .fill(.background.opacity(0.55))
+                .fill(.background.opacity(0.3))
+                RoundedRectangle(cornerRadius: 1.5 * mm, style: .continuous)
+                    .path(in: rect(4, 13, 49, 42.5))
+                    .fill(.background.opacity(0.3))
+                RoundedRectangle(cornerRadius: 1 * mm, style: .continuous)
+                    .path(in: rect(5.4, 14.4, 46.2, 39.7))
+                    .fill(.background.opacity(0.6))
                 Path { path in
-                    path.move(to: CGPoint(x: 25.5 * mm, y: 58 * mm))
-                    path.addLine(to: CGPoint(x: 31.5 * mm, y: 58 * mm))
-                    path.addLine(to: CGPoint(x: 28.5 * mm, y: 62 * mm))
+                    path.move(to: CGPoint(x: 25.5 * mm, y: 57.2 * mm))
+                    path.addLine(to: CGPoint(x: 31.5 * mm, y: 57.2 * mm))
+                    path.addLine(to: CGPoint(x: 28.5 * mm, y: 60.7 * mm))
                     path.closeSubpath()
                 }
-                .fill(.background.opacity(0.45))
+                .fill(.background.opacity(0.3))
             }
         }
         .aspectRatio(57 / 65.5, contentMode: .fit)
@@ -385,8 +395,8 @@ private struct CartridgeIcon: View {
 private struct CartridgeShape: Shape {
     func path(in rect: CGRect) -> Path {
         let mm = rect.width / 57
-        let radius = 2.5 * mm
-        let notchX = rect.minX + 49 * mm
+        let radius = 1.5 * mm
+        let notchX = rect.minX + 51 * mm
         let notchBottom = rect.minY + 2.5 * mm
         var path = Path()
         path.move(to: CGPoint(x: rect.minX + radius, y: rect.minY))
