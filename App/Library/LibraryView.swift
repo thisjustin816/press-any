@@ -25,6 +25,8 @@ struct LibraryView: View {
     @State private var chosenQuickPlaySave: UUID?
     @State private var showQuickPlaySessions = false
     @State private var quickPlayToResume: QuickPlaySession?
+    @State private var screenshotGameID: UUID?
+    @State private var screenshotBuildInfo: Build?
 
     let container: AppContainer
     let onPlay: (LaunchContext) -> Void
@@ -136,6 +138,13 @@ struct LibraryView: View {
                 }
             }
             .onAppear { model.reload() }
+            .task { openScreenshotScene() }
+            .navigationDestination(item: $screenshotGameID) { gameID in
+                GameDetailView(container: container, gameID: gameID, onPlay: onPlay)
+            }
+            .sheet(item: $screenshotBuildInfo) { build in
+                BuildTechnicalInfoView(build: build, container: container)
+            }
             // Quick Play promotion adds Games from sheets this screen doesn't own.
             .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in model.reload() }
             .refreshable { model.reload() }
@@ -237,6 +246,20 @@ struct LibraryView: View {
             onPlay(try model.launchContext(for: game))
         } catch {
             model.report("Couldn’t start \(game.primaryTitle): \(error.localizedDescription)")
+        }
+    }
+
+    /// The library scenes; `RootView` opens the gameplay ones.
+    private func openScreenshotScene() {
+        switch ScreenshotScene.current {
+        case .game(let file):
+            screenshotGameID = ScreenshotScene.build(romFile: file, in: container)?.gameID
+        case .buildInfo(let file):
+            screenshotBuildInfo = ScreenshotScene.build(romFile: file, in: container)
+        case .importReview(let file):
+            handleImportSelection(.success([ScreenshotScene.romURL(file)]))
+        default:
+            break
         }
     }
 
