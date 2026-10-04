@@ -177,7 +177,14 @@ extension TouchControlLayout {
                 pictureOpensMenu: pictureOpensMenu
             )
         case .playtiles:
-            playtiles(width: width, height: height, safeBottom: safeBottom, pictureOpensMenu: pictureOpensMenu)
+            playtiles(
+                width: width,
+                height: height,
+                safeBottom: safeBottom,
+                displayScale: displayScale,
+                scaling: scaling,
+                pictureOpensMenu: pictureOpensMenu
+            )
         }
     }
 
@@ -329,7 +336,16 @@ extension TouchControlLayout {
     /// The Playtiles GBC Delta skin (`info.json`, iPhone edge-to-edge portrait) in its 1080x2340
     /// mapping space, scaled to fit the view and centered across it. Touch areas are the skin's
     /// frames joined with its artwork; drawing follows the artwork, measured from the skin's PDF.
-    static func playtiles(width: Double, height: Double, safeBottom: Double, pictureOpensMenu: Bool) -> TouchControlLayout {
+    /// The picture is sized by `scaling` inside the skin's screen frame, and the bezel fills the
+    /// rest of that frame.
+    static func playtiles(
+        width: Double,
+        height: Double,
+        safeBottom: Double,
+        displayScale: Double,
+        scaling: ScreenScaling,
+        pictureOpensMenu: Bool
+    ) -> TouchControlLayout {
         let scale = min(width / 1080, height / 2340)
         let originX = (width - 1080 * scale) / 2
         func frame(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> TouchRect {
@@ -349,7 +365,8 @@ extension TouchControlLayout {
         // Game Boy order, frames and artwork together.
         let selectArt = frame(691, 1924, 134, 53)
         let startArt = frame(847, 1924, 135, 53)
-        let screen = frame(11, 167, 1058, 951.8717683557)
+        let screenFrame = frame(11, 167, 1058, 951.8717683557)
+        let screen = scaling.picture(sourceWidth: 160, sourceHeight: 144, in: screenFrame, pixelsPerPoint: displayScale)
         let logo = logo(width: width, height: height, safeBottom: safeBottom)
 
         return TouchControlLayout(
@@ -364,6 +381,7 @@ extension TouchControlLayout {
             // The skin's Menu button and tap-the-game Fast Forward are left out: the logo opens
             // the menu, as on the Game Boy layout.
             menuAreas: menuAreas(logo: logo, screen: screen, pictureOpensMenu: pictureOpensMenu),
+            bezel: screenFrame,
             artwork: [
                 .dpad: dpadArt,
                 .a: aArt,

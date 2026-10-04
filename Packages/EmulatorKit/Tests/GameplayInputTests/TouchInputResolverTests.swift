@@ -174,6 +174,15 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(guide.bar.y, layout.screen.y + layout.screen.height, "the guide is below the picture")
         XCTAssertNil(TouchControlLayout.make(.gameBoy, width: 393, height: 852).alignmentGuide)
 
+        // The bezel is the skin's screen frame, and the picture sits inside it in whole pixels.
+        let phone = TouchControlLayout.make(.playtiles, width: 393, height: 852, displayScale: 3)
+        let bezel = try! XCTUnwrap(phone.bezel)
+        XCTAssertEqual(bezel.width, 1058 * 393 / 1080, accuracy: 0.01, "the bezel is the skin's screen frame")
+        XCTAssertEqual(phone.screen.width * 3, 1120, accuracy: 0.001, "7 device pixels per Game Boy pixel")
+        XCTAssertTrue(phone.screen.x > bezel.x && phone.screen.y > bezel.y, "the bezel shows on every side")
+        XCTAssertTrue(phone.screen.x + phone.screen.width < bezel.x + bezel.width, "the bezel shows on the right")
+        XCTAssertTrue(phone.screen.y + phone.screen.height < bezel.y + bezel.height, "the bezel shows at the bottom")
+
         XCTAssertFalse(layout.opensMenu(at: TouchPoint(x: 148, y: 1950)), "the skin's Menu button is left out")
         XCTAssertFalse(layout.opensMenu(at: TouchPoint(x: 892, y: 1561)), "A is a Game Boy control")
 

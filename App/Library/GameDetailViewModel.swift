@@ -80,6 +80,17 @@ final class GameDetailViewModel: ObservableObject {
         return builds.first { $0.id == preferred } ?? builds.first
     }
 
+    /// The Build and save Play starts, picked as `ResolvePreferredSaveProfile` picks them, without
+    /// creating the blank "Main" profile it makes when the Game has none.
+    var playSummary: String? {
+        guard let build = preferredBuild else { return nil }
+        let save = profileName(id: build.preferredSaveProfileID)
+            ?? profileName(id: game?.preferredSaveProfileID)
+            ?? saveProfiles.first?.title
+            ?? "Main (new)"
+        return "\(build.displayName) · \(save)"
+    }
+
     func reload() {
         do {
             guard let fetched = try games.fetchGame(id: gameID) else {

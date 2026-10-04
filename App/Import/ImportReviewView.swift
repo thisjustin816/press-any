@@ -11,7 +11,7 @@ struct ImportReviewView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("ROM") {
+                Section {
                     LabeledContent("File", value: model.analysis.originalFilename)
                     LabeledContent("Header title", value: model.analysis.header.title.isEmpty ? "Unknown" : model.analysis.header.title)
                     LabeledContent("System", value: model.analysis.header.system.displayName)
@@ -19,6 +19,12 @@ struct ImportReviewView: View {
                     if !model.analysis.header.headerChecksumValid {
                         Label("Header checksum is not valid", systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.orange)
+                    }
+                } header: {
+                    Text("ROM")
+                } footer: {
+                    if !model.analysis.header.headerChecksumValid {
+                        Text("The checksum covers the title and cartridge details at the start of the ROM. Homebrew and patched ROMs sometimes leave it wrong, and an original Game Boy won’t start them.")
                     }
                 }
 
@@ -72,7 +78,7 @@ struct ImportDestinationSection: View {
                 Label("This exact ROM is already in your library.", systemImage: "checkmark.circle")
             }
         } else {
-            Section("Destination") {
+            Section {
                 Picker("Import as", selection: $model.destination) {
                     Text("New Game").tag(ImportReviewViewModel.Destination.newGame)
                     ForEach(model.games) { game in
@@ -82,10 +88,20 @@ struct ImportDestinationSection: View {
                 }
 
                 if model.destination == .newGame {
-                    TextField("Game title", text: $model.gameTitle)
+                    LabeledContent("Game Title") {
+                        TextField("Game Title", text: $model.gameTitle)
+                            .multilineTextAlignment(.trailing)
+                    }
                 }
-                TextField("Build name", text: $model.buildDisplayName)
+                LabeledContent("Build Name") {
+                    TextField("Build Name", text: $model.buildDisplayName)
+                        .multilineTextAlignment(.trailing)
+                }
                 Toggle("Base Build", isOn: $model.markAsBase)
+            } header: {
+                Text("Destination")
+            } footer: {
+                Text("A Base Build is a clean, unmodified ROM that patches are applied to. A Game can have one for each revision or region.")
             }
         }
     }

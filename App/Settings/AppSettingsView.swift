@@ -37,33 +37,14 @@ struct AppSettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
-                } footer: {
-                    Text("Library games open on the game instead of the boot logo. Quick Play always skips it.")
-                }
-
-                Section {
                     Picker("Controller Layout", selection: $controllerLayout) {
                         Text("Game Boy").tag(TouchControlStyle.gameBoy)
                         Text("Playtiles").tag(TouchControlStyle.playtiles)
                     }
+                } header: {
+                    Text("Controls")
                 } footer: {
                     Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits the Playtiles controller.")
-                }
-
-                Section {
-                    Picker("Screen Scaling", selection: $screenScaling) {
-                        Text("Integer").tag(ScreenScaling.integer)
-                        Text("Fill").tag(ScreenScaling.fill)
-                    }
-                } footer: {
-                    Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
-                }
-
-                Section {
-                    Toggle("Tap Game for Menu", isOn: $tapGameForMenu)
-                } footer: {
-                    Text("Tapping \(AppBrand.displayName) under the controls always opens the game menu. This adds tapping the game itself.")
                 }
 
                 Section {
@@ -77,11 +58,36 @@ struct AppSettingsView: View {
                 }
 
                 Section {
+                    Toggle("Tap Game for Menu", isOn: $tapGameForMenu)
+                } footer: {
+                    Text("Tapping \(AppBrand.displayName) at the bottom of the screen always opens the game menu. This adds tapping the game itself.")
+                }
+
+                Section {
+                    Picker("Screen Scaling", selection: $screenScaling) {
+                        Text("Integer").tag(ScreenScaling.integer)
+                        Text("Fill").tag(ScreenScaling.fill)
+                    }
+                } header: {
+                    Text("Display")
+                } footer: {
+                    Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
+                }
+
+                Section {
+                    Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
+                } footer: {
+                    Text("Library games open on the game instead of the boot logo. Quick Play always skips it.")
+                }
+
+                Section {
                     Picker("Sound", selection: $soundMode) {
                         Text("Follow Silent Switch").tag(SoundMode.followSilentSwitch)
                         Text("Always On").tag(SoundMode.alwaysOn)
                         Text("Always Off").tag(SoundMode.alwaysOff)
                     }
+                } header: {
+                    Text("Sound")
                 } footer: {
                     Text("Always Off leaves music from other apps playing.")
                 }
@@ -92,6 +98,8 @@ struct AppSettingsView: View {
                         Text("Ask").tag(AutoResumePolicy.ask)
                         Text("Never").tag(AutoResumePolicy.never)
                     }
+                } header: {
+                    Text("Playing")
                 } footer: {
                     Text("Whether a game picks up where you left off when you open it again or return to the app.")
                 }

@@ -3,6 +3,21 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Design review changes
+
+**Decision.** Quick Play's game menu shows Save State grayed out with "Add to Library to save
+states", and an Add to Library item that closes the game and opens that step. The import review
+labels its Game Title and Build Name fields and explains Base Build and a wrong header checksum.
+A Game's Play button names the Build and save it starts; Build rows no longer show a hash, and
+the footer explains the star and BASE. The Build menu is grouped: playing and saves, details,
+editing, then Make Separate Game. Library cartridges without artwork take the brand's magenta
+for Game Boy Color and print the title on the label. Made With shows names as their projects
+spell them (GB Studio, GB BASIC), GBDK-2020 versions without the detector's "2020." prefix,
+ranges as "x to y" and open ranges as "x or later", and an audio driver's edition, such as
+hUGETracker's SuperDisk, beside its kind rather than as a version. Settings groups its items
+under Controls, Display, Sound and Playing. The Playtiles layout draws the Game Boy bezel in the
+skin's screen frame around the picture, where the black background showed before.
+
 ## 2026-10-04: A controller opens the game menu only from a button the player maps
 
 **Decision.** No controller button opens the game menu by default. Controller settings will offer

@@ -37,6 +37,8 @@ final class GameplayViewController: UIViewController {
     private var stopped = false
 
     var onClose: (() -> Void)?
+    /// Set for Quick Play: the menu then offers Add to Library, which closes the game and calls this.
+    var onAddToLibrary: (() -> Void)?
 
     init(
         runtime: any GameplayRuntime,
@@ -204,6 +206,18 @@ final class GameplayViewController: UIViewController {
             } else {
                 elements.append(UIMenu(title: "Load State", image: loadImage, children: loadActions))
             }
+        } else {
+            elements.append(UIAction(
+                title: "Save State",
+                subtitle: "Add to Library to save states",
+                image: UIImage(systemName: "square.and.arrow.down"),
+                attributes: .disabled
+            ) { _ in })
+        }
+        if onAddToLibrary != nil {
+            elements.append(UIAction(title: "Add to Library…", image: UIImage(systemName: "square.and.arrow.down.on.square")) { [weak self] _ in
+                self?.addToLibraryTapped()
+            })
         }
         let close = UIAction(title: "Close Game", image: UIImage(systemName: "xmark"), attributes: .destructive) { [weak self] _ in
             self?.closeTapped()
@@ -424,6 +438,12 @@ final class GameplayViewController: UIViewController {
         stopRuntime()
         dismiss(animated: true)
         onClose?()
+    }
+
+    private func addToLibraryTapped() {
+        stopRuntime()
+        dismiss(animated: true)
+        onAddToLibrary?()
     }
 
     private func stopRuntime() {
