@@ -30,6 +30,9 @@ final class GameplayViewController: UIViewController {
     /// The close and menu buttons in the corners. They hide while the touch controls show, since
     /// the logo opens the menu then.
     private var cornerButtons: [UIButton] = []
+    /// Set by a touch while a controller is connected, and cleared a few seconds after the last one.
+    private var cornerButtonsRevealed = false
+    private var cornerButtonsHideTask: Task<Void, Never>?
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
     // reach the controller, so the nonisolated deinit can remove the observers without a hop.
@@ -333,11 +336,34 @@ final class GameplayViewController: UIViewController {
     }
 
     /// While the touch controls show, tapping the logo opens the menu, so the corner buttons hide.
-    /// With a controller connected the controls hide and the corner buttons come back. The
-    /// controller's body stays, so the game keeps its frame.
-    private func updateCornerButtons() {
+    /// With a controller connected the controls hide too, and the corner buttons show only after a
+    /// touch on the screen, or always while VoiceOver runs. The controller's body stays, so the game
+    /// keeps its frame.
+    private func updateCornerButtons(animated: Bool = false) {
         let layoutHasMenu = !touchControls.layout.menuAreas.isEmpty
-        for button in cornerButtons { button.isHidden = layoutHasMenu && touchControls.showsControls }
+        let hidden = touchControls.showsControls
+            ? layoutHasMenu
+            : !(cornerButtonsRevealed || UIAccessibility.isVoiceOverRunning)
+        for button in cornerButtons { button.isUserInteractionEnabled = !hidden }
+        UIView.animate(withDuration: animated ? 0.25 : 0) {
+            for button in self.cornerButtons { button.alpha = hidden ? 0 : 1 }
+        }
+    }
+
+    /// Touches reach this controller only while a controller is connected, since the touch
+    /// controls take every touch otherwise.
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        guard !touchControls.showsControls else { return }
+        cornerButtonsRevealed = true
+        updateCornerButtons(animated: true)
+        cornerButtonsHideTask?.cancel()
+        cornerButtonsHideTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self, !Task.isCancelled else { return }
+            self.cornerButtonsRevealed = false
+            self.updateCornerButtons(animated: true)
+        }
     }
 
     private func toggleFastForward() {

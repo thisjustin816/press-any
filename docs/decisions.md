@@ -11,7 +11,9 @@ rather than in a footer naming the detector's version. The wordmark is heavy ita
 `docs/NAMING.md` describes, at 26 points in the library and 28 on the controller. A Quick Play
 session opens its ROM's Technical Info from the session screen. Full hashes show as four
 groups of 16 on two lines, and touch and hold copies them. Lists in the interface use the serial
-comma.
+comma. With a game controller connected, the corner Close and Menu buttons no longer stay up:
+like the touch controls' view, the game shows alone, and a touch on the screen brings the
+buttons back for four seconds. They stay up while VoiceOver runs.
 
 ## 2026-10-04: Original test ROMs are checked in
 
