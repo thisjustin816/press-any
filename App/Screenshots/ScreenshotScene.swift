@@ -30,9 +30,6 @@ enum ScreenshotScene: Equatable {
     /// touch controls hide, whatever controllers the simulator has.
     static let simulatesGamepad = flag("ScreenshotGamepad")
 
-    /// Set with `-ScreenshotMenu YES`: gameplay opens its game menu once it has started.
-    static let opensGameMenu = flag("ScreenshotMenu")
-
     /// Set with `-ScreenshotLayout <layout>`, such as `playtiles`: gameplay uses that controller
     /// layout instead of the one in Settings, which stays as it is.
     static let layoutOverride: TouchControlStyle? = {

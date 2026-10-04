@@ -27,14 +27,9 @@ final class GameplayViewController: UIViewController {
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
     private let soundMode: SoundMode
-    /// The close and menu buttons in the corners. They hide while the touch controls show, since
-    /// the logo opens the menu then.
-    private var cornerButtons: [UIButton] = []
-    private static let cornerButtonInset: CGFloat = 10
-    private static let cornerButtonSize: CGFloat = 42
-    /// Set by a touch while a controller is connected, and cleared a few seconds after the last one.
-    private var cornerButtonsRevealed = false
-    private var cornerButtonsHideTask: Task<Void, Never>?
+    /// Clear buttons over the layout's menu areas, the logo and, with Tap Game for Menu, the
+    /// picture. They open the game menu with or without a controller connected.
+    private var menuButtons: [GameMenuButton] = []
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
     // reach the controller, so the nonisolated deinit can remove the observers without a hop.
@@ -93,23 +88,13 @@ final class GameplayViewController: UIViewController {
         } catch {
             message = [launchMessage, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
         }
-        // The menu has no button, so the first game played with the touch controls says where it is.
-        if touchControls.showsControls, !UserDefaults.standard.bool(forKey: Self.menuHintShownKey) {
+        // The menu has no visible button, so the first game played says where it is.
+        if !UserDefaults.standard.bool(forKey: Self.menuHintShownKey) {
             UserDefaults.standard.set(true, forKey: Self.menuHintShownKey)
             message = [message, "Tap \(AppBrand.displayName) for the menu."].compactMap { $0 }.joined(separator: " ")
         }
         driver.start()
         if let message { showTransientMessage(message) }
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        guard ScreenshotScene.opensGameMenu else { return }
-        // After the boot logo, so the menu opens over the game's own picture.
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(3))
-            self?.presentMenuSheet()
-        }
     }
 
     private static let menuHintShownKey = "gameplay.menuHintShown"
@@ -146,33 +131,6 @@ final class GameplayViewController: UIViewController {
             touchControls.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
 
-        let close = UIButton(type: .system)
-        close.translatesAutoresizingMaskIntoConstraints = false
-        var configuration = UIButton.Configuration.filled()
-        configuration.image = UIImage(systemName: "xmark")
-        configuration.baseForegroundColor = .white
-        configuration.baseBackgroundColor = UIColor.black.withAlphaComponent(0.45)
-        configuration.cornerStyle = .capsule
-        close.configuration = configuration
-        close.accessibilityLabel = "Close Game"
-        close.addAction(UIAction { [weak self] _ in self?.closeTapped() }, for: .touchUpInside)
-        view.addSubview(close)
-
-        let menu = UIButton(type: .system)
-        menu.translatesAutoresizingMaskIntoConstraints = false
-        var menuConfiguration = configuration
-        menuConfiguration.image = UIImage(systemName: "ellipsis")
-        menu.configuration = menuConfiguration
-        menu.accessibilityLabel = "Game Menu"
-        menu.showsMenuAsPrimaryAction = true
-        menu.menu = UIMenu(children: [
-            UIDeferredMenuElement.uncached { [weak self] completion in
-                MainActor.assumeIsolated { completion(self?.menuElements() ?? []) }
-            },
-        ])
-        view.addSubview(menu)
-        cornerButtons = [close, menu]
-
         var resumeConfiguration = UIButton.Configuration.filled()
         resumeConfiguration.title = "Resume"
         resumeConfiguration.image = UIImage(systemName: "play.fill")
@@ -186,18 +144,17 @@ final class GameplayViewController: UIViewController {
         view.addSubview(pausedOverlay)
 
         NSLayoutConstraint.activate([
-            close.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 14),
-            close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: Self.cornerButtonInset),
-            close.widthAnchor.constraint(equalToConstant: Self.cornerButtonSize),
-            close.heightAnchor.constraint(equalToConstant: Self.cornerButtonSize),
-            menu.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -14),
-            menu.topAnchor.constraint(equalTo: close.topAnchor),
-            menu.widthAnchor.constraint(equalToConstant: Self.cornerButtonSize),
-            menu.heightAnchor.constraint(equalToConstant: Self.cornerButtonSize),
             pausedOverlay.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             pausedOverlay.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
         ])
     }
+
+    /// The game menu, built when it opens so it shows the current pause, speed and save states.
+    private lazy var gameMenu = UIMenu(children: [
+        UIDeferredMenuElement.uncached { [weak self] completion in
+            MainActor.assumeIsolated { completion(self?.menuElements() ?? []) }
+        },
+    ])
 
     private func menuElements() -> [UIMenuElement] {
         var elements: [UIMenuElement] = []
@@ -244,6 +201,10 @@ final class GameplayViewController: UIViewController {
                 elements.append(UIMenu(title: "Load State", image: loadImage, children: loadActions))
             }
         }
+        let close = UIAction(title: "Close Game", image: UIImage(systemName: "xmark"), attributes: .destructive) { [weak self] _ in
+            self?.closeTapped()
+        }
+        elements.append(UIMenu(options: .displayInline, children: [close]))
         return elements
     }
 
@@ -312,18 +273,13 @@ final class GameplayViewController: UIViewController {
         touchControls.theme = controllerTheme
         touchControls.pictureOpensMenu = tapGameForMenu
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
-        touchControls.onMenu = { [weak self] in self?.presentMenuSheet() }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
-        // The corner buttons can show with a controller, so the picture starts 6 points below them,
-        // with or without one, and stays put when a controller connects.
-        touchControls.topClearance = Double(Self.cornerButtonInset + Self.cornerButtonSize + 6)
         controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }
             self.touchControls.showsControls = !connected
             self.touchControls.hapticsEnabled = !connected
             self.rumble.setController(self.controllerMonitor.activeController)
-            self.updateCornerButtons()
         }
         controllerMonitor.onUnexpectedDisconnect = { [weak self] in
             guard let self else { return }
@@ -331,7 +287,6 @@ final class GameplayViewController: UIViewController {
             self.pauseGameplay()
             self.touchControls.showsControls = true
             self.touchControls.hapticsEnabled = true
-            self.updateCornerButtons()
             self.input.resetController()
             self.showTransientMessage("Controller disconnected. Game paused.")
         }
@@ -340,7 +295,6 @@ final class GameplayViewController: UIViewController {
         touchControls.showsControls = !connected
         touchControls.hapticsEnabled = !connected
         rumble.setController(controllerMonitor.activeController)
-        updateCornerButtons()
     }
 
     private func applyLayout(_ layout: TouchControlLayout) {
@@ -348,79 +302,33 @@ final class GameplayViewController: UIViewController {
         renderer?.screenRect = screen.width > 0
             ? CGRect(x: screen.x, y: screen.y, width: screen.width, height: screen.height)
             : nil
+        placeMenuButtons(over: layout.menuAreas)
     }
 
-    /// While the touch controls show, tapping the logo opens the menu, so the corner buttons hide.
-    /// With a controller connected the controls hide too, and the corner buttons show only after a
-    /// touch on the screen, or always while VoiceOver runs. The controller's body stays, so the game
-    /// keeps its frame.
-    private func updateCornerButtons(animated: Bool = false) {
-        let layoutHasMenu = !touchControls.layout.menuAreas.isEmpty
-        let hidden = touchControls.showsControls
-            ? layoutHasMenu
-            : !(cornerButtonsRevealed || UIAccessibility.isVoiceOverRunning)
-        for button in cornerButtons { button.isUserInteractionEnabled = !hidden }
-        UIView.animate(withDuration: animated ? 0.25 : 0) {
-            for button in self.cornerButtons { button.alpha = hidden ? 0 : 1 }
+    /// The menu buttons sit under the paused overlay and above the touch controls, which pass
+    /// touches through with a controller connected, so the logo opens the menu either way.
+    private func placeMenuButtons(over areas: [TouchRect]) {
+        while menuButtons.count < areas.count {
+            let button = GameMenuButton(menu: gameMenu)
+            view.insertSubview(button, aboveSubview: touchControls)
+            menuButtons.append(button)
         }
-    }
-
-    /// Touches reach this controller only while a controller is connected, since the touch
-    /// controls take every touch otherwise.
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesBegan(touches, with: event)
-        guard !touchControls.showsControls else { return }
-        cornerButtonsRevealed = true
-        updateCornerButtons(animated: true)
-        cornerButtonsHideTask?.cancel()
-        cornerButtonsHideTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(4))
-            guard let self, !Task.isCancelled else { return }
-            self.cornerButtonsRevealed = false
-            self.updateCornerButtons(animated: true)
+        for (index, button) in menuButtons.enumerated() {
+            guard index < areas.count else {
+                button.isHidden = true
+                continue
+            }
+            let area = areas[index]
+            button.isHidden = false
+            button.frame = CGRect(x: area.x, y: area.y, width: area.width, height: area.height)
+            // The first area is the logo; VoiceOver finds the menu there, once.
+            button.isAccessibilityElement = index == 0
         }
     }
 
     private func toggleFastForward() {
         fastForward.toggle()
         driver.setSpeed(fastForward ? .multiplier(2) : .normal)
-    }
-
-    private func loadLatestState() {
-        guard let states = runtime as? any SaveStateRuntime else {
-            showTransientMessage("Save states aren’t kept in Quick Play.")
-            return
-        }
-        guard let latest = (try? states.saveStates())?.first(where: { $0.kind != .auto }) else {
-            showTransientMessage("No saved state yet.")
-            return
-        }
-        loadState(latest)
-    }
-
-    /// The game menu as a sheet, opened by tapping the logo, or the game picture when that's turned
-    /// on. It includes Close, since the corner close button is hidden while the touch controls show.
-    private func presentMenuSheet() {
-        guard presentedViewController == nil else { return }
-        let sheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        if pausedOverlay.isHidden {
-            sheet.addAction(UIAlertAction(title: "Pause", style: .default) { [weak self] _ in
-                self?.userPaused = true
-                self?.pauseGameplay()
-            })
-        } else {
-            sheet.addAction(UIAlertAction(title: "Resume", style: .default) { [weak self] _ in self?.resumeTapped() })
-        }
-        sheet.addAction(UIAlertAction(title: fastForward ? "Stop Fast Forward" : "Fast Forward", style: .default) { [weak self] _ in
-            self?.toggleFastForward()
-        })
-        if runtime is any SaveStateRuntime {
-            sheet.addAction(UIAlertAction(title: "Save State", style: .default) { [weak self] _ in self?.saveState() })
-            sheet.addAction(UIAlertAction(title: "Load Latest State", style: .default) { [weak self] _ in self?.loadLatestState() })
-        }
-        sheet.addAction(UIAlertAction(title: "Close Game", style: .destructive) { [weak self] _ in self?.closeTapped() })
-        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        present(sheet, animated: true)
     }
 
     private func observeLifecycle() {
@@ -561,5 +469,23 @@ final class GameplayViewController: UIViewController {
         } completion: { _ in
             label.removeFromSuperview()
         }
+    }
+}
+
+/// A clear button over a menu area that opens the game menu where the finger landed.
+private final class GameMenuButton: UIButton {
+    init(menu: UIMenu) {
+        super.init(frame: .zero)
+        self.menu = menu
+        showsMenuAsPrimaryAction = true
+        accessibilityLabel = "Game Menu"
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func menuAttachmentPoint(for configuration: UIContextMenuConfiguration) -> CGPoint {
+        contextMenuInteraction?.location(in: self) ?? super.menuAttachmentPoint(for: configuration)
     }
 }

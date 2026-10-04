@@ -72,7 +72,6 @@ elif shots == "summary":
 else:
     sys.exit(f"SHOTS must be summary or every-rom, not {shots!r}")
 shot(f"play:{names[0]}", 8, "play-gamepad", "-ScreenshotGamepad YES")
-shot(f"play:{names[0]}", 8, "game-menu", "-ScreenshotMenu YES")
 # The Playtiles layout is drawn after a GBC skin, so it shows a GBC game when one was chosen.
 playtiles_rom = first(lambda r: r["system"] == "GBC") or names[0]
 shot(f"play:{playtiles_rom}", 8, "playtiles", "-ScreenshotLayout playtiles")

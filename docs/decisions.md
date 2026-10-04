@@ -3,6 +3,19 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: One game menu, opened from the logo with or without a controller
+
+**Decision.** Gameplay has one game menu, a pop-up menu that opens from the Press Any logo, and
+from the game picture when Tap Game for Menu is on, with or without a game controller connected.
+It holds Pause or Resume, Fast Forward with a checkmark while on, Save State, Load State with each
+saved state, and Close Game in red in its own section. The corner Close and Menu buttons and the
+action sheet are gone, and the Game Boy layout's picture sits under the status bar again.
+
+**Why.** The logo stopped responding while a controller was connected, which was the only reason
+for the corner buttons, and two menus for one job had drifted apart. Without the corner buttons,
+nothing covers the top of the picture, so neither layout gives up room for them; Playtiles would
+have had to shrink its picture.
+
 ## 2026-10-04: Screenshot review changes
 
 **Decision.** Library artwork is square. A Game's Made With section lists an engine such as GB
@@ -11,12 +24,7 @@ rather than in a footer naming the detector's version. The wordmark is heavy ita
 `docs/NAMING.md` describes, at 26 points in the library and 28 on the controller. A Quick Play
 session opens its ROM's Technical Info from the session screen. Full hashes show as four
 groups of 16 on two lines, and touch and hold copies them. Lists in the interface use the serial
-comma. With a game controller connected, the corner Close and Menu buttons no longer stay up:
-like the touch controls' view, the game shows alone, and a touch on the screen brings the
-buttons back for four seconds. They stay up while VoiceOver runs. The Game Boy layout starts lower to leave room for them, with or
-without a controller, so the picture never moves when one connects: 6 points below the buttons on
-phones with a Dynamic Island, and as far as the controls allow without shrinking on shorter ones
-such as the iPhone SE, where the buttons still overlap the top of the bezel. The bezel's rounder bottom-right corner is sized to pass
+comma. The bezel's rounder bottom-right corner is sized to pass
 the picture's corner at half the border's width; at 3.5 times the border it touched the picture.
 
 ## 2026-10-04: Original test ROMs are checked in
@@ -181,10 +189,10 @@ Neither layout has a Menu button or gestures by default. As SameBoy opens its me
 logo, tapping the wordmark at the bottom opens the game menu, which holds Pause, Fast Forward,
 the save states and Close. Its tap area is 44 points tall. Settings > Tap Game for Menu
 (`tapGameForMenu`, app-wide, off by default) also lets a tap on the game picture open it, as
-SameBoy does. The menu opens when the finger lifts within 10 points of where it landed, so a thumb
-sliding across doesn't open it. The first game played with the touch controls says "Tap Press Any
-for the menu" once. With VoiceOver, double-tapping the controls opens the menu. With a game
-controller connected the touch controls hide and the corner Close and Menu buttons come back.
+SameBoy does. The menu opens only for a touch that lands there, so a thumb sliding across doesn't
+open it. The first game played says "Tap Press Any for the menu" once. VoiceOver finds the logo as
+the Game Menu button. With a game controller connected the touch controls hide and the logo still
+opens the menu.
 
 ## 2026-10-03: Merging into a Game that already holds the same image
 

@@ -54,16 +54,24 @@ final class MenuScreenshots: XCTestCase {
         try expect(app.buttons["Duplicate"], then: "menu-save-profile")
     }
 
-    func test6ControllerCornerMenu() throws {
+    func test6GameplayMenu() throws {
+        try openGameplayMenu(then: "menu-gameplay")
+    }
+
+    func test7GameplayMenuWithController() throws {
+        try openGameplayMenu(arguments: ["-ScreenshotGamepad", "YES"], then: "menu-gameplay-gamepad")
+    }
+
+    /// Taps the logo, which opens the same menu with or without a controller connected.
+    private func openGameplayMenu(arguments: [String] = [], then name: String) throws {
         let settings = try settings()
-        let app = try launch("play:\(settings.playROM)", arguments: ["-ScreenshotGamepad", "YES"])
-        // Past the boot logo; then a touch brings up the corner buttons.
-        sleep(6)
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7)).tap()
+        let app = try launch("play:\(settings.playROM)", arguments: arguments)
         let menu = app.buttons["Game Menu"]
-        XCTAssertTrue(menu.waitForExistence(timeout: 5), "the corner Menu button shows after a touch")
+        XCTAssertTrue(menu.waitForExistence(timeout: 10), "the logo is a menu button")
+        // Past the boot logo, so the menu opens over the game's own picture.
+        sleep(4)
         menu.tap()
-        try expect(app.buttons["Pause"], then: "menu-controller")
+        try expect(app.buttons["Close Game"], then: name)
     }
 
     private func settings() throws -> Settings {

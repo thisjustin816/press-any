@@ -5,15 +5,14 @@ import UIKit
 @MainActor
 final class TouchControllerView: UIView {
     var onInputChanged: ((EmulatorInputState) -> Void)?
-    /// A tap on the logo, or on the game picture when `pictureOpensMenu` is on. It never reaches the
-    /// Game Boy's input.
-    var onMenu: (() -> Void)?
     /// Called with every new layout, so the game picture can follow the layout's screen frame.
     var onLayoutChanged: ((TouchControlLayout) -> Void)?
     var hapticsEnabled = true
     var style: TouchControlStyle = .gameBoy {
         didSet { setNeedsLayout() }
     }
+    /// Adds the game picture to the layout's menu areas, which the gameplay screen covers with its
+    /// menu buttons.
     var pictureOpensMenu = false {
         didSet { setNeedsLayout() }
     }
@@ -32,20 +31,12 @@ final class TouchControllerView: UIView {
             setNeedsDisplay()
         }
     }
-    /// How far below the safe area the picture's bezel starts, so buttons shown over the top of the
-    /// view clear it. It applies with and without a controller, so the picture never moves.
-    var topClearance = 0.0 {
-        didSet { setNeedsLayout() }
-    }
     private var palette: ControllerPalette { .resolve(theme, for: traitCollection) }
     var layout: TouchControlLayout { resolver.layout }
 
     // Replaced with a layout for the real bounds in layoutSubviews, before any touch arrives.
     private var resolver = TouchInputResolver(layout: .make(.gameBoy, width: 0, height: 0))
     private var touchIDs: [ObjectIdentifier: Int] = [:]
-    /// Where each touch on a menu area began. The menu opens when one lifts close by, so a thumb
-    /// sliding across doesn't open it.
-    private var menuTouches: [ObjectIdentifier: CGPoint] = [:]
     private var nextTouchID = 1
     private var lastInput = EmulatorInputState()
     private let feedback = UIImpactFeedbackGenerator(style: .light)
@@ -56,11 +47,6 @@ final class TouchControllerView: UIView {
         isOpaque = false
         backgroundColor = .clear
         accessibilityIdentifier = "gameplay.touchControls"
-        // The controls can't be played with VoiceOver, but its double-tap opens the menu, which the
-        // corner buttons don't offer while the touch controls show.
-        isAccessibilityElement = true
-        accessibilityLabel = "Game"
-        accessibilityHint = "Double-tap for the game menu."
         feedback.prepare()
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: TouchControllerView, _: UITraitCollection) in
             view.setNeedsDisplay()
@@ -81,11 +67,9 @@ final class TouchControllerView: UIView {
             safeBottom: Double(safeAreaInsets.bottom),
             displayScale: Double(traitCollection.displayScale),
             scaling: scaling,
-            pictureOpensMenu: pictureOpensMenu,
-            topClearance: topClearance
+            pictureOpensMenu: pictureOpensMenu
         ))
         touchIDs.removeAll()
-        menuTouches.removeAll()
         lastInput = .init()
         onInputChanged?(lastInput)
         onLayoutChanged?(resolver.layout)
@@ -126,12 +110,7 @@ final class TouchControllerView: UIView {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         for touch in touches {
-            let location = point(for: touch)
-            if resolver.layout.opensMenu(at: location) {
-                menuTouches[ObjectIdentifier(touch)] = touch.location(in: self)
-                continue
-            }
-            resolver.touchBegan(id: id(for: touch), point: location)
+            resolver.touchBegan(id: id(for: touch), point: point(for: touch))
         }
         publish()
     }
@@ -145,35 +124,22 @@ final class TouchControllerView: UIView {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        let tappedMenu = touches.contains { touch in
-            guard let start = menuTouches[ObjectIdentifier(touch)] else { return false }
-            let end = touch.location(in: self)
-            return hypot(end.x - start.x, end.y - start.y) <= 10 && resolver.layout.opensMenu(at: point(for: touch))
-        }
         end(touches)
-        if tappedMenu { onMenu?() }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         end(touches)
     }
 
-    override func accessibilityActivate() -> Bool {
-        onMenu?()
-        return true
-    }
-
     func cancelInput() {
         resolver.cancelAllTouches()
         touchIDs.removeAll()
-        menuTouches.removeAll()
         publish()
     }
 
     private func end(_ touches: Set<UITouch>) {
         for touch in touches {
             let key = ObjectIdentifier(touch)
-            menuTouches.removeValue(forKey: key)
             guard let id = touchIDs.removeValue(forKey: key) else { continue }
             resolver.touchEnded(id: id)
         }

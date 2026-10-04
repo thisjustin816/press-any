@@ -154,9 +154,7 @@ extension TouchControlLayout {
     /// screen clear of the status bar and `safeBottom` the logo clear of the home indicator.
     /// `displayScale` lets the Game Boy layout size the picture to whole device pixels under
     /// `scaling`. `pictureOpensMenu` makes a tap on the game picture open the menu as well as one
-    /// on the logo. `topClearance` moves the Game Boy layout's bezel down to that far below
-    /// `safeTop`, for buttons drawn over the top of the view, as far as spare room below the
-    /// picture allows: the controls never shrink for it. The playtiles artwork keeps its place.
+    /// on the logo.
     public static func make(
         _ style: TouchControlStyle,
         width: Double,
@@ -165,8 +163,7 @@ extension TouchControlLayout {
         safeBottom: Double = 0,
         displayScale: Double = 3,
         scaling: ScreenScaling = .integer,
-        pictureOpensMenu: Bool = false,
-        topClearance: Double = 0
+        pictureOpensMenu: Bool = false
     ) -> TouchControlLayout {
         switch style {
         case .gameBoy:
@@ -177,8 +174,7 @@ extension TouchControlLayout {
                 safeBottom: safeBottom,
                 displayScale: displayScale,
                 scaling: scaling,
-                pictureOpensMenu: pictureOpensMenu,
-                topClearance: topClearance
+                pictureOpensMenu: pictureOpensMenu
             )
         case .playtiles:
             playtiles(width: width, height: height, safeBottom: safeBottom, pictureOpensMenu: pictureOpensMenu)
@@ -188,11 +184,8 @@ extension TouchControlLayout {
     /// The logo's tap area, 44 points tall and grown upward, away from the home indicator, and the
     /// picture when it opens the menu too.
     static func menuAreas(logo: TouchRect, screen: TouchRect, pictureOpensMenu: Bool) -> [TouchRect] {
-        pictureOpensMenu ? [logoArea(logo), screen] : [logoArea(logo)]
-    }
-
-    static func logoArea(_ logo: TouchRect) -> TouchRect {
-        TouchRect(x: logo.x - 10, y: logo.y - 16, width: logo.width + 20, height: logo.height + 20)
+        let logoArea = TouchRect(x: logo.x - 10, y: logo.y - 16, width: logo.width + 20, height: logo.height + 20)
+        return pictureOpensMenu ? [logoArea, screen] : [logoArea]
     }
 
     /// The logo's box, centered just above the home indicator, or the bottom edge without one.
@@ -234,8 +227,7 @@ extension TouchControlLayout {
         safeBottom: Double,
         displayScale: Double,
         scaling: ScreenScaling,
-        pictureOpensMenu: Bool,
-        topClearance: Double
+        pictureOpensMenu: Bool
     ) -> TouchControlLayout {
         let mm = pointsPerMillimeter
         let panel = GameBoyPanel.self
@@ -248,24 +240,9 @@ extension TouchControlLayout {
         let pictureWidth = fitted.width
         let pictureHeight = fitted.height
         let bezelPadding = min(12, (width - pictureWidth) / 2)
-        let logo = logo(width: width, height: height, safeBottom: safeBottom)
-        let dpadSize = panel.dpadSize * mm
-        let lettering = 26.0
-        let hardwarePillsY = (panel.select.y - panel.dpad.y) * mm
-        let pillBand = 44.0
-
-        // The bezel sits under the status bar, lowered toward `topClearance` only into room the
-        // controls don't need at the hardware's spacing. Centered between the bezel and the logo,
-        // the controls keep half of any slack below them, so START and SELECT's touch band clears
-        // the logo's tap area only with twice its overhang past the lettering to spare.
-        let bezelTop = max(safeTop, 20) + edgeMargin
-        let bezelHeight = pictureHeight + 2 * bezelPadding
-        let overhang = max(0, pillBand / 2 + (logo.y - logoArea(logo).y) - lettering)
-        let spareRoom = logo.y - (bezelTop + bezelHeight) - (dpadSize / 2 + hardwarePillsY + lettering) - 2 * overhang
-        let lowering = min(max(0, safeTop + topClearance - bezelTop), max(0, spareRoom))
         let screen = TouchRect(
             x: (width - pictureWidth) / 2,
-            y: bezelTop + lowering + bezelPadding,
+            y: max(safeTop, 20) + edgeMargin + bezelPadding,
             width: pictureWidth,
             height: pictureHeight
         )
@@ -275,7 +252,9 @@ extension TouchControlLayout {
             width: pictureWidth + 2 * bezelPadding,
             height: pictureHeight + 2 * bezelPadding
         )
+        let logo = logo(width: width, height: height, safeBottom: safeBottom)
 
+        let dpadSize = panel.dpadSize * mm
         let buttonSize = panel.buttonSize * mm
         let pill = (length: panel.pillSize.length * mm, width: panel.pillSize.width * mm)
 
@@ -296,8 +275,9 @@ extension TouchControlLayout {
         // Down, relative to the D-pad's center: A and B a little higher and lower, START and
         // SELECT well below. The block runs from the D-pad's top to the lettering under the pills.
         let aY = (panel.a.y - panel.dpad.y) * mm
+        let lettering = 26.0
         let space = logo.y - (bezel.y + bezel.height)
-        var pillsY = hardwarePillsY
+        var pillsY = (panel.select.y - panel.dpad.y) * mm
         let blockHeight = dpadSize / 2 + pillsY + lettering
         if space < blockHeight { pillsY = max(100, pillsY - (blockHeight - space)) }
         let dpadY = bezel.y + bezel.height + max(0, (space - (dpadSize / 2 + pillsY + lettering)) / 2) + dpadSize / 2
@@ -320,7 +300,7 @@ extension TouchControlLayout {
         // Buttons take touches 10 points past their edge, the D-pad 12, and START and SELECT a
         // 44-point-tall band, each narrower where it would meet its neighbor.
         let buttonReach = min(buttonSize + 20, (aToB.x * aToB.x + aToB.y * aToB.y).squareRoot() - 2)
-        let pillReach = (length: min(pill.length + 24, pillSpacing - 4), width: pillBand)
+        let pillReach = (length: min(pill.length + 24, pillSpacing - 4), width: 44.0)
         let dpadRect = square(dpad, dpadSize)
 
         return TouchControlLayout(
