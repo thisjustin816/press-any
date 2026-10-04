@@ -199,7 +199,7 @@ struct LibraryView: View {
 
     private var gameGrid: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 16)], spacing: 20) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 16, alignment: .top)], spacing: 20) {
                 ForEach(model.visibleGames) { game in
                     NavigationLink {
                         GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
