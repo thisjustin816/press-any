@@ -106,6 +106,8 @@ capture() {
   local file
   file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$3")"
   echo "== $1" >>"$log"
+  # simctl doesn't truncate the output file, so a launch that prints nothing would repeat the last.
+  rm -f "$log.tmp"
   local attempt
   for attempt in 1 2 3; do
     xcrun simctl launch --terminate-running-process --stdout="$PWD/$log.tmp" --stderr="$PWD/$log.tmp" \
