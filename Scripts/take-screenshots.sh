@@ -160,6 +160,14 @@ capture() {
   done
   sleep "$2"
   xcrun simctl io "$udid" screenshot "$file" >/dev/null
+  # Before its first frame the app shows the blank launch screen, a PNG under 100 KB where every
+  # real screen is over 150 KB. A slow simulator gets two more chances.
+  for attempt in 1 2; do
+    (($(wc -c <"$file") < 120000)) || break
+    echo "$file looks blank; waiting and taking it again ($attempt)." >&2
+    sleep 6
+    xcrun simctl io "$udid" screenshot "$file" >/dev/null
+  done
   xcrun simctl terminate "$udid" "$bundle_id" || true
   cat "$log.tmp" >>"$log" 2>/dev/null || true
   echo "$file"
