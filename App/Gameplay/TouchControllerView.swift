@@ -23,19 +23,18 @@ final class TouchControllerView: UIView {
     var theme: ControllerTheme = .matchSystem {
         didSet { setNeedsDisplay() }
     }
-    /// With a game controller connected only the body is drawn, touches pass through, and the
-    /// picture moves down by `controllerTopClearance`.
+    /// With a game controller connected only the body is drawn, and touches pass through.
     var showsControls = true {
         didSet {
             guard showsControls != oldValue else { return }
             isUserInteractionEnabled = showsControls
             if !showsControls { cancelInput() }
-            setNeedsLayout()
+            setNeedsDisplay()
         }
     }
-    /// How far below the safe area the picture's bezel starts while the controls are hidden, so
-    /// buttons shown over the top of the view clear it.
-    var controllerTopClearance = 0.0 {
+    /// How far below the safe area the picture's bezel starts, so buttons shown over the top of the
+    /// view clear it. It applies with and without a controller, so the picture never moves.
+    var topClearance = 0.0 {
         didSet { setNeedsLayout() }
     }
     private var palette: ControllerPalette { .resolve(theme, for: traitCollection) }
@@ -83,7 +82,7 @@ final class TouchControllerView: UIView {
             displayScale: Double(traitCollection.displayScale),
             scaling: scaling,
             pictureOpensMenu: pictureOpensMenu,
-            topClearance: showsControls ? 0 : controllerTopClearance
+            topClearance: topClearance
         ))
         touchIDs.removeAll()
         menuTouches.removeAll()

@@ -13,8 +13,10 @@ session opens its ROM's Technical Info from the session screen. Full hashes show
 groups of 16 on two lines, and touch and hold copies them. Lists in the interface use the serial
 comma. With a game controller connected, the corner Close and Menu buttons no longer stay up:
 like the touch controls' view, the game shows alone, and a touch on the screen brings the
-buttons back for four seconds. They stay up while VoiceOver runs. The Game Boy layout's picture moves down below them while a controller is
-connected, so they never cover it.
+buttons back for four seconds. They stay up while VoiceOver runs. The Game Boy layout starts lower to leave room for them, with or
+without a controller, so the picture never moves when one connects: 6 points below the buttons on
+phones with a Dynamic Island, and as far as the controls allow without shrinking on shorter ones
+such as the iPhone SE, where the buttons still overlap the top of the bezel.
 
 ## 2026-10-04: Original test ROMs are checked in
 

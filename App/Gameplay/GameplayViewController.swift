@@ -304,8 +304,9 @@ final class GameplayViewController: UIViewController {
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
         touchControls.onMenu = { [weak self] in self?.presentMenuSheet() }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
-        // With a controller the corner buttons can show, so the picture starts 6 points below them.
-        touchControls.controllerTopClearance = Double(Self.cornerButtonInset + Self.cornerButtonSize + 6)
+        // The corner buttons can show with a controller, so the picture starts 6 points below them,
+        // with or without one, and stays put when a controller connects.
+        touchControls.topClearance = Double(Self.cornerButtonInset + Self.cornerButtonSize + 6)
         controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }
