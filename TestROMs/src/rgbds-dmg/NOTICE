@@ -1,0 +1,2 @@
+Pure RGBDS assembly, no SDK runtime linked. Original code (main.asm, make_font.py, font.inc, build.sh): MIT, see LICENSE.
+Toolchain: RGBDS 1.0.4 (BSD-style license, https://github.com/gbdev/rgbds); it is not linked into the ROM.

@@ -533,9 +533,9 @@ Spec: later 5: MVP.
 
 Done: Standalone detector seam + gbtoolsid port (engines, toolchains, music/SFX drivers,
 version/range, evidence, detector version, corpus revision), differential CI vs upstream; GB Studio
-detection, multi-layer (GB Studio over GBDK + audio driver); Categorical confidence; Runs on import
-and patching, stored per Build, shown in Import Review, promotion and Technical Info (which detects
-again); Feeds the save compatibility check.
+detection, including 4.3+ by version, multi-layer (GB Studio over GBDK + audio driver); Categorical
+confidence; Runs on import and patching, stored per Build, shown in Import Review, promotion and
+Technical Info (which detects again); Feeds the save compatibility check.
 
 ### Included Games
 

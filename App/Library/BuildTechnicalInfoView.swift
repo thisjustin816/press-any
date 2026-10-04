@@ -22,13 +22,7 @@ struct BuildTechnicalInfoView: View {
                     if let pin = build.corePin {
                         LabeledContent("Core", value: "\(pin.descriptor.identifier) \(pin.descriptor.version)")
                     }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("SHA-256")
-                        Text(build.imageSHA256)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
+                    SHA256Row(hash: build.imageSHA256)
                 }
 
                 if let reports {

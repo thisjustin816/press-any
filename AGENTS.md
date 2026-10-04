@@ -51,7 +51,7 @@ Do not permanently vendor third-party source snapshots into normal Git history.
 
 ## Testing rules
 
-- Do not commit copyrighted commercial ROMs or saves as fixtures.
+- Do not commit copyrighted commercial ROMs or saves as fixtures. The original test ROMs in `TestROMs/` are the exception: built from the source beside them, each listed in `TestROMs/manifest.json`, which `Scripts/verify-repo-hygiene.sh` checks. Add a ROM there with its source, license and manifest entry, not anywhere else.
 - Prefer generated/synthetic ROMs and generated IPS/BPS patches for automated tests.
 - New domain/application behavior needs a test before or with implementation.
 - Run `make test-core` after platform-independent changes.

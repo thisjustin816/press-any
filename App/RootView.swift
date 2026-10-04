@@ -13,7 +13,9 @@ final class AppBootstrap: ObservableObject {
 
     init() {
         do {
-            container = try .live()
+            let live = try AppContainer.live()
+            ScreenshotSeeder.seedIfRequested(live)
+            container = live
             errorDescription = nil
         } catch {
             container = nil
@@ -51,6 +53,7 @@ struct RootView: View {
                 }
             }
         }
+        .task { openScreenshotScene() }
         .fullScreenCover(item: $gameplay, onDismiss: showClosingQuickPlay) { presentation in
             GameplayViewControllerRepresentable(
                 runtime: presentation.runtime,
@@ -134,6 +137,40 @@ struct RootView: View {
             pendingResume = prepared
         } else {
             start(prepared, resume: true)
+        }
+    }
+
+    /// The gameplay and Quick Play scenes; `LibraryView` opens the rest.
+    private func openScreenshotScene() {
+        guard let container = bootstrap.container else { return }
+        switch ScreenshotScene.current {
+        case .play(let file):
+            do {
+                guard let context = try ScreenshotScene.launchContext(romFile: file, in: container) else {
+                    errorMessage = "\(file) wasn’t seeded."
+                    return
+                }
+                launch(context, container: container)
+            } catch {
+                errorMessage = "Could not start \(file): \(error)"
+            }
+        case .quickPlayInfo(let file):
+            do {
+                endedQuickPlay = try container.quickPlayWorkspace.start(romURL: ScreenshotScene.romURL(file))
+            } catch {
+                errorMessage = "Could not start Quick Play: \(error)"
+            }
+        case .quickPlay(let file):
+            quickPlay(
+                QuickPlayRequest(
+                    url: ScreenshotScene.romURL(file),
+                    copiedSaveProfileID: nil,
+                    chosenAt: DispatchTime.now().uptimeNanoseconds
+                ),
+                container: container
+            )
+        default:
+            break
         }
     }
 

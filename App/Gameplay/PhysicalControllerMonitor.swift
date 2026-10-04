@@ -9,6 +9,9 @@ final class PhysicalControllerMonitor {
     var onUnexpectedDisconnect: (() -> Void)?
 
     private(set) var activeController: GCController?
+
+    /// Whether a controller drives the game, so the touch controls hide.
+    var isConnected: Bool { activeController != nil || ScreenshotScene.simulatesGamepad }
     // Written only during init and read only in deinit, which runs once nothing else can reach
     // the monitor, so the nonisolated deinit can remove the observers without a hop.
     nonisolated(unsafe) private var observers: [NSObjectProtocol] = []
@@ -53,6 +56,11 @@ final class PhysicalControllerMonitor {
     }
 
     private func activate(_ controller: GCController) {
+        // Screenshot runs decide for themselves whether a controller is connected.
+        if ScreenshotScene.current != nil {
+            ScreenshotScene.log("Ignoring controller: \(controller.vendorName ?? "unnamed")")
+            return
+        }
         activeController = controller
         installHandlers(on: controller)
         onConnectionChanged?(true)

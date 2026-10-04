@@ -175,7 +175,7 @@ private final class Fixture: @unchecked Sendable {
                 ToolchainDetectionReport(
                     detector: "gbtoolsid",
                     detectorVersion: "1",
-                    corpusRevision: "v1.5.5",
+                    corpusRevision: "v1.5.5-14-g5ff49ad",
                     components: tools.map { DetectedToolchainComponent(kind: .toolchain, name: $0, version: "4.3.0", evidence: []) }
                 ),
                 buildID: build.id,

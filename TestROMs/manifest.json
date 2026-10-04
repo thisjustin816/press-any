@@ -1,0 +1,314 @@
+{
+  "name": "test-roms-v1",
+  "roms": [
+    {
+      "filename": "gbdk450-dmg.gb",
+      "name": "GBDK 4.5.0 DMG",
+      "system": "GB",
+      "sdk": "GBDK-2020",
+      "sdk_version": "4.5.0",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x00",
+      "sha256": "5871b7528345da8ea23c51849e1143ad1e785e4bf30b0bb5511ad7a43ba5209c",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": true,
+      "tags": [
+        "gbdk",
+        "dmg",
+        "hero"
+      ]
+    },
+    {
+      "filename": "gbdk406-dmg.gb",
+      "name": "GBDK 4.0.6 DMG",
+      "system": "GB",
+      "sdk": "GBDK-2020",
+      "sdk_version": "4.0.6",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x00",
+      "sha256": "a3e5a44789ca8bbe33400cd91fefbb3cef943307ac74b080306348f72451a7d7",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": false,
+      "tags": [
+        "gbdk",
+        "dmg",
+        "older-sdk"
+      ]
+    },
+    {
+      "filename": "rgbds-dmg.gb",
+      "name": "RGBDS DMG",
+      "system": "GB",
+      "sdk": "RGBDS",
+      "sdk_version": "1.0.4",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x00",
+      "sha256": "8b7fc2798f75e7a8e04f77f7c927d12b3ba87dd9a589e479369b1ab7d32b1b2f",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": true,
+      "tags": [
+        "rgbds",
+        "dmg",
+        "assembly",
+        "hero"
+      ]
+    },
+    {
+      "filename": "gbstudio-dmg.gb",
+      "name": "GB Studio DMG",
+      "system": "GB",
+      "sdk": "GB Studio",
+      "sdk_version": "4.3.2",
+      "mapper": "MBC5+RUMBLE+RAM+BATTERY",
+      "cartridge_type": "0x1E",
+      "cgb_flag": "0x00",
+      "sha256": "25eba8d6ff9debec182fe9155d2ea0b753aff91383bbd6063d303bb9b244009c",
+      "size": 131072,
+      "header_checksum_ok": true,
+      "hero": true,
+      "tags": [
+        "gbstudio",
+        "dmg",
+        "hero"
+      ]
+    },
+    {
+      "filename": "hugedriver-dmg.gb",
+      "name": "hUGEDriver music",
+      "system": "GB",
+      "sdk": "hUGEDriver (RGBDS)",
+      "sdk_version": "a3cbd0c (RGBDS 1.0.4)",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x00",
+      "sha256": "d9a48850e467ea7494582dfac8c39103b71583d173ac566b36630e1bc761b12e",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": false,
+      "tags": [
+        "music",
+        "hugedriver",
+        "rgbds",
+        "dmg"
+      ]
+    },
+    {
+      "filename": "zgb-dmg.gb",
+      "name": "ZGB DMG",
+      "system": "GB",
+      "sdk": "ZGB",
+      "sdk_version": "v2023.0 (GBDK-2020 4.1.1)",
+      "mapper": "MBC1",
+      "cartridge_type": "0x01",
+      "cgb_flag": "0x00",
+      "sha256": "9276f1a67b54c72f41ec2b593b37d1700a20232a10c4950e0e52cad999769043",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": false,
+      "tags": [
+        "zgb",
+        "gbdk",
+        "dmg"
+      ]
+    },
+    {
+      "filename": "gbdk450-gbc.gbc",
+      "name": "GBDK 4.5.0 GBC-only",
+      "system": "GBC",
+      "sdk": "GBDK-2020",
+      "sdk_version": "4.5.0",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0xC0",
+      "sha256": "e0a15903859f98386f49d3cbfc66ed12038ea68db2bce1ce4708a74cca187974",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": false,
+      "tags": [
+        "gbdk",
+        "gbc",
+        "gbc-only"
+      ]
+    },
+    {
+      "filename": "gbdk450-dual.gbc",
+      "name": "GBDK 4.5.0 dual-mode",
+      "system": "GBC",
+      "sdk": "GBDK-2020",
+      "sdk_version": "4.5.0",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x80",
+      "sha256": "9a80da8178f931540de0630163271a0dbccf110a5d5595bd7398a96942dbad8c",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": true,
+      "tags": [
+        "gbdk",
+        "gbc",
+        "dual-mode",
+        "hero"
+      ]
+    },
+    {
+      "filename": "rgbds-gbc.gbc",
+      "name": "RGBDS GBC-only",
+      "system": "GBC",
+      "sdk": "RGBDS",
+      "sdk_version": "1.0.4",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0xC0",
+      "sha256": "ac27e49d25d7ca85e4ef85977fc9948b0f1dfbbafbe134faa664bded3f107b5e",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": false,
+      "tags": [
+        "rgbds",
+        "gbc",
+        "gbc-only",
+        "assembly"
+      ]
+    },
+    {
+      "filename": "gbstudio-gbc.gbc",
+      "name": "GB Studio color",
+      "system": "GBC",
+      "sdk": "GB Studio",
+      "sdk_version": "4.3.2",
+      "mapper": "MBC5+RUMBLE+RAM+BATTERY",
+      "cartridge_type": "0x1E",
+      "cgb_flag": "0xC0",
+      "sha256": "4a861de479af7fd2e7a155008251658ad9c33ea1164c4d4d6e7a70dca526d7fe",
+      "size": 131072,
+      "header_checksum_ok": true,
+      "hero": true,
+      "tags": [
+        "gbstudio",
+        "gbc",
+        "hero"
+      ]
+    },
+    {
+      "filename": "mbc5-battery.gb",
+      "name": "MBC5 battery save counter",
+      "system": "GB",
+      "sdk": "GBDK-2020",
+      "sdk_version": "4.5.0",
+      "mapper": "MBC5+RAM+BATTERY",
+      "cartridge_type": "0x1B",
+      "cgb_flag": "0x00",
+      "sha256": "a67eabdf2557e997cc106221adc90ca315090232394051d060d5a9bc825815b1",
+      "size": 65536,
+      "header_checksum_ok": true,
+      "hero": true,
+      "tags": [
+        "gbdk",
+        "dmg",
+        "battery",
+        "mbc5",
+        "hero"
+      ]
+    },
+    {
+      "filename": "gbdk450-rev-v1.0.gb",
+      "name": "Revision pair v1.0",
+      "system": "GB",
+      "sdk": "GBDK-2020",
+      "sdk_version": "4.5.0",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x00",
+      "sha256": "5d0095665224f48d718337e0f8740bcb6d8e3f759afb56f5cf402ee1ded5224e",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": true,
+      "tags": [
+        "gbdk",
+        "dmg",
+        "patch-pair",
+        "revision-1.0",
+        "hero"
+      ]
+    },
+    {
+      "filename": "gbdk450-rev-v1.1.gb",
+      "name": "Revision pair v1.1",
+      "system": "GB",
+      "sdk": "GBDK-2020",
+      "sdk_version": "4.5.0",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x00",
+      "sha256": "0fc125644a5a8235ff62ee301d41e43c76579f83c08746636c0540a213e5863c",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": false,
+      "tags": [
+        "gbdk",
+        "dmg",
+        "patch-pair",
+        "revision-1.1"
+      ]
+    },
+    {
+      "filename": "gbdk450-badsum.gb",
+      "name": "Bad header checksum",
+      "system": "GB",
+      "sdk": "GBDK-2020",
+      "sdk_version": "4.5.0",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x00",
+      "sha256": "1e7a1ede611950cb0968b069c8737e79c87fbdcf70b502775eb02154e365ae6c",
+      "size": 32768,
+      "header_checksum_ok": false,
+      "hero": false,
+      "tags": [
+        "gbdk",
+        "dmg",
+        "bad-checksum"
+      ]
+    }
+  ],
+  "patches": [
+    {
+      "filename": "gbdk450-rev-v1.0-to-v1.1.ips",
+      "format": "IPS",
+      "source": "gbdk450-rev-v1.0.gb",
+      "target": "gbdk450-rev-v1.1.gb",
+      "source_sha256": "5d0095665224f48d718337e0f8740bcb6d8e3f759afb56f5cf402ee1ded5224e",
+      "target_sha256": "0fc125644a5a8235ff62ee301d41e43c76579f83c08746636c0540a213e5863c",
+      "sha256": "2ac81fd7c95cd8007b7c46b1e0d4c075f1e4a6e486a50da92ae5fd1a24577fa4",
+      "size": 3369,
+      "hero": true,
+      "tags": [
+        "patch-pair",
+        "ips",
+        "hero"
+      ]
+    },
+    {
+      "filename": "gbdk450-rev-v1.0-to-v1.1.bps",
+      "format": "BPS",
+      "source": "gbdk450-rev-v1.0.gb",
+      "target": "gbdk450-rev-v1.1.gb",
+      "source_sha256": "5d0095665224f48d718337e0f8740bcb6d8e3f759afb56f5cf402ee1ded5224e",
+      "target_sha256": "0fc125644a5a8235ff62ee301d41e43c76579f83c08746636c0540a213e5863c",
+      "sha256": "2176cedcc7bd522fd47b1b9b816d9f6802770ef70b093350d472b3d20380a8fd",
+      "size": 3333,
+      "hero": true,
+      "tags": [
+        "patch-pair",
+        "bps",
+        "hero"
+      ]
+    }
+  ]
+}

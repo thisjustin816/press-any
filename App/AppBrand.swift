@@ -28,10 +28,15 @@ enum AppBrand {
         /// Letter spacing as a fraction of the point size.
         static let tracking: CGFloat = 0.028
 
+        /// Weight and slant are set together: adding italic with `withSymbolicTraits` to a black
+        /// system font replaces its traits and drops the weight back to regular.
         static func font(size: CGFloat) -> UIFont {
-            let font = UIFont.systemFont(ofSize: size, weight: .black)
-            guard let italic = font.fontDescriptor.withSymbolicTraits(.traitItalic) else { return font }
-            return UIFont(descriptor: italic, size: size)
+            let traits: [UIFontDescriptor.TraitKey: Any] = [
+                .weight: UIFont.Weight.black.rawValue,
+                .symbolic: UIFontDescriptor.SymbolicTraits.traitItalic.rawValue,
+            ]
+            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor.addingAttributes([.traits: traits])
+            return UIFont(descriptor: descriptor, size: size)
         }
 
         /// For drawing in UIKit, in fixed colors such as a controller theme's.

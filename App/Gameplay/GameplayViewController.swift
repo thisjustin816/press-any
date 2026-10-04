@@ -30,6 +30,11 @@ final class GameplayViewController: UIViewController {
     /// The close and menu buttons in the corners. They hide while the touch controls show, since
     /// the logo opens the menu then.
     private var cornerButtons: [UIButton] = []
+    private static let cornerButtonInset: CGFloat = 10
+    private static let cornerButtonSize: CGFloat = 42
+    /// Set by a touch while a controller is connected, and cleared a few seconds after the last one.
+    private var cornerButtonsRevealed = false
+    private var cornerButtonsHideTask: Task<Void, Never>?
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
     // reach the controller, so the nonisolated deinit can remove the observers without a hop.
@@ -172,13 +177,13 @@ final class GameplayViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             close.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 14),
-            close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
-            close.widthAnchor.constraint(equalToConstant: 42),
-            close.heightAnchor.constraint(equalToConstant: 42),
+            close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: Self.cornerButtonInset),
+            close.widthAnchor.constraint(equalToConstant: Self.cornerButtonSize),
+            close.heightAnchor.constraint(equalToConstant: Self.cornerButtonSize),
             menu.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -14),
             menu.topAnchor.constraint(equalTo: close.topAnchor),
-            menu.widthAnchor.constraint(equalToConstant: 42),
-            menu.heightAnchor.constraint(equalToConstant: 42),
+            menu.widthAnchor.constraint(equalToConstant: Self.cornerButtonSize),
+            menu.heightAnchor.constraint(equalToConstant: Self.cornerButtonSize),
             pausedOverlay.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             pausedOverlay.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
         ])
@@ -299,6 +304,9 @@ final class GameplayViewController: UIViewController {
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
         touchControls.onMenu = { [weak self] in self?.presentMenuSheet() }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
+        // The corner buttons can show with a controller, so the picture starts 6 points below them,
+        // with or without one, and stays put when a controller connects.
+        touchControls.topClearance = Double(Self.cornerButtonInset + Self.cornerButtonSize + 6)
         controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }
@@ -318,7 +326,7 @@ final class GameplayViewController: UIViewController {
             self.showTransientMessage("Controller disconnected. Game paused.")
         }
 
-        let connected = controllerMonitor.activeController != nil
+        let connected = controllerMonitor.isConnected
         touchControls.showsControls = !connected
         touchControls.hapticsEnabled = !connected
         rumble.setController(controllerMonitor.activeController)
@@ -333,11 +341,34 @@ final class GameplayViewController: UIViewController {
     }
 
     /// While the touch controls show, tapping the logo opens the menu, so the corner buttons hide.
-    /// With a controller connected the controls hide and the corner buttons come back. The
-    /// controller's body stays, so the game keeps its frame.
-    private func updateCornerButtons() {
+    /// With a controller connected the controls hide too, and the corner buttons show only after a
+    /// touch on the screen, or always while VoiceOver runs. The controller's body stays, so the game
+    /// keeps its frame.
+    private func updateCornerButtons(animated: Bool = false) {
         let layoutHasMenu = !touchControls.layout.menuAreas.isEmpty
-        for button in cornerButtons { button.isHidden = layoutHasMenu && touchControls.showsControls }
+        let hidden = touchControls.showsControls
+            ? layoutHasMenu
+            : !(cornerButtonsRevealed || UIAccessibility.isVoiceOverRunning)
+        for button in cornerButtons { button.isUserInteractionEnabled = !hidden }
+        UIView.animate(withDuration: animated ? 0.25 : 0) {
+            for button in self.cornerButtons { button.alpha = hidden ? 0 : 1 }
+        }
+    }
+
+    /// Touches reach this controller only while a controller is connected, since the touch
+    /// controls take every touch otherwise.
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        guard !touchControls.showsControls else { return }
+        cornerButtonsRevealed = true
+        updateCornerButtons(animated: true)
+        cornerButtonsHideTask?.cancel()
+        cornerButtonsHideTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self, !Task.isCancelled else { return }
+            self.cornerButtonsRevealed = false
+            self.updateCornerButtons(animated: true)
+        }
     }
 
     private func toggleFastForward() {

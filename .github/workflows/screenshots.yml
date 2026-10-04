@@ -1,0 +1,62 @@
+name: Screenshots
+
+# Manual only: captures the app on the iPhone 17 Pro simulator, seeded from TestROMs/, and uploads
+# the PNGs as an artifact. Nothing checks them; they are for looking at.
+
+on:
+  workflow_dispatch:
+    inputs:
+      roms:
+        description: "hero, all, or comma-separated manifest tags and filenames"
+        default: hero
+        required: true
+      shots:
+        description: One of each screen, or each ROM's game, Technical Info and gameplay too
+        type: choice
+        options: [summary, every-rom]
+        default: summary
+      appearance:
+        description: Simulator appearance
+        type: choice
+        options: [light, dark]
+        default: light
+      import_rom:
+        description: The ROM the import review opens (never seeded)
+        default: gbdk450-badsum.gb
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    name: Simulator screenshots
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install XcodeGen and RGBDS
+        run: brew install xcodegen rgbds
+      - name: Bootstrap (boot ROMs and Xcode project)
+        run: make bootstrap
+      - name: Take screenshots
+        env:
+          ROMS: ${{ inputs.roms }}
+          SHOTS: ${{ inputs.shots }}
+          APPEARANCE: ${{ inputs.appearance }}
+          IMPORT_ROM: ${{ inputs.import_rom }}
+        run: |
+          set -o pipefail
+          ./Scripts/take-screenshots.sh "$ROMS" screenshots 2>&1 | tee screenshots.log
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: screenshots-${{ inputs.appearance }}
+          path: |
+            screenshots/
+            screenshots.log
+          if-no-files-found: error

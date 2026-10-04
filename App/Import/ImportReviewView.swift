@@ -15,7 +15,7 @@ struct ImportReviewView: View {
                     LabeledContent("File", value: model.analysis.originalFilename)
                     LabeledContent("Header title", value: model.analysis.header.title.isEmpty ? "Unknown" : model.analysis.header.title)
                     LabeledContent("System", value: model.analysis.header.system.displayName)
-                    LabeledContent("SHA-256", value: model.shortHash + "...")
+                    LabeledContent("SHA-256", value: model.shortHash + "…")
                     if !model.analysis.header.headerChecksumValid {
                         Label("Header checksum is not valid", systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.orange)

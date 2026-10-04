@@ -3,6 +3,35 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Screenshot review changes
+
+**Decision.** Library artwork is square. A Game's Made With section lists an engine such as GB
+Studio or ZGB above the toolchain it runs on, and explains itself behind a question-mark button
+rather than in a footer naming the detector's version. The wordmark is heavy italic, as
+`docs/NAMING.md` describes, at 26 points in the library and 28 on the controller. A Quick Play
+session opens its ROM's Technical Info from the session screen. Full hashes show as four
+groups of 16 on two lines, and touch and hold copies them. Lists in the interface use the serial
+comma. With a game controller connected, the corner Close and Menu buttons no longer stay up:
+like the touch controls' view, the game shows alone, and a touch on the screen brings the
+buttons back for four seconds. They stay up while VoiceOver runs. The Game Boy layout starts lower to leave room for them, with or
+without a controller, so the picture never moves when one connects: 6 points below the buttons on
+phones with a Dynamic Island, and as far as the controls allow without shrinking on shorter ones
+such as the iPhone SE, where the buttons still overlap the top of the bezel. The bezel's rounder bottom-right corner is sized to pass
+the picture's corner at half the border's width; at 3.5 times the border it touched the picture.
+
+## 2026-10-04: Original test ROMs are checked in
+
+**Decision.** `TestROMs/` holds 14 small ROMs and two patches built from source in the same
+directory: GBDK-2020, RGBDS, GB Studio, ZGB and hUGEDriver, in GB and GBC, plus a battery-save ROM,
+a v1.0/v1.1 revision pair with IPS and BPS patches, and one with a wrong header checksum. The
+AGENTS.md rule is about commercial ROMs, and these are original and redistributable under their
+own licenses (`TestROMs/README.md`). `Scripts/verify-repo-hygiene.sh` still rejects every other game
+image and saves, and requires each tracked ROM to match `TestROMs/manifest.json`. hUGEDriver's own
+source is fetched at a pinned commit by its build rather than kept here, per the dependency policy.
+The GB Studio ROMs are not byte-reproducible, so a rebuild changes their hashes and the manifest.
+Screenshot runs (manual only) pick ROMs by the manifest's `hero` flag and `tags`. Package tests
+check toolchain detection, header parsing and both patches against the manifest.
+
 ## 2026-10-04: Profile badges are one emoji, and profiles can be deleted
 
 **Decision.** A Save Profile's badge is one emoji, set from its menu and shown before its name

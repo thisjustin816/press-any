@@ -5,9 +5,9 @@ Usage: gbtoolsid-differential-corpus.py <built gbtoolsid checkout> <output direc
 
 The corpus holds gbtoolsid's own test ROMs plus synthetic ROMs that plant its signatures:
 each fixed-address signature alone, each searched signature alone, GBForth's chained
-startup, and seeded random combinations including truncated and corrupted plants. For each
-ROM it writes <rom>.expected.txt (default mode) and <rom>.expected-strict.txt (-s), holding
-gbtoolsid's text output without the "File:" line.
+startup, GBBasic's version bytes, and seeded random combinations including truncated and
+corrupted plants. For each ROM it writes <rom>.expected.txt (default mode) and
+<rom>.expected-strict.txt (-s), holding gbtoolsid's text output without the "File:" line.
 """
 
 import importlib.util
@@ -45,6 +45,13 @@ def load_definitions(src):
                 masked[args[0]] = (values, mask + [0] * (len(values) - len(mask)))
             elif macro == "DEF_PATTERN_ADDR":
                 addresses[args[0]] = data.int_expression(args[1])
+    # A few check functions declare their signature inline instead of with the DEF_* macros.
+    for source in sorted(src.glob("sig_*.c")):
+        text = data.strip_comments(source.read_text())
+        for name, literal in re.findall(r'const\s+uint8_t\s+(\w+)\s*\[\s*\]\s*=\s*("(?:[^"\\]|\\.)*")\s*;', text):
+            patterns[name] = list(data.c_string(literal).encode("latin-1")) + [0]
+        for name, value in re.findall(r"const\s+uint32_t\s+(\w+)\s*=\s*([^;]+);", text):
+            addresses[name] = data.int_expression(value)
     return patterns, masked, addresses
 
 
@@ -124,6 +131,18 @@ def main():
         if i < 6:
             plant(image, second + addresses["sig_gbforth_startup_2_next_at"], patterns["sig_gbforth_startup_3"])
         roms[f"chain_gbforth_{i}.gb"] = bytes(image)
+
+    # GBBasic: the version is read from the two bytes before the magic key, which sits past
+    # the end of a ROM_SIZE image. The last two images end just after the key.
+    for i in range(8):
+        image = base_image(rng, "random" if i % 2 else "zero") * 8
+        major, minor = (0, 0) if i == 0 else (0xFF, 0xFF) if i == 1 else (rng.getrandbits(8), rng.getrandbits(8))
+        plant(image, addresses["sig_gbbasic_magic_version_major_at"], [major])
+        plant(image, addresses["sig_gbbasic_magic_version_minor_at"], [minor])
+        plant(image, addresses["sig_gbbasic_magic_key_at"], patterns["sig_gbbasic_magic_key"])
+        if i >= 6:
+            image = image[: addresses["sig_gbbasic_magic_key_at"] + len(patterns["sig_gbbasic_magic_key"])]
+        roms[f"version_gbbasic_{i}.gb"] = bytes(image)
 
     for i in range(RANDOM_ROMS):
         image = base_image(rng, rng.choice(["zero", "ff", "random"]))

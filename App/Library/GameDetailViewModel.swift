@@ -284,7 +284,7 @@ final class GameDetailViewModel: ObservableObject {
             reload()
             infoMessage = "Merged into \(target.primaryTitle)."
         } catch BuildOperationError.duplicateImagesInTarget(let buildIDs) {
-            let names = buildIDs.compactMap { buildName(id: $0) }.joined(separator: ", ")
+            let names = buildIDs.compactMap { buildName(id: $0) }.formatted(.list(type: .and))
             errorMessage = "\(target.primaryTitle) already has the same ROM as \(names). Move can’t combine them without losing that Build’s save states. Use Copy, or remove one first."
         } catch {
             errorMessage = error.localizedDescription

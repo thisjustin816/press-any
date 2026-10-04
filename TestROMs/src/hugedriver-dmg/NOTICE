@@ -1,0 +1,12 @@
+hugedriver-dmg third-party notices
+==================================
+
+Original code (main.asm, build.sh, make_font.py, font.inc): MIT, see LICENSE.
+
+hUGEDriver (hUGEDriver.asm, include/hUGE.inc, include/hUGE_note_table.inc, include/hardware.inc,
+sample_song.asm) is fetched unchanged by build.sh (and checked against pinned hashes) from https://github.com/untoxa/hUGEDriver, commit
+a3cbd0cea48e6784d7f625066d0300f7cb075926 (a fork of SuperDisk/hUGEDriver). Its README states:
+"hUGETracker and hUGEDriver are dedicated to the public domain." The ROM plays the repository's own
+sample song (rgbds_example/sample_song.asm). include/hardware.inc is the community hardware
+definitions file that ships inside that repository and falls under the same dedication.
+No RGBDS runtime is linked into the ROM.

@@ -64,7 +64,7 @@ struct LibraryCheckSection: View {
             lines.append("\(count(missingSources, "ROM or patch file is", "ROM or patch files are")) missing. Importing the same file again restores it.")
         }
         if missingUserData > 0 {
-            lines.append("\(count(missingUserData, "save, state or artwork file is", "save, state or artwork files are")) missing.")
+            lines.append("\(count(missingUserData, "save, state, or artwork file is", "save, state, or artwork files are")) missing.")
         }
         if missingGenerated > 0 {
             lines.append("\(count(missingGenerated, "patched Build’s image", "patched Builds’ images")) will be rebuilt when played.")

@@ -32,6 +32,11 @@ final class TouchControllerView: UIView {
             setNeedsDisplay()
         }
     }
+    /// How far below the safe area the picture's bezel starts, so buttons shown over the top of the
+    /// view clear it. It applies with and without a controller, so the picture never moves.
+    var topClearance = 0.0 {
+        didSet { setNeedsLayout() }
+    }
     private var palette: ControllerPalette { .resolve(theme, for: traitCollection) }
     var layout: TouchControlLayout { resolver.layout }
 
@@ -76,7 +81,8 @@ final class TouchControllerView: UIView {
             safeBottom: Double(safeAreaInsets.bottom),
             displayScale: Double(traitCollection.displayScale),
             scaling: scaling,
-            pictureOpensMenu: pictureOpensMenu
+            pictureOpensMenu: pictureOpensMenu,
+            topClearance: topClearance
         ))
         touchIDs.removeAll()
         menuTouches.removeAll()
@@ -217,19 +223,23 @@ final class TouchControllerView: UIView {
         context.restoreGState()
     }
 
-    /// The app's wordmark, printed at the bottom of the body.
+    /// The app's wordmark, printed at the bottom of the body. It stands a few points taller than
+    /// its box, still inside the box's tap area.
     private func drawLogo(in rect: CGRect, palette: ControllerPalette) {
-        let string = AppBrand.Wordmark.attributedString(size: 18, ink: palette.logo, accent: palette.logoAccent)
+        let string = AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent)
         let textSize = string.size()
         string.draw(at: CGPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2))
     }
 
-    /// The glass around the game picture, rounded more at the bottom right, as on a Game Boy.
+    /// The glass around the game picture, rounded more at the bottom right, as on a Game Boy. That
+    /// corner's arc passes the picture's corner at half the border's width: with radius r and border
+    /// b the gap is r - √2 (r - b), so r = (√2 - 1/2) b / (√2 - 1), about 2.2 b.
     private func drawBezel(_ bezelRect: TouchRect, around screen: TouchRect, palette: ControllerPalette, in context: CGContext) {
         let picture = cgRect(screen)
         let bezel = cgRect(bezelRect)
         let border = max(picture.minY - bezel.minY, 1)
-        let path = roundedRect(bezel, radius: border * 0.8, bottomRightRadius: border * 3.5)
+        let bottomRightRadius = (2.0.squareRoot() - 0.5) * border / (2.0.squareRoot() - 1)
+        let path = roundedRect(bezel, radius: border * 0.8, bottomRightRadius: bottomRightRadius)
         path.append(UIBezierPath(rect: picture))
         path.usesEvenOddFillRule = true
         context.saveGState()
