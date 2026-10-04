@@ -35,5 +35,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Play Build A of a homebrew Game, then launch Build B, made with different tools, with the same save; the warning appears, and Play with a Copy leaves the original save unchanged.
 - [ ] Replace Save from File on a profile with a save asks first and keeps "<name> before import"; on a blank profile it doesn't ask.
 - [ ] Load State shows each state's thumbnail.
+- [ ] A profile's Badge takes one emoji, shows it beside the name in the profile list and the Play with Save and Default Save menus, and refuses text.
+- [ ] Deleting a profile asks first, naming it; a Build that played it plays the Game's default afterwards.
 - [ ] The library list labels a Game Boy Color game "Game Boy Color".
 - [ ] Settings > Check Library Files reports an intact library.

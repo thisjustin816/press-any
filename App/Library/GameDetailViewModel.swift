@@ -32,6 +32,8 @@ final class GameDetailViewModel: ObservableObject {
     private let buildOperations: BuildOperations
     private let createBlank: CreateBlankSaveProfile
     private let duplicateProfile: DuplicateSaveProfile
+    private let badges: SetSaveProfileBadge
+    private let profileDeleter: DeleteSaveProfile
     private let saveImporter: ImportBatterySave
     private let patchCreator: CreatePatchedBuild
     private let evictImage: EvictGeneratedImage
@@ -47,6 +49,8 @@ final class GameDetailViewModel: ObservableObject {
         buildOperations: BuildOperations,
         createBlank: CreateBlankSaveProfile,
         duplicateProfile: DuplicateSaveProfile,
+        badges: SetSaveProfileBadge,
+        deleteProfile: DeleteSaveProfile,
         importSave: ImportBatterySave,
         patchCreator: CreatePatchedBuild,
         evictImage: EvictGeneratedImage,
@@ -61,6 +65,8 @@ final class GameDetailViewModel: ObservableObject {
         self.buildOperations = buildOperations
         self.createBlank = createBlank
         self.duplicateProfile = duplicateProfile
+        self.badges = badges
+        self.profileDeleter = deleteProfile
         self.saveImporter = importSave
         self.patchCreator = patchCreator
         self.evictImage = evictImage
@@ -124,7 +130,7 @@ final class GameDetailViewModel: ObservableObject {
 
     func profileName(id: UUID?) -> String? {
         guard let id else { return nil }
-        return saveProfiles.first { $0.id == id }?.displayName
+        return saveProfiles.first { $0.id == id }?.title
     }
 
     func setPreferredBuild(_ build: Build) {
@@ -138,6 +144,21 @@ final class GameDetailViewModel: ObservableObject {
 
     func createBlankProfile(name: String) {
         perform { _ = try createBlank.execute(gameID: gameID, name: name) }
+    }
+
+    func setBadge(_ badge: String, of profile: SaveProfile) {
+        do {
+            _ = try badges.execute(profileID: profile.id, badge: badge)
+            reload()
+        } catch SaveProfileOperationError.invalidBadge {
+            errorMessage = "A badge is a single emoji."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func delete(_ profile: SaveProfile) {
+        perform { try profileDeleter.execute(profileID: profile.id) }
     }
 
     func duplicate(_ profile: SaveProfile, name: String) {

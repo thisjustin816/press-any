@@ -26,6 +26,75 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertEqual(copy.copiedFromProfileID, source.id)
     }
 
+    func testABadgeIsOneEmojiAndLeavesTheSaveTimeAlone() throws {
+        let harness = try Harness.make()
+        let profile = try harness.createProfile(name: "Main", battery: Data([1]))
+        let setBadge = SetSaveProfileBadge(profiles: harness.profiles)
+
+        for emoji in ["⭐️", "🐉", "1️⃣", "🇯🇵", "👍🏽", "🧑‍🚀"] {
+            XCTAssertEqual(try setBadge.execute(profileID: profile.id, badge: emoji).badge, emoji)
+        }
+        for invalid in ["1", "A", "#", "⭐️⭐️", "Hi"] {
+            XCTAssertThrowsError(try setBadge.execute(profileID: profile.id, badge: invalid), invalid)
+        }
+        XCTAssertNil(try setBadge.execute(profileID: profile.id, badge: "  ").badge, "blank clears it")
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: profile.id)?.modifiedAt, profile.modifiedAt)
+    }
+
+    func testDeletingAProfileRemovesItsSaveAndStatesAndWhatPointedAtIt() throws {
+        let harness = try Harness.make(twoBuilds: true)
+        let doomed = try harness.createProfile(name: "Doomed", battery: Data([1]))
+        let kept = try harness.createProfile(name: "Kept", battery: Data([2]))
+        let hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        try harness.buildOperations().setPreferredSaveProfile(buildID: hack.id, profileID: doomed.id)
+        let states = InMemorySaveStateRepository()
+        let stateURL = harness.store.stateURL(stateID: UUID())
+        try harness.store.writeDataAtomically(Data([9]), to: stateURL)
+        let stateAsset = ManagedAsset(
+            id: UUID(),
+            kind: .saveState,
+            storageClass: .userData,
+            contentSHA256: harness.store.hashData(Data([9])),
+            byteLength: 1,
+            relativePath: try harness.store.managedRelativePath(for: stateURL),
+            integrityStatus: .verified,
+            createdAt: harness.now
+        )
+        try harness.assets.insertAsset(stateAsset)
+        try states.insertSaveState(SaveState(
+            id: UUID(),
+            buildID: hack.id,
+            saveProfileID: doomed.id,
+            core: CoreDescriptor(identifier: "sameboy", version: "1.0.3"),
+            stateSerializationVersion: "1",
+            stateAssetID: stateAsset.id,
+            kind: .manual,
+            playtimeSeconds: 0,
+            createdAt: harness.now
+        ))
+        let saveAsset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(doomed.persistentSaveAssetID)))
+
+        try DeleteSaveProfile(
+            games: harness.games,
+            builds: harness.builds,
+            profiles: harness.profiles,
+            states: states,
+            assets: harness.assets,
+            assetStore: harness.store,
+            transactions: PassthroughTransactionRunner()
+        ).execute(profileID: doomed.id)
+
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).map(\.id), [kept.id])
+        XCTAssertNil(try harness.games.fetchGame(id: harness.game.id)?.preferredSaveProfileID, "it was the Game's default")
+        XCTAssertNil(try harness.builds.fetchBuild(id: hack.id)?.preferredSaveProfileID)
+        XCTAssertEqual(try states.fetchSaveStates(saveProfileID: doomed.id), [])
+        XCTAssertNil(try harness.assets.fetchAsset(id: saveAsset.id))
+        XCTAssertNil(try harness.assets.fetchAsset(id: stateAsset.id))
+        XCTAssertFalse(harness.store.fileExists(at: try harness.store.managedURL(relativePath: saveAsset.relativePath)))
+        XCTAssertFalse(harness.store.fileExists(at: stateURL))
+        XCTAssertEqual(try harness.persistentSaveBytes(profileID: kept.id), Data([2]))
+    }
+
     func testCreateBlankProfileBecomesPreferredWhenGameHasNone() throws {
         let harness = try Harness.make()
         let useCase = CreateBlankSaveProfile(

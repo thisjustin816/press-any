@@ -235,6 +235,16 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
         }
     }
 
+    public func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] {
+        try read { db in
+            try SaveStateRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM save_states WHERE save_profile_id = ? ORDER BY created_at DESC, id",
+                arguments: [PersistenceCodec.uuid(saveProfileID)]
+            ).map { try $0.domain() }
+        }
+    }
+
     public func deleteSaveState(id: UUID) throws {
         try write { db in
             try db.execute(sql: "DELETE FROM save_states WHERE id = ?", arguments: [PersistenceCodec.uuid(id)])

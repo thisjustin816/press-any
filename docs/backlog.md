@@ -1,7 +1,7 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-04: 98 done, 33 partial and 166 missing. The specs stay the
+on 2026-10-03 and updated 2026-10-04: 100 done, 32 partial and 165 missing. The specs stay the
 source of truth for what each item means; this file tracks what's left and a suggested order.
 Update an item's row when its status changes, and move it to its area's "Done" line when it's
 finished.
@@ -17,8 +17,7 @@ later.
 Nothing below is in progress.
 
 1. Finish the MVP. The real-device check in `docs/mvp-verification.md` still has to pass on a
-   phone. Two MVP-scope fields are stored but never set or shown: the Save Profile badge and RTC
-   context.
+   phone.
 2. Display and play feel, small changes that make games look and play right on day one: frame
    blending, GBC color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
@@ -128,7 +127,6 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 | missing | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | no edit UI |
 | partial | Build region/language/revision/version + structured version sort key | MVP/v1 | mvp "Build"; Q152 | columns exist, never populated (import ignores filename/header), no edit UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
-| partial | SaveProfile icon/badge and RTC context | MVP |  | MVP fields mvp "SaveProfile" `badge`, `rtcContextJSON` stored, never set or shown |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1 | prod "Documents"; Q169 |  |
 | missing | Typed multi-artwork model with primary selection | v1 | prod "Artwork"; dec 20 | Game.artworkAssetID is a single image |
 | missing | Tags and collections | v1 | prod "Canonical domain model" |  |
@@ -230,10 +228,9 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Explicit Replace/Delete profile with confirmation naming the target | v1 | dec 9 | repo deleteSaveProfile exists, no UI |
 | partial | Compatibility-aware Build switching (flush, analyze, risky -> migrate/duplicate/use anyway/blank) | MVP and v1 | mvp "Build switching/save safety"; prod "Compatibility-aware Build switching"; later 5, 15 | launch check offers copy/new save/use anyway; migrate waits for v1.1 GB Studio migration |
 | missing | GB Studio save migration (version-gated, needs maps) | v1.1 | prod "v1.1 targets" |  |
-| missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset |
+| missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later | dec 9/33 |  |
 
 Done: One .sav per Save Profile, atomic flush; Compatible Builds share a profile on purpose; New
@@ -241,7 +238,9 @@ blank profile; duplicate profile (bytes copied, ancestry shown); Import .sav int
 or into an existing one after confirming, keeping its old save as "<name> before import";
 Variable maps (GB Studio globals, RGBDS .sym, GBDK .noi) kept on the exact Build; Each profile
 records the Build that last wrote it, and launching another Build warns when the save may not fit
-(GB Studio, different detected tools, different header save hardware).
+(GB Studio, different detected tools, different header save hardware); Save Profile badge, one
+emoji shown beside its name; Delete a profile, with a confirmation naming it, taking its save and
+states.
 
 ### Save system: states and lifecycle
 

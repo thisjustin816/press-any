@@ -36,6 +36,9 @@ struct GameDetailView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var technicalInfo: Build?
     @State private var pendingReplacement: PendingReplacement?
+    @State private var badgeTarget: SaveProfile?
+    @State private var badgeText = ""
+    @State private var deletionTarget: SaveProfile?
 
     private struct SettingsTarget: Identifiable {
         let id = UUID()
@@ -59,6 +62,8 @@ struct GameDetailView: View {
             buildOperations: container.buildOperations,
             createBlank: container.createBlankSaveProfile,
             duplicateProfile: container.duplicateSaveProfile,
+            badges: container.setSaveProfileBadge,
+            deleteProfile: container.deleteSaveProfile,
             importSave: container.importBatterySave,
             patchCreator: container.patchCreator,
             evictImage: container.evictGeneratedImage,
@@ -69,7 +74,7 @@ struct GameDetailView: View {
     }
 
     var body: some View {
-        withAlerts(withPresentations(list))
+        withProfileAlerts(withAlerts(withPresentations(list)))
             .navigationTitle(model.game?.primaryTitle ?? "Game")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -261,14 +266,29 @@ struct GameDetailView: View {
             }
     }
 
-    private func withAlerts(_ content: some View) -> some View {
+    private func withProfileAlerts(_ content: some View) -> some View {
         content
-            .alert("New Save Profile", isPresented: $showNewProfile) {
-                TextField("Name", text: $newProfileName)
-                Button("Create") {
-                    model.createBlankProfile(name: newProfileName)
+            .alert("Badge", isPresented: Binding(
+                get: { badgeTarget != nil },
+                set: { if !$0 { badgeTarget = nil } }
+            ), presenting: badgeTarget) { profile in
+                TextField("Emoji", text: $badgeText)
+                Button("Save") { model.setBadge(badgeText, of: profile) }
+                if profile.badge != nil {
+                    Button("Remove Badge", role: .destructive) { model.setBadge("", of: profile) }
                 }
                 Button("Cancel", role: .cancel) {}
+            } message: { profile in
+                Text("One emoji shown beside \(profile.displayName).")
+            }
+            .alert("Delete This Save Profile?", isPresented: Binding(
+                get: { deletionTarget != nil },
+                set: { if !$0 { deletionTarget = nil } }
+            ), presenting: deletionTarget) { profile in
+                Button("Delete \(profile.displayName)", role: .destructive) { model.delete(profile) }
+                Button("Cancel", role: .cancel) {}
+            } message: { profile in
+                Text("\(profile.displayName)’s battery save and its save states are deleted. This can’t be undone.")
             }
             .alert("Replace This Save?", isPresented: Binding(
                 get: { pendingReplacement != nil },
@@ -278,6 +298,17 @@ struct GameDetailView: View {
                 Button("Cancel", role: .cancel) {}
             } message: { pending in
                 Text("\(pending.url.lastPathComponent) replaces the save in \(pending.profile.displayName). Its current save is copied to “\(pending.profile.displayName) before import” first.")
+            }
+    }
+
+    private func withAlerts(_ content: some View) -> some View {
+        content
+            .alert("New Save Profile", isPresented: $showNewProfile) {
+                TextField("Name", text: $newProfileName)
+                Button("Create") {
+                    model.createBlankProfile(name: newProfileName)
+                }
+                Button("Cancel", role: .cancel) {}
             }
             .alert("Different Base ROM", isPresented: Binding(
                 get: { model.baseMismatch != nil },
@@ -343,7 +374,7 @@ struct GameDetailView: View {
         Button("Play") { launch(build: build) }
         Menu("Play with Save") {
             ForEach(model.saveProfiles) { profile in
-                Button(profile.displayName) { launch(build: build, profile: profile) }
+                Button(profile.title) { launch(build: build, profile: profile) }
             }
         }
         Menu("Default Save") {
@@ -361,9 +392,9 @@ struct GameDetailView: View {
                     model.setDefaultProfile(profile, for: build)
                 } label: {
                     if build.preferredSaveProfileID == profile.id {
-                        Label(profile.displayName, systemImage: "checkmark")
+                        Label(profile.title, systemImage: "checkmark")
                     } else {
-                        Text(profile.displayName)
+                        Text(profile.title)
                     }
                 }
             }
@@ -395,7 +426,7 @@ struct GameDetailView: View {
     private func profileRow(_ profile: SaveProfile) -> some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(profile.displayName)
+                Text(profile.title)
                 // A copy brought from another Game by a promote or merge has its original there.
                 if let parent = model.profileName(id: profile.copiedFromProfileID) {
                     Text("Copied from \(parent)")
@@ -415,6 +446,12 @@ struct GameDetailView: View {
                 model.duplicate(profile, name: profile.displayName + " Copy")
             }
             Button("Replace Save from File…") { request(.replacementSave(profile)) }
+            Button("Badge…") {
+                badgeText = profile.badge ?? ""
+                badgeTarget = profile
+            }
+            Divider()
+            Button("Delete…", role: .destructive) { deletionTarget = profile }
         }
     }
 
@@ -637,7 +674,7 @@ private struct CarryOverSection: View {
                     Toggle(artworkLabel, isOn: $carryOver.artwork)
                 }
                 ForEach(profiles) { profile in
-                    Toggle(profile.displayName, isOn: Binding(
+                    Toggle(profile.title, isOn: Binding(
                         get: { carryOver.saveProfileIDs.contains(profile.id) },
                         set: { isOn in
                             if isOn {

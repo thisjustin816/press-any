@@ -24,6 +24,8 @@ final class AppContainer {
     let buildOperations: BuildOperations
     let createBlankSaveProfile: CreateBlankSaveProfile
     let duplicateSaveProfile: DuplicateSaveProfile
+    let setSaveProfileBadge: SetSaveProfileBadge
+    let deleteSaveProfile: DeleteSaveProfile
     let importBatterySave: ImportBatterySave
     let replaceBatterySave: ReplaceBatterySave
     let preferredLaunchResolver: ResolvePreferredLaunchContext
@@ -81,6 +83,16 @@ final class AppContainer {
         createBlankSaveProfile = CreateBlankSaveProfile(
             games: repositories.games,
             profiles: repositories.saveProfiles
+        )
+        setSaveProfileBadge = SetSaveProfileBadge(profiles: repositories.saveProfiles)
+        deleteSaveProfile = DeleteSaveProfile(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
+            assets: repositories.assets,
+            assetStore: fileStore,
+            transactions: repositories.transactions
         )
         duplicateSaveProfile = DuplicateSaveProfile(
             profiles: repositories.saveProfiles,

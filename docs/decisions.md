@@ -3,6 +3,15 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Profile badges are one emoji, and profiles can be deleted
+
+**Decision.** A Save Profile's badge is one emoji, set from its menu and shown before its name
+wherever profiles are listed. Setting it leaves the profile's modified time alone, since that time
+decides whether an Auto State can still be restored. A profile can be deleted from its menu after a
+confirmation naming it, which also deletes its battery save and save states. A Game or Build that
+played it plays the Game's default instead. The per-profile RTC offset waits for v1 (`dec 11`):
+SameBoy keeps the cartridge clock inside the save, so games with a clock already work.
+
 ## 2026-10-04: The library check runs when asked
 
 **Decision.** Settings > Check Library Files compares the managed files with the database. It

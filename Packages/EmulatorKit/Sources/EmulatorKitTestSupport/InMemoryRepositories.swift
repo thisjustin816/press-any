@@ -109,6 +109,10 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
         }
     }
 
+    public func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] {
+        lock.withLock { values.values.filter { $0.saveProfileID == saveProfileID }.sorted { $0.createdAt > $1.createdAt } }
+    }
+
     public func deleteSaveState(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
 }
 
