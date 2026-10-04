@@ -3,6 +3,18 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Original test ROMs are checked in
+
+**Decision.** `TestROMs/` holds 14 small ROMs and two patches built from source in the same
+directory: GBDK-2020, RGBDS, GB Studio, ZGB and hUGEDriver, in GB and GBC, plus a battery-save ROM,
+a v1.0/v1.1 revision pair with IPS and BPS patches, and one with a wrong header checksum. The
+AGENTS.md rule is about commercial ROMs, and these are original and redistributable under their
+own licenses (`TestROMs/README.md`). `Scripts/verify-repo-hygiene.sh` still rejects every other game
+image and saves, and requires each tracked ROM to match `TestROMs/manifest.json`. hUGEDriver's own
+source is fetched at a pinned commit by its build rather than kept here, per the dependency policy.
+The GB Studio ROMs are not byte-reproducible, so a rebuild changes their hashes and the manifest.
+Screenshot runs (manual only) pick ROMs by the manifest's `hero` flag and `tags`.
+
 ## 2026-10-04: Profile badges are one emoji, and profiles can be deleted
 
 **Decision.** A Save Profile's badge is one emoji, set from its menu and shown before its name

@@ -1,0 +1,11 @@
+{
+  "_resourceType": "palette",
+  "id": "gbc-test-2",
+  "name": "GBC Test 2",
+  "colors": [
+    "FFF0C0",
+    "F0C040",
+    "C08000",
+    "5A3800"
+  ]
+}

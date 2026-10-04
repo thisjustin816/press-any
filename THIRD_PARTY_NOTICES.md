@@ -43,6 +43,14 @@ this repository.
   synthetic ROMs. The test ROMs are fetched at run time and never committed here.
 - License: public domain, under the Unlicense (https://unlicense.org).
 
+## Test ROMs
+
+- Location: `TestROMs/`. Not part of the app or its tests' build.
+- Original code and assets: MIT. The ROMs link the GBDK-2020 runtime (GPL v2 with a linking
+  exception), and the GB Studio and ZGB ROMs link those engines (MIT). Each directory under
+  `TestROMs/src/` carries the notices; `TestROMs/README.md` lists the versions.
+- hUGEDriver (public domain) is fetched at a pinned commit by its ROM's build, not kept here.
+
 ## In the app
 
 Settings > Acknowledgements lists each project whose code ships in the app. SameBoy's and

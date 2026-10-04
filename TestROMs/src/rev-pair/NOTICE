@@ -1,0 +1,8 @@
+Revision pair: v1.0 and v1.1 differ in visible text and ball speed. The patch tools in src/patch-tools build the IPS and BPS patches between them.
+
+Original code (main.c, config.h, build.sh): MIT, see LICENSE.
+
+The ROM links the GBDK-2020 4.5.0 runtime and library. GBDK-2020 is
+distributed under the GNU GPL v2 with a linking exception: linking the library into a ROM
+does not by itself put the ROM under the GPL. Its notice is in THIRD_PARTY_GBDK_LICENSE.txt.
+GBDK-2020: https://github.com/gbdk-2020/gbdk-2020

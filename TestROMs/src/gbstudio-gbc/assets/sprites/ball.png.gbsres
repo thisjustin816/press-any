@@ -1,0 +1,129 @@
+{
+  "_resourceType": "sprite",
+  "id": "d1af06ba-9202-545b-b736-a3cad9cd5250",
+  "name": "ball",
+  "symbol": "sprite_ball",
+  "states": [
+    {
+      "id": "8c1359ca-8994-5538-8842-f8fac24e5375",
+      "name": "",
+      "animationType": "fixed",
+      "flipLeft": false,
+      "animations": [
+        {
+          "id": "b707554c-dba9-502f-ba1f-2e61f5a4f00d",
+          "frames": [
+            {
+              "id": "b5a0268b-f6a6-5db6-9a92-d5515e9da2ea",
+              "tiles": [
+                {
+                  "id": "fffc3778-2951-540a-a226-d4d0f5ab835d",
+                  "x": 0,
+                  "y": 0,
+                  "sliceX": 0,
+                  "sliceY": 0,
+                  "flipX": false,
+                  "flipY": false,
+                  "palette": 0,
+                  "paletteIndex": 0,
+                  "objPalette": "OBP0",
+                  "priority": false
+                },
+                {
+                  "id": "5586da4b-42ad-5f71-b93d-7d5ac8133a54",
+                  "x": 8,
+                  "y": 0,
+                  "sliceX": 8,
+                  "sliceY": 0,
+                  "flipX": false,
+                  "flipY": false,
+                  "palette": 0,
+                  "paletteIndex": 0,
+                  "objPalette": "OBP0",
+                  "priority": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "6362390b-e81e-5a6a-a84a-3d249cc3a8ae",
+          "frames": [
+            {
+              "id": "510ab239-92dd-571f-ad93-7baaf99539e9",
+              "tiles": []
+            }
+          ]
+        },
+        {
+          "id": "5e1e2c57-54ef-52eb-aa1d-e20e270bc99f",
+          "frames": [
+            {
+              "id": "f857b565-808a-5e37-8e99-d27f3a25ec7b",
+              "tiles": []
+            }
+          ]
+        },
+        {
+          "id": "c1fee433-16f9-5bcb-9af1-8a9845198488",
+          "frames": [
+            {
+              "id": "ff5bf1b2-c707-59db-9310-d42e7b4e06a9",
+              "tiles": []
+            }
+          ]
+        },
+        {
+          "id": "fd262ace-32ce-589d-894d-055cb55f4675",
+          "frames": [
+            {
+              "id": "89c7dffd-2d14-5f12-94b2-a2a5e90cd750",
+              "tiles": []
+            }
+          ]
+        },
+        {
+          "id": "bb0c0a91-80d1-5653-8da9-7ff48ecc5b70",
+          "frames": [
+            {
+              "id": "c3b42d71-e0db-5f0a-b942-a318d1cf897b",
+              "tiles": []
+            }
+          ]
+        },
+        {
+          "id": "e743cb98-96e9-56ff-9194-86c235f69704",
+          "frames": [
+            {
+              "id": "5decf710-39a8-54cc-8169-28aac7a7937f",
+              "tiles": []
+            }
+          ]
+        },
+        {
+          "id": "8d1c5dfe-2b0b-58b0-9514-5bd106e09987",
+          "frames": [
+            {
+              "id": "773bc7c1-eec6-50f0-83cf-e30ffe183b55",
+              "tiles": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "numTiles": 2,
+  "canvasOriginX": 0,
+  "canvasOriginY": 0,
+  "canvasWidth": 16,
+  "canvasHeight": 16,
+  "boundsX": 0,
+  "boundsY": 0,
+  "boundsWidth": 16,
+  "boundsHeight": 16,
+  "animSpeed": 15,
+  "filename": "ball.png",
+  "width": 16,
+  "height": 16,
+  "checksum": "c611a7356a648659ac7cc8eac9cb9a2678fd2cc7"
+}

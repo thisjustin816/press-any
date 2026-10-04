@@ -1,0 +1,121 @@
+{
+  "_resourceType": "actor",
+  "id": "fb13f26b-6ac2-5dc6-83c5-a39512933a50",
+  "_index": 0,
+  "symbol": "actor_ball",
+  "prefabId": "",
+  "name": "ball",
+  "x": 11,
+  "y": 13,
+  "frame": 0,
+  "animate": false,
+  "spriteSheetId": "d1af06ba-9202-545b-b736-a3cad9cd5250",
+  "paletteId": "",
+  "direction": "down",
+  "moveSpeed": 1,
+  "animSpeed": 255,
+  "isPinned": false,
+  "persistent": false,
+  "collisionGroup": "",
+  "collisionExtraFlags": [],
+  "prefabScriptOverrides": {},
+  "script": [],
+  "startScript": [],
+  "updateScript": [
+    {
+      "id": "327fa9ea-e42a-542e-9925-cbf7eacd2682",
+      "command": "EVENT_ACTOR_MOVE_TO",
+      "args": {
+        "actorId": "$self$",
+        "x": {
+          "type": "number",
+          "value": 136
+        },
+        "y": {
+          "type": "number",
+          "value": 124
+        },
+        "units": "pixels",
+        "collideWith": [],
+        "lockDirection": [],
+        "moveType": "diagonal"
+      }
+    },
+    {
+      "id": "6af79022-ad71-5f8e-bcaf-296c04e676d0",
+      "command": "EVENT_ACTOR_MOVE_TO",
+      "args": {
+        "actorId": "$self$",
+        "x": {
+          "type": "number",
+          "value": 88
+        },
+        "y": {
+          "type": "number",
+          "value": 124
+        },
+        "units": "pixels",
+        "collideWith": [],
+        "lockDirection": [],
+        "moveType": "diagonal"
+      }
+    },
+    {
+      "id": "97e65572-e1ae-5f89-bb83-a956dda92db3",
+      "command": "EVENT_ACTOR_MOVE_TO",
+      "args": {
+        "actorId": "$self$",
+        "x": {
+          "type": "number",
+          "value": 136
+        },
+        "y": {
+          "type": "number",
+          "value": 100
+        },
+        "units": "pixels",
+        "collideWith": [],
+        "lockDirection": [],
+        "moveType": "diagonal"
+      }
+    },
+    {
+      "id": "ff6f6edd-fdeb-565f-991a-4cbb784cf18d",
+      "command": "EVENT_ACTOR_MOVE_TO",
+      "args": {
+        "actorId": "$self$",
+        "x": {
+          "type": "number",
+          "value": 88
+        },
+        "y": {
+          "type": "number",
+          "value": 100
+        },
+        "units": "pixels",
+        "collideWith": [],
+        "lockDirection": [],
+        "moveType": "diagonal"
+      }
+    },
+    {
+      "id": "75d1c825-b154-5e59-b414-a18f68d59e14",
+      "command": "EVENT_ACTOR_MOVE_TO",
+      "args": {
+        "actorId": "$self$",
+        "x": {
+          "type": "number",
+          "value": 112
+        },
+        "y": {
+          "type": "number",
+          "value": 112
+        },
+        "units": "pixels",
+        "collideWith": [],
+        "lockDirection": [],
+        "moveType": "diagonal"
+      }
+    }
+  ]
+}

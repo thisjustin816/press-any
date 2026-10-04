@@ -72,4 +72,5 @@ To install it on your own iPhone with a free Apple ID, follow `docs/device-build
 ## License
 
 Press Any's own source is licensed under Apache-2.0 (`LICENSE`). Dependencies keep their own
-licenses. The repository contains no game images, saves or Nintendo boot ROMs.
+licenses. The repository contains no commercial game images, saves or Nintendo boot ROMs; `TestROMs/` holds
+small original test ROMs built from source.
