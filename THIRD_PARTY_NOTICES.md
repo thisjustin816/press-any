@@ -32,7 +32,9 @@ this repository.
 
 - Project: gbtoolsid (Game Boy Toolchain ID)
 - Upstream: https://github.com/bbbbbr/gbtoolsid
-- Ported revision: `v1.5.5` (`cc211126d81514b3c3988ed77a529f3886bbd796`)
+- Ported revision: `v1.5.5-14-g5ff49ad` (`5ff49ad1282178eaebf47314d0c775c2b13d98b8`), an
+  untagged commit on main. No release includes its GB Studio 4.3+ detection yet, so the port
+  follows main rather than the v1.5.5 tag.
 - Usage: `Packages/EmulatorKit/Sources/ToolchainDetection/GB` is a Swift port of its detection
   logic. `GBToolsIDData.swift` is generated from its `src/entry_names_*.h` signature tables by
   `Scripts/generate-gbtoolsid-data.py`; the `check_*` functions are translated by hand. The

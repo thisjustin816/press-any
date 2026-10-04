@@ -530,13 +530,12 @@ Spec: later 5: MVP.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | partial | Wiring: run on import, persist per Build, Build Technical Info, Quick Play presentation, compatibility routing | MVP | later 5 | Quick Play shows findings at promotion, not during play (D allows skipping) |
-| missing | Detect GB Studio 4.3+ by version | MVP | later 5 | The ported gbtoolsid v1.5.5 reports the GB Studio 4.3.2 test ROMs as 3.2.0 - 3.2.1; upstream detects 4.3.0+ from commit 1aa7788, which no release includes yet. `TestROMDetectionTests` pins the current result |
 
 Done: Standalone detector seam + gbtoolsid port (engines, toolchains, music/SFX drivers,
 version/range, evidence, detector version, corpus revision), differential CI vs upstream; GB Studio
-detection, multi-layer (GB Studio over GBDK + audio driver); Categorical confidence; Runs on import
-and patching, stored per Build, shown in Import Review, promotion and Technical Info (which detects
-again); Feeds the save compatibility check.
+detection, including 4.3+ by version, multi-layer (GB Studio over GBDK + audio driver); Categorical
+confidence; Runs on import and patching, stored per Build, shown in Import Review, promotion and
+Technical Info (which detects again); Feeds the save compatibility check.
 
 ### Included Games
 

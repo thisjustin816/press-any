@@ -82,6 +82,7 @@ final class GBToolsIDEngine {
         check(checkGBSDK)
         check(checkMatlabGB)
         check(checkLLVMGBLibGBXX)
+        check(checkRetroRGBFull)
 
         check(checkMusic)
         check(checkSoundFX)
@@ -187,6 +188,12 @@ final class GBToolsIDEngine {
     /// check function rather than with the DEF_* macros.
     func checkPatternAtAddr(_ bytes: [UInt8], name: String, _ matchIndex: Int) -> Bool {
         checkPatternAtAddr(GBToolsIDPattern(name: name, bytes: bytes), matchIndex)
+    }
+
+    /// read_byte_addr: the byte at `addr`, or nil past the end of the image.
+    func readByteAddr(_ addr: Int) -> UInt8? {
+        guard addr >= 0, addr < searchBuffer.count else { return nil }
+        return searchBuffer[addr]
     }
 
     func getAddrLastMatch() -> Int {

@@ -1,4 +1,5 @@
-// Port of gbtoolsid's src/sig_zgb.c, sig_crosszgb.c, sig_gbbasic.c and sig_gbstudio.c.
+// Port of gbtoolsid's src/sig_zgb.c, sig_crosszgb.c, sig_gbbasic.c, sig_gbstudio.c and
+// sig_retrorgbfull.c.
 
 private typealias D = GBToolsIDData
 
@@ -90,8 +91,18 @@ extension GBToolsIDEngine {
     // MARK: sig_gbbasic.c
 
     func checkGBBasic() -> Bool {
-        if checkPatternAtAddr(D.sig_gbbasic_magic_v11, D.sig_gbbasic_magic_v11_at) {
-            entryAdd(formatEntry(.engine, "GBBasic", "v1.1"))
+        if checkPatternAtAddr(D.sig_gbbasic_magic_key, D.sig_gbbasic_magic_key_at) {
+            let entry: EntryTemplate
+            // Read version bytes and format them into a string for the entry
+            if let verMajor = readByteAddr(D.sig_gbbasic_magic_version_major_at),
+               let verMinor = readByteAddr(D.sig_gbbasic_magic_version_minor_at) {
+                entry = formatEntry(.engine, "GBBasic", "v\(verMajor).\(verMinor)")
+            } else {
+                // If the read failed for some reason then default is un-versioned
+                entry = formatEntry(.engine, "GBBasic", "")
+            }
+
+            entryAdd(entry)
             return true
         } else if checkPatternAtAddr(D.sig_gbbasic_actor_init_alpha, D.sig_gbbasic_actor_init_alpha3_at) {
             entryAdd(formatEntry(.engine, "GBBasic", "Alpha3"))
@@ -166,6 +177,9 @@ extension GBToolsIDEngine {
 
                     entryAddWithVersion(entry, "4.0.0 - 4.0.2")
                     return true
+                } else if findPatternBufMasked(D.sig_gbs_vminstruct_4_3_0_plus) {
+                    entryAddWithVersion(entry, "4.3.0+")
+                    return true
                 }
 
                 entryAddWithVersion(entry, "3.2.0 - 3.2.1")
@@ -174,5 +188,21 @@ extension GBToolsIDEngine {
         }
 
         return false
+    }
+
+    // MARK: sig_retrorgbfull.c
+
+    func checkRetroRGBFull() {
+        // Declared inline in the C source and searched with the NOTERM macro, so the search
+        // covers "RGBFULL!" without its terminator.
+        let sig_retrorgbfull_signature = GBToolsIDPattern(
+            name: "sig_retrorgbfull_signature",
+            bytes: Array("RGBFULL!".utf8) + [0]
+        )
+
+        let entry = formatEntry(.engine, "RetroGBFull Toolkit", "")
+        if findPatternStrNoTerm(sig_retrorgbfull_signature) {
+            entryAdd(entry)
+        }
     }
 }

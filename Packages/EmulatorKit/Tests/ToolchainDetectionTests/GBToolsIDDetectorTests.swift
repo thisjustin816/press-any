@@ -36,9 +36,12 @@ final class GBToolsIDDetectorTests: XCTestCase {
     func testStrictModeTestsEnginesOnlyAfterGBDK() {
         // GBBasic's marker sits at 0x20000, so the image must be at least 160 KB.
         var image = [UInt8](repeating: 0, count: 0x28000)
-        plant(&image, D.sig_gbbasic_magic_v11_at, D.sig_gbbasic_magic_v11.bytes)
+        plant(&image, D.sig_gbbasic_magic_key_at, D.sig_gbbasic_magic_key.bytes)
+        image[D.sig_gbbasic_magic_version_major_at] = 1
+        image[D.sig_gbbasic_magic_version_minor_at] = 11
 
         XCTAssertEqual(detect(image).components.map(\.name), ["GBBasic"])
+        XCTAssertEqual(detect(image).components.map(\.version), ["v1.11"])
         XCTAssertEqual(GBToolsIDDetector(strictMode: true).detect(image: Data(image)).components, [])
     }
 

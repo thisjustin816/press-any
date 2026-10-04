@@ -20,6 +20,9 @@ extension GBToolsIDEngine {
         } else if findPatternStrNoTerm(D.sig_str_devsound_x) {
             entry = formatEntry(.music, "DevSound", "X")
             entryAdd(entry)
+        } else if findPatternStrNoTerm(D.sig_str_devsound_x2) {
+            entry = formatEntry(.music, "DevSound", "X2")
+            entryAdd(entry)
         } else if findPatternStrNoTerm(D.sig_str_dev_GBMod) {
             entry = formatEntry(.music, "GBMod", "")
             entryAdd(entry)

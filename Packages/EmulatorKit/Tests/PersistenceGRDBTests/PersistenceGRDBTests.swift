@@ -35,7 +35,7 @@ struct PersistenceGRDBTests {
             ToolchainDetectionReport(
                 detector: "gbtoolsid",
                 detectorVersion: "1",
-                corpusRevision: "v1.5.5",
+                corpusRevision: "v1.5.5-14-g5ff49ad",
                 components: [DetectedToolchainComponent(
                     kind: .toolchain,
                     name: name,

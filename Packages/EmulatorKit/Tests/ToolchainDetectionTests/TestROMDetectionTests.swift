@@ -13,8 +13,6 @@ final class TestROMDetectionTests: XCTestCase {
         "gbdk450-dmg.gb": ["toolchain:GBDK:2020.4.3.0+"],
         "gbdk406-dmg.gb": ["toolchain:GBDK:2020.4.0.5 - 2020.4.0.6"],
         "rgbds-dmg.gb": [],
-        // gbtoolsid at the ported revision (v1.5.5) can't tell GB Studio 4.3 from 3.2; upstream
-        // detects these as "4.3.0+" from commit 1aa7788. Expect that once the port includes it.
         "gbstudio-dmg.gb": gbStudio,
         "hugedriver-dmg.gb": ["musicDriver:hUGETracker:SuperDisk"],
         "zgb-dmg.gb": ["toolchain:GBDK:2020.4.1.0 - 2020.4.1.1", "engine:ZGB:2022.0+", "musicDriver:hUGETracker:SuperDisk"],
@@ -30,7 +28,7 @@ final class TestROMDetectionTests: XCTestCase {
 
     private static let gbStudio = [
         "toolchain:GBDK:2020.4.3.0+",
-        "engine:GBStudio:3.2.0 - 3.2.1",
+        "engine:GBStudio:4.3.0+",
         "musicDriver:hUGETracker:SuperDisk",
         "soundEffectsDriver:VGM2GBSFX:-",
     ]
