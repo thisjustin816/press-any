@@ -149,12 +149,16 @@ final class GameplayViewController: UIViewController {
         ])
     }
 
+    private lazy var gameMenu = makeGameMenu()
+
     /// The game menu, built when it opens so it shows the current pause, speed and save states.
-    private lazy var gameMenu = UIMenu(children: [
-        UIDeferredMenuElement.uncached { [weak self] completion in
-            MainActor.assumeIsolated { completion(self?.menuElements() ?? []) }
-        },
-    ])
+    private func makeGameMenu() -> UIMenu {
+        UIMenu(children: [
+            UIDeferredMenuElement.uncached { [weak self] completion in
+                MainActor.assumeIsolated { completion(self?.menuElements() ?? []) }
+            },
+        ])
+    }
 
     private func menuElements() -> [UIMenuElement] {
         var elements: [UIMenuElement] = []
