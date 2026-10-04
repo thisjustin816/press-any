@@ -27,6 +27,8 @@ struct LibraryView: View {
     @State private var quickPlayToResume: QuickPlaySession?
     @State private var screenshotGameID: UUID?
     @State private var screenshotBuildInfo: Build?
+    /// Off hides the titles under grid tiles, for libraries whose box art carries the name.
+    @AppStorage("library.showsGridTitles") private var showsGridTitles = true
 
     let container: AppContainer
     let onPlay: (LaunchContext) -> Void
@@ -102,6 +104,9 @@ struct LibraryView: View {
                         Picker("Library View", selection: $displayMode) {
                             Label("Grid", systemImage: "square.grid.2x2").tag(DisplayMode.grid)
                             Label("List", systemImage: "list.bullet").tag(DisplayMode.list)
+                        }
+                        if displayMode == .grid {
+                            Toggle("Show Titles", isOn: $showsGridTitles)
                         }
                     } label: {
                         Image(systemName: displayMode == .grid ? "square.grid.2x2" : "list.bullet")
@@ -206,7 +211,12 @@ struct LibraryView: View {
                     NavigationLink {
                         GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
                     } label: {
-                        GameLibraryTile(game: game, system: model.system(of: game), artworkURL: container.artworkURL(for: game))
+                        GameLibraryTile(
+                            game: game,
+                            system: model.system(of: game),
+                            artworkURL: container.artworkURL(for: game),
+                            showsTitle: showsGridTitles
+                        )
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
@@ -298,16 +308,22 @@ private struct GameLibraryTile: View {
     let game: Game
     let system: GameSystem
     let artworkURL: URL?
+    let showsTitle: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             GameArtworkView(url: artworkURL, system: system, title: game.primaryTitle)
                 .aspectRatio(1, contentMode: .fit)
-            Text(game.primaryTitle)
-                .font(.headline)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if showsTitle {
+                Text(game.primaryTitle)
+                    .font(.headline)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+        // The title stays readable to VoiceOver when it isn't shown.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(game.primaryTitle)
     }
 }
 

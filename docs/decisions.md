@@ -16,7 +16,11 @@ spell them (GB Studio, GB BASIC), GBDK-2020 versions without the detector's "202
 ranges as "x to y" and open ranges as "x or later", and an audio driver's edition, such as
 hUGETracker's SuperDisk, beside its kind rather than as a version. Settings groups its items
 under Controls, Display, Sound and Playing. The Playtiles layout draws the Game Boy bezel in the
-skin's screen frame around the picture, where the black background showed before.
+skin's screen frame around the picture, where the black background showed before. The Dark
+controller theme's bezel is a charcoal lighter than the body, so it reads as its own part on
+both layouts. The library's view menu has Show Titles for the grid, on by default, for box art
+that carries the name. A Game's default Save Profile is starred, as its preferred Build is, and
+Play reads "New Save" when it will create one.
 
 ## 2026-10-04: A controller opens the game menu only from a button the player maps
 

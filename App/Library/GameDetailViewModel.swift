@@ -81,13 +81,13 @@ final class GameDetailViewModel: ObservableObject {
     }
 
     /// The Build and save Play starts, picked as `ResolvePreferredSaveProfile` picks them, without
-    /// creating the blank "Main" profile it makes when the Game has none.
+    /// creating the blank profile it makes when the Game has none.
     var playSummary: String? {
         guard let build = preferredBuild else { return nil }
         let save = profileName(id: build.preferredSaveProfileID)
             ?? profileName(id: game?.preferredSaveProfileID)
             ?? saveProfiles.first?.title
-            ?? "Main (new)"
+            ?? "New Save"
         return "\(build.displayName) · \(save)"
     }
 

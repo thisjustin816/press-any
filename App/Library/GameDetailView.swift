@@ -146,7 +146,7 @@ struct GameDetailView: View {
         } header: {
             Text("Builds")
         } footer: {
-            Text("The star marks the Build Play starts. BASE marks a clean, unmodified ROM that patches are applied to. Touch and hold a Build to pick its save, apply a patch, or move it to its own Game.")
+            Text("\(Image(systemName: "star.fill")) Play starts this Build. BASE is a clean ROM patches apply to. Touch and hold for more.")
         }
     }
 
@@ -170,7 +170,7 @@ struct GameDetailView: View {
         } header: {
             Text("Save Profiles")
         } footer: {
-            Text("Touch and hold a profile to duplicate it, give it a badge, replace its save, or delete it.")
+            Text("\(Image(systemName: "star.fill")) Play uses this save unless a Build picks its own. Touch and hold for more.")
         }
     }
 
@@ -448,8 +448,9 @@ struct GameDetailView: View {
             }
             Spacer()
             if model.game?.preferredSaveProfileID == profile.id {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.secondary)
+                Image(systemName: "star.fill")
+                    .foregroundStyle(.yellow)
+                    .accessibilityLabel("Default Save")
             }
         }
         .contextMenu {
