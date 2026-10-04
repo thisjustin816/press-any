@@ -231,12 +231,15 @@ final class TouchControllerView: UIView {
         string.draw(at: CGPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2))
     }
 
-    /// The glass around the game picture, rounded more at the bottom right, as on a Game Boy.
+    /// The glass around the game picture, rounded more at the bottom right, as on a Game Boy. That
+    /// corner's arc passes the picture's corner at half the border's width: with radius r and border
+    /// b the gap is r - √2 (r - b), so r = (√2 - 1/2) b / (√2 - 1), about 2.2 b.
     private func drawBezel(_ bezelRect: TouchRect, around screen: TouchRect, palette: ControllerPalette, in context: CGContext) {
         let picture = cgRect(screen)
         let bezel = cgRect(bezelRect)
         let border = max(picture.minY - bezel.minY, 1)
-        let path = roundedRect(bezel, radius: border * 0.8, bottomRightRadius: border * 3.5)
+        let bottomRightRadius = (2.0.squareRoot() - 0.5) * border / (2.0.squareRoot() - 1)
+        let path = roundedRect(bezel, radius: border * 0.8, bottomRightRadius: bottomRightRadius)
         path.append(UIBezierPath(rect: picture))
         path.usesEvenOddFillRule = true
         context.saveGState()

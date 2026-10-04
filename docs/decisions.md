@@ -16,7 +16,8 @@ like the touch controls' view, the game shows alone, and a touch on the screen b
 buttons back for four seconds. They stay up while VoiceOver runs. The Game Boy layout starts lower to leave room for them, with or
 without a controller, so the picture never moves when one connects: 6 points below the buttons on
 phones with a Dynamic Island, and as far as the controls allow without shrinking on shorter ones
-such as the iPhone SE, where the buttons still overlap the top of the bezel.
+such as the iPhone SE, where the buttons still overlap the top of the bezel. The bezel's rounder bottom-right corner is sized to pass
+the picture's corner at half the border's width; at 3.5 times the border it touched the picture.
 
 ## 2026-10-04: Original test ROMs are checked in
 
