@@ -342,8 +342,9 @@ private struct GameArtworkView: View {
     }
 }
 
-/// A DMG Game Pak from the front, 57 by 65.5 mm: the lock notch at the top right, grip ridges
-/// across the top, the recessed label, and the arrow pointing into the slot. Drawn in millimeters.
+/// A DMG Game Pak from the front, 57 by 65.5 mm: the lock notch at the top right, the app's name
+/// molded into the band where a cartridge has its logo, the recessed label, and the arrow
+/// pointing into the slot. Drawn in millimeters.
 private struct CartridgeIcon: View {
     var body: some View {
         GeometryReader { proxy in
@@ -351,15 +352,13 @@ private struct CartridgeIcon: View {
             ZStack {
                 CartridgeShape()
                     .fill(.tertiary)
-                Path { path in
-                    for y in [4.5, 6.5, 8.5] {
-                        path.addRoundedRect(
-                            in: CGRect(x: 9 * mm, y: y * mm, width: 39 * mm, height: 0.8 * mm),
-                            cornerSize: CGSize(width: 0.4 * mm, height: 0.4 * mm)
-                        )
-                    }
-                }
-                .fill(.background.opacity(0.45))
+                Text(AppBrand.displayName)
+                    .font(Font(AppBrand.Wordmark.font(size: 5.5 * mm)))
+                    .foregroundStyle(.background.opacity(0.5))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: 40 * mm)
+                    .position(x: 27 * mm, y: 7 * mm)
                 Path { path in
                     path.addPath(UnevenRoundedRectangle(
                         topLeadingRadius: 4 * mm,
