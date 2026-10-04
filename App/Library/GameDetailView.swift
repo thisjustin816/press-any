@@ -123,6 +123,7 @@ struct GameDetailView: View {
                 launch(build: model.preferredBuild)
             } label: {
                 Label("Play", systemImage: "play.fill")
+                    .labelStyle(.titleAndIcon)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -138,7 +139,7 @@ struct GameDetailView: View {
         } header: {
             Text("Builds")
         } footer: {
-            Text("Touch and hold a Build to pick its save, apply a patch or move it to its own Game.")
+            Text("Touch and hold a Build to pick its save, apply a patch, or move it to its own Game.")
         }
     }
 
@@ -162,7 +163,7 @@ struct GameDetailView: View {
         } header: {
             Text("Save Profiles")
         } footer: {
-            Text("Touch and hold a profile to duplicate it, give it a badge, replace its save or delete it.")
+            Text("Touch and hold a profile to duplicate it, give it a badge, replace its save, or delete it.")
         }
     }
 
@@ -357,7 +358,7 @@ struct GameDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Text(String(build.imageSHA256.prefix(12)) + "...")
+                Text(String(build.imageSHA256.prefix(12)) + "…")
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
             }

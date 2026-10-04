@@ -1,14 +1,16 @@
 import EmulatorDomain
 import SwiftUI
 
-/// What toolchain detection found in an image: each tool, engine and audio driver with its
+/// What toolchain detection found in an image: each engine, tool, and audio driver with its
 /// version and how strongly it matched, or that nothing was recognized.
 struct ToolchainSection: View {
     let reports: [ToolchainDetectionReport]
 
+    @State private var showsAbout = false
+
     var body: some View {
         Section {
-            let components = reports.flatMap(\.components)
+            let components = Self.displayOrder(reports.flatMap(\.components))
             if components.isEmpty {
                 Text("Not recognized")
                     .foregroundStyle(.secondary)
@@ -27,15 +29,34 @@ struct ToolchainSection: View {
                 }
             }
         } header: {
-            Text("Made With")
-        } footer: {
-            Text("A guess at how the game was made, from \(sources). It never decides which Game a Build belongs to. It can warn that a save may not carry over to another Build, but can’t promise one will.")
+            HStack {
+                Text("Made With")
+                Spacer()
+                Button {
+                    showsAbout = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                }
+                .accessibilityLabel("About Made With")
+                .popover(isPresented: $showsAbout) {
+                    Text("A guess at how the game was made, from the code it contains. It never decides which Game a Build belongs to, and it can’t promise a save will carry over to another Build.")
+                        .font(.callout)
+                        .padding()
+                        .frame(idealWidth: 300)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .presentationCompactAdaptation(.popover)
+                }
+            }
         }
     }
 
-    private var sources: String {
-        let names = reports.map { "\($0.detector) \($0.corpusRevision)" }
-        return names.isEmpty ? "no detector" : names.joined(separator: " and ")
+    /// An engine such as GB Studio or ZGB is built on a toolchain such as GBDK, so it comes first,
+    /// as what the game was really made with. Within a kind, detection's order is kept.
+    static func displayOrder(_ components: [DetectedToolchainComponent]) -> [DetectedToolchainComponent] {
+        let rank: [ToolchainComponentKind: Int] = [.engine: 0, .toolchain: 1, .musicDriver: 2, .soundEffectsDriver: 3]
+        return components.enumerated()
+            .sorted { (rank[$0.element.kind] ?? 4, $0.offset) < (rank[$1.element.kind] ?? 4, $1.offset) }
+            .map(\.element)
     }
 
     private static func kindName(_ kind: ToolchainComponentKind) -> String {

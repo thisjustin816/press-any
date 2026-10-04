@@ -318,7 +318,7 @@ final class GameplayViewController: UIViewController {
             self.showTransientMessage("Controller disconnected. Game paused.")
         }
 
-        let connected = controllerMonitor.activeController != nil
+        let connected = controllerMonitor.isConnected
         touchControls.showsControls = !connected
         touchControls.hapticsEnabled = !connected
         rumble.setController(controllerMonitor.activeController)

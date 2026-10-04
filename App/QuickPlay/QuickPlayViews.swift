@@ -12,6 +12,7 @@ struct QuickPlaySessionView: View {
 
     @State private var promotion: QuickPlayPromotionViewModel?
     @State private var confirmDiscard = false
+    @State private var showsTechnicalInfo = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -22,6 +23,11 @@ struct QuickPlaySessionView: View {
                 LabeledContent("Kept Until", value: session.expiresAt.formatted(date: .abbreviated, time: .shortened))
                 if let source = sourceProfileName {
                     LabeledContent("Save", value: "Copy of \(source)")
+                }
+                Button {
+                    showsTechnicalInfo = true
+                } label: {
+                    Label("Technical Info", systemImage: "info.circle")
                 }
             } footer: {
                 Text("Nothing from this session is in your library until you add it.")
@@ -59,6 +65,12 @@ struct QuickPlaySessionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $promotion) { model in
             QuickPlayPromotionView(model: model, onPromoted: onFinished)
+        }
+        .sheet(isPresented: $showsTechnicalInfo) {
+            QuickPlayTechnicalInfoView(session: session)
+        }
+        .task {
+            if case .quickPlayInfo = ScreenshotScene.current { showsTechnicalInfo = true }
         }
         .confirmationDialog("Discard this session?", isPresented: $confirmDiscard, titleVisibility: .visible) {
             Button("Discard", role: .destructive) {

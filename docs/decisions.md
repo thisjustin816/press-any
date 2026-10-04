@@ -3,6 +3,16 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Screenshot review changes
+
+**Decision.** Library artwork is square. A Game's Made With section lists an engine such as GB
+Studio or ZGB above the toolchain it runs on, and explains itself behind a question-mark button
+rather than in a footer naming the detector's version. The wordmark is heavy italic, as
+`docs/NAMING.md` describes, at 26 points in the library and 28 on the controller. A Quick Play
+session opens its ROM's Technical Info from the session screen. Full hashes show as four
+groups of 16 on two lines, and touch and hold copies them. Lists in the interface use the serial
+comma.
+
 ## 2026-10-04: Original test ROMs are checked in
 
 **Decision.** `TestROMs/` holds 14 small ROMs and two patches built from source in the same

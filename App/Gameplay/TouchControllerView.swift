@@ -217,9 +217,10 @@ final class TouchControllerView: UIView {
         context.restoreGState()
     }
 
-    /// The app's wordmark, printed at the bottom of the body.
+    /// The app's wordmark, printed at the bottom of the body. It stands a few points taller than
+    /// its box, still inside the box's tap area.
     private func drawLogo(in rect: CGRect, palette: ControllerPalette) {
-        let string = AppBrand.Wordmark.attributedString(size: 18, ink: palette.logo, accent: palette.logoAccent)
+        let string = AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent)
         let textSize = string.size()
         string.draw(at: CGPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2))
     }

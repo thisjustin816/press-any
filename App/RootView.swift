@@ -140,7 +140,7 @@ struct RootView: View {
         }
     }
 
-    /// The gameplay scenes; `LibraryView` opens the rest.
+    /// The gameplay and Quick Play scenes; `LibraryView` opens the rest.
     private func openScreenshotScene() {
         guard let container = bootstrap.container else { return }
         switch ScreenshotScene.current {
@@ -153,6 +153,12 @@ struct RootView: View {
                 launch(context, container: container)
             } catch {
                 errorMessage = "Could not start \(file): \(error)"
+            }
+        case .quickPlayInfo(let file):
+            do {
+                endedQuickPlay = try container.quickPlayWorkspace.start(romURL: ScreenshotScene.romURL(file))
+            } catch {
+                errorMessage = "Could not start Quick Play: \(error)"
             }
         case .quickPlay(let file):
             quickPlay(

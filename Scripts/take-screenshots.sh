@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Captures the library, game, Build info, import review, Quick Play and gameplay screens on an
+# Captures the library, game, Build info, gameplay, import review, and Quick Play screens on an
 # iOS simulator, seeded from TestROMs/. Needs macOS with Xcode, after `make bootstrap`.
 #
 #   Scripts/take-screenshots.sh [ROMS] [OUTPUT_DIR]
 #
 # ROMS is `hero` (the default), `all`, or a comma-separated list of manifest tags and filenames.
-# Optional environment: DEVICE (simulator name), APPEARANCE (light or dark), IMPORT_ROM (the
-# file the import review opens, which is never seeded).
+# Optional environment: SHOTS (`summary`, the default: one of each screen; `every-rom`: each
+# ROM's game, Technical Info and gameplay), DEVICE (simulator name), APPEARANCE (light or dark),
+# IMPORT_ROM (the file the import review opens, which is never seeded).
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
@@ -18,29 +19,67 @@ output="${2:-screenshots}"
 device="${DEVICE:-iPhone 17 Pro}"
 appearance="${APPEARANCE:-light}"
 import_rom="${IMPORT_ROM:-gbdk450-badsum.gb}"
+shots="${SHOTS:-summary}"
 derived_data="build/screenshots/DerivedData"
 app="$derived_data/Build/Products/Debug-iphonesimulator/PressAny.app"
 
-# One filename per line: the chosen ROMs, then any patch whose source was chosen.
-selected="$(python3 - "$roms" <<'PY'
+# The plan, tab-separated: `file <name>` for each ROM or patch to copy (the chosen ROMs, then any
+# patch whose source was chosen), then `shot <scene> <seconds to wait> <name> <gamepad>` for each
+# screenshot. The waits let gameplay get past the boot logo with the game's picture moving.
+plan="$(python3 - "$roms" "$shots" "$import_rom" <<'PY'
 import json, sys
+wanted_arg, shots, import_rom = sys.argv[1:]
 manifest = json.load(open("TestROMs/manifest.json"))
-wanted = {w.strip() for w in sys.argv[1].split(",") if w.strip()}
+wanted = {w.strip() for w in wanted_arg.split(",") if w.strip()}
 def chosen(entry):
     if "all" in wanted:
         return True
     if "hero" in wanted and entry["hero"]:
         return True
     return entry["filename"] in wanted or bool(wanted & set(entry["tags"]))
-roms = [r["filename"] for r in manifest["roms"] if chosen(r)]
-patches = [p["filename"] for p in manifest["patches"] if p["source"] in roms]
+roms = [r for r in manifest["roms"] if chosen(r)]
 if not roms:
-    sys.exit(f"No ROMs in TestROMs/manifest.json match {sys.argv[1]!r}")
-print("\n".join(roms + patches))
+    sys.exit(f"No ROMs in TestROMs/manifest.json match {wanted_arg!r}")
+names = [r["filename"] for r in roms]
+patches = [p for p in manifest["patches"] if p["source"] in names]
+def first(test):
+    return next((r["filename"] for r in roms if test(r)), None)
+def stem(filename):
+    return filename.rsplit(".", 1)[0]
+
+lines = [f"file\t{f}" for f in names + [p["filename"] for p in patches]]
+shot = lambda scene, wait, name, gamepad=0: lines.append(f"shot\t{scene}\t{wait}\t{name}\t{gamepad}")
+# The first launch seeds the library, so it waits longest.
+shot("library", 8, "library")
+if shots == "every-rom":
+    for f in names:
+        shot(f"game:{f}", 4, f"game-{stem(f)}")
+        shot(f"build-info:{f}", 4, f"build-info-{stem(f)}")
+        shot(f"play:{f}", 8, f"play-{stem(f)}")
+elif shots == "summary":
+    # A Game with a patched Build shows Builds best, and GB Studio shows the most in Made With.
+    shot(f"game:{(patches[0]['source'] if patches else names[0])}", 4, "game")
+    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info")
+    for system in ("GB", "GBC"):
+        if f := first(lambda r: r["system"] == system):
+            shot(f"play:{f}", 8, f"play-{system.lower()}")
+else:
+    sys.exit(f"SHOTS must be summary or every-rom, not {shots!r}")
+shot(f"play:{names[0]}", 8, "play-gamepad", 1)
+shot(f"import:unimported/{import_rom}", 4, "import-review")
+shot(f"quick-play:{names[0]}", 8, "quick-play")
+shot(f"quick-play-info:{names[0]}", 4, "quick-play-info")
+print("\n".join(lines))
 PY
 )"
 files=()
-while IFS= read -r file; do files+=("$file"); done <<<"$selected"
+scenes=()
+while IFS=$'\t' read -r kind rest; do
+  case "$kind" in
+    file) files+=("$rest") ;;
+    shot) scenes+=("$rest") ;;
+  esac
+done <<<"$plan"
 echo "Seeding: ${files[*]}"
 
 mkdir -p "$output"
@@ -100,7 +139,7 @@ collect_diagnostics() {
 }
 
 shot=0
-# capture <scene> <seconds to wait> <name>
+# capture <scene> <seconds to wait> <name> <gamepad: 1 to act as if one were connected>
 capture() {
   shot=$((shot + 1))
   local file
@@ -111,7 +150,8 @@ capture() {
   local attempt
   for attempt in 1 2 3; do
     xcrun simctl launch --terminate-running-process --stdout="$PWD/$log.tmp" --stderr="$PWD/$log.tmp" \
-      "$udid" "$bundle_id" -ScreenshotScene "$1" >/dev/null && break
+      "$udid" "$bundle_id" -ScreenshotScene "$1" -ScreenshotGamepad "$([[ $4 == 1 ]] && echo YES || echo NO)" \
+      >/dev/null && break
     if ((attempt == 3)); then
       collect_diagnostics
       return 1
@@ -125,18 +165,10 @@ capture() {
   echo "$file"
 }
 
-# The first launch seeds the library, so it gets longer.
-capture library 8 library
-for file in "${files[@]}"; do
-  [[ -f "TestROMs/roms/$file" ]] || continue
-  name="${file%.*}"
-  capture "game:$file" 4 "game-$name"
-  capture "build-info:$file" 4 "build-info-$name"
-  # Past the boot logo, with the game's own picture moving.
-  capture "play:$file" 8 "play-$name"
+for scene in "${scenes[@]}"; do
+  IFS=$'\t' read -r name_scene wait name gamepad <<<"$scene"
+  capture "$name_scene" "$wait" "$name" "$gamepad"
 done
-capture "import:unimported/$import_rom" 4 "import-review"
-capture "quick-play:${files[0]}" 8 "quick-play"
 rm -f "$log.tmp"
 
 if grep -q "Couldn't seed\|seeding failed" "$log"; then

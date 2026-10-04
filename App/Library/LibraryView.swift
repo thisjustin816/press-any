@@ -88,7 +88,7 @@ struct LibraryView: View {
             .searchable(text: $model.searchText, prompt: "Search games")
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    WordmarkView()
+                    WordmarkView(size: 26)
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -222,8 +222,8 @@ struct LibraryView: View {
                 GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
             } label: {
                 HStack(spacing: 12) {
-                    GameArtworkView(title: game.primaryTitle, url: container.artworkURL(for: game))
-                        .frame(width: 48, height: 64)
+                    GameArtworkView(url: container.artworkURL(for: game))
+                        .frame(width: 56, height: 56)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(game.primaryTitle)
                             .font(.headline)
@@ -296,8 +296,8 @@ private struct GameLibraryTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            GameArtworkView(title: game.primaryTitle, url: artworkURL)
-                .aspectRatio(0.72, contentMode: .fit)
+            GameArtworkView(url: artworkURL)
+                .aspectRatio(1, contentMode: .fit)
             Text(game.primaryTitle)
                 .font(.headline)
                 .lineLimit(2)
@@ -306,9 +306,8 @@ private struct GameLibraryTile: View {
     }
 }
 
-/// The Game's assigned artwork, or a placeholder with its title.
+/// The Game's assigned artwork, or a placeholder. The title is always shown beside it.
 private struct GameArtworkView: View {
-    let title: String
     let url: URL?
 
     var body: some View {
@@ -333,16 +332,9 @@ private struct GameArtworkView: View {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(.quaternary)
             .overlay {
-                VStack(spacing: 6) {
-                    Image(systemName: "gamecontroller.fill")
-                        .font(.title2)
-                    Text(title)
-                        .font(.caption2)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                        .padding(.horizontal, 6)
-                }
-                .foregroundStyle(.secondary)
+                Image(systemName: "gamecontroller.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
             }
             .clipped()
     }

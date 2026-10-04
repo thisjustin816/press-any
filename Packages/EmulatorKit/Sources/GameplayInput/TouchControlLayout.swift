@@ -190,7 +190,7 @@ extension TouchControlLayout {
 
     /// The logo's box, centered just above the home indicator, or the bottom edge without one.
     static func logo(width: Double, height: Double, safeBottom: Double) -> TouchRect {
-        TouchRect(x: width / 2 - 60, y: height - max(safeBottom, 12) - 28, width: 120, height: 24)
+        TouchRect(x: width / 2 - 90, y: height - max(safeBottom, 12) - 28, width: 180, height: 24)
     }
 
     /// The original Game Boy (DMG-01) front panel, in millimeters from its left edge and from the

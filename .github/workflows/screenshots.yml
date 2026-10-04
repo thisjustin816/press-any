@@ -10,6 +10,11 @@ on:
         description: "hero, all, or comma-separated manifest tags and filenames"
         default: hero
         required: true
+      shots:
+        description: One of each screen, or each ROM's game, Technical Info and gameplay too
+        type: choice
+        options: [summary, every-rom]
+        default: summary
       appearance:
         description: Simulator appearance
         type: choice
@@ -40,6 +45,7 @@ jobs:
       - name: Take screenshots
         env:
           ROMS: ${{ inputs.roms }}
+          SHOTS: ${{ inputs.shots }}
           APPEARANCE: ${{ inputs.appearance }}
           IMPORT_ROM: ${{ inputs.import_rom }}
         run: |

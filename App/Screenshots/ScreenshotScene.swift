@@ -14,12 +14,23 @@ enum ScreenshotScene: Equatable {
     case importReview(romFile: String)
     case play(romFile: String)
     case quickPlay(romFile: String)
+    case quickPlayInfo(romFile: String)
 
     static let current: ScreenshotScene? = {
         #if DEBUG
         return UserDefaults.standard.string(forKey: "ScreenshotScene").flatMap(ScreenshotScene.init(argument:))
         #else
         return nil
+        #endif
+    }()
+
+    /// Set with `-ScreenshotGamepad YES`: gameplay acts as if a controller were connected, so its
+    /// touch controls hide, whatever controllers the simulator has.
+    static let simulatesGamepad: Bool = {
+        #if DEBUG
+        return current != nil && UserDefaults.standard.bool(forKey: "ScreenshotGamepad")
+        #else
+        return false
         #endif
     }()
 
@@ -39,6 +50,7 @@ enum ScreenshotScene: Equatable {
         case ("import", let file?): self = .importReview(romFile: file)
         case ("play", let file?): self = .play(romFile: file)
         case ("quick-play", let file?): self = .quickPlay(romFile: file)
+        case ("quick-play-info", let file?): self = .quickPlayInfo(romFile: file)
         default: return nil
         }
     }
