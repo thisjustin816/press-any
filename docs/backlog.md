@@ -1,9 +1,10 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-04: 98 done, 33 partial and 166 missing. The specs stay the source of truth for what
-each item means; this file tracks what's left and a suggested order. Update an item's row when
-its status changes, and move it to its area's "Done" line when it's finished.
+on 2026-10-03 and updated 2026-10-04: 98 done, 33 partial and 166 missing. The specs stay the
+source of truth for what each item means; this file tracks what's left and a suggested order.
+Update an item's row when its status changes, and move it to its area's "Done" line when it's
+finished.
 
 Spec references: `mvp`, `prod`, `dec` and `later` are the four files in `docs/specs/`
 (`gb-emulator-mvp.md`, `-product.md`, `-decisions.md` and `-later-decisions.md`), with section

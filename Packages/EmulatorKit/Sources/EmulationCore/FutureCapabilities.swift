@@ -1,8 +1,9 @@
 import Foundation
 
 // Capabilities a core may offer later. No core implements them yet, and the app checks for one
-// with a cast (`core as? RewindCapability`), so a core without it needs nothing. The contracts
-// below are filled in when each feature is built, so they don't commit to one core's API.
+// with a cast (`core as? RewindCapability`), so a core without it needs nothing. Rewind's contract
+// follows the spec; the others get theirs when their feature is built, so none commits to one
+// core's API.
 
 /// A core that can step back through recent frames.
 public protocol RewindCapability: AnyObject {

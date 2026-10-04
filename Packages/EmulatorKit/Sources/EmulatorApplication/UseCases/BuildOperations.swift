@@ -175,8 +175,11 @@ public struct BuildOperations: Sendable {
             updatedNewGame.preferredBuildID = promoted.id
             try games.updateGame(updatedNewGame)
 
-            let emptiesSource = try mode == .move && builds.fetchBuilds(gameID: sourceBuild.gameID).isEmpty
-            if !emptiesSource {
+            // The source's Builds after a move, best first; a copy leaves the source as it was.
+            let remaining = try mode == .move
+                ? builds.fetchBuilds(gameID: sourceBuild.gameID).sorted(by: Self.preferredBuildSort)
+                : nil
+            if remaining?.isEmpty != true {
                 try copyProfiles(
                     carryOver.saveProfileIDs,
                     from: sourceBuild.gameID,
@@ -185,8 +188,7 @@ public struct BuildOperations: Sendable {
                 )
             }
 
-            if mode == .move, var oldGame = try games.fetchGame(id: sourceBuild.gameID) {
-                let remaining = try builds.fetchBuilds(gameID: oldGame.id).sorted(by: Self.preferredBuildSort)
+            if let remaining, var oldGame = try games.fetchGame(id: sourceBuild.gameID) {
                 if remaining.isEmpty {
                     // Promoting a Game's only Build renames it rather than splitting it.
                     updatedNewGame.lineage = nil
@@ -304,7 +306,7 @@ public struct BuildOperations: Sendable {
 
         // Whichever artwork lost has no owner left.
         if mode == .move, sourceGame.artworkAssetID != nil, let kept = targetGame.artworkAssetID {
-            discardAsset(replacesArtwork ? kept : sourceGame.artworkAssetID)
+            assets.discard(assetID: replacesArtwork ? kept : sourceGame.artworkAssetID, files: assetStore)
         }
         if mode == .copy, carryOver.artwork, targetGame.artworkAssetID == nil, let artwork = sourceGame.artworkAssetID {
             _ = try copyArtwork(artwork, to: targetGameID)
@@ -355,14 +357,6 @@ public struct BuildOperations: Sendable {
             fileExtension: URL(fileURLWithPath: asset.relativePath).pathExtension,
             originalFilename: asset.originalFilename
         )
-    }
-
-    private func discardAsset(_ assetID: UUID?) {
-        guard let assetID, let asset = try? assets.fetchAsset(id: assetID) else { return }
-        try? assets.deleteAsset(id: asset.id)
-        if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
-            try? assetStore.removeIfExists(url)
-        }
     }
 
     /// Inserts a copy of `source` in `gameID`. A patch-derived copy gets its own recipe, so

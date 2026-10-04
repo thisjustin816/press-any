@@ -2,7 +2,7 @@ import AssetStorage
 import SwiftUI
 
 /// Checks the library's files against the database: missing files, damaged ROMs and patches,
-/// and leftover ROM or generated files that no Build uses, which it removes.
+/// and leftover source or generated files that nothing uses, which it removes.
 struct LibraryCheckSection: View {
     let checker: ManagedAssetIntegrityChecker
 
@@ -70,7 +70,7 @@ struct LibraryCheckSection: View {
             lines.append("\(missingGenerated) patched images will be rebuilt the next time they’re played.")
         }
         if !report.removedRelativePaths.isEmpty {
-            lines.append("Removed \(report.removedRelativePaths.count) leftover files no Build uses.")
+            lines.append("Removed \(report.removedRelativePaths.count) leftover files that nothing used.")
         }
         return lines.isEmpty ? "Every library file is present and intact." : lines.joined(separator: "\n")
     }

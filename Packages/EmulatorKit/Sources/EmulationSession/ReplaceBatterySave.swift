@@ -61,18 +61,8 @@ public struct ReplaceBatterySave: Sendable {
             return BatterySaveReplacement(profile: replaced, safetyCopy: safetyCopy)
         } catch {
             // The profile still has its old save, so the copy isn't needed.
-            if let safetyCopy { discard(safetyCopy) }
+            if let safetyCopy { profiles.discardNewProfile(safetyCopy, assets: assets, files: assetStore) }
             throw error
-        }
-    }
-
-    private func discard(_ profile: SaveProfile) {
-        try? profiles.deleteSaveProfile(id: profile.id)
-        guard let assetID = profile.persistentSaveAssetID,
-              let asset = try? assets.fetchAsset(id: assetID) else { return }
-        try? assets.deleteAsset(id: assetID)
-        if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
-            try? assetStore.removeIfExists(url)
         }
     }
 }

@@ -101,7 +101,7 @@ public struct SaveStateService: Sendable {
             }
         } catch {
             try? assetStore.removeIfExists(destination)
-            if let thumbnail { discard(thumbnail) }
+            if let thumbnail { assets.discard(thumbnail, files: assetStore) }
             throw error
         }
 
@@ -146,13 +146,6 @@ public struct SaveStateService: Sendable {
         return asset
     }
 
-    private func discard(_ asset: ManagedAsset) {
-        try? assets.deleteAsset(id: asset.id)
-        if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
-            try? assetStore.removeIfExists(url)
-        }
-    }
-
     public func load(
         _ state: SaveState,
         worker: SessionWorker,
@@ -195,7 +188,7 @@ public struct SaveStateService: Sendable {
             } else {
                 try states.deleteSaveState(id: state.id)
             }
-            if let thumbnail { discard(thumbnail) }
+            if let thumbnail { assets.discard(thumbnail, files: assetStore) }
         }
     }
 }

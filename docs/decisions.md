@@ -13,7 +13,7 @@ and states aren't rehashed: they change as they're played, and their writes are 
 
 ## 2026-10-04: Promote and merge review what comes along
 
-**Decision.** Make Separate Game… and Merge Into Another Game… open a review sheet before they
+**Decision.** Make Separate Game and Merge Into Another Game open a review sheet before they
 change anything. Build-scoped data (save states, recipes, toolchain reports, variable maps,
 settings) always follows its Build; the sheet chooses the Game-level things:
 
@@ -36,9 +36,9 @@ can have several Base Builds, one per region or revision.
 
 ## 2026-10-04: Importing a .sav into an existing profile keeps a copy
 
-**Decision.** A Save Profile's menu has Replace Save from File…. When the profile already has a
-save, the app asks first, then copies that save to "<profile> before import" before writing the
-file, as Quick Play promotion does with "before Quick Play". A blank profile is filled without
+**Decision.** A Save Profile's menu has Replace Save from File. When the profile already has a
+save, the app asks first. It then copies the current save to "<profile> before import" and writes
+the file, as Quick Play promotion does with "<profile> before Quick Play". A blank profile is filled without
 asking. The imported save records no writing Build, so launching it never raises the
 compatibility warning. Since the profile's save is newer than any Auto State, the next launch
 boots from the imported save.
@@ -49,12 +49,12 @@ boots from the imported save.
 Build with a save written by another Build checks the pair first. The save is risky when either
 Build was made with GB Studio, when both Builds have detection results naming different tools or
 engine versions, or when their cartridge headers declare different save hardware (bytes 0x147
-and 0x149). A risky launch asks before playing: Play with a Copy (the default), Start a New Save,
-Use the Save Anyway, or Cancel. A copy or a new save becomes that Build's default save, so the
+and 0x149). A risky launch asks before playing: Play with a Copy, Start a New Save, Use "<profile>"
+Anyway, or Cancel. A copy or a new save becomes that Build's default save, so the
 next launch doesn't ask again. A save with no recorded writer, or a check that fails, never
 blocks play: detection can add caution but never proves two saves compatible.
 
-A Build can also keep variable maps (Build menu > Attach Variable Map…): GB Studio's
+A Build can also keep variable maps (Build menu > Attach Variable Map): GB Studio's
 `game_globals.i` or `globals.i`, or an RGBDS `.sym` or GBDK `.noi` symbol file. Each map is
 stored as an immutable source file on that exact Build and listed in Technical Info. Attaching a
 map migrates nothing yet; it's kept for the v1.1 save migration.
@@ -67,8 +67,8 @@ result. Each Build keeps one report per detector (`build_toolchain_reports`). A 
 Info detects its image again and keeps the result if it changed, which covers Builds imported
 before detection and newer signature data. Each finding carries a categorical confidence from its
 own matched signatures: high for two or more, medium for one, low when it's inferred from other
-findings. "Not recognized" is a stored result too. Detection never names or groups a Game and
-never decides save compatibility.
+findings. "Not recognized" is a stored result too. Detection never names or groups a Game, and
+for saves it only adds caution (see "A risky Build switch offers a copy of the save").
 
 ## 2026-10-03: Controller themes
 

@@ -29,7 +29,7 @@ struct ToolchainSection: View {
         } header: {
             Text("Made With")
         } footer: {
-            Text("A guess at how the game was made, from \(sources). It never decides which Game a Build belongs to or whether its saves carry over.")
+            Text("A guess at how the game was made, from \(sources). It never decides which Game a Build belongs to. It can warn that a save may not carry over to another Build, but can’t promise one will.")
         }
     }
 
