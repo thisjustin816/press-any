@@ -2,7 +2,7 @@
 """Generate the original PNG assets in ../res (font, background, ball sprite).
 
 Run once; the PNGs are committed.  Needs Pillow.  Output is 4-shade
-indexed PNG so png2asset maps colours 0..3 to DMG shades white..black.
+indexed PNG so png2asset maps colors 0..3 to DMG shades white..black.
 """
 import os
 from PIL import Image
@@ -58,7 +58,7 @@ def glyph(ch):
 
 def font():
     # One extra, unused swatch tile holds all four shades in palette order so
-    # png2asset keeps colour indices 0..3 (it drops unused palette entries).
+    # png2asset keeps color indices 0..3 (it drops unused palette entries).
     img = Image.new("L", (8 * (len(ORDER) + 1), 8), 0)
     for x in range(8):
         for y in range(8):
@@ -103,10 +103,10 @@ def ball():
             if d <= 7.6:
                 v = 3 if d > 5.8 else 2
                 if (x - 5) ** 2 + (y - 5) ** 2 <= 5:
-                    v = 0 if v == 2 else v  # shine (colour 0 is transparent)
+                    v = 0 if v == 2 else v  # shine (color 0 is transparent)
                     v = 1 if v == 0 else v
                 img.putpixel((x, y), v)
-    # colour 0 is transparent for sprites: keep outside as 0
+    # color 0 is transparent for sprites: keep outside as 0
     save(img, os.path.join("sprites", "ball.png"))
 
 

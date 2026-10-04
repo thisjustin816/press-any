@@ -206,7 +206,7 @@ def make_sprites():
                         sp[ox + xx, oy + yy] = SHADES[3]
         counts.append(len(lab))
     save_p(sheet, os.path.join(ROOT, "assets/sprites/buttons.png"), [TRANSPARENT] + SHADES)
-    # tile x is relative to a canvas-centred 16px base: -16 .. +24 for a 48px canvas
+    # tile x is relative to a canvas-centered 16px base: -16 .. +24 for a 48px canvas
     btn_id = sprite_res("buttons", "buttons.png", 48, 144, counts, x0=-16)
     return ball_id, btn_id
 

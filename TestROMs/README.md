@@ -32,7 +32,7 @@ everything in `roms/` and `patches/` (`sha256sum -c SHA256SUMS` from this direct
 | `hugedriver-dmg.gb` | GB | hUGEDriver a3cbd0c, RGBDS 1.0.4 | ROM ONLY | plays hUGEDriver's sample song |
 | `zgb-dmg.gb` | GB | ZGB v2023.0 on GBDK-2020 4.1.1 | MBC1 | |
 | `gbdk450-gbc.gbc` | GBC | GBDK-2020 4.5.0 | ROM ONLY | GBC-only, header 0x143 = 0xC0 |
-| `gbdk450-dual.gbc` | GBC | GBDK-2020 4.5.0 | ROM ONLY | dual-mode (0x80), inverted grey on DMG, colour on GBC, hero |
+| `gbdk450-dual.gbc` | GBC | GBDK-2020 4.5.0 | ROM ONLY | dual-mode (0x80), inverted gray on DMG, color on GBC, hero |
 | `rgbds-gbc.gbc` | GBC | RGBDS 1.0.4 | ROM ONLY | GBC-only (`rgbfix -C`) |
 | `gbstudio-gbc.gbc` | GBC | GB Studio 4.3.2 | MBC5+RUMBLE+RAM+BATTERY | color mode, hero |
 | `mbc5-battery.gb` | GB | GBDK-2020 4.5.0 | MBC5+RAM+BATTERY | 8 KB cart RAM; save counter +1 per boot and per A press, hero |
