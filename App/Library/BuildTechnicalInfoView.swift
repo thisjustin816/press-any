@@ -17,7 +17,7 @@ struct BuildTechnicalInfoView: View {
             Form {
                 Section("Build") {
                     LabeledContent("Name", value: build.displayName)
-                    LabeledContent("System", value: build.system == .gameBoyColor ? "Game Boy Color" : "Game Boy")
+                    LabeledContent("System", value: build.system.displayName)
                     LabeledContent("Source", value: build.sourceKind == .patchRecipe ? "Patched" : "Imported")
                     if let pin = build.corePin {
                         LabeledContent("Core", value: "\(pin.descriptor.identifier) \(pin.descriptor.version)")

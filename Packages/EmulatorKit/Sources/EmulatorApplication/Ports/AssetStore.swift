@@ -16,6 +16,7 @@ public protocol AssetStore: Sendable {
     func persistentSaveURL(profileID: UUID) -> URL
     func artworkURL(gameID: UUID, sha256: String, extension fileExtension: String) throws -> URL
     func stateURL(stateID: UUID) -> URL
+    func stateThumbnailURL(stateID: UUID, extension fileExtension: String) throws -> URL
     func quickPlayRoot(sessionID: UUID) -> URL
     func quickPlaySessionIDs() throws -> [UUID]
     func managedRelativePath(for url: URL) throws -> String

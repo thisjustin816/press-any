@@ -3,6 +3,14 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: The library check runs when asked
+
+**Decision.** Settings > Check Library Files compares the managed files with the database. It
+rehashes every ROM and patch, marks damaged ones, reports missing files, and removes leftover source
+and generated files that nothing uses, such as those an interrupted import left behind. It runs
+only when the user asks, since rehashing a large library at launch would slow every start. Saves
+and states aren't rehashed: they change as they're played, and their writes are atomic.
+
 ## 2026-10-04: Promote and merge review what comes along
 
 **Decision.** Make Separate Game… and Merge Into Another Game… open a review sheet before they

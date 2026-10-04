@@ -15,6 +15,7 @@ public struct SaveStateService: Sendable {
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
     private let retention: AutoStateRetention
+    private let thumbnails: (any FrameImageEncoding)?
     private let now: @Sendable () -> Date
 
     public init(
@@ -22,12 +23,14 @@ public struct SaveStateService: Sendable {
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
         retention: AutoStateRetention = .init(),
+        thumbnails: (any FrameImageEncoding)? = nil,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.states = states
         self.assets = assets
         self.assetStore = assetStore
         self.retention = retention
+        self.thumbnails = thumbnails
         self.now = now
     }
 
@@ -37,7 +40,8 @@ public struct SaveStateService: Sendable {
         context: LaunchContext,
         kind: SaveStateKind,
         label: String? = nil,
-        playtimeSeconds: Double
+        playtimeSeconds: Double,
+        frame: EmulatorVideoFrame? = nil
     ) throws -> SaveState {
         let payload = try worker.perform { try $0.serializeState() }
         let core = try worker.perform { $0.descriptor }
@@ -58,6 +62,9 @@ public struct SaveStateService: Sendable {
             integrityStatus: .verified,
             createdAt: timestamp
         )
+
+        // A thumbnail is a convenience: one that can't be made leaves the state without it.
+        let thumbnail = frame.flatMap { try? saveThumbnail($0, stateID: stateID, timestamp: timestamp) }
 
         let state: SaveState
         do {
@@ -80,6 +87,7 @@ public struct SaveStateService: Sendable {
                     core: core,
                     stateSerializationVersion: serializationVersion,
                     stateAssetID: assetID,
+                    screenshotAssetID: thumbnail?.id,
                     kind: kind,
                     autoSequence: autoSequence,
                     label: label,
@@ -93,6 +101,7 @@ public struct SaveStateService: Sendable {
             }
         } catch {
             try? assetStore.removeIfExists(destination)
+            if let thumbnail { discard(thumbnail) }
             throw error
         }
 
@@ -102,6 +111,46 @@ public struct SaveStateService: Sendable {
             try? pruneAutoStates(context: context)
         }
         return state
+    }
+
+    /// The state's thumbnail image, or nil when it has none or it can't be read.
+    public func thumbnailData(for state: SaveState) -> Data? {
+        guard let assetID = state.screenshotAssetID,
+              let asset = try? assets.fetchAsset(id: assetID),
+              let url = try? assetStore.managedURL(relativePath: asset.relativePath)
+        else { return nil }
+        return try? assetStore.readData(at: url)
+    }
+
+    private func saveThumbnail(_ frame: EmulatorVideoFrame, stateID: UUID, timestamp: Date) throws -> ManagedAsset? {
+        guard let thumbnails else { return nil }
+        let data = try thumbnails.encode(frame)
+        let destination = try assetStore.stateThumbnailURL(stateID: stateID, extension: thumbnails.fileExtension)
+        try assetStore.writeDataAtomically(data, to: destination)
+        let asset = ManagedAsset(
+            id: UUID(),
+            kind: .stateThumbnail,
+            storageClass: .userData,
+            contentSHA256: assetStore.hashData(data),
+            byteLength: Int64(data.count),
+            relativePath: try assetStore.managedRelativePath(for: destination),
+            integrityStatus: .verified,
+            createdAt: timestamp
+        )
+        do {
+            try assets.insertAsset(asset)
+        } catch {
+            try? assetStore.removeIfExists(destination)
+            throw error
+        }
+        return asset
+    }
+
+    private func discard(_ asset: ManagedAsset) {
+        try? assets.deleteAsset(id: asset.id)
+        if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
+            try? assetStore.removeIfExists(url)
+        }
     }
 
     public func load(
@@ -137,6 +186,7 @@ public struct SaveStateService: Sendable {
     private func pruneAutoStates(context: LaunchContext) throws {
         let all = try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
         for state in retention.expiredStates(from: all) {
+            let thumbnail = try state.screenshotAssetID.flatMap { try assets.fetchAsset(id: $0) }
             if let asset = try assets.fetchAsset(id: state.stateAssetID) {
                 let url = try assetStore.managedURL(relativePath: asset.relativePath)
                 try states.deleteSaveState(id: state.id)
@@ -145,6 +195,7 @@ public struct SaveStateService: Sendable {
             } else {
                 try states.deleteSaveState(id: state.id)
             }
+            if let thumbnail { discard(thumbnail) }
         }
     }
 }

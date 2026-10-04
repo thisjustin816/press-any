@@ -15,6 +15,7 @@ import ToolchainDetection
 @MainActor
 final class AppContainer {
     let fileStore: ManagedFileStore
+    let integrityChecker: ManagedAssetIntegrityChecker
     let database: AppDatabase
     let repositories: GRDBRepositorySet
 
@@ -58,6 +59,7 @@ final class AppContainer {
         try database.migrate()
         repositories = database.makeRepositories()
 
+        integrityChecker = ManagedAssetIntegrityChecker(assets: repositories.assets, assetStore: fileStore)
         importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, assetStore: fileStore)
         importCommitter = ImportCommitter(
             games: repositories.games,
@@ -190,7 +192,8 @@ final class AppContainer {
             assetStore: fileStore,
             imageResolver: launchImageResolver,
             coreRegistry: coreRegistry,
-            settings: settingsResolver
+            settings: settingsResolver,
+            thumbnails: PNGFrameEncoder()
         )
     }
 

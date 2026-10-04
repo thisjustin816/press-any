@@ -61,6 +61,7 @@ public final class EmulationSession: @unchecked Sendable {
         imageResolver: any BuildImageResolving,
         coreRegistry: CoreRegistry,
         settings: SettingsResolver? = nil,
+        thumbnails: (any FrameImageEncoding)? = nil,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.builds = builds
@@ -72,7 +73,13 @@ public final class EmulationSession: @unchecked Sendable {
         self.now = now
         self.coreResolver = ResolveCoreForBuild(builds: builds, registry: coreRegistry, now: now)
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
-        self.stateService = SaveStateService(states: states, assets: assets, assetStore: assetStore, now: now)
+        self.stateService = SaveStateService(
+            states: states,
+            assets: assets,
+            assetStore: assetStore,
+            thumbnails: thumbnails,
+            now: now
+        )
         self.settings = settings
     }
 
@@ -265,7 +272,8 @@ public final class EmulationSession: @unchecked Sendable {
             context: context,
             kind: .manual,
             label: label,
-            playtimeSeconds: playtimeSeconds
+            playtimeSeconds: playtimeSeconds,
+            frame: currentFrame
         )
     }
 
@@ -276,8 +284,14 @@ public final class EmulationSession: @unchecked Sendable {
             worker: worker,
             context: context,
             kind: .auto,
-            playtimeSeconds: playtimeSeconds
+            playtimeSeconds: playtimeSeconds,
+            frame: currentFrame
         )
+    }
+
+    /// The state's thumbnail image, or nil when it has none.
+    public func thumbnailData(for state: SaveState) -> Data? {
+        stateService.thumbnailData(for: state)
     }
 
     public func loadState(_ saveState: SaveState) throws {

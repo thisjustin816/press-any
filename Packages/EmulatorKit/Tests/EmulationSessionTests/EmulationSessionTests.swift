@@ -50,6 +50,48 @@ final class EmulationSessionTests: XCTestCase {
         XCTAssertEqual(Set(autos.compactMap(\.autoSequence)), Set([3, 4, 5, 6, 7]))
     }
 
+    func testAStateKeepsAThumbnailOfTheFrameItWasSavedOn() throws {
+        let harness = try SessionHarness.make()
+        let session = harness.makeSession(thumbnails: FrameSizeEncoder())
+        try session.start(context: harness.contextA)
+        let frame = try session.stepFrame()
+
+        let state = try session.saveManualState()
+
+        XCTAssertEqual(session.thumbnailData(for: state), FrameSizeEncoder.bytes(of: frame))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(state.screenshotAssetID)))
+        XCTAssertEqual(asset.kind, .stateThumbnail)
+    }
+
+    func testAStateSavedBeforeAnyFrameOrWithoutAnEncoderHasNoThumbnail() throws {
+        let harness = try SessionHarness.make()
+        let withEncoder = harness.makeSession(thumbnails: FrameSizeEncoder())
+        try withEncoder.start(context: harness.contextA)
+        XCTAssertNil(try withEncoder.saveManualState().screenshotAssetID)
+        try withEncoder.stop()
+
+        let without = harness.makeSession()
+        try without.start(context: harness.contextA)
+        _ = try without.stepFrame()
+        XCTAssertNil(try without.saveManualState().screenshotAssetID)
+    }
+
+    func testPruningAutoStatesRemovesTheirThumbnails() throws {
+        let harness = try SessionHarness.make()
+        let session = harness.makeSession(thumbnails: FrameSizeEncoder())
+        try session.start(context: harness.contextA)
+        for _ in 0..<7 {
+            _ = try session.stepFrame()
+            try session.background()
+            try session.resume()
+        }
+
+        let kept = try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
+        let thumbnails = try harness.assets.fetchAssets().filter { $0.kind == .stateThumbnail }
+        XCTAssertEqual(Set(thumbnails.map(\.id)), Set(kept.compactMap(\.screenshotAssetID)))
+        XCTAssertEqual(thumbnails.count, 5)
+    }
+
     func testSaveStateCannotLoadIntoDifferentBuildContext() throws {
         let harness = try SessionHarness.make()
         let sessionA = harness.makeSession()
@@ -470,6 +512,7 @@ private struct SessionHarness {
 
     func makeSession(
         settings: SettingsResolver? = nil,
+        thumbnails: (any FrameImageEncoding)? = nil,
         now: Date = Date(timeIntervalSince1970: 1_700_000_000)
     ) -> EmulationSession {
         EmulationSession(
@@ -481,6 +524,7 @@ private struct SessionHarness {
             imageResolver: TestBuildROMResolver(builds: builds, assets: assets, store: store),
             coreRegistry: CoreRegistry(factories: [factory]),
             settings: settings,
+            thumbnails: thumbnails,
             now: { now }
         )
     }
@@ -517,5 +561,18 @@ private struct TestBuildROMResolver: BuildImageResolving {
             throw EmulationSessionError.romAssetNotFound(build.imageAssetID)
         }
         return try store.managedURL(relativePath: asset.relativePath)
+    }
+}
+
+/// Encodes a frame as its width and height, so a test can tell which frame it got.
+private struct FrameSizeEncoder: FrameImageEncoding {
+    let fileExtension = "png"
+
+    static func bytes(of frame: EmulatorVideoFrame) -> Data {
+        Data([UInt8(frame.width), UInt8(frame.height)])
+    }
+
+    func encode(_ frame: EmulatorVideoFrame) throws -> Data {
+        Self.bytes(of: frame)
     }
 }

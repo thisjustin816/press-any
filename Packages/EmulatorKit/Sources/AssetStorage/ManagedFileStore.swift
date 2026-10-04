@@ -123,6 +123,12 @@ public struct ManagedFileStore: AssetStore, Sendable {
             .appendingPathComponent("\(stateID.uuidString.lowercased()).state")
     }
 
+    public func stateThumbnailURL(stateID: UUID, extension fileExtension: String) throws -> URL {
+        rootURL
+            .appendingPathComponent("UserData/States", isDirectory: true)
+            .appendingPathComponent("\(stateID.uuidString.lowercased()).\(try validateFileExtension(fileExtension))")
+    }
+
     public func quickPlayRoot(sessionID: UUID) -> URL {
         rootURL
             .appendingPathComponent("Temporary/QuickPlay", isDirectory: true)

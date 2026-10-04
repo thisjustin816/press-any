@@ -30,6 +30,7 @@ protocol SaveStateRuntime: GameplayRuntime {
     func saveManualState(label: String?) throws -> SaveState
     func saveStates() throws -> [SaveState]
     func loadState(_ saveState: SaveState) throws
+    func thumbnailData(for state: SaveState) -> Data?
 }
 
 extension EmulationSession: SaveStateRuntime {}
