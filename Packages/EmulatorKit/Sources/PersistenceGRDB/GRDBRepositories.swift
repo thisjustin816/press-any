@@ -391,6 +391,58 @@ public final class GRDBToolchainReportRepository: ToolchainReportRepository, GRD
     }
 }
 
+public final class GRDBBuildVariableMapRepository: BuildVariableMapRepository, GRDBRepositoryBacking, @unchecked Sendable {
+    let writer: any DatabaseWriter
+
+    init(writer: any DatabaseWriter) {
+        self.writer = writer
+    }
+
+    public func insertVariableMap(_ map: BuildVariableMap) throws {
+        try write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO build_variable_maps(id, build_id, asset_id, format, source, original_filename, attached_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                arguments: [
+                    PersistenceCodec.uuid(map.id), PersistenceCodec.uuid(map.buildID), PersistenceCodec.uuid(map.assetID),
+                    map.format.rawValue, map.source.rawValue, map.originalFilename, PersistenceCodec.date(map.attachedAt),
+                ]
+            )
+        }
+    }
+
+    public func fetchVariableMaps(buildID: UUID) throws -> [BuildVariableMap] {
+        let rows = try read { db in
+            try Row.fetchAll(
+                db,
+                sql: "SELECT * FROM build_variable_maps WHERE build_id = ? ORDER BY attached_at, id",
+                arguments: [PersistenceCodec.uuid(buildID)]
+            )
+        }
+        return try rows.map { row in
+            let format: String = row["format"]
+            let source: String = row["source"]
+            guard let mapFormat = BuildVariableMap.Format(rawValue: format) else {
+                throw PersistenceError.invalidEnum(type: "BuildVariableMap.Format", value: format)
+            }
+            guard let mapSource = BuildVariableMap.Source(rawValue: source) else {
+                throw PersistenceError.invalidEnum(type: "BuildVariableMap.Source", value: source)
+            }
+            return BuildVariableMap(
+                id: try PersistenceCodec.uuid(row["id"] as String),
+                buildID: try PersistenceCodec.uuid(row["build_id"] as String),
+                assetID: try PersistenceCodec.uuid(row["asset_id"] as String),
+                format: mapFormat,
+                source: mapSource,
+                originalFilename: row["original_filename"],
+                attachedAt: try PersistenceCodec.date(row["attached_at"] as String)
+            )
+        }
+    }
+}
+
 public final class GRDBSettingsStore: SettingsStore, GRDBRepositoryBacking, @unchecked Sendable {
     let writer: any DatabaseWriter
 
@@ -459,6 +511,7 @@ public struct GRDBRepositorySet: Sendable {
     public let saveStates: GRDBSaveStateRepository
     public let patchRecipes: GRDBPatchRecipeRepository
     public let toolchainReports: GRDBToolchainReportRepository
+    public let variableMaps: GRDBBuildVariableMapRepository
     public let assets: GRDBManagedAssetRepository
     public let settings: GRDBSettingsStore
     public let transactions: GRDBLibraryTransactionRunner
@@ -470,6 +523,7 @@ public struct GRDBRepositorySet: Sendable {
         saveStates = GRDBSaveStateRepository(writer: writer)
         patchRecipes = GRDBPatchRecipeRepository(writer: writer)
         toolchainReports = GRDBToolchainReportRepository(writer: writer)
+        variableMaps = GRDBBuildVariableMapRepository(writer: writer)
         assets = GRDBManagedAssetRepository(writer: writer)
         settings = GRDBSettingsStore(writer: writer)
         transactions = GRDBLibraryTransactionRunner(writer: writer)

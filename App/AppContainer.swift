@@ -28,6 +28,9 @@ final class AppContainer {
     let patchCreator: CreatePatchedBuild
     let launchImageResolver: ResolveImageForLaunch
     let toolchainRefresh: RefreshToolchainReports
+    let attachVariableMap: AttachVariableMap
+    let saveCompatibility: AssessSaveCompatibility
+    let chooseSaveForBuild: ChooseSaveForBuild
     let evictGeneratedImage: EvictGeneratedImage
     let gameArtwork: GameArtwork
     let quickPlayWorkspace: QuickPlayWorkspace
@@ -112,6 +115,27 @@ final class AppContainer {
             images: launchImageResolver,
             assetStore: fileStore,
             detect: { ToolchainDetectorRegistry.standard.detect(image: $0, system: $1) }
+        )
+        attachVariableMap = AttachVariableMap(
+            builds: repositories.builds,
+            maps: repositories.variableMaps,
+            assets: repositories.assets,
+            assetStore: fileStore,
+            transactions: repositories.transactions
+        )
+        saveCompatibility = AssessSaveCompatibility(
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            reports: repositories.toolchainReports,
+            images: launchImageResolver,
+            assetStore: fileStore
+        )
+        chooseSaveForBuild = ChooseSaveForBuild(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            assets: repositories.assets,
+            assetStore: fileStore
         )
         evictGeneratedImage = EvictGeneratedImage(
             builds: repositories.builds,

@@ -77,6 +77,24 @@ public struct ManagedFileStore: AssetStore, Sendable {
         )
     }
 
+    public func variableMapURL(sha256: String, extension fileExtension: String) throws -> URL {
+        let normalizedHash = try validateSHA256(sha256)
+        let normalizedExtension = try validateFileExtension(fileExtension)
+        return rootURL
+            .appendingPathComponent("Source/VariableMap", isDirectory: true)
+            .appendingPathComponent(String(normalizedHash.prefix(2)), isDirectory: true)
+            .appendingPathComponent("\(normalizedHash).\(normalizedExtension)")
+    }
+
+    public func commitVariableMap(stagedURL: URL, sha256: String, extension fileExtension: String) throws -> URL {
+        try commitImmutableSource(
+            stagedURL: stagedURL,
+            sha256: sha256,
+            relativeDirectory: "Source/VariableMap",
+            filenameExtension: try validateFileExtension(fileExtension)
+        )
+    }
+
     public func generatedImageURL(sha256: String) -> URL {
         let normalized = normalizedSHA256OrFallback(sha256)
         return rootURL

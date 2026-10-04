@@ -56,6 +56,35 @@ struct PersistenceGRDBTests {
         #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.build.id) == [])
     }
 
+    @Test("a profile remembers its save's writer and a Build keeps its variable maps")
+    func saveWriterAndVariableMaps() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+
+        var profile = fixture.profile
+        profile.saveWrittenByBuildID = fixture.build.id
+        try repositories.saveProfiles.updateSaveProfile(profile)
+        #expect(try repositories.saveProfiles.fetchSaveProfile(id: profile.id) == profile)
+
+        let map = BuildVariableMap(
+            id: UUID(),
+            buildID: fixture.build.id,
+            assetID: fixture.romAsset.id,
+            format: .gbStudioGlobals,
+            source: .userImport,
+            originalFilename: "game_globals.i",
+            attachedAt: Date(timeIntervalSince1970: 5)
+        )
+        try repositories.variableMaps.insertVariableMap(map)
+        #expect(try repositories.variableMaps.fetchVariableMaps(buildID: fixture.build.id) == [map])
+        #expect(try repositories.variableMaps.fetchVariableMaps(buildID: fixture.patchedBuild.id) == [])
+
+        try repositories.games.deleteGame(id: fixture.game.id)
+        #expect(try repositories.variableMaps.fetchVariableMaps(buildID: fixture.build.id) == [])
+    }
+
     @Test("transaction runner rolls repository writes back together")
     func transactionRollback() throws {
         let database = try AppDatabase.inMemory()

@@ -40,6 +40,11 @@ public protocol ToolchainReportRepository: Sendable {
     func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport]
 }
 
+public protocol BuildVariableMapRepository: Sendable {
+    func insertVariableMap(_ map: BuildVariableMap) throws
+    func fetchVariableMaps(buildID: UUID) throws -> [BuildVariableMap]
+}
+
 public protocol PatchRecipeRepository: Sendable {
     func insertPatchRecipe(_ recipe: PatchRecipe) throws
     func fetchPatchRecipe(resultBuildID: UUID) throws -> PatchRecipe?

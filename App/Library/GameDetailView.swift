@@ -7,12 +7,15 @@ import UniformTypeIdentifiers
 struct GameDetailView: View {
     private enum FileRequest {
         case patch(Build)
+        case variableMap(Build)
         case batterySave
         case artwork
 
         var contentTypes: [UTType] {
             switch self {
             case .patch: [.ipsPatch, .bpsPatch]
+            // `.i`, `.sym` and `.noi` files have no system type; the import checks the contents.
+            case .variableMap: [.data]
             case .batterySave: [.gameBoySave]
             case .artwork: [.image]
             }
@@ -58,7 +61,8 @@ struct GameDetailView: View {
             importSave: container.importBatterySave,
             patchCreator: container.patchCreator,
             evictImage: container.evictGeneratedImage,
-            artwork: container.gameArtwork
+            artwork: container.gameArtwork,
+            variableMaps: container.attachVariableMap
         ))
     }
 
@@ -354,6 +358,7 @@ struct GameDetailView: View {
         }
         Divider()
         Button("Apply Patch…") { request(.patch(build)) }
+        Button("Attach Variable Map…") { request(.variableMap(build)) }
         if build.sourceKind == .patchRecipe {
             Button("Remove Generated Image") { model.removeGeneratedImage(of: build) }
         }
@@ -398,6 +403,8 @@ struct GameDetailView: View {
         switch fileRequest {
         case .patch(let build):
             model.applyPatches(urls, to: build)
+        case .variableMap(let build):
+            if let url = urls.first { model.attachVariableMap(from: url, to: build) }
         case .batterySave:
             if let url = urls.first { model.importSave(from: url) }
         case .artwork:

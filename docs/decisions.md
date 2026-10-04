@@ -3,6 +3,22 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: A risky Build switch offers a copy of the save
+
+**Decision.** Each Save Profile records which Build last wrote its battery save. Launching a
+Build with a save written by another Build checks the pair first. The save is risky when either
+Build was made with GB Studio, when both Builds have detection results naming different tools or
+engine versions, or when their cartridge headers declare different save hardware (bytes 0x147
+and 0x149). A risky launch asks before playing: Play with a Copy (the default), Start a New Save,
+Use the Save Anyway, or Cancel. A copy or a new save becomes that Build's default save, so the
+next launch doesn't ask again. A save with no recorded writer, or a check that fails, never
+blocks play: detection can add caution but never proves two saves compatible.
+
+A Build can also keep variable maps (Build menu > Attach Variable Map…): GB Studio's
+`game_globals.i` or `globals.i`, or an RGBDS `.sym` or GBDK `.noi` symbol file. Each map is
+stored as an immutable source file on that exact Build and listed in Technical Info. Attaching a
+map migrates nothing yet; it's kept for the v1.1 save migration.
+
 ## 2026-10-04: Toolchain detection runs on import and shows its findings
 
 **Decision.** The gbtoolsid port runs whenever an image becomes a Build: on import, where Import

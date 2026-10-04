@@ -27,18 +27,20 @@ public struct PersistentSaveService: Sendable {
     }
 
     @discardableResult
-    public func flush(worker: SessionWorker, profileID: UUID) throws -> SaveProfile {
+    public func flush(worker: SessionWorker, profileID: UUID, buildID: UUID) throws -> SaveProfile {
         guard let profile = try profiles.fetchSaveProfile(id: profileID) else {
             throw PersistentSaveServiceError.profileNotFound(profileID)
         }
 
         let battery = try worker.perform { try $0.persistentSaveData() }
         guard !battery.isEmpty else { return profile }
-        return try replacePersistentSaveData(battery, profileID: profileID)
+        return try replacePersistentSaveData(battery, profileID: profileID, writtenByBuildID: buildID)
     }
 
+    /// Writes `battery` as the profile's save. `writtenByBuildID` is the Build whose game wrote it,
+    /// or nil when that isn't known.
     @discardableResult
-    public func replacePersistentSaveData(_ battery: Data, profileID: UUID) throws -> SaveProfile {
+    public func replacePersistentSaveData(_ battery: Data, profileID: UUID, writtenByBuildID: UUID?) throws -> SaveProfile {
         guard !battery.isEmpty else {
             guard let profile = try profiles.fetchSaveProfile(id: profileID) else {
                 throw PersistentSaveServiceError.profileNotFound(profileID)
@@ -82,6 +84,7 @@ public struct PersistentSaveService: Sendable {
             }
 
             profile.persistentSaveAssetID = asset.id
+            profile.saveWrittenByBuildID = writtenByBuildID
             profile.modifiedAt = timestamp
             try profiles.updateSaveProfile(profile)
             return profile

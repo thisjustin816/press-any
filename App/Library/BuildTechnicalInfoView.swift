@@ -9,6 +9,7 @@ struct BuildTechnicalInfoView: View {
 
     @State private var reports: [ToolchainDetectionReport]?
     @State private var errorMessage: String?
+    @State private var variableMaps: [BuildVariableMap] = []
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -42,6 +43,14 @@ struct BuildTechnicalInfoView: View {
                         ProgressView()
                     }
                 }
+
+                if !variableMaps.isEmpty {
+                    Section("Variable Maps") {
+                        ForEach(variableMaps) { map in
+                            LabeledContent(map.originalFilename, value: Self.name(of: map.format))
+                        }
+                    }
+                }
             }
             .navigationTitle("Technical Info")
             .navigationBarTitleDisplayMode(.inline)
@@ -54,7 +63,15 @@ struct BuildTechnicalInfoView: View {
         }
     }
 
+    private static func name(of format: BuildVariableMap.Format) -> String {
+        switch format {
+        case .gbStudioGlobals: "GB Studio globals"
+        case .symbolFile: "Symbol file"
+        }
+    }
+
     private func refresh() async {
+        variableMaps = (try? container.repositories.variableMaps.fetchVariableMaps(buildID: build.id)) ?? []
         let refresh = container.toolchainRefresh
         let build = build
         do {

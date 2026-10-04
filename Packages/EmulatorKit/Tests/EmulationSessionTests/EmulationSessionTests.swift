@@ -176,6 +176,20 @@ extension EmulationSessionTests {
         XCTAssertEqual(try second.saveStates().map(\.id), [autoState.id], "the rejected state is kept")
     }
 
+    func testTheProfileRemembersWhichBuildLastWroteItsSave() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
+
+        let sessionA = harness.makeSession()
+        try sessionA.start(context: harness.contextA)
+        try sessionA.stop()
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.saveWrittenByBuildID, harness.buildA.id)
+
+        let sessionB = harness.makeSession()
+        try sessionB.start(context: harness.contextB)
+        try sessionB.stop()
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.saveWrittenByBuildID, harness.buildB.id)
+    }
+
     func testAutoStateIsNotOfferedOnceASharedProfileSaveIsNewer() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
         let early = Date(timeIntervalSince1970: 1_700_000_000)

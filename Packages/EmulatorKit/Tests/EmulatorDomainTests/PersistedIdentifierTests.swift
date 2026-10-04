@@ -11,6 +11,13 @@ final class PersistedIdentifierTests: XCTestCase {
         )
     }
 
+    func testVariableMapRawValuesAreStable() {
+        XCTAssertEqual(BuildVariableMap.Format.gbStudioGlobals.rawValue, "gbStudioGlobals")
+        XCTAssertEqual(BuildVariableMap.Format.symbolFile.rawValue, "symbolFile")
+        XCTAssertEqual(BuildVariableMap.Source.userImport.rawValue, "userImport")
+        XCTAssertEqual(ManagedAssetKind.variableMap.rawValue, "variableMap")
+    }
+
     func testManagedAssetKindRawValuesAreStable() {
         XCTAssertEqual(ManagedAssetKind.sourceImage.rawValue, "sourceROM")
         XCTAssertEqual(ManagedAssetKind.sourcePatch.rawValue, "sourcePatch")

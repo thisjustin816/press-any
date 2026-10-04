@@ -35,6 +35,7 @@ final class GameDetailViewModel: ObservableObject {
     private let patchCreator: CreatePatchedBuild
     private let evictImage: EvictGeneratedImage
     private let artwork: GameArtwork
+    private let variableMaps: AttachVariableMap
 
     init(
         gameID: UUID,
@@ -47,7 +48,8 @@ final class GameDetailViewModel: ObservableObject {
         importSave: ImportBatterySave,
         patchCreator: CreatePatchedBuild,
         evictImage: EvictGeneratedImage,
-        artwork: GameArtwork
+        artwork: GameArtwork,
+        variableMaps: AttachVariableMap
     ) {
         self.gameID = gameID
         self.games = games
@@ -60,6 +62,7 @@ final class GameDetailViewModel: ObservableObject {
         self.patchCreator = patchCreator
         self.evictImage = evictImage
         self.artwork = artwork
+        self.variableMaps = variableMaps
     }
 
     var preferredBuild: Build? {
@@ -147,6 +150,19 @@ final class GameDetailViewModel: ObservableObject {
                 name: url.deletingPathExtension().lastPathComponent
             )
             infoMessage = "Imported the save as \(profile.displayName)."
+        }
+    }
+
+    func attachVariableMap(from url: URL, to build: Build) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let map = try variableMaps.execute(buildID: build.id, sourceURL: url)
+            infoMessage = "Attached \(map.originalFilename) to \(build.displayName)."
+        } catch AttachVariableMapError.unrecognizedFormat {
+            errorMessage = "\(url.lastPathComponent) isn’t a GB Studio globals file or a symbol file."
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

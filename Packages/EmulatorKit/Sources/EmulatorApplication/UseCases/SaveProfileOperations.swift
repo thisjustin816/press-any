@@ -123,6 +123,7 @@ public struct DuplicateSaveProfile: Sendable {
             displayName: name,
             badge: source.badge,
             persistentSaveAssetID: persistentSaveAssetID,
+            saveWrittenByBuildID: source.saveWrittenByBuildID,
             copiedFromProfileID: source.id,
             rtcContextJSON: source.rtcContextJSON,
             createdAt: timestamp,

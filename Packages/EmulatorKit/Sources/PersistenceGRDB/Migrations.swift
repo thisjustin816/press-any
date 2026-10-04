@@ -158,5 +158,19 @@ enum MVPV3Schema {
         detected_at TEXT NOT NULL,
         PRIMARY KEY (build_id, detector)
     );
+
+    ALTER TABLE save_profiles
+    ADD COLUMN save_written_by_build_id TEXT REFERENCES builds(id) ON DELETE SET NULL;
+
+    CREATE TABLE build_variable_maps (
+        id TEXT PRIMARY KEY NOT NULL,
+        build_id TEXT NOT NULL REFERENCES builds(id) ON DELETE CASCADE,
+        asset_id TEXT NOT NULL REFERENCES managed_assets(id),
+        format TEXT NOT NULL,
+        source TEXT NOT NULL,
+        original_filename TEXT NOT NULL,
+        attached_at TEXT NOT NULL,
+        UNIQUE (build_id, asset_id)
+    );
     """#
 }

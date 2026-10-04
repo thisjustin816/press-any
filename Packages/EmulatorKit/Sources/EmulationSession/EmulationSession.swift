@@ -254,7 +254,7 @@ public final class EmulationSession: @unchecked Sendable {
     @discardableResult
     public func flushBattery() throws -> SaveProfile {
         let (worker, context, _) = try snapshotActive()
-        return try persistentSaveService.flush(worker: worker, profileID: context.saveProfileID)
+        return try persistentSaveService.flush(worker: worker, profileID: context.saveProfileID, buildID: context.buildID)
     }
 
     @discardableResult

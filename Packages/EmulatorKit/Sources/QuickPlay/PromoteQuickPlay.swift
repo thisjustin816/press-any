@@ -118,7 +118,8 @@ public struct PromoteQuickPlay: Sendable {
                 do {
                     promotedProfile = try persistentSaveService.replacePersistentSaveData(
                         replacement.battery,
-                        profileID: profileID
+                        profileID: profileID,
+                        writtenByBuildID: result.build.id
                     )
                 } catch {
                     // The profile still has its old save, so the copy isn't needed, and a retry
@@ -130,7 +131,8 @@ public struct PromoteQuickPlay: Sendable {
                 promotedProfile = try createProfile(
                     gameID: result.game.id,
                     name: name,
-                    temporaryBattery: try workspace.temporaryBatteryData(sessionID: session.id)
+                    temporaryBattery: try workspace.temporaryBatteryData(sessionID: session.id),
+                    writtenByBuildID: result.build.id
                 )
             }
         } catch let error as PromoteQuickPlayError {
@@ -153,7 +155,7 @@ public struct PromoteQuickPlay: Sendable {
         }
     }
 
-    private func createProfile(gameID: UUID, name: String, temporaryBattery: Data?) throws -> SaveProfile {
+    private func createProfile(gameID: UUID, name: String, temporaryBattery: Data?, writtenByBuildID: UUID) throws -> SaveProfile {
         let timestamp = now()
         var profile = SaveProfile(
             id: makeID(),
@@ -165,7 +167,11 @@ public struct PromoteQuickPlay: Sendable {
         try profiles.insertSaveProfile(profile)
         do {
             if let temporaryBattery, !temporaryBattery.isEmpty {
-                profile = try persistentSaveService.replacePersistentSaveData(temporaryBattery, profileID: profile.id)
+                profile = try persistentSaveService.replacePersistentSaveData(
+                    temporaryBattery,
+                    profileID: profile.id,
+                    writtenByBuildID: writtenByBuildID
+                )
             }
             return profile
         } catch {

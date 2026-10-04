@@ -127,6 +127,19 @@ public final class InMemoryToolchainReportRepository: ToolchainReportRepository,
     }
 }
 
+public final class InMemoryBuildVariableMapRepository: BuildVariableMapRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: BuildVariableMap] = [:]
+
+    public init() {}
+
+    public func insertVariableMap(_ map: BuildVariableMap) throws { lock.withLock { values[map.id] = map } }
+
+    public func fetchVariableMaps(buildID: UUID) throws -> [BuildVariableMap] {
+        lock.withLock { values.values.filter { $0.buildID == buildID }.sorted { $0.attachedAt < $1.attachedAt } }
+    }
+}
+
 public final class InMemoryPatchRecipeRepository: PatchRecipeRepository, @unchecked Sendable {
     private let lock = NSLock()
     private var values: [UUID: PatchRecipe] = [:]
