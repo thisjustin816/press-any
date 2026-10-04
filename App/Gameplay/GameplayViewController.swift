@@ -30,6 +30,8 @@ final class GameplayViewController: UIViewController {
     /// The close and menu buttons in the corners. They hide while the touch controls show, since
     /// the logo opens the menu then.
     private var cornerButtons: [UIButton] = []
+    private static let cornerButtonInset: CGFloat = 10
+    private static let cornerButtonSize: CGFloat = 42
     /// Set by a touch while a controller is connected, and cleared a few seconds after the last one.
     private var cornerButtonsRevealed = false
     private var cornerButtonsHideTask: Task<Void, Never>?
@@ -175,13 +177,13 @@ final class GameplayViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             close.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 14),
-            close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
-            close.widthAnchor.constraint(equalToConstant: 42),
-            close.heightAnchor.constraint(equalToConstant: 42),
+            close.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: Self.cornerButtonInset),
+            close.widthAnchor.constraint(equalToConstant: Self.cornerButtonSize),
+            close.heightAnchor.constraint(equalToConstant: Self.cornerButtonSize),
             menu.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -14),
             menu.topAnchor.constraint(equalTo: close.topAnchor),
-            menu.widthAnchor.constraint(equalToConstant: 42),
-            menu.heightAnchor.constraint(equalToConstant: 42),
+            menu.widthAnchor.constraint(equalToConstant: Self.cornerButtonSize),
+            menu.heightAnchor.constraint(equalToConstant: Self.cornerButtonSize),
             pausedOverlay.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             pausedOverlay.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
         ])
@@ -302,6 +304,8 @@ final class GameplayViewController: UIViewController {
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
         touchControls.onMenu = { [weak self] in self?.presentMenuSheet() }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
+        // With a controller the corner buttons can show, so the picture starts 6 points below them.
+        touchControls.controllerTopClearance = Double(Self.cornerButtonInset + Self.cornerButtonSize + 6)
         controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }

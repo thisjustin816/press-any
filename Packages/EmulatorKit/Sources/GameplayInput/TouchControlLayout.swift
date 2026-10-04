@@ -154,7 +154,8 @@ extension TouchControlLayout {
     /// screen clear of the status bar and `safeBottom` the logo clear of the home indicator.
     /// `displayScale` lets the Game Boy layout size the picture to whole device pixels under
     /// `scaling`. `pictureOpensMenu` makes a tap on the game picture open the menu as well as one
-    /// on the logo.
+    /// on the logo. `topClearance` keeps the Game Boy layout's bezel at least that far below
+    /// `safeTop`, for buttons drawn over the top of the view; the playtiles artwork keeps its place.
     public static func make(
         _ style: TouchControlStyle,
         width: Double,
@@ -163,7 +164,8 @@ extension TouchControlLayout {
         safeBottom: Double = 0,
         displayScale: Double = 3,
         scaling: ScreenScaling = .integer,
-        pictureOpensMenu: Bool = false
+        pictureOpensMenu: Bool = false,
+        topClearance: Double = 0
     ) -> TouchControlLayout {
         switch style {
         case .gameBoy:
@@ -174,7 +176,8 @@ extension TouchControlLayout {
                 safeBottom: safeBottom,
                 displayScale: displayScale,
                 scaling: scaling,
-                pictureOpensMenu: pictureOpensMenu
+                pictureOpensMenu: pictureOpensMenu,
+                topClearance: topClearance
             )
         case .playtiles:
             playtiles(width: width, height: height, safeBottom: safeBottom, pictureOpensMenu: pictureOpensMenu)
@@ -227,7 +230,8 @@ extension TouchControlLayout {
         safeBottom: Double,
         displayScale: Double,
         scaling: ScreenScaling,
-        pictureOpensMenu: Bool
+        pictureOpensMenu: Bool,
+        topClearance: Double
     ) -> TouchControlLayout {
         let mm = pointsPerMillimeter
         let panel = GameBoyPanel.self
@@ -242,7 +246,7 @@ extension TouchControlLayout {
         let bezelPadding = min(12, (width - pictureWidth) / 2)
         let screen = TouchRect(
             x: (width - pictureWidth) / 2,
-            y: max(safeTop, 20) + edgeMargin + bezelPadding,
+            y: max(max(safeTop, 20) + edgeMargin, safeTop + topClearance) + bezelPadding,
             width: pictureWidth,
             height: pictureHeight
         )

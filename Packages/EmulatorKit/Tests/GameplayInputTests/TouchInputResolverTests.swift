@@ -104,6 +104,21 @@ final class TouchInputResolverTests: XCTestCase {
         }
     }
 
+    func testTopClearanceMovesOnlyTheGameBoyPictureDown() {
+        for (width, height, top) in [(375.0, 667.0, 20.0), (402.0, 874.0, 62.0)] {
+            let standard = TouchControlLayout.make(.gameBoy, width: width, height: height, safeTop: top)
+            let cleared = TouchControlLayout.make(.gameBoy, width: width, height: height, safeTop: top, topClearance: 58)
+            XCTAssertGreaterThanOrEqual(cleared.bezel!.y, top + 58, "the bezel starts below the clearance, \(width)x\(height)")
+            XCTAssertGreaterThan(cleared.screen.y, standard.screen.y, "the picture moves down, \(width)x\(height)")
+            XCTAssertEqual(cleared.screen.width, standard.screen.width, "the picture keeps its size, \(width)x\(height)")
+            XCTAssertLessThanOrEqual(cleared.screen.y + cleared.screen.height, cleared.logo!.y, "the picture clears the logo, \(width)x\(height)")
+
+            let playtiles = TouchControlLayout.make(.playtiles, width: width, height: height, safeTop: top)
+            let playtilesCleared = TouchControlLayout.make(.playtiles, width: width, height: height, safeTop: top, topClearance: 58)
+            XCTAssertEqual(playtilesCleared.screen, playtiles.screen, "the playtiles artwork keeps its place, \(width)x\(height)")
+        }
+    }
+
     func testControllerLayoutRawValuesAreStable() {
         // Stored in settings, so renaming a case must not change them.
         XCTAssertEqual(TouchControlStyle.allCases.map(\.rawValue), ["gameBoy", "playtiles"])
