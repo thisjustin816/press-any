@@ -47,9 +47,9 @@ can have several Base Builds, one per region or revision.
 
 **Decision.** A Save Profile's menu has Replace Save from File. When the profile already has a
 save, the app asks first. It then copies the current save to "<profile> before import" and writes
-the file, as Quick Play promotion does with "<profile> before Quick Play". A blank profile is filled without
-asking. The imported save records no writing Build, so launching it never raises the
-compatibility warning. Since the profile's save is newer than any Auto State, the next launch
+the file, as Quick Play promotion does with "<profile> before Quick Play". A blank profile is
+filled without asking. The imported save records no writing Build, so launching it never raises
+the compatibility warning. Since the profile's save is newer than any Auto State, the next launch
 boots from the imported save.
 
 ## 2026-10-04: A risky Build switch offers a copy of the save
@@ -85,9 +85,9 @@ for saves it only adds caution (see "A risky Build switch offers a copy of the s
 picture showing through, in one of two color themes chosen by Settings > Controller Theme
 (`controllerTheme`, app-wide, Match System by default):
 
-- **Classic** uses an original Game Boy's colors, sampled from a photograph of one: a warm gray
-  body, a gray lens around the picture, maroon-magenta A and B, a dark D-pad, gray rubber pills
-  and navy lettering.
+- **Classic** uses an original Game Boy's colors, sampled from the same public-domain photograph
+  the Game Boy layout is measured from: a warm gray body, a gray lens around the picture,
+  maroon-magenta A and B, a dark D-pad, gray rubber pills and navy lettering.
 - **Dark** is the same design on a near-black body, with the channel behind A and B lighter
   than the body.
 
@@ -126,16 +126,19 @@ the game while leaving other apps' audio playing.
 **Decision.** The on-screen controls come in two built-in layouts, chosen by Settings >
 Controller Layout (`controllerLayout`, Game Boy by default, overridable per System, Game or Build):
 
-- **Game Boy** follows the original Game Boy's front panel, measured from a photograph of a
-  DMG-01 and scaled to its specified 90 mm width: the D-pad (22.9 mm) and A and B (10.8 mm) are
-  drawn at the hardware's size, about 6.1 points per millimeter, with A and B 16.8 mm apart on a
-  24.6 degree slope and SELECT and START side by side, tilted 18 degrees. The hardware puts SELECT
-  and START a little left of center; here they center under the logo. Across the width the
-  controls keep the Game Boy's proportions, pulled in so nothing leaves the screen, and A and B
-  close up only if B would crowd the D-pad. The game picture sits at the top, sized by Screen
-  Scaling, and the controls are centered between its bezel and the logo. Touch areas reach 10 to
-  12 points past the drawn controls without overlapping. SameBoy's iOS layout isn't used: its
-  `iOS/` directory needs the author's written permission to ship on the App Store.
+- **Game Boy** follows the original Game Boy's front panel, measured from a photograph of a DMG-01
+  and scaled to its specified 90 mm width. The photograph is Evan-Amos's `File:Game-Boy-FL.jpg` on
+  Wikimedia Commons, which is in the public domain. Each control was found by its color, and its
+  center and size were read from the smallest rectangle around it, with the screen window as the
+  reference for position and tilt. The D-pad (22.9 mm) and A and B (10.8 mm) are drawn at the
+  hardware's size, about 6.1 points per millimeter, with A and B 16.8 mm apart on a 24.6 degree
+  slope and SELECT and START side by side, tilted 18 degrees. The hardware puts SELECT and START a
+  little left of center; here they center under the logo. Across the width the controls keep the
+  Game Boy's proportions, pulled in so nothing leaves the screen, and A and B close up only if B
+  would crowd the D-pad. The game picture sits at the top, sized by Screen Scaling, and the
+  controls are centered between its bezel and the logo. Touch areas reach 10 to 12 points past the
+  drawn controls without overlapping. SameBoy's iOS layout isn't used: its `iOS/` directory needs
+  the author's written permission to ship on the App Store.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
   START and SELECT swapped into Game Boy order. Controls are drawn at the skin artwork's sizes,
   where A is larger than B, and respond across both the frame and the artwork. The skin's Menu
