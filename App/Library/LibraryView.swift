@@ -342,44 +342,58 @@ private struct GameArtworkView: View {
     }
 }
 
-/// A Game Boy cartridge seen from the front: the cut top-right corner, the grip lines across the
-/// top, and the recessed label.
+/// A DMG Game Pak from the front, 57 by 65.5 mm: the lock notch at the top right, grip ridges
+/// across the top, the recessed label, and the arrow pointing into the slot. Drawn in millimeters.
 private struct CartridgeIcon: View {
     var body: some View {
-        ZStack {
-            CartridgeShape()
-                .fill(.tertiary)
-            GeometryReader { proxy in
-                let width = proxy.size.width
-                let height = proxy.size.height
-                VStack(spacing: height * 0.035) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        Capsule()
-                            .fill(.background.opacity(0.45))
-                            .frame(width: width * 0.5, height: max(height * 0.02, 1))
+        GeometryReader { proxy in
+            let mm = proxy.size.width / 57
+            ZStack {
+                CartridgeShape()
+                    .fill(.tertiary)
+                Path { path in
+                    for y in [4.5, 6.5, 8.5] {
+                        path.addRoundedRect(
+                            in: CGRect(x: 9 * mm, y: y * mm, width: 39 * mm, height: 0.8 * mm),
+                            cornerSize: CGSize(width: 0.4 * mm, height: 0.4 * mm)
+                        )
                     }
                 }
-                .position(x: width * 0.45, y: height * 0.12)
-                RoundedRectangle(cornerRadius: width * 0.05, style: .continuous)
-                    .fill(.background.opacity(0.55))
-                    .frame(width: width * 0.74, height: height * 0.48)
-                    .position(x: width * 0.5, y: height * 0.56)
+                .fill(.background.opacity(0.45))
+                Path { path in
+                    path.addPath(UnevenRoundedRectangle(
+                        topLeadingRadius: 4 * mm,
+                        bottomLeadingRadius: 0.5 * mm,
+                        bottomTrailingRadius: 0.5 * mm,
+                        topTrailingRadius: 4 * mm
+                    ).path(in: CGRect(x: 5 * mm, y: 12 * mm, width: 47 * mm, height: 43 * mm)))
+                }
+                .fill(.background.opacity(0.55))
+                Path { path in
+                    path.move(to: CGPoint(x: 25.5 * mm, y: 58 * mm))
+                    path.addLine(to: CGPoint(x: 31.5 * mm, y: 58 * mm))
+                    path.addLine(to: CGPoint(x: 28.5 * mm, y: 62 * mm))
+                    path.closeSubpath()
+                }
+                .fill(.background.opacity(0.45))
             }
         }
-        // A DMG cartridge is 57 mm wide and 65 mm tall.
-        .aspectRatio(57.0 / 65.0, contentMode: .fit)
+        .aspectRatio(57 / 65.5, contentMode: .fit)
         .accessibilityHidden(true)
     }
 }
 
 private struct CartridgeShape: Shape {
     func path(in rect: CGRect) -> Path {
-        let radius = rect.width * 0.06
-        let cut = rect.width * 0.14
+        let mm = rect.width / 57
+        let radius = 2.5 * mm
+        let notchX = rect.minX + 49 * mm
+        let notchBottom = rect.minY + 2.5 * mm
         var path = Path()
         path.move(to: CGPoint(x: rect.minX + radius, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX - cut, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + cut))
+        path.addLine(to: CGPoint(x: notchX, y: rect.minY))
+        path.addLine(to: CGPoint(x: notchX, y: notchBottom))
+        path.addLine(to: CGPoint(x: rect.maxX, y: notchBottom))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - radius))
         path.addQuadCurve(to: CGPoint(x: rect.maxX - radius, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
         path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.maxY))
