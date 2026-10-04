@@ -3,6 +3,18 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: A controller opens the game menu only from a button the player maps
+
+**Decision.** No controller button opens the game menu by default. Controller settings will offer
+"Open Menu" as an input any button can be mapped to, as SameBoy does. The Home button is never
+taken: Apple's guidelines reserve it for the system. Menu and Options stay START and SELECT, and
+tapping the logo opens the menu with a controller connected.
+
+**Why.** Delta, Manic EMU and RetroArch turn off the system's use of Home to open their menus, but
+Apple reserves Home for the system and says it may not honor that request. SameBoy leaves Home
+alone and makes the menu a mappable input, which keeps START and SELECT on the buttons players
+expect.
+
 ## 2026-10-04: One game menu, opened from the logo with or without a controller
 
 **Decision.** Gameplay has one game menu, a pop-up menu that opens from the Press Any logo, and

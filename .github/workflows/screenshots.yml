@@ -16,10 +16,10 @@ on:
         options: [summary, every-rom]
         default: summary
       appearance:
-        description: Simulator appearance
+        description: Simulator appearance; both runs a light and a dark job side by side
         type: choice
-        options: [light, dark]
-        default: light
+        options: [both, light, dark]
+        default: both
       import_rom:
         description: The ROM the import review opens (never seeded)
         default: gbdk450-badsum.gb
@@ -30,9 +30,13 @@ permissions:
 
 jobs:
   screenshots:
-    name: Simulator screenshots
+    name: Simulator screenshots (${{ matrix.appearance }})
     runs-on: macos-26
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        appearance: ${{ fromJSON(inputs.appearance == 'both' && '["light","dark"]' || format('["{0}"]', inputs.appearance)) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -46,7 +50,7 @@ jobs:
         env:
           ROMS: ${{ inputs.roms }}
           SHOTS: ${{ inputs.shots }}
-          APPEARANCE: ${{ inputs.appearance }}
+          APPEARANCE: ${{ matrix.appearance }}
           IMPORT_ROM: ${{ inputs.import_rom }}
         run: |
           set -o pipefail
@@ -55,7 +59,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: screenshots-${{ inputs.appearance }}
+          name: screenshots-${{ matrix.appearance }}
           path: |
             screenshots/
             screenshots.log

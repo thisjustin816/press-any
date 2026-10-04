@@ -363,7 +363,7 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | partial | Controller active hides touch controls | MVP | Q109 | hides (body and logo menu stay); user override missing |
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | Q111 | first connected used; selectPlayerOne() has no UI |
 | missing | Named reusable controller profiles, remapping, App/System/Game/Build inheritance | v1 | Q112 | fixed mapping (Select = Options or L1) |
-| missing | Controller hotkey combos and menu navigation | v1 | dec 24 |  |
+| missing | Controller hotkey combos and menu navigation | v1 | dec 24 | "Open Menu" is a mappable input with no default button, and Home is never taken (D "A controller opens the game menu") |
 | missing | Rumble routing override Phone / Controller / Both / Off | v1 | Q88 |  |
 | missing | Separate phone and controller intensity | v1 | Q104 |  |
 
