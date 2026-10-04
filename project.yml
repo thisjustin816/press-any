@@ -52,6 +52,8 @@ targets:
         product: QuickPlay
       - package: EmulatorKit
         product: GameplayInput
+      - package: EmulatorKit
+        product: ToolchainDetection
   PressAnyTests:
     type: bundle.unit-test
     platform: iOS

@@ -12,6 +12,7 @@ public struct ImportCommitter: Sendable {
     private let games: any GameRepository
     private let builds: any BuildRepository
     private let assets: any ManagedAssetRepository
+    private let toolchainReports: any ToolchainReportRepository
     private let assetStore: any AssetStore
     private let transactions: any LibraryTransactionRunner
     private let now: @Sendable () -> Date
@@ -21,6 +22,7 @@ public struct ImportCommitter: Sendable {
         games: any GameRepository,
         builds: any BuildRepository,
         assets: any ManagedAssetRepository,
+        toolchainReports: any ToolchainReportRepository,
         assetStore: any AssetStore,
         transactions: any LibraryTransactionRunner,
         now: @escaping @Sendable () -> Date = Date.init,
@@ -29,6 +31,7 @@ public struct ImportCommitter: Sendable {
         self.games = games
         self.builds = builds
         self.assets = assets
+        self.toolchainReports = toolchainReports
         self.assetStore = assetStore
         self.transactions = transactions
         self.now = now
@@ -52,6 +55,10 @@ public struct ImportCommitter: Sendable {
             if asset.storageClass == .source {
                 _ = try assetStore.commitSourceROM(stagedURL: plan.analysis.stagedURL, sha256: plan.analysis.sha256)
             }
+            // The same image gives the same findings, but a newer detector may find more.
+            for report in plan.analysis.toolchainReports {
+                try toolchainReports.saveReport(report, buildID: build.id, detectedAt: now())
+            }
             return ROMImportResult(
                 game: game,
                 build: build,
@@ -71,7 +78,7 @@ public struct ImportCommitter: Sendable {
         let createdUnreferencedFile = existingAsset == nil && !fileExistedBeforeCommit
 
         do {
-            let result = try transactions.run { [games, builds, assets, assetStore, now, makeID] in
+            let result = try transactions.run { [games, builds, assets, toolchainReports, assetStore, now, makeID] in
                 let timestamp = now()
                 let sourceAsset: ManagedAsset
                 if let existingAsset {
@@ -127,6 +134,9 @@ public struct ImportCommitter: Sendable {
                     modifiedAt: timestamp
                 )
                 try builds.insertBuild(build)
+                for report in plan.analysis.toolchainReports {
+                    try toolchainReports.saveReport(report, buildID: build.id, detectedAt: timestamp)
+                }
 
                 var returnedGame = game
                 if createdNewGame {

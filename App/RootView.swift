@@ -1,4 +1,5 @@
 import EmulationSession
+import EmulatorApplication
 import EmulatorDomain
 import GameplayInput
 import Foundation
@@ -27,6 +28,7 @@ struct RootView: View {
     @State private var gameplay: GameplayPresentation?
     @State private var errorMessage: String?
     @State private var pendingResume: PreparedLaunch?
+    @State private var riskyLaunch: RiskyLaunch?
     /// The Quick Play session whose gameplay screen is closing, shown once the cover is gone.
     @State private var closingQuickPlayID: UUID?
     @State private var endedQuickPlay: QuickPlaySession?
@@ -96,6 +98,20 @@ struct RootView: View {
         } message: { _ in
             Text("Start Over boots the game from its battery save. The resume point is kept.")
         }
+        .alert("This save may not work with this Build", isPresented: Binding(
+            get: { riskyLaunch != nil },
+            set: { if !$0 { riskyLaunch = nil } }
+        ), presenting: riskyLaunch) { risky in
+            Button("Play with a Copy") { chooseSave(for: risky, newSave: false) }
+            Button("Start a New Save") { chooseSave(for: risky, newSave: true) }
+            Button("Use “\(risky.profileName)” Anyway", role: .destructive) {
+                riskyLaunch = nil
+                if let container = bootstrap.container { launch(risky.context, container: container, checkSave: false) }
+            }
+            Button("Cancel", role: .cancel) { riskyLaunch = nil }
+        } message: { risky in
+            Text(risky.message)
+        }
         .alert(AppBrand.displayName, isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
@@ -106,12 +122,31 @@ struct RootView: View {
         }
     }
 
-    private func launch(_ context: LaunchContext, container: AppContainer) {
+    private func launch(_ context: LaunchContext, container: AppContainer, checkSave: Bool = true) {
+        // A failed check never blocks play; it only withholds a warning it couldn't confirm.
+        if checkSave, let assessment = try? container.saveCompatibility.execute(context: context), assessment.isRisky,
+           let profile = try? container.repositories.saveProfiles.fetchSaveProfile(id: context.saveProfileID) {
+            riskyLaunch = RiskyLaunch(context: context, assessment: assessment, profileName: profile.displayName)
+            return
+        }
         let prepared = container.prepareLaunch(context: context)
         if prepared.autoState != nil, prepared.policy == .ask {
             pendingResume = prepared
         } else {
             start(prepared, resume: true)
+        }
+    }
+
+    private func chooseSave(for risky: RiskyLaunch, newSave: Bool) {
+        riskyLaunch = nil
+        guard let container = bootstrap.container else { return }
+        do {
+            let context = newSave
+                ? try container.chooseSaveForBuild.playWithNewSave(risky.context)
+                : try container.chooseSaveForBuild.playWithCopy(risky.context)
+            launch(context, container: container, checkSave: false)
+        } catch {
+            errorMessage = "Could not make the save: \(error.localizedDescription)"
         }
     }
 
@@ -234,5 +269,33 @@ private extension ControllerTheme {
         case .classic: .light
         case .dark: .dark
         }
+    }
+}
+
+/// A launch held back because its save was last written by another Build that may lay it out
+/// differently.
+private struct RiskyLaunch {
+    let context: LaunchContext
+    let assessment: SaveCompatibilityAssessment
+    let profileName: String
+
+    var message: String {
+        var lines = ["“\(profileName)” was last saved by \(assessment.writtenBy?.displayName ?? "another Build")."]
+        for risk in assessment.risks {
+            switch risk {
+            case .gbStudio:
+                lines.append("A GB Studio game can lay out its saved data differently from one Build to the next, even with the same GB Studio version.")
+            case .differentTools(let writtenWith, let playingWith):
+                lines.append("That Build was made with \(Self.list(writtenWith)); this one with \(Self.list(playingWith)).")
+            case .differentSaveHardware:
+                lines.append("The two Builds declare different save hardware in their cartridge headers.")
+            }
+        }
+        lines.append("A copy keeps the original save safe.")
+        return lines.joined(separator: " ")
+    }
+
+    private static func list(_ tools: [String]) -> String {
+        tools.isEmpty ? "unrecognized tools" : tools.formatted(.list(type: .and))
     }
 }

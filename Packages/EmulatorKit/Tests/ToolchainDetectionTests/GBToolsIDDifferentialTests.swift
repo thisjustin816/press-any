@@ -1,3 +1,4 @@
+import EmulatorDomain
 import Foundation
 import XCTest
 @testable import ToolchainDetection

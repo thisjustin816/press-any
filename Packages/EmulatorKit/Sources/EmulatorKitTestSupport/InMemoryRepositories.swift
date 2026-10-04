@@ -109,7 +109,39 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
         }
     }
 
+    public func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] {
+        lock.withLock { values.values.filter { $0.saveProfileID == saveProfileID }.sorted { $0.createdAt > $1.createdAt } }
+    }
+
     public func deleteSaveState(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+}
+
+public final class InMemoryToolchainReportRepository: ToolchainReportRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: [String: ToolchainDetectionReport]] = [:]
+
+    public init() {}
+
+    public func saveReport(_ report: ToolchainDetectionReport, buildID: UUID, detectedAt: Date) throws {
+        lock.withLock { values[buildID, default: [:]][report.detector] = report }
+    }
+
+    public func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport] {
+        lock.withLock { (values[buildID] ?? [:]).values.sorted { $0.detector < $1.detector } }
+    }
+}
+
+public final class InMemoryBuildVariableMapRepository: BuildVariableMapRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: BuildVariableMap] = [:]
+
+    public init() {}
+
+    public func insertVariableMap(_ map: BuildVariableMap) throws { lock.withLock { values[map.id] = map } }
+
+    public func fetchVariableMaps(buildID: UUID) throws -> [BuildVariableMap] {
+        lock.withLock { values.values.filter { $0.buildID == buildID }.sorted { $0.attachedAt < $1.attachedAt } }
+    }
 }
 
 public final class InMemoryPatchRecipeRepository: PatchRecipeRepository, @unchecked Sendable {

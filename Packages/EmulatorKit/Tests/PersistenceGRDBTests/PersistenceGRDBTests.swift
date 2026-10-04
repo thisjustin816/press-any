@@ -25,6 +25,66 @@ struct PersistenceGRDBTests {
         #expect(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: fixture.patchedBuild.id) == fixture.recipe)
     }
 
+    @Test("a Build keeps one toolchain report per detector, deleted with it")
+    func toolchainReports() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        func report(_ name: String) -> ToolchainDetectionReport {
+            ToolchainDetectionReport(
+                detector: "gbtoolsid",
+                detectorVersion: "1",
+                corpusRevision: "v1.5.5",
+                components: [DetectedToolchainComponent(
+                    kind: .toolchain,
+                    name: name,
+                    version: "4.3.0",
+                    evidence: [ToolchainEvidence(signature: "sig_a", offset: 0x150)]
+                )]
+            )
+        }
+
+        try repositories.toolchainReports.saveReport(report("GBDK"), buildID: fixture.build.id, detectedAt: Date(timeIntervalSince1970: 1))
+        #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.build.id) == [report("GBDK")])
+
+        try repositories.toolchainReports.saveReport(report("ZGB"), buildID: fixture.build.id, detectedAt: Date(timeIntervalSince1970: 2))
+        #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.build.id) == [report("ZGB")], "replaced, not added")
+        #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.patchedBuild.id) == [])
+
+        try repositories.games.deleteGame(id: fixture.game.id)
+        #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.build.id) == [])
+    }
+
+    @Test("a profile remembers its save's writer and a Build keeps its variable maps")
+    func saveWriterAndVariableMaps() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+
+        var profile = fixture.profile
+        profile.saveWrittenByBuildID = fixture.build.id
+        try repositories.saveProfiles.updateSaveProfile(profile)
+        #expect(try repositories.saveProfiles.fetchSaveProfile(id: profile.id) == profile)
+
+        let map = BuildVariableMap(
+            id: UUID(),
+            buildID: fixture.build.id,
+            assetID: fixture.romAsset.id,
+            format: .gbStudioGlobals,
+            source: .userImport,
+            originalFilename: "game_globals.i",
+            attachedAt: Date(timeIntervalSince1970: 5)
+        )
+        try repositories.variableMaps.insertVariableMap(map)
+        #expect(try repositories.variableMaps.fetchVariableMaps(buildID: fixture.build.id) == [map])
+        #expect(try repositories.variableMaps.fetchVariableMaps(buildID: fixture.patchedBuild.id) == [])
+
+        try repositories.games.deleteGame(id: fixture.game.id)
+        #expect(try repositories.variableMaps.fetchVariableMaps(buildID: fixture.build.id) == [])
+    }
+
     @Test("transaction runner rolls repository writes back together")
     func transactionRollback() throws {
         let database = try AppDatabase.inMemory()
@@ -235,9 +295,14 @@ struct PersistenceGRDBTests {
         let fixture = try Fixture.create(in: repositories)
         let operations = try Self.operations(repositories)
 
-        _ = try operations.promoteBuild(buildID: fixture.patchedBuild.id, title: "Hack", mode: .move)
+        let hack = try operations.promoteBuild(buildID: fixture.patchedBuild.id, title: "Hack", mode: .move)
+        #expect(try repositories.games.fetchGame(id: hack.id)?.lineage?.sourceGameID == fixture.game.id)
         let carried = try operations.promoteBuild(buildID: fixture.build.id, title: "Original", mode: .move)
         #expect(carried.artworkAssetID == fixture.game.artworkAssetID, "the last Build takes the artwork along")
+        #expect(
+            try repositories.games.fetchGame(id: hack.id)?.lineage == GameLineage(sourceGameID: nil, sourceTitle: fixture.game.primaryTitle),
+            "the lineage keeps the title once its Game is gone"
+        )
 
         let now = Date(timeIntervalSince1970: 1_700_000_200)
         let otherArt = ManagedAsset(

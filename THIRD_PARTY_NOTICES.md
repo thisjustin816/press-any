@@ -35,8 +35,9 @@ this repository.
 - Ported revision: `v1.5.5` (`cc211126d81514b3c3988ed77a529f3886bbd796`)
 - Usage: `Packages/EmulatorKit/Sources/ToolchainDetection/GB` is a Swift port of its detection
   logic. `GBToolsIDData.swift` is generated from its `src/entry_names_*.h` signature tables by
-  `Scripts/generate-gbtoolsid-data.py`; the `check_*` functions are translated by hand. No
-  gbtoolsid source or binary ships with Press Any, and the app never runs the gbtoolsid tool.
+  `Scripts/generate-gbtoolsid-data.py`; the `check_*` functions are translated by hand. The
+  app links the port and runs it in process; no gbtoolsid source or binary ships, and the app
+  never runs the gbtoolsid tool.
 - Verification: `Scripts/test-toolchain-detection-differential.sh` builds gbtoolsid at the
   ported revision and requires the port to produce identical results on its test ROMs and on
   synthetic ROMs. The test ROMs are fetched at run time and never committed here.
@@ -44,9 +45,9 @@ this repository.
 
 ## In the app
 
-Settings > Acknowledgements shows the license of each project whose code ships in the app,
-bundled verbatim from `App/Acknowledgements/`: SameBoy and GRDB.swift. gbtoolsid's port isn't
-linked into the app.
+Settings > Acknowledgements lists each project whose code ships in the app. SameBoy's and
+GRDB.swift's licenses are bundled verbatim from `App/Acknowledgements/`; gbtoolsid, which is in
+the public domain, gets a credit.
 
 ## Updating a dependency
 

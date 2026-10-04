@@ -51,6 +51,7 @@ struct LibraryView: View {
         importCoordinator = coordinator
         _model = StateObject(wrappedValue: LibraryViewModel(
             gameRepository: container.repositories.games,
+            buildRepository: container.repositories.builds,
             launchResolver: container.preferredLaunchResolver
         ))
     }
@@ -174,7 +175,7 @@ struct LibraryView: View {
                 )
             }
             .sheet(isPresented: $showSettings) {
-                AppSettingsView(store: container.repositories.settings)
+                AppSettingsView(store: container.repositories.settings, integrityChecker: container.integrityChecker)
             }
             .alert("Library Error", isPresented: Binding(
                 get: { model.errorMessage != nil },
@@ -217,7 +218,7 @@ struct LibraryView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(game.primaryTitle)
                             .font(.headline)
-                        Text("Game Boy")
+                        Text(model.system(of: game).displayName)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

@@ -3,6 +3,82 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Profile badges are one emoji, and profiles can be deleted
+
+**Decision.** A Save Profile's badge is one emoji, set from its menu and shown before its name
+wherever profiles are listed. Setting it leaves the profile's modified time alone, since that time
+decides whether an Auto State can still be restored. A profile can be deleted from its menu after a
+confirmation naming it, which also deletes its battery save and save states. A Game or Build that
+played it plays the Game's default instead. The per-profile RTC offset waits for v1 (`dec 11`):
+SameBoy keeps the cartridge clock inside the save, so games with a clock already work.
+
+## 2026-10-04: The library check runs when asked
+
+**Decision.** Settings > Check Library Files compares the managed files with the database. It
+rehashes every ROM and patch, marks damaged ones, reports missing files, and removes leftover source
+and generated files that nothing uses, such as those an interrupted import left behind. It runs
+only when the user asks, since rehashing a large library at launch would slow every start. Saves
+and states aren't rehashed: they change as they're played, and their writes are atomic.
+
+## 2026-10-04: Promote and merge review what comes along
+
+**Decision.** Make Separate Game and Merge Into Another Game open a review sheet before they
+change anything. Build-scoped data (save states, recipes, toolchain reports, variable maps,
+settings) always follows its Build; the sheet chooses the Game-level things:
+
+- **Promote** offers to copy the Game's artwork and its Save Profiles. It selects the artwork
+  and the profiles the Build plays or last wrote. Copies get their own files, so the two Games'
+  artwork and saves diverge from there. The promoted Build plays the copy of the profile it
+  played, or the new Game's default when that profile stayed behind.
+- **Merge by Move** takes every Save Profile, since the source Game is deleted. When both Games
+  have artwork, the target keeps its own unless Use <source>'s Artwork is on.
+- **Merge by Copy** offers to copy the source's artwork and profiles, selecting the artwork when
+  the target has none and the profiles the source Builds play or last wrote, plus the source
+  Game's default.
+
+A promoted Game records which Game it split from and that Game's title, shown as Split From. The
+title stays after the source Game is deleted. Promoting a Game's only Build by Move renames the
+Game, so it records no lineage.
+
+A Build's menu also has Mark as Base Build / Unmark as Base Build, for imported Builds. A Game
+can have several Base Builds, one per region or revision.
+
+## 2026-10-04: Importing a .sav into an existing profile keeps a copy
+
+**Decision.** A Save Profile's menu has Replace Save from File. When the profile already has a
+save, the app asks first. It then copies the current save to "<profile> before import" and writes
+the file, as Quick Play promotion does with "<profile> before Quick Play". A blank profile is filled without
+asking. The imported save records no writing Build, so launching it never raises the
+compatibility warning. Since the profile's save is newer than any Auto State, the next launch
+boots from the imported save.
+
+## 2026-10-04: A risky Build switch offers a copy of the save
+
+**Decision.** Each Save Profile records which Build last wrote its battery save. Launching a
+Build with a save written by another Build checks the pair first. The save is risky when either
+Build was made with GB Studio, when both Builds have detection results naming different tools or
+engine versions, or when their cartridge headers declare different save hardware (bytes 0x147
+and 0x149). A risky launch asks before playing: Play with a Copy, Start a New Save, Use "<profile>"
+Anyway, or Cancel. A copy or a new save becomes that Build's default save, so the
+next launch doesn't ask again. A save with no recorded writer, or a check that fails, never
+blocks play: detection can add caution but never proves two saves compatible.
+
+A Build can also keep variable maps (Build menu > Attach Variable Map): GB Studio's
+`game_globals.i` or `globals.i`, or an RGBDS `.sym` or GBDK `.noi` symbol file. Each map is
+stored as an immutable source file on that exact Build and listed in Technical Info. Attaching a
+map migrates nothing yet; it's kept for the v1.1 save migration.
+
+## 2026-10-04: Toolchain detection runs on import and shows its findings
+
+**Decision.** The gbtoolsid port runs whenever an image becomes a Build: on import, where Import
+Review and Quick Play promotion show its findings, and on patching, where it detects the patched
+result. Each Build keeps one report per detector (`build_toolchain_reports`). A Build's Technical
+Info detects its image again and keeps the result if it changed, which covers Builds imported
+before detection and newer signature data. Each finding carries a categorical confidence from its
+own matched signatures: high for two or more, medium for one, low when it's inferred from other
+findings. "Not recognized" is a stored result too. Detection never names or groups a Game, and
+for saves it only adds caution (see "A risky Build switch offers a copy of the save").
+
 ## 2026-10-03: Controller themes
 
 **Decision.** Both controller layouts draw a controller body behind the controls, with the game

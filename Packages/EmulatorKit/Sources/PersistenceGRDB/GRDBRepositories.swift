@@ -235,6 +235,16 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
         }
     }
 
+    public func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] {
+        try read { db in
+            try SaveStateRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM save_states WHERE save_profile_id = ? ORDER BY created_at DESC, id",
+                arguments: [PersistenceCodec.uuid(saveProfileID)]
+            ).map { try $0.domain() }
+        }
+    }
+
     public func deleteSaveState(id: UUID) throws {
         try write { db in
             try db.execute(sql: "DELETE FROM save_states WHERE id = ?", arguments: [PersistenceCodec.uuid(id)])
@@ -347,6 +357,102 @@ public final class GRDBManagedAssetRepository: ManagedAssetInventoryRepository, 
     }
 }
 
+public final class GRDBToolchainReportRepository: ToolchainReportRepository, GRDBRepositoryBacking, @unchecked Sendable {
+    let writer: any DatabaseWriter
+
+    init(writer: any DatabaseWriter) {
+        self.writer = writer
+    }
+
+    public func saveReport(_ report: ToolchainDetectionReport, buildID: UUID, detectedAt: Date) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let json = String(decoding: try encoder.encode(report), as: UTF8.self)
+        try write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO build_toolchain_reports(
+                    build_id, detector, detector_version, corpus_revision, report_json, detected_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(build_id, detector) DO UPDATE SET
+                    detector_version = excluded.detector_version,
+                    corpus_revision = excluded.corpus_revision,
+                    report_json = excluded.report_json,
+                    detected_at = excluded.detected_at
+                """,
+                arguments: [
+                    PersistenceCodec.uuid(buildID), report.detector, report.detectorVersion,
+                    report.corpusRevision, json, PersistenceCodec.date(detectedAt),
+                ]
+            )
+        }
+    }
+
+    public func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport] {
+        let rows = try read { db in
+            try String.fetchAll(
+                db,
+                sql: "SELECT report_json FROM build_toolchain_reports WHERE build_id = ? ORDER BY detector",
+                arguments: [PersistenceCodec.uuid(buildID)]
+            )
+        }
+        return try rows.map { try JSONDecoder().decode(ToolchainDetectionReport.self, from: Data($0.utf8)) }
+    }
+}
+
+public final class GRDBBuildVariableMapRepository: BuildVariableMapRepository, GRDBRepositoryBacking, @unchecked Sendable {
+    let writer: any DatabaseWriter
+
+    init(writer: any DatabaseWriter) {
+        self.writer = writer
+    }
+
+    public func insertVariableMap(_ map: BuildVariableMap) throws {
+        try write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO build_variable_maps(id, build_id, asset_id, format, source, original_filename, attached_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                arguments: [
+                    PersistenceCodec.uuid(map.id), PersistenceCodec.uuid(map.buildID), PersistenceCodec.uuid(map.assetID),
+                    map.format.rawValue, map.source.rawValue, map.originalFilename, PersistenceCodec.date(map.attachedAt),
+                ]
+            )
+        }
+    }
+
+    public func fetchVariableMaps(buildID: UUID) throws -> [BuildVariableMap] {
+        let rows = try read { db in
+            try Row.fetchAll(
+                db,
+                sql: "SELECT * FROM build_variable_maps WHERE build_id = ? ORDER BY attached_at, id",
+                arguments: [PersistenceCodec.uuid(buildID)]
+            )
+        }
+        return try rows.map { row in
+            let format: String = row["format"]
+            let source: String = row["source"]
+            guard let mapFormat = BuildVariableMap.Format(rawValue: format) else {
+                throw PersistenceError.invalidEnum(type: "BuildVariableMap.Format", value: format)
+            }
+            guard let mapSource = BuildVariableMap.Source(rawValue: source) else {
+                throw PersistenceError.invalidEnum(type: "BuildVariableMap.Source", value: source)
+            }
+            return BuildVariableMap(
+                id: try PersistenceCodec.uuid(row["id"] as String),
+                buildID: try PersistenceCodec.uuid(row["build_id"] as String),
+                assetID: try PersistenceCodec.uuid(row["asset_id"] as String),
+                format: mapFormat,
+                source: mapSource,
+                originalFilename: row["original_filename"],
+                attachedAt: try PersistenceCodec.date(row["attached_at"] as String)
+            )
+        }
+    }
+}
+
 public final class GRDBSettingsStore: SettingsStore, GRDBRepositoryBacking, @unchecked Sendable {
     let writer: any DatabaseWriter
 
@@ -414,6 +520,8 @@ public struct GRDBRepositorySet: Sendable {
     public let saveProfiles: GRDBSaveProfileRepository
     public let saveStates: GRDBSaveStateRepository
     public let patchRecipes: GRDBPatchRecipeRepository
+    public let toolchainReports: GRDBToolchainReportRepository
+    public let variableMaps: GRDBBuildVariableMapRepository
     public let assets: GRDBManagedAssetRepository
     public let settings: GRDBSettingsStore
     public let transactions: GRDBLibraryTransactionRunner
@@ -424,6 +532,8 @@ public struct GRDBRepositorySet: Sendable {
         saveProfiles = GRDBSaveProfileRepository(writer: writer)
         saveStates = GRDBSaveStateRepository(writer: writer)
         patchRecipes = GRDBPatchRecipeRepository(writer: writer)
+        toolchainReports = GRDBToolchainReportRepository(writer: writer)
+        variableMaps = GRDBBuildVariableMapRepository(writer: writer)
         assets = GRDBManagedAssetRepository(writer: writer)
         settings = GRDBSettingsStore(writer: writer)
         transactions = GRDBLibraryTransactionRunner(writer: writer)

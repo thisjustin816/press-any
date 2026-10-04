@@ -50,6 +50,48 @@ final class EmulationSessionTests: XCTestCase {
         XCTAssertEqual(Set(autos.compactMap(\.autoSequence)), Set([3, 4, 5, 6, 7]))
     }
 
+    func testAStateKeepsAThumbnailOfTheFrameItWasSavedOn() throws {
+        let harness = try SessionHarness.make()
+        let session = harness.makeSession(thumbnails: FrameSizeEncoder())
+        try session.start(context: harness.contextA)
+        let frame = try session.stepFrame()
+
+        let state = try session.saveManualState()
+
+        XCTAssertEqual(session.thumbnailData(for: state), FrameSizeEncoder.bytes(of: frame))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(state.screenshotAssetID)))
+        XCTAssertEqual(asset.kind, .stateThumbnail)
+    }
+
+    func testAStateSavedBeforeAnyFrameOrWithoutAnEncoderHasNoThumbnail() throws {
+        let harness = try SessionHarness.make()
+        let withEncoder = harness.makeSession(thumbnails: FrameSizeEncoder())
+        try withEncoder.start(context: harness.contextA)
+        XCTAssertNil(try withEncoder.saveManualState().screenshotAssetID)
+        try withEncoder.stop()
+
+        let without = harness.makeSession()
+        try without.start(context: harness.contextA)
+        _ = try without.stepFrame()
+        XCTAssertNil(try without.saveManualState().screenshotAssetID)
+    }
+
+    func testPruningAutoStatesRemovesTheirThumbnails() throws {
+        let harness = try SessionHarness.make()
+        let session = harness.makeSession(thumbnails: FrameSizeEncoder())
+        try session.start(context: harness.contextA)
+        for _ in 0..<7 {
+            _ = try session.stepFrame()
+            try session.background()
+            try session.resume()
+        }
+
+        let kept = try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
+        let thumbnails = try harness.assets.fetchAssets().filter { $0.kind == .stateThumbnail }
+        XCTAssertEqual(Set(thumbnails.map(\.id)), Set(kept.compactMap(\.screenshotAssetID)))
+        XCTAssertEqual(thumbnails.count, 5)
+    }
+
     func testSaveStateCannotLoadIntoDifferentBuildContext() throws {
         let harness = try SessionHarness.make()
         let sessionA = harness.makeSession()
@@ -176,6 +218,57 @@ extension EmulationSessionTests {
         XCTAssertEqual(try second.saveStates().map(\.id), [autoState.id], "the rejected state is kept")
     }
 
+    func testTheProfileRemembersWhichBuildLastWroteItsSave() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
+
+        let sessionA = harness.makeSession()
+        try sessionA.start(context: harness.contextA)
+        try sessionA.stop()
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.saveWrittenByBuildID, harness.buildA.id)
+
+        let sessionB = harness.makeSession()
+        try sessionB.start(context: harness.contextB)
+        try sessionB.stop()
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.saveWrittenByBuildID, harness.buildB.id)
+    }
+
+    func testImportingASaveIntoAProfileKeepsItsOldSaveAsACopy() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        var profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
+        profile.saveWrittenByBuildID = harness.buildA.id
+        try harness.profiles.updateSaveProfile(profile)
+        let file = try harness.writeExternalFile(Data([9, 9]))
+
+        let result = try harness.replaceSave().execute(profileID: profile.id, sourceURL: file)
+
+        XCTAssertEqual(try harness.batteryData(of: result.profile), Data([9, 9]))
+        XCTAssertNil(result.profile.saveWrittenByBuildID, "an imported file's writer isn't known")
+        let copy = try XCTUnwrap(result.safetyCopy)
+        XCTAssertEqual(copy.displayName, "Main before import")
+        XCTAssertEqual(try harness.batteryData(of: copy), Data([1, 2, 3]))
+    }
+
+    func testImportingASaveIntoABlankProfileMakesNoCopy() throws {
+        let harness = try SessionHarness.make()
+        let result = try harness.replaceSave().execute(
+            profileID: harness.profile.id,
+            sourceURL: try harness.writeExternalFile(Data([7]))
+        )
+        XCTAssertNil(result.safetyCopy)
+        XCTAssertEqual(try harness.batteryData(of: result.profile), Data([7]))
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 1)
+    }
+
+    func testAnEmptyFileReplacesNothing() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        XCTAssertThrowsError(try harness.replaceSave().execute(
+            profileID: harness.profile.id,
+            sourceURL: try harness.writeExternalFile(Data())
+        )) { XCTAssertEqual($0 as? ReplaceBatterySaveError, .emptyFile) }
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 1)
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1, 2, 3]))
+    }
+
     func testAutoStateIsNotOfferedOnceASharedProfileSaveIsNewer() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
         let early = Date(timeIntervalSince1970: 1_700_000_000)
@@ -276,6 +369,9 @@ private final class UndeletableSaveStateRepository: SaveStateRepository, @unchec
     func insertSaveState(_ state: SaveState) throws { try inner.insertSaveState(state) }
     func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
         try inner.fetchSaveStates(buildID: buildID, saveProfileID: saveProfileID)
+    }
+    func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] {
+        try inner.fetchSaveStates(saveProfileID: saveProfileID)
     }
     func deleteSaveState(id: UUID) throws { throw Refused() }
 }
@@ -401,8 +497,25 @@ private struct SessionHarness {
         )
     }
 
+    func replaceSave() -> ReplaceBatterySave {
+        ReplaceBatterySave(profiles: profiles, assets: assets, assetStore: store)
+    }
+
+    func writeExternalFile(_ data: Data) throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("import-\(UUID().uuidString).sav")
+        try data.write(to: url)
+        return url
+    }
+
+    func batteryData(of profile: SaveProfile) throws -> Data? {
+        let current = try XCTUnwrap(profiles.fetchSaveProfile(id: profile.id))
+        guard let assetID = current.persistentSaveAssetID, let asset = try assets.fetchAsset(id: assetID) else { return nil }
+        return try store.readData(at: store.managedURL(relativePath: asset.relativePath))
+    }
+
     func makeSession(
         settings: SettingsResolver? = nil,
+        thumbnails: (any FrameImageEncoding)? = nil,
         now: Date = Date(timeIntervalSince1970: 1_700_000_000)
     ) -> EmulationSession {
         EmulationSession(
@@ -414,6 +527,7 @@ private struct SessionHarness {
             imageResolver: TestBuildROMResolver(builds: builds, assets: assets, store: store),
             coreRegistry: CoreRegistry(factories: [factory]),
             settings: settings,
+            thumbnails: thumbnails,
             now: { now }
         )
     }
@@ -450,5 +564,18 @@ private struct TestBuildROMResolver: BuildImageResolving {
             throw EmulationSessionError.romAssetNotFound(build.imageAssetID)
         }
         return try store.managedURL(relativePath: asset.relativePath)
+    }
+}
+
+/// Encodes a frame as its width and height, so a test can tell which frame it got.
+private struct FrameSizeEncoder: FrameImageEncoding {
+    let fileExtension = "png"
+
+    static func bytes(of frame: EmulatorVideoFrame) -> Data {
+        Data([UInt8(frame.width), UInt8(frame.height)])
+    }
+
+    func encode(_ frame: EmulatorVideoFrame) throws -> Data {
+        Self.bytes(of: frame)
     }
 }

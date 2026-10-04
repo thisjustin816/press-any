@@ -10,10 +10,12 @@ import Patching
 import PersistenceGRDB
 import QuickPlay
 import SameBoyAdapter
+import ToolchainDetection
 
 @MainActor
 final class AppContainer {
     let fileStore: ManagedFileStore
+    let integrityChecker: ManagedAssetIntegrityChecker
     let database: AppDatabase
     let repositories: GRDBRepositorySet
 
@@ -22,10 +24,17 @@ final class AppContainer {
     let buildOperations: BuildOperations
     let createBlankSaveProfile: CreateBlankSaveProfile
     let duplicateSaveProfile: DuplicateSaveProfile
+    let setSaveProfileBadge: SetSaveProfileBadge
+    let deleteSaveProfile: DeleteSaveProfile
     let importBatterySave: ImportBatterySave
+    let replaceBatterySave: ReplaceBatterySave
     let preferredLaunchResolver: ResolvePreferredLaunchContext
     let patchCreator: CreatePatchedBuild
     let launchImageResolver: ResolveImageForLaunch
+    let toolchainRefresh: RefreshToolchainReports
+    let attachVariableMap: AttachVariableMap
+    let saveCompatibility: AssessSaveCompatibility
+    let chooseSaveForBuild: ChooseSaveForBuild
     let evictGeneratedImage: EvictGeneratedImage
     let gameArtwork: GameArtwork
     let quickPlayWorkspace: QuickPlayWorkspace
@@ -52,11 +61,13 @@ final class AppContainer {
         try database.migrate()
         repositories = database.makeRepositories()
 
+        integrityChecker = ManagedAssetIntegrityChecker(assets: repositories.assets, assetStore: fileStore)
         importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, assetStore: fileStore)
         importCommitter = ImportCommitter(
             games: repositories.games,
             builds: repositories.builds,
             assets: repositories.assets,
+            toolchainReports: repositories.toolchainReports,
             assetStore: fileStore,
             transactions: repositories.transactions
         )
@@ -73,6 +84,16 @@ final class AppContainer {
             games: repositories.games,
             profiles: repositories.saveProfiles
         )
+        setSaveProfileBadge = SetSaveProfileBadge(profiles: repositories.saveProfiles)
+        deleteSaveProfile = DeleteSaveProfile(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
+            assets: repositories.assets,
+            assetStore: fileStore,
+            transactions: repositories.transactions
+        )
         duplicateSaveProfile = DuplicateSaveProfile(
             profiles: repositories.saveProfiles,
             assets: repositories.assets,
@@ -80,6 +101,11 @@ final class AppContainer {
         )
         importBatterySave = ImportBatterySave(
             games: repositories.games,
+            profiles: repositories.saveProfiles,
+            assets: repositories.assets,
+            assetStore: fileStore
+        )
+        replaceBatterySave = ReplaceBatterySave(
             profiles: repositories.saveProfiles,
             assets: repositories.assets,
             assetStore: fileStore
@@ -94,12 +120,40 @@ final class AppContainer {
             builds: repositories.builds,
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
+            toolchainReports: repositories.toolchainReports,
             assetStore: fileStore,
             transactions: repositories.transactions
         )
         launchImageResolver = ResolveImageForLaunch(
             builds: repositories.builds,
             recipes: repositories.patchRecipes,
+            assets: repositories.assets,
+            assetStore: fileStore
+        )
+        toolchainRefresh = RefreshToolchainReports(
+            reports: repositories.toolchainReports,
+            images: launchImageResolver,
+            assetStore: fileStore,
+            detect: { ToolchainDetectorRegistry.standard.detect(image: $0, system: $1) }
+        )
+        attachVariableMap = AttachVariableMap(
+            builds: repositories.builds,
+            maps: repositories.variableMaps,
+            assets: repositories.assets,
+            assetStore: fileStore,
+            transactions: repositories.transactions
+        )
+        saveCompatibility = AssessSaveCompatibility(
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            reports: repositories.toolchainReports,
+            images: launchImageResolver,
+            assetStore: fileStore
+        )
+        chooseSaveForBuild = ChooseSaveForBuild(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
             assets: repositories.assets,
             assetStore: fileStore
         )
@@ -150,7 +204,8 @@ final class AppContainer {
             assetStore: fileStore,
             imageResolver: launchImageResolver,
             coreRegistry: coreRegistry,
-            settings: settingsResolver
+            settings: settingsResolver,
+            thumbnails: PNGFrameEncoder()
         )
     }
 

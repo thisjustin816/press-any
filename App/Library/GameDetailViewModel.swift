@@ -1,4 +1,5 @@
 import Combine
+import EmulationSession
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
@@ -31,10 +32,14 @@ final class GameDetailViewModel: ObservableObject {
     private let buildOperations: BuildOperations
     private let createBlank: CreateBlankSaveProfile
     private let duplicateProfile: DuplicateSaveProfile
+    private let badges: SetSaveProfileBadge
+    private let profileDeleter: DeleteSaveProfile
     private let saveImporter: ImportBatterySave
     private let patchCreator: CreatePatchedBuild
     private let evictImage: EvictGeneratedImage
     private let artwork: GameArtwork
+    private let variableMaps: AttachVariableMap
+    private let saveReplacer: ReplaceBatterySave
 
     init(
         gameID: UUID,
@@ -44,10 +49,14 @@ final class GameDetailViewModel: ObservableObject {
         buildOperations: BuildOperations,
         createBlank: CreateBlankSaveProfile,
         duplicateProfile: DuplicateSaveProfile,
+        badges: SetSaveProfileBadge,
+        deleteProfile: DeleteSaveProfile,
         importSave: ImportBatterySave,
         patchCreator: CreatePatchedBuild,
         evictImage: EvictGeneratedImage,
-        artwork: GameArtwork
+        artwork: GameArtwork,
+        variableMaps: AttachVariableMap,
+        replaceSave: ReplaceBatterySave
     ) {
         self.gameID = gameID
         self.games = games
@@ -56,10 +65,14 @@ final class GameDetailViewModel: ObservableObject {
         self.buildOperations = buildOperations
         self.createBlank = createBlank
         self.duplicateProfile = duplicateProfile
+        self.badges = badges
+        self.profileDeleter = deleteProfile
         self.saveImporter = importSave
         self.patchCreator = patchCreator
         self.evictImage = evictImage
         self.artwork = artwork
+        self.variableMaps = variableMaps
+        self.saveReplacer = replaceSave
     }
 
     var preferredBuild: Build? {
@@ -117,7 +130,7 @@ final class GameDetailViewModel: ObservableObject {
 
     func profileName(id: UUID?) -> String? {
         guard let id else { return nil }
-        return saveProfiles.first { $0.id == id }?.displayName
+        return saveProfiles.first { $0.id == id }?.title
     }
 
     func setPreferredBuild(_ build: Build) {
@@ -131,6 +144,21 @@ final class GameDetailViewModel: ObservableObject {
 
     func createBlankProfile(name: String) {
         perform { _ = try createBlank.execute(gameID: gameID, name: name) }
+    }
+
+    func setBadge(_ badge: String, of profile: SaveProfile) {
+        do {
+            _ = try badges.execute(profileID: profile.id, badge: badge)
+            reload()
+        } catch SaveProfileOperationError.invalidBadge {
+            errorMessage = "A badge is a single emoji."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func delete(_ profile: SaveProfile) {
+        perform { try profileDeleter.execute(profileID: profile.id) }
     }
 
     func duplicate(_ profile: SaveProfile, name: String) {
@@ -147,6 +175,32 @@ final class GameDetailViewModel: ObservableObject {
                 name: url.deletingPathExtension().lastPathComponent
             )
             infoMessage = "Imported the save as \(profile.displayName)."
+        }
+    }
+
+    func replaceSave(of profile: SaveProfile, from url: URL) {
+        perform {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            let result = try saveReplacer.execute(profileID: profile.id, sourceURL: url)
+            infoMessage = if let copy = result.safetyCopy {
+                "Imported \(url.lastPathComponent) into \(profile.displayName). Its previous save is in \(copy.displayName)."
+            } else {
+                "Imported \(url.lastPathComponent) into \(profile.displayName)."
+            }
+        }
+    }
+
+    func attachVariableMap(from url: URL, to build: Build) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let map = try variableMaps.execute(buildID: build.id, sourceURL: url)
+            infoMessage = "Attached \(map.originalFilename) to \(build.displayName)."
+        } catch AttachVariableMapError.unrecognizedFormat {
+            errorMessage = "\(url.lastPathComponent) isn’t a GB Studio globals file or a symbol file."
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -204,16 +258,29 @@ final class GameDetailViewModel: ObservableObject {
         perform { try artwork.remove(gameID: gameID) }
     }
 
-    func promote(_ build: Build, title: String, mode: ReorganizationMode) {
+    func setBase(_ build: Build, isBase: Bool) {
+        perform { try buildOperations.setBase(buildID: build.id, isBase: isBase) }
+    }
+
+    /// The review step's first selection; when it can't be worked out, nothing is selected.
+    func suggestedCarryOver(promoting build: Build) -> GameCarryOver {
+        (try? buildOperations.suggestedCarryOver(promoting: build.id)) ?? .nothing
+    }
+
+    func suggestedCarryOver(mergingInto target: Game) -> GameCarryOver {
+        (try? buildOperations.suggestedCarryOver(merging: gameID, into: target.id)) ?? .nothing
+    }
+
+    func promote(_ build: Build, title: String, mode: ReorganizationMode, carryOver: GameCarryOver) {
         perform {
-            let newGame = try buildOperations.promoteBuild(buildID: build.id, title: title, mode: mode)
+            let newGame = try buildOperations.promoteBuild(buildID: build.id, title: title, mode: mode, carryOver: carryOver)
             infoMessage = "\(build.displayName) is now the Game \(newGame.primaryTitle)."
         }
     }
 
-    func merge(into target: Game, mode: ReorganizationMode) {
+    func merge(into target: Game, mode: ReorganizationMode, carryOver: GameCarryOver) {
         do {
-            try buildOperations.mergeGame(sourceGameID: gameID, into: target.id, mode: mode)
+            try buildOperations.mergeGame(sourceGameID: gameID, into: target.id, mode: mode, carryOver: carryOver)
             reload()
             infoMessage = "Merged into \(target.primaryTitle)."
         } catch BuildOperationError.duplicateImagesInTarget(let buildIDs) {

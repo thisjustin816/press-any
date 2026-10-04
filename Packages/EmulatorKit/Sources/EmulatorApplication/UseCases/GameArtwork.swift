@@ -66,7 +66,7 @@ public struct GameArtwork: Sendable {
             throw error
         }
 
-        if let previous { discard(previous) }
+        if let previous { assets.discard(previous, files: assetStore) }
         return game
     }
 
@@ -80,16 +80,7 @@ public struct GameArtwork: Sendable {
         game.artworkAssetID = nil
         game.modifiedAt = now()
         try games.updateGame(game)
-        if let previous { discard(previous) }
+        if let previous { assets.discard(previous, files: assetStore) }
         return game
-    }
-
-    /// The Game no longer points at the image, so a failure here leaves only an orphaned file
-    /// for the integrity checker to report, never a broken reference.
-    private func discard(_ asset: ManagedAsset) {
-        try? assets.deleteAsset(id: asset.id)
-        if let url = try? assetStore.managedURL(relativePath: asset.relativePath) {
-            try? assetStore.removeIfExists(url)
-        }
     }
 }

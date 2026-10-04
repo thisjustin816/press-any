@@ -26,7 +26,16 @@ Verify with a user-supplied legal ROM:
 - [ ] Quick Play an 8 MB image on device and record the time from choosing the file to the first frame, which the game screen shows as "First frame in N ms"; it opens on the game, not the boot logo, and nothing optional (shaders, skins, custom layouts, detection) loads before it. Then play for a minute and confirm normal speed and audio.
 - [ ] On both controller layouts, tapping the Press Any wordmark opens the game menu, and tapping the game picture doesn't until Settings > Tap Game for Menu is on. Dragging a thumb across either doesn't open it. The first game played shows "Tap Press Any for the menu." once, and never again.
 - [ ] Screen Scaling: Integer shows every Game Boy pixel the same size on both layouts; Fill makes the picture larger, most visibly on Playtiles and on Pro Max phones, with even, sharp pixels and no shimmer while scrolling.
-- [ ] Settings > Acknowledgements lists SameBoy and GRDB.swift, and each opens its full license text.
+- [ ] Settings > Acknowledgements lists SameBoy, GRDB.swift and gbtoolsid, and each opens its license text or credit.
 - [ ] Controller Theme: Classic shows dark status bar text and Dark light text, and Match System follows Light and Dark Mode. The library behind the game keeps its own appearance.
 - [ ] A library game shows the boot logo by default; with Settings > Skip Boot Logo on, it opens on the game.
 - [ ] Move a Build to its own Game and merge it back; Build identity and data remain intact.
+- [ ] Make Separate Game shows a review with the Build's own Save Profiles and the artwork selected; the new Game gets copies, shows Split From, and the original Game is unchanged.
+- [ ] Import a homebrew ROM (GB Studio, GBDK or RGBDS); Import Review and the Build's Technical Info show what it was made with.
+- [ ] Play Build A of a homebrew Game, then launch Build B, made with different tools, with the same save; the warning appears, and Play with a Copy leaves the original save unchanged.
+- [ ] Replace Save from File on a profile with a save asks first and keeps "<name> before import"; on a blank profile it doesn't ask.
+- [ ] Load State shows each state's thumbnail.
+- [ ] A profile's Badge takes one emoji, shows it beside the name in the profile list and the Play with Save and Default Save menus, and refuses text.
+- [ ] Deleting a profile asks first, naming it; a Build that played it plays the Game's default afterwards.
+- [ ] The library list labels a Game Boy Color game "Game Boy Color".
+- [ ] Settings > Check Library Files reports an intact library.

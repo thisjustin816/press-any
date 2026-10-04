@@ -9,6 +9,9 @@ extension AppDatabase {
         migrator.registerMigration("mvp-v2") { db in
             try db.execute(sql: MVPV2Schema.sql)
         }
+        migrator.registerMigration("mvp-v3") { db in
+            try db.execute(sql: MVPV3Schema.sql)
+        }
         return migrator
     }
 }
@@ -141,5 +144,39 @@ enum MVPV2Schema {
 
     ALTER TABLE games
     ADD COLUMN artwork_asset_id TEXT REFERENCES managed_assets(id) ON DELETE SET NULL;
+    """#
+}
+
+enum MVPV3Schema {
+    static let sql = #"""
+    CREATE TABLE build_toolchain_reports (
+        build_id TEXT NOT NULL REFERENCES builds(id) ON DELETE CASCADE,
+        detector TEXT NOT NULL,
+        detector_version TEXT NOT NULL,
+        corpus_revision TEXT NOT NULL,
+        report_json TEXT NOT NULL,
+        detected_at TEXT NOT NULL,
+        PRIMARY KEY (build_id, detector)
+    );
+
+    ALTER TABLE save_profiles
+    ADD COLUMN save_written_by_build_id TEXT REFERENCES builds(id) ON DELETE SET NULL;
+
+    CREATE TABLE build_variable_maps (
+        id TEXT PRIMARY KEY NOT NULL,
+        build_id TEXT NOT NULL REFERENCES builds(id) ON DELETE CASCADE,
+        asset_id TEXT NOT NULL REFERENCES managed_assets(id),
+        format TEXT NOT NULL,
+        source TEXT NOT NULL,
+        original_filename TEXT NOT NULL,
+        attached_at TEXT NOT NULL,
+        UNIQUE (build_id, asset_id)
+    );
+
+    ALTER TABLE games
+    ADD COLUMN lineage_source_game_id TEXT REFERENCES games(id) ON DELETE SET NULL;
+
+    ALTER TABLE games
+    ADD COLUMN lineage_source_title TEXT;
     """#
 }

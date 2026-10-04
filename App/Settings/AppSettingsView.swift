@@ -1,3 +1,4 @@
+import AssetStorage
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
@@ -8,6 +9,7 @@ import SwiftUI
 /// still wins for that launch.
 struct AppSettingsView: View {
     private let store: any SettingsStore
+    private let integrityChecker: ManagedAssetIntegrityChecker?
 
     @State private var skipBootAnimation: Bool
     @State private var autoResumePolicy: AutoResumePolicy
@@ -19,8 +21,9 @@ struct AppSettingsView: View {
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
 
-    init(store: any SettingsStore) {
+    init(store: any SettingsStore, integrityChecker: ManagedAssetIntegrityChecker? = nil) {
         self.store = store
+        self.integrityChecker = integrityChecker
         _skipBootAnimation = State(initialValue: Self.stored(Bool.self, .skipBootAnimation, in: store) ?? false)
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
         _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
@@ -91,6 +94,10 @@ struct AppSettingsView: View {
                     }
                 } footer: {
                     Text("Whether a game picks up where you left off when you open it again or return to the app.")
+                }
+
+                if let integrityChecker {
+                    LibraryCheckSection(checker: integrityChecker)
                 }
 
                 Section {

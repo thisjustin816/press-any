@@ -1,9 +1,10 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03: 89 done, 32 partial and 175 missing. The specs stay the source of truth for what
-each item means; this file tracks what's left and a suggested order. Update an item's row when
-its status changes, and move it to its area's "Done" line when it's finished.
+on 2026-10-03 and updated 2026-10-04: 100 done, 32 partial and 165 missing. The specs stay the
+source of truth for what each item means; this file tracks what's left and a suggested order.
+Update an item's row when its status changes, and move it to its area's "Done" line when it's
+finished.
 
 Spec references: `mvp`, `prod`, `dec` and `later` are the four files in `docs/specs/`
 (`gb-emulator-mvp.md`, `-product.md`, `-decisions.md` and `-later-decisions.md`), with section
@@ -15,17 +16,8 @@ later.
 
 Nothing below is in progress.
 
-1. Finish the MVP. These are MVP-scope items the inventory found missing or partial, and the
-   real-device check in `docs/mvp-verification.md` still has to pass on a phone.
-   - Wire toolchain detection into the app: run it on import, store it on the Build, show it in
-     Import Review and Technical Info. The detector is built and tested, but the app target
-     doesn't link it.
-   - Variable-map sidecars on the exact Build, and compatibility-aware Build switching.
-   - Save state thumbnails, and the unused Save Profile badge and RTC fields.
-   - A review step for promote and merge, Game-level lineage on a promoted Game, and marking a
-     Base Build after import.
-   - Capability protocol shells for rewind, cheats, memory, RTC, link cable, camera and printer.
-   - An automated test for controller disconnect (MVP test 14).
+1. Finish the MVP. The real-device check in `docs/mvp-verification.md` still has to pass on a
+   phone.
 2. Display and play feel, small changes that make games look and play right on day one: frame
    blending, GBC color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
@@ -38,10 +30,7 @@ Nothing below is in progress.
 
 ## Known bugs
 
-- The library list labels every Game "Game Boy", including Game Boy Color games
-  (`App/Library/LibraryView.swift`).
-- `ManagedAssetIntegrityChecker` exists but the app never runs it, so saves and states aren't
-  verified when they're read.
+None known.
 
 ## Spec conflicts to resolve
 
@@ -102,7 +91,6 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Separate optional capability protocols, absence representable | MVP | mvp "Core interfaces" | RumbleCapability, BootSkippingCapability exist; Rewind/Cheat/MemoryAccess/RTC/LinkCable/Camera/Printer shells absent |
 | missing | Nonintrusive "core update available" notice | v1 | prod "Core policy" | none |
 | missing | Explicit, reversible core-migration checkpoint (new state lineage, rollback when old core available) | v1 | Q85; later 4 | none |
 | partial | Automatic model selection | v1 | Q87 | CGB flag 0x80/0xC0 -> CGB, else DMG (SameBoyAdapter.loadImage); SGB never chosen |
@@ -113,13 +101,15 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 
 Done: SameBoy 1.0.3 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest compatible core on
 first launch, then pinned per Build; Open SameBoy boot ROMs incl. cgb_boot_fast; Skip Boot Logo:
-Quick Play always, library via inheritable setting (default shows logo).
+Quick Play always, library via inheritable setting (default shows logo); Optional capability
+protocols: rumble and boot skipping implemented, rewind, cheats, memory access, RTC, link cable,
+camera and printer declared, and a missing one is a failed cast.
 
 ### Persistence / storage
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); ManagedAssetIntegrityChecker (corrupt marking, orphan detection) exists but app never runs it; saves/states not verified on read |
+| partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers); saves/states not verified on read |
 | missing | Storage screen by category, source vs disposable, safe cleanup | v1 | Q138 | none |
 | partial | Automatic cleanup of disposable data only | v1 | Q139 | expired Quick Play sessions removed at launch (AppContainer init); no generated-cache eviction under pressure |
 | missing | GC coordination / in-flight protection / orphan sweep in the running app | v1 | later 6 | logic only in the unused checker |
@@ -136,8 +126,7 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 | missing | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; mvp "Game" (provenance records) | none |
 | missing | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | no edit UI |
 | partial | Build region/language/revision/version + structured version sort key | MVP/v1 | mvp "Build"; Q152 | columns exist, never populated (import ignores filename/header), no edit UI |
-| missing | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 |  |
-| partial | SaveProfile icon/badge and RTC context | MVP |  | MVP fields mvp "SaveProfile" `badge`, `rtcContextJSON` stored, never set or shown |
+| partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1 | prod "Documents"; Q169 |  |
 | missing | Typed multi-artwork model with primary selection | v1 | prod "Artwork"; dec 20 | Game.artworkAssetID is a single image |
 | missing | Tags and collections | v1 | prod "Canonical domain model" |  |
@@ -197,28 +186,28 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1 | prod "Multi-asset review" |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1 | prod "Duplicate handling" | duplicate path only repairs the blob |
 | missing | Visual artwork comparison (existing/fetched/packaged) in review | v1 | dec 32 |  |
-| missing | Toolchain detection shown in Import Review | MVP | later 5 | detector not called by import |
 | missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1 | Q149/Q150 |  |
 | missing | Multiple ROMs attached to one Game in one flow | v1 | dec 16 |  |
 
 Done: Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
-re-import repairs damaged file; New Game vs Add Build choice, Base Build toggle.
+re-import repairs damaged file; New Game vs Add Build choice, Base Build toggle; Toolchain
+findings in Import Review and Quick Play promotion.
 
 ### Game/Build restructuring
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Import-Review-style inheritance step (artwork, docs, tags, compatible profiles; deselectable) on promote/merge | v1 (mvp says merge "with review") | Q83/Q84 | none |
-| missing | Game-level lineage on promoted Game (link to source/base Game) | MVP/v1 | dec 37; Q161 | only Build.parentBuildID survives |
-| partial | Mark one or more Base Builds | MVP | mvp "Build operations MVP"; Q154/Q155 | only at import time (toggle); no later mark/unmark; no "preferred base" |
+| partial | Import-Review-style inheritance step (artwork, docs, tags, compatible profiles; deselectable) on promote/merge | v1 (mvp says merge "with review") | Q83/Q84 | review sheet copies artwork and chosen Save Profiles; docs and tags don't exist yet |
+| missing | Preferred Base Build among several | v1 | Q155 (optional) |  |
 | missing | Lightweight Build timeline (versions, hashes, parents, notes, import/activation history) | v1 | prod "Game/Build restructuring" |  |
 | missing | Build comparison (changed bytes/ranges, size, banks, header) | v1 | dec 5 |  |
 
 Done: Make Separate Game: Move/Copy, default Move, Build UUID/blob preserved, Build-scoped data
 follows; Merge into Game: Move/Copy, lineage/recipes remapped; Same image already in target: Copy
 skips, Move refused naming the Builds; Profiles/artwork/preferences follow when the source Game is
-emptied or merged away.
+emptied or merged away; Promoted Game records the Game it split from (Split From), kept by title
+once that Game is gone; Mark or unmark imported Builds as Base Builds after import.
 
 ### Patching
 
@@ -239,17 +228,19 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Import .sav | MVP | mvp "Save Profile MVP" | only into a new profile; into a selected profile with destructive confirmation + safety copy missing |
-| missing | Explicit Replace/Delete profile with confirmation naming the target | v1 | dec 9 | repo deleteSaveProfile exists, no UI |
-| missing | Compatibility-aware Build switching (flush, analyze, risky -> migrate/duplicate/use anyway/blank) | MVP and v1 | mvp "Build switching/save safety"; prod "Compatibility-aware Build switching"; later 5, 15 | No analysis; the user forks profiles by hand |
-| missing | Variable-map sidecars (globals.i/game_globals.i) attached to exact Build | MVP | later 5 |  |
-| missing | Likely-incompatible-save warning from toolchain/GB Studio | v1 | dec 7 |  |
+| partial | Compatibility-aware Build switching (flush, analyze, risky -> migrate/duplicate/use anyway/blank) | MVP and v1 | mvp "Build switching/save safety"; prod "Compatibility-aware Build switching"; later 5, 15 | launch check offers copy/new save/use anyway; migrate waits for v1.1 GB Studio migration |
 | missing | GB Studio save migration (version-gated, needs maps) | v1.1 | prod "v1.1 targets" |  |
-| missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset |
+| missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later | dec 9/33 |  |
 
 Done: One .sav per Save Profile, atomic flush; Compatible Builds share a profile on purpose; New
-blank profile; duplicate profile (bytes copied, ancestry shown).
+blank profile; duplicate profile (bytes copied, ancestry shown); Import .sav into a new profile,
+or into an existing one after confirming, keeping its old save as "<name> before import";
+Variable maps (GB Studio globals, RGBDS .sym, GBDK .noi) kept on the exact Build; Each profile
+records the Build that last wrote it, and launching another Build warns when the save may not fit
+(GB Studio, different detected tools, different header save hardware); Save Profile badge, one
+emoji shown beside its name; Delete a profile, with a confirmation naming it, taking its save and
+states.
 
 ### Save system: states and lifecycle
 
@@ -258,7 +249,6 @@ blank profile; duplicate profile (bytes copied, ancestry shown).
 | missing | Quick Save (one tap) | v1 | dec 8 | SaveStateKind.quick unused |
 | missing | Configurable fixed slots | v1 | dec 8 |  |
 | partial | Unlimited named states | v1 | dec 8 | `label` field; no naming, renaming or deleting UI |
-| missing | State thumbnail screenshot | MVP field / v1 | mvp "SaveState"; prod "Save states" | screenshotAssetID never written |
 | missing | Configurable automatic cleanup; pinned/favorited exempt | v1 | dec 8 |  |
 | missing | State records cheat config; offer Restore Cheat Configuration | v1 | Q126 |  |
 | missing | Per-Save-Profile autoresume override | v1 | dec 8/9, Q146 (see conflicts) |  |
@@ -271,7 +261,7 @@ never cross Build/Profile/core/serialization context; Auto State on background, 
 switch; rolling 5; Resume Games Always/Ask/Never (default Always), inheritable System/Game/Build,
 Ask prompt, foreground policy; Auto State not restored once the profile's save is newer; Failed
 restore boots normally, keeps state, tells user; Backgrounding pauses emulation/audio; One active
-emulator session.
+emulator session; Each state keeps a PNG thumbnail of its frame, shown in Load State.
 
 ### Quick Play
 
@@ -539,12 +529,13 @@ Spec: later 5: MVP.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Categorical confidence in the report | MVP | later 5 | ToolchainDetectionReport has none |
-| missing | Wiring: run on import, persist per Build, Build Technical Info, Quick Play presentation, compatibility routing | MVP | later 5 | module not linked into the app target (project.yml) |
+| partial | Wiring: run on import, persist per Build, Build Technical Info, Quick Play presentation, compatibility routing | MVP | later 5 | Quick Play shows findings at promotion, not during play (D allows skipping) |
 
 Done: Standalone detector seam + gbtoolsid port (engines, toolchains, music/SFX drivers,
 version/range, evidence, detector version, corpus revision), differential CI vs upstream; GB Studio
-detection, multi-layer (GB Studio over GBDK + audio driver).
+detection, multi-layer (GB Studio over GBDK + audio driver); Categorical confidence; Runs on import
+and patching, stored per Build, shown in Import Review, promotion and Technical Info (which detects
+again); Feeds the save compatibility check.
 
 ### Included Games
 
@@ -561,7 +552,7 @@ Spec: later 11.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | no-intro-update, toolchain-fingerprints-update, shader-catalog-update, included-games-verify, fixtures, license-audit, privacy-audit, openvgdb-update (disabled) | v1 | docs/ci.md "Not built yet" |  |
-| partial | MVP gate | MVP | mvp "Required tests" / mvp-verification.md | package tests cover required tests 1-13 and 15; test 14 (controller disconnect) has no automated test; every physical-iPhone (L4c) check is unchecked |
+| partial | MVP gate | MVP | mvp "Required tests" / mvp-verification.md | package tests cover required tests 1-13 and 15, and an app test covers 14 (controller disconnect); every physical-iPhone (L4c) check is unchecked |
 
 Done: ci.yml (L1/L2/L3, gbtoolsid differential, test-coverage, hygiene) and ios-build.yml (simulator
 build/tests).

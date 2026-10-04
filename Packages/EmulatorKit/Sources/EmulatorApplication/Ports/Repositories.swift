@@ -30,7 +30,21 @@ public protocol SaveProfileRepository: Sendable {
 public protocol SaveStateRepository: Sendable {
     func insertSaveState(_ state: SaveState) throws
     func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState]
+    /// Every state made with the profile, on any Build.
+    func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState]
     func deleteSaveState(id: UUID) throws
+}
+
+/// Each Build keeps one report per detector, the latest it ran.
+public protocol ToolchainReportRepository: Sendable {
+    /// Inserts the report, or replaces the Build's earlier report from the same detector.
+    func saveReport(_ report: ToolchainDetectionReport, buildID: UUID, detectedAt: Date) throws
+    func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport]
+}
+
+public protocol BuildVariableMapRepository: Sendable {
+    func insertVariableMap(_ map: BuildVariableMap) throws
+    func fetchVariableMaps(buildID: UUID) throws -> [BuildVariableMap]
 }
 
 public protocol PatchRecipeRepository: Sendable {

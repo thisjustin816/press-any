@@ -3,6 +3,21 @@ import XCTest
 
 /// The database stores these raw values, so renaming a case must not change them.
 final class PersistedIdentifierTests: XCTestCase {
+    func testToolchainComponentKindRawValuesAreStable() {
+        // Stored inside each Build's toolchain report JSON.
+        XCTAssertEqual(
+            [ToolchainComponentKind.toolchain, .engine, .musicDriver, .soundEffectsDriver].map(\.rawValue),
+            ["toolchain", "engine", "musicDriver", "soundEffectsDriver"]
+        )
+    }
+
+    func testVariableMapRawValuesAreStable() {
+        XCTAssertEqual(BuildVariableMap.Format.gbStudioGlobals.rawValue, "gbStudioGlobals")
+        XCTAssertEqual(BuildVariableMap.Format.symbolFile.rawValue, "symbolFile")
+        XCTAssertEqual(BuildVariableMap.Source.userImport.rawValue, "userImport")
+        XCTAssertEqual(ManagedAssetKind.variableMap.rawValue, "variableMap")
+    }
+
     func testManagedAssetKindRawValuesAreStable() {
         XCTAssertEqual(ManagedAssetKind.sourceImage.rawValue, "sourceROM")
         XCTAssertEqual(ManagedAssetKind.sourcePatch.rawValue, "sourcePatch")

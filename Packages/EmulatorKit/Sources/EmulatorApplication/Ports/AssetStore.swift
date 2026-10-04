@@ -10,10 +10,13 @@ public protocol AssetStore: Sendable {
     func sourcePatchURL(sha256: String, extension fileExtension: String) throws -> URL
     func commitSourceROM(stagedURL: URL, sha256: String) throws -> URL
     func commitSourcePatch(stagedURL: URL, sha256: String, extension fileExtension: String) throws -> URL
+    func variableMapURL(sha256: String, extension fileExtension: String) throws -> URL
+    func commitVariableMap(stagedURL: URL, sha256: String, extension fileExtension: String) throws -> URL
     func generatedImageURL(sha256: String) -> URL
     func persistentSaveURL(profileID: UUID) -> URL
     func artworkURL(gameID: UUID, sha256: String, extension fileExtension: String) throws -> URL
     func stateURL(stateID: UUID) -> URL
+    func stateThumbnailURL(stateID: UUID, extension fileExtension: String) throws -> URL
     func quickPlayRoot(sessionID: UUID) -> URL
     func quickPlaySessionIDs() throws -> [UUID]
     func managedRelativePath(for url: URL) throws -> String

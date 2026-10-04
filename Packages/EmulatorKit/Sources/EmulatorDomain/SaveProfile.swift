@@ -6,6 +6,9 @@ public struct SaveProfile: Identifiable, Codable, Equatable, Sendable {
     public var displayName: String
     public var badge: String?
     public var persistentSaveAssetID: UUID?
+    /// The Build that last wrote the battery save, so a different Build can be checked before it
+    /// uses the save. Nil when that isn't known, as for an imported `.sav`.
+    public var saveWrittenByBuildID: UUID?
     public let copiedFromProfileID: UUID?
     public var rtcContextJSON: String?
     public var totalPlaytimeSeconds: Double
@@ -20,6 +23,7 @@ public struct SaveProfile: Identifiable, Codable, Equatable, Sendable {
         displayName: String,
         badge: String? = nil,
         persistentSaveAssetID: UUID? = nil,
+        saveWrittenByBuildID: UUID? = nil,
         copiedFromProfileID: UUID? = nil,
         rtcContextJSON: String? = nil,
         totalPlaytimeSeconds: Double = 0,
@@ -33,6 +37,7 @@ public struct SaveProfile: Identifiable, Codable, Equatable, Sendable {
         self.displayName = displayName
         self.badge = badge
         self.persistentSaveAssetID = persistentSaveAssetID
+        self.saveWrittenByBuildID = saveWrittenByBuildID
         self.copiedFromProfileID = copiedFromProfileID
         self.rtcContextJSON = rtcContextJSON
         self.totalPlaytimeSeconds = totalPlaytimeSeconds

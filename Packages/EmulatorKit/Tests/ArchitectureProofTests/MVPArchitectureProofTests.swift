@@ -207,6 +207,7 @@ private struct ArchitectureHarness {
             games: games,
             builds: builds,
             assets: assets,
+            toolchainReports: InMemoryToolchainReportRepository(),
             assetStore: store,
             transactions: PassthroughTransactionRunner(),
             now: now
@@ -226,6 +227,7 @@ private struct ArchitectureHarness {
             builds: builds,
             recipes: recipes,
             assets: assets,
+            toolchainReports: InMemoryToolchainReportRepository(),
             assetStore: store,
             patcher: PatchStackApplier(),
             transactions: PassthroughTransactionRunner(),

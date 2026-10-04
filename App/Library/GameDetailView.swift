@@ -7,13 +7,17 @@ import UniformTypeIdentifiers
 struct GameDetailView: View {
     private enum FileRequest {
         case patch(Build)
+        case variableMap(Build)
         case batterySave
+        case replacementSave(SaveProfile)
         case artwork
 
         var contentTypes: [UTType] {
             switch self {
             case .patch: [.ipsPatch, .bpsPatch]
-            case .batterySave: [.gameBoySave]
+            // `.i`, `.sym` and `.noi` files have no system type; the import checks the contents.
+            case .variableMap: [.data]
+            case .batterySave, .replacementSave: [.gameBoySave]
             case .artwork: [.image]
             }
         }
@@ -26,11 +30,15 @@ struct GameDetailView: View {
     @State private var fileRequest: FileRequest?
     @State private var showFileImporter = false
     @State private var promotion: Build?
-    @State private var promotionTitle = ""
     @State private var showMerge = false
     @State private var settingsTarget: SettingsTarget?
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
+    @State private var technicalInfo: Build?
+    @State private var pendingReplacement: PendingReplacement?
+    @State private var badgeTarget: SaveProfile?
+    @State private var badgeText = ""
+    @State private var deletionTarget: SaveProfile?
 
     private struct SettingsTarget: Identifiable {
         let id = UUID()
@@ -54,15 +62,19 @@ struct GameDetailView: View {
             buildOperations: container.buildOperations,
             createBlank: container.createBlankSaveProfile,
             duplicateProfile: container.duplicateSaveProfile,
+            badges: container.setSaveProfileBadge,
+            deleteProfile: container.deleteSaveProfile,
             importSave: container.importBatterySave,
             patchCreator: container.patchCreator,
             evictImage: container.evictGeneratedImage,
-            artwork: container.gameArtwork
+            artwork: container.gameArtwork,
+            variableMaps: container.attachVariableMap,
+            replaceSave: container.replaceBatterySave
         ))
     }
 
     var body: some View {
-        withAlerts(withPresentations(list))
+        withProfileAlerts(withAlerts(withPresentations(list)))
             .navigationTitle(model.game?.primaryTitle ?? "Game")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -74,6 +86,7 @@ struct GameDetailView: View {
     private var list: some View {
         List {
             artworkSection
+            lineageSection
             playSection
             buildsSection
             profilesSection
@@ -92,6 +105,15 @@ struct GameDetailView: View {
                 .frame(maxWidth: .infinity, maxHeight: 220)
             }
             .listRowBackground(Color.clear)
+        }
+    }
+
+    @ViewBuilder
+    private var lineageSection: some View {
+        if let lineage = model.game?.lineage {
+            Section {
+                LabeledContent("Split From", value: lineage.sourceTitle)
+            }
         }
     }
 
@@ -121,7 +143,7 @@ struct GameDetailView: View {
     }
 
     private var profilesSection: some View {
-        Section("Save Profiles") {
+        Section {
             ForEach(model.saveProfiles) { profile in
                 profileRow(profile)
             }
@@ -137,6 +159,10 @@ struct GameDetailView: View {
             } label: {
                 Label("Import .sav", systemImage: "square.and.arrow.down")
             }
+        } header: {
+            Text("Save Profiles")
+        } footer: {
+            Text("Touch and hold a profile to duplicate it, give it a badge, replace its save or delete it.")
         }
     }
 
@@ -219,13 +245,63 @@ struct GameDetailView: View {
                     store: container.repositories.settings
                 )
             }
+            .sheet(item: $technicalInfo) { build in
+                BuildTechnicalInfoView(build: build, container: container)
+            }
             .sheet(isPresented: $showMerge) {
                 MergeGameSheet(
-                    sourceTitle: model.game?.primaryTitle ?? "",
-                    targets: model.otherGames
-                ) { target, mode in
-                    model.merge(into: target, mode: mode)
+                    source: model.game,
+                    profiles: model.saveProfiles,
+                    targets: model.otherGames,
+                    suggest: { model.suggestedCarryOver(mergingInto: $0) }
+                ) { target, mode, carryOver in
+                    model.merge(into: target, mode: mode, carryOver: carryOver)
                 }
+            }
+            .sheet(item: $promotion) { build in
+                PromoteBuildSheet(
+                    build: build,
+                    sourceHasArtwork: model.game?.artworkAssetID != nil,
+                    profiles: model.saveProfiles,
+                    suggested: model.suggestedCarryOver(promoting: build)
+                ) { title, mode, carryOver in
+                    model.promote(build, title: title, mode: mode, carryOver: carryOver)
+                }
+            }
+    }
+
+    private func withProfileAlerts(_ content: some View) -> some View {
+        content
+            .alert("Badge", isPresented: Binding(
+                get: { badgeTarget != nil },
+                set: { if !$0 { badgeTarget = nil } }
+            ), presenting: badgeTarget) { profile in
+                TextField("Emoji", text: $badgeText)
+                Button("Save") { model.setBadge(badgeText, of: profile) }
+                if profile.badge != nil {
+                    Button("Remove Badge", role: .destructive) { model.setBadge("", of: profile) }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { profile in
+                Text("One emoji shown beside \(profile.displayName).")
+            }
+            .alert("Delete This Save Profile?", isPresented: Binding(
+                get: { deletionTarget != nil },
+                set: { if !$0 { deletionTarget = nil } }
+            ), presenting: deletionTarget) { profile in
+                Button("Delete \(profile.displayName)", role: .destructive) { model.delete(profile) }
+                Button("Cancel", role: .cancel) {}
+            } message: { profile in
+                Text("\(profile.displayName)’s battery save and its save states are deleted. This can’t be undone.")
+            }
+            .alert("Replace This Save?", isPresented: Binding(
+                get: { pendingReplacement != nil },
+                set: { if !$0 { pendingReplacement = nil } }
+            ), presenting: pendingReplacement) { pending in
+                Button("Replace", role: .destructive) { model.replaceSave(of: pending.profile, from: pending.url) }
+                Button("Cancel", role: .cancel) {}
+            } message: { pending in
+                Text("\(pending.url.lastPathComponent) replaces the save in \(pending.profile.displayName). Its current save is copied to “\(pending.profile.displayName) before import” first.")
             }
     }
 
@@ -237,17 +313,6 @@ struct GameDetailView: View {
                     model.createBlankProfile(name: newProfileName)
                 }
                 Button("Cancel", role: .cancel) {}
-            }
-            .alert("Make Separate Game", isPresented: Binding(
-                get: { promotion != nil },
-                set: { if !$0 { promotion = nil } }
-            ), presenting: promotion) { build in
-                TextField("Game Title", text: $promotionTitle)
-                Button("Move") { model.promote(build, title: promotionTitle, mode: .move) }
-                Button("Copy") { model.promote(build, title: promotionTitle, mode: .copy) }
-                Button("Cancel", role: .cancel) {}
-            } message: { _ in
-                Text("Move takes this Build out of this Game. Copy leaves it here as well.")
             }
             .alert("Different Base ROM", isPresented: Binding(
                 get: { model.baseMismatch != nil },
@@ -313,7 +378,7 @@ struct GameDetailView: View {
         Button("Play") { launch(build: build) }
         Menu("Play with Save") {
             ForEach(model.saveProfiles) { profile in
-                Button(profile.displayName) { launch(build: build, profile: profile) }
+                Button(profile.title) { launch(build: build, profile: profile) }
             }
         }
         Menu("Default Save") {
@@ -331,14 +396,20 @@ struct GameDetailView: View {
                     model.setDefaultProfile(profile, for: build)
                 } label: {
                     if build.preferredSaveProfileID == profile.id {
-                        Label(profile.displayName, systemImage: "checkmark")
+                        Label(profile.title, systemImage: "checkmark")
                     } else {
-                        Text(profile.displayName)
+                        Text(profile.title)
                     }
                 }
             }
         }
         Button("Set as Preferred") { model.setPreferredBuild(build) }
+        if build.sourceKind != .patchRecipe {
+            Button(build.isBase ? "Unmark as Base Build" : "Mark as Base Build") {
+                model.setBase(build, isBase: !build.isBase)
+            }
+        }
+        Button("Technical Info…") { technicalInfo = build }
         Button("Build Settings…") {
             settingsTarget = SettingsTarget(
                 title: "\(build.displayName) Settings",
@@ -349,21 +420,20 @@ struct GameDetailView: View {
         }
         Divider()
         Button("Apply Patch…") { request(.patch(build)) }
+        Button("Attach Variable Map…") { request(.variableMap(build)) }
         if build.sourceKind == .patchRecipe {
             Button("Remove Generated Image") { model.removeGeneratedImage(of: build) }
         }
-        Button("Make Separate Game…") {
-            promotionTitle = build.displayName
-            promotion = build
-        }
+        Button("Make Separate Game…") { promotion = build }
     }
 
     private func profileRow(_ profile: SaveProfile) -> some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(profile.displayName)
-                if let parent = profile.copiedFromProfileID {
-                    Text("Copied from \(model.profileName(id: parent) ?? String(parent.uuidString.prefix(8)))")
+                Text(profile.title)
+                // A copy brought from another Game by a promote or merge has its original there.
+                if let parent = model.profileName(id: profile.copiedFromProfileID) {
+                    Text("Copied from \(parent)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -379,6 +449,13 @@ struct GameDetailView: View {
             Button("Duplicate") {
                 model.duplicate(profile, name: profile.displayName + " Copy")
             }
+            Button("Replace Save from File…") { request(.replacementSave(profile)) }
+            Button("Badge…") {
+                badgeText = profile.badge ?? ""
+                badgeTarget = profile
+            }
+            Divider()
+            Button("Delete…", role: .destructive) { deletionTarget = profile }
         }
     }
 
@@ -393,8 +470,18 @@ struct GameDetailView: View {
         switch fileRequest {
         case .patch(let build):
             model.applyPatches(urls, to: build)
+        case .variableMap(let build):
+            if let url = urls.first { model.attachVariableMap(from: url, to: build) }
         case .batterySave:
             if let url = urls.first { model.importSave(from: url) }
+        case .replacementSave(let profile):
+            guard let url = urls.first else { break }
+            // Replacing a blank profile loses nothing, so only a profile with a save asks first.
+            if profile.persistentSaveAssetID == nil {
+                model.replaceSave(of: profile, from: url)
+            } else {
+                pendingReplacement = PendingReplacement(profile: profile, url: url)
+            }
         case .artwork:
             if let url = urls.first { model.setArtwork(from: url) }
         case nil:
@@ -417,17 +504,93 @@ struct GameDetailView: View {
     }
 }
 
-private struct MergeGameSheet: View {
-    let sourceTitle: String
-    let targets: [Game]
-    let onMerge: (Game, ReorganizationMode) -> Void
+/// Promotes a Build to its own Game, with a review of what the new Game brings along.
+private struct PromoteBuildSheet: View {
+    let build: Build
+    let sourceHasArtwork: Bool
+    let profiles: [SaveProfile]
+    let onPromote: (String, ReorganizationMode, GameCarryOver) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var title: String
     @State private var mode: ReorganizationMode = .move
+    @State private var carryOver: GameCarryOver
+
+    init(
+        build: Build,
+        sourceHasArtwork: Bool,
+        profiles: [SaveProfile],
+        suggested: GameCarryOver,
+        onPromote: @escaping (String, ReorganizationMode, GameCarryOver) -> Void
+    ) {
+        self.build = build
+        self.sourceHasArtwork = sourceHasArtwork
+        self.profiles = profiles
+        self.onPromote = onPromote
+        _title = State(initialValue: build.displayName)
+        _carryOver = State(initialValue: suggested)
+    }
 
     var body: some View {
         NavigationStack {
-            List {
+            Form {
+                Section {
+                    TextField("Game Title", text: $title)
+                }
+                Section {
+                    Picker("Build", selection: $mode) {
+                        Text("Move").tag(ReorganizationMode.move)
+                        Text("Copy").tag(ReorganizationMode.copy)
+                    }
+                    .pickerStyle(.segmented)
+                } footer: {
+                    Text(mode == .move
+                         ? "\(build.displayName) leaves this Game, with its save states and settings."
+                         : "\(build.displayName) stays here, and a copy starts the new Game.")
+                }
+                CarryOverSection(
+                    carryOver: $carryOver,
+                    artworkLabel: sourceHasArtwork ? "Copy the Artwork" : nil,
+                    profiles: profiles,
+                    footer: "Chosen Save Profiles are copied; the originals stay here."
+                )
+            }
+            .navigationTitle("Make Separate Game")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Make Game") {
+                        onPromote(title, mode, carryOver)
+                        dismiss()
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+/// Merges this Game into another, with a review of the Game-level things that come along.
+private struct MergeGameSheet: View {
+    let source: Game?
+    let profiles: [SaveProfile]
+    let targets: [Game]
+    let suggest: (Game) -> GameCarryOver
+    let onMerge: (Game, ReorganizationMode, GameCarryOver) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var mode: ReorganizationMode = .move
+    @State private var target: Game?
+    @State private var carryOver = GameCarryOver.nothing
+
+    private var sourceTitle: String { source?.primaryTitle ?? "" }
+
+    var body: some View {
+        NavigationStack {
+            Form {
                 Section {
                     Picker("Builds", selection: $mode) {
                         Text("Move").tag(ReorganizationMode.move)
@@ -442,10 +605,43 @@ private struct MergeGameSheet: View {
 
                 Section("Merge Into") {
                     ForEach(targets) { game in
-                        Button(game.primaryTitle) {
-                            onMerge(game, mode)
-                            dismiss()
+                        Button {
+                            target = game
+                            carryOver = suggest(game)
+                        } label: {
+                            HStack {
+                                Text(game.primaryTitle)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if target?.id == game.id {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
                         }
+                    }
+                }
+
+                if let target {
+                    if mode == .move {
+                        // A move takes every profile, so only the artwork is a choice, and only
+                        // when both Games have some.
+                        if source?.artworkAssetID != nil, target.artworkAssetID != nil {
+                            Section {
+                                Toggle("Use \(sourceTitle)’s Artwork", isOn: $carryOver.artwork)
+                            } header: {
+                                Text("Bring Along")
+                            } footer: {
+                                Text("Otherwise \(target.primaryTitle) keeps its own.")
+                            }
+                        }
+                    } else {
+                        CarryOverSection(
+                            carryOver: $carryOver,
+                            artworkLabel: source?.artworkAssetID == nil ? nil
+                                : target.artworkAssetID == nil ? "Copy the Artwork" : "Replace \(target.primaryTitle)’s Artwork",
+                            profiles: profiles,
+                            footer: "Chosen Save Profiles are copied; the originals stay in \(sourceTitle)."
+                        )
                     }
                 }
             }
@@ -455,7 +651,54 @@ private struct MergeGameSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Merge") {
+                        if let target { onMerge(target, mode, carryOver) }
+                        dismiss()
+                    }
+                    .disabled(target == nil)
+                }
             }
         }
     }
+}
+
+/// The review step's choices: the artwork, and each Save Profile.
+private struct CarryOverSection: View {
+    @Binding var carryOver: GameCarryOver
+    /// Nil when there's no artwork to bring.
+    let artworkLabel: String?
+    let profiles: [SaveProfile]
+    let footer: String
+
+    var body: some View {
+        if artworkLabel != nil || !profiles.isEmpty {
+            Section {
+                if let artworkLabel {
+                    Toggle(artworkLabel, isOn: $carryOver.artwork)
+                }
+                ForEach(profiles) { profile in
+                    Toggle(profile.title, isOn: Binding(
+                        get: { carryOver.saveProfileIDs.contains(profile.id) },
+                        set: { isOn in
+                            if isOn {
+                                carryOver.saveProfileIDs.insert(profile.id)
+                            } else {
+                                carryOver.saveProfileIDs.remove(profile.id)
+                            }
+                        }
+                    ))
+                }
+            } header: {
+                Text("Bring Along")
+            } footer: {
+                Text(footer)
+            }
+        }
+    }
+}
+
+private struct PendingReplacement {
+    let profile: SaveProfile
+    let url: URL
 }

@@ -9,6 +9,7 @@ public enum ManagedAssetKind: String, Codable, Sendable {
     case stateThumbnail
     case quickPlayImage = "quickPlayROM"
     case artwork
+    case variableMap
 }
 
 public enum ManagedAssetStorageClass: String, Codable, Sendable {

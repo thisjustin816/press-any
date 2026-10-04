@@ -54,6 +54,8 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
     var preferredBuildID: String?
     var preferredSaveProfileID: String?
     var artworkAssetID: String?
+    var lineageSourceGameID: String?
+    var lineageSourceTitle: String?
     var createdAt: String
     var modifiedAt: String
 
@@ -64,6 +66,8 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         case preferredBuildID = "preferred_build_id"
         case preferredSaveProfileID = "preferred_save_profile_id"
         case artworkAssetID = "artwork_asset_id"
+        case lineageSourceGameID = "lineage_source_game_id"
+        case lineageSourceTitle = "lineage_source_title"
         case createdAt = "created_at"
         case modifiedAt = "modified_at"
     }
@@ -75,6 +79,8 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         preferredBuildID = value.preferredBuildID.map(PersistenceCodec.uuid)
         preferredSaveProfileID = value.preferredSaveProfileID.map(PersistenceCodec.uuid)
         artworkAssetID = value.artworkAssetID.map(PersistenceCodec.uuid)
+        lineageSourceGameID = value.lineage?.sourceGameID.map(PersistenceCodec.uuid)
+        lineageSourceTitle = value.lineage?.sourceTitle
         createdAt = PersistenceCodec.date(value.createdAt)
         modifiedAt = PersistenceCodec.date(value.modifiedAt)
     }
@@ -87,6 +93,9 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
             preferredBuildID: try PersistenceCodec.optionalUUID(preferredBuildID),
             preferredSaveProfileID: try PersistenceCodec.optionalUUID(preferredSaveProfileID),
             artworkAssetID: try PersistenceCodec.optionalUUID(artworkAssetID),
+            lineage: try lineageSourceTitle.map {
+                GameLineage(sourceGameID: try PersistenceCodec.optionalUUID(lineageSourceGameID), sourceTitle: $0)
+            },
             createdAt: try PersistenceCodec.date(createdAt),
             modifiedAt: try PersistenceCodec.date(modifiedAt)
         )
@@ -273,6 +282,7 @@ struct SaveProfileRecord: Codable, FetchableRecord, PersistableRecord {
     var displayName: String
     var badge: String?
     var persistentSaveAssetID: String?
+    var saveWrittenByBuildID: String?
     var copiedFromProfileID: String?
     var rtcContextJSON: String?
     var totalPlaytimeSeconds: Double
@@ -286,6 +296,7 @@ struct SaveProfileRecord: Codable, FetchableRecord, PersistableRecord {
         case gameID = "game_id"
         case displayName = "display_name"
         case persistentSaveAssetID = "battery_asset_id"
+        case saveWrittenByBuildID = "save_written_by_build_id"
         case copiedFromProfileID = "copied_from_profile_id"
         case rtcContextJSON = "rtc_context_json"
         case totalPlaytimeSeconds = "total_playtime_seconds"
@@ -301,6 +312,7 @@ struct SaveProfileRecord: Codable, FetchableRecord, PersistableRecord {
         displayName = value.displayName
         badge = value.badge
         persistentSaveAssetID = value.persistentSaveAssetID.map(PersistenceCodec.uuid)
+        saveWrittenByBuildID = value.saveWrittenByBuildID.map(PersistenceCodec.uuid)
         copiedFromProfileID = value.copiedFromProfileID.map(PersistenceCodec.uuid)
         rtcContextJSON = value.rtcContextJSON
         totalPlaytimeSeconds = value.totalPlaytimeSeconds
@@ -317,6 +329,7 @@ struct SaveProfileRecord: Codable, FetchableRecord, PersistableRecord {
             displayName: displayName,
             badge: badge,
             persistentSaveAssetID: try PersistenceCodec.optionalUUID(persistentSaveAssetID),
+            saveWrittenByBuildID: try PersistenceCodec.optionalUUID(saveWrittenByBuildID),
             copiedFromProfileID: try PersistenceCodec.optionalUUID(copiedFromProfileID),
             rtcContextJSON: rtcContextJSON,
             totalPlaytimeSeconds: totalPlaytimeSeconds,

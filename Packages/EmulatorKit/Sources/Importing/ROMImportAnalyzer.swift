@@ -1,18 +1,22 @@
 import EmulatorApplication
 import Foundation
+import ToolchainDetection
 
 public struct ROMImportAnalyzer: Sendable {
     private let builds: any BuildRepository
     private let assetStore: any AssetStore
+    private let detectors: ToolchainDetectorRegistry
     private let makeTransactionID: @Sendable () -> UUID
 
     public init(
         builds: any BuildRepository,
         assetStore: any AssetStore,
+        detectors: ToolchainDetectorRegistry = .standard,
         makeTransactionID: @escaping @Sendable () -> UUID = UUID.init
     ) {
         self.builds = builds
         self.assetStore = assetStore
+        self.detectors = detectors
         self.makeTransactionID = makeTransactionID
     }
 
@@ -33,7 +37,8 @@ public struct ROMImportAnalyzer: Sendable {
                 header: header,
                 filenameMetadata: FilenameMetadataParser.parse(filename: sourceURL.lastPathComponent),
                 exactExistingBuildID: existing?.id,
-                suggestedGameID: targetGameID ?? existing?.gameID
+                suggestedGameID: targetGameID ?? existing?.gameID,
+                toolchainReports: detectors.detect(image: data, system: header.system)
             )
         } catch {
             try? assetStore.removeIfExists(stagedURL.deletingLastPathComponent())

@@ -13,7 +13,7 @@ final class GameplayViewController: UIViewController {
     private let metalView = MTKView(frame: .zero)
     private let touchControls = TouchControllerView(frame: .zero)
     private let audio = AudioOutputEngine()
-    private let controllerMonitor = PhysicalControllerMonitor()
+    private let controllerMonitor: PhysicalControllerMonitor
     private let rumble = RumbleRouter()
     private var renderer: MetalRenderer?
     private let autoResumePolicy: AutoResumePolicy
@@ -47,9 +47,11 @@ final class GameplayViewController: UIViewController {
         screenScaling: ScreenScaling = .integer,
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
-        soundMode: SoundMode = .followSilentSwitch
+        soundMode: SoundMode = .followSilentSwitch,
+        controllerMonitor: PhysicalControllerMonitor = PhysicalControllerMonitor()
     ) {
         self.runtime = runtime
+        self.controllerMonitor = controllerMonitor
         self.controlStyle = controlStyle
         self.screenScaling = screenScaling
         self.controllerTheme = controllerTheme
@@ -96,6 +98,11 @@ final class GameplayViewController: UIViewController {
     }
 
     private static let menuHintShownKey = "gameplay.menuHintShown"
+
+    /// Whether the touch controls are showing, for tests.
+    var showsTouchControls: Bool { touchControls.showsControls }
+    /// Whether gameplay is paused behind the paused overlay, for tests.
+    var isShowingPaused: Bool { !pausedOverlay.isHidden }
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
@@ -209,7 +216,8 @@ final class GameplayViewController: UIViewController {
             let loadActions = saved.map { state in
                 UIAction(
                     title: state.label ?? (state.kind == .auto ? "Auto State" : "State"),
-                    subtitle: formatter.string(from: state.createdAt)
+                    subtitle: formatter.string(from: state.createdAt),
+                    image: states.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
                 ) { [weak self] _ in
                     self?.loadState(state)
                 }
@@ -222,6 +230,16 @@ final class GameplayViewController: UIViewController {
             }
         }
         return elements
+    }
+
+    /// A state's thumbnail at menu-icon size, with the pixels kept sharp.
+    private static func menuThumbnail(_ data: Data) -> UIImage? {
+        guard let image = UIImage(data: data) else { return nil }
+        let size = CGSize(width: 40, height: 36)
+        return UIGraphicsImageRenderer(size: size).image { context in
+            context.cgContext.interpolationQuality = .none
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
     }
 
     private func saveState() {
