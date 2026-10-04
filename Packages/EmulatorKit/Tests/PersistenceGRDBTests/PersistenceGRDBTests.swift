@@ -25,6 +25,37 @@ struct PersistenceGRDBTests {
         #expect(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: fixture.patchedBuild.id) == fixture.recipe)
     }
 
+    @Test("a Build keeps one toolchain report per detector, deleted with it")
+    func toolchainReports() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        func report(_ name: String) -> ToolchainDetectionReport {
+            ToolchainDetectionReport(
+                detector: "gbtoolsid",
+                detectorVersion: "1",
+                corpusRevision: "v1.5.5",
+                components: [DetectedToolchainComponent(
+                    kind: .toolchain,
+                    name: name,
+                    version: "4.3.0",
+                    evidence: [ToolchainEvidence(signature: "sig_a", offset: 0x150)]
+                )]
+            )
+        }
+
+        try repositories.toolchainReports.saveReport(report("GBDK"), buildID: fixture.build.id, detectedAt: Date(timeIntervalSince1970: 1))
+        #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.build.id) == [report("GBDK")])
+
+        try repositories.toolchainReports.saveReport(report("ZGB"), buildID: fixture.build.id, detectedAt: Date(timeIntervalSince1970: 2))
+        #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.build.id) == [report("ZGB")], "replaced, not added")
+        #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.patchedBuild.id) == [])
+
+        try repositories.games.deleteGame(id: fixture.game.id)
+        #expect(try repositories.toolchainReports.fetchReports(buildID: fixture.build.id) == [])
+    }
+
     @Test("transaction runner rolls repository writes back together")
     func transactionRollback() throws {
         let database = try AppDatabase.inMemory()

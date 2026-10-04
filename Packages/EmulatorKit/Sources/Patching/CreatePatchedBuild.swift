@@ -1,6 +1,7 @@
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import ToolchainDetection
 
 public enum CreatePatchedBuildError: Error, Equatable {
     case gameNotFound(UUID)
@@ -70,7 +71,9 @@ public struct CreatePatchedBuild: Sendable {
     private let builds: any BuildRepository
     private let recipes: any PatchRecipeRepository
     private let assets: any ManagedAssetRepository
+    private let toolchainReports: any ToolchainReportRepository
     private let assetStore: any AssetStore
+    private let detectors: ToolchainDetectorRegistry
     private let patcher: any PatchApplying
     private let transactions: any LibraryTransactionRunner
     private let now: @Sendable () -> Date
@@ -81,7 +84,9 @@ public struct CreatePatchedBuild: Sendable {
         builds: any BuildRepository,
         recipes: any PatchRecipeRepository,
         assets: any ManagedAssetRepository,
+        toolchainReports: any ToolchainReportRepository,
         assetStore: any AssetStore,
+        detectors: ToolchainDetectorRegistry = .standard,
         patcher: any PatchApplying = PatchStackApplier(),
         transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
         now: @escaping @Sendable () -> Date = Date.init,
@@ -91,7 +96,9 @@ public struct CreatePatchedBuild: Sendable {
         self.builds = builds
         self.recipes = recipes
         self.assets = assets
+        self.toolchainReports = toolchainReports
         self.assetStore = assetStore
+        self.detectors = detectors
         self.patcher = patcher
         self.transactions = transactions
         self.now = now
@@ -174,6 +181,7 @@ public struct CreatePatchedBuild: Sendable {
                 createdAt: timestamp,
                 modifiedAt: timestamp
             )
+            let reports = detectors.detect(image: output, system: build.system)
             let patchAssets = imported.map(\.asset)
             let assetsToInsert = imported.filter(\.needsAssetInsert).map(\.asset)
             let recipe = PatchRecipe(
@@ -193,11 +201,14 @@ public struct CreatePatchedBuild: Sendable {
             )
 
             do {
-                try transactions.run { [assets, builds, recipes, assetsToInsert] in
+                try transactions.run { [assets, builds, recipes, toolchainReports, assetsToInsert] in
                     for asset in assetsToInsert { try assets.insertAsset(asset) }
                     if existingGenerated == nil { try assets.insertAsset(generatedAsset) }
                     try builds.insertBuild(build)
                     try recipes.insertPatchRecipe(recipe)
+                    for report in reports {
+                        try toolchainReports.saveReport(report, buildID: build.id, detectedAt: timestamp)
+                    }
                 }
             } catch {
                 if !generatedExistedBefore { try? assetStore.removeIfExists(generatedURL) }

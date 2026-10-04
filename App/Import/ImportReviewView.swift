@@ -22,6 +22,8 @@ struct ImportReviewView: View {
                     }
                 }
 
+                ToolchainSection(reports: model.analysis.toolchainReports)
+
                 ImportDestinationSection(model: model)
 
                 if let message = model.errorMessage {

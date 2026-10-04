@@ -1,12 +1,17 @@
 import SwiftUI
 
-/// The licenses of the open-source code that ships in the app, which their terms ask to be shown.
-/// The texts are bundled verbatim from `App/Acknowledgements/`.
+/// The open-source code that ships in the app. Licenses whose terms ask to be shown are bundled
+/// verbatim from `App/Acknowledgements/`; public-domain code gets a credit instead.
 struct AcknowledgementsView: View {
     fileprivate struct Component: Identifiable {
+        enum License {
+            case bundled(file: String)
+            case publicDomain(credit: String)
+        }
+
         let name: String
         let use: String
-        let licenseFile: String
+        let license: License
         var id: String { name }
     }
 
@@ -14,9 +19,18 @@ struct AcknowledgementsView: View {
         Component(
             name: "SameBoy",
             use: "Game Boy and Game Boy Color emulation, and the boot ROMs",
-            licenseFile: "SameBoy-LICENSE"
+            license: .bundled(file: "SameBoy-LICENSE")
         ),
-        Component(name: "GRDB.swift", use: "The game library’s database", licenseFile: "GRDB-LICENSE"),
+        Component(name: "GRDB.swift", use: "The game library’s database", license: .bundled(file: "GRDB-LICENSE")),
+        Component(
+            name: "gbtoolsid",
+            use: "Detecting which tools a game was made with",
+            license: .publicDomain(credit: """
+            gbtoolsid by bbbbbr (https://github.com/bbbbbr/gbtoolsid) is in the public domain under \
+            the Unlicense (https://unlicense.org). \(AppBrand.displayName)’s toolchain detection is a \
+            Swift port of its detection logic and signature tables.
+            """)
+        ),
     ]
 
     var body: some View {
@@ -52,9 +66,14 @@ private struct LicenseTextView: View {
     }
 
     private var text: String {
-        guard let url = Bundle.main.url(forResource: component.licenseFile, withExtension: "txt"),
-              let text = try? String(contentsOf: url, encoding: .utf8)
-        else { return "This build is missing the license text." }
-        return text
+        switch component.license {
+        case .publicDomain(let credit):
+            return credit
+        case .bundled(let file):
+            guard let url = Bundle.main.url(forResource: file, withExtension: "txt"),
+                  let text = try? String(contentsOf: url, encoding: .utf8)
+            else { return "This build is missing the license text." }
+            return text
+        }
     }
 }

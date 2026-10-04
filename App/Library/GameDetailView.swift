@@ -31,6 +31,7 @@ struct GameDetailView: View {
     @State private var settingsTarget: SettingsTarget?
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
+    @State private var technicalInfo: Build?
 
     private struct SettingsTarget: Identifiable {
         let id = UUID()
@@ -219,6 +220,9 @@ struct GameDetailView: View {
                     store: container.repositories.settings
                 )
             }
+            .sheet(item: $technicalInfo) { build in
+                BuildTechnicalInfoView(build: build, container: container)
+            }
             .sheet(isPresented: $showMerge) {
                 MergeGameSheet(
                     sourceTitle: model.game?.primaryTitle ?? "",
@@ -339,6 +343,7 @@ struct GameDetailView: View {
             }
         }
         Button("Set as Preferred") { model.setPreferredBuild(build) }
+        Button("Technical Info…") { technicalInfo = build }
         Button("Build Settings…") {
             settingsTarget = SettingsTarget(
                 title: "\(build.displayName) Settings",

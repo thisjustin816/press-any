@@ -112,6 +112,21 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
     public func deleteSaveState(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
 }
 
+public final class InMemoryToolchainReportRepository: ToolchainReportRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: [String: ToolchainDetectionReport]] = [:]
+
+    public init() {}
+
+    public func saveReport(_ report: ToolchainDetectionReport, buildID: UUID, detectedAt: Date) throws {
+        lock.withLock { values[buildID, default: [:]][report.detector] = report }
+    }
+
+    public func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport] {
+        lock.withLock { (values[buildID] ?? [:]).values.sorted { $0.detector < $1.detector } }
+    }
+}
+
 public final class InMemoryPatchRecipeRepository: PatchRecipeRepository, @unchecked Sendable {
     private let lock = NSLock()
     private var values: [UUID: PatchRecipe] = [:]

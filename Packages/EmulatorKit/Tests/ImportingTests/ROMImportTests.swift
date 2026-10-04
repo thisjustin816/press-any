@@ -26,6 +26,58 @@ final class ROMImportTests: XCTestCase {
         XCTAssertEqual(try harness.sourceROMFileCount(), 1)
     }
 
+    func testImportReviewShowsToolchainFindingsAndTheBuildKeepsThem() throws {
+        let harness = try ImportHarness.make()
+        // Turbo Rascal's marker is the header title "TRSE GB" with its terminating zero.
+        let romURL = try harness.writeExternalROM(TestROM.make(title: "TRSE GB"))
+        let analysis = try harness.analyzer.analyzeROM(at: romURL, targetGameID: nil)
+        XCTAssertEqual(analysis.toolchainReports.flatMap(\.components).map(\.name), ["Turbo Rascal Syntax Error"])
+
+        let result = try harness.committer.commit(ROMImportPlan(
+            analysis: analysis,
+            disposition: .createGame(title: "Rascal"),
+            buildDisplayName: "Original",
+            markAsBase: true
+        ))
+        XCTAssertEqual(try harness.toolchainReports.fetchReports(buildID: result.build.id), analysis.toolchainReports)
+        XCTAssertEqual(result.game.primaryTitle, "Rascal", "detection never names the Game")
+    }
+
+    func testAnUnrecognizedImageStoresAnEmptyReport() throws {
+        let harness = try ImportHarness.make()
+        let romURL = try harness.writeExternalROM(TestROM.make(title: "PLAIN"))
+        let result = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(at: romURL, targetGameID: nil),
+            disposition: .createGame(title: "Plain"),
+            buildDisplayName: "Original",
+            markAsBase: true
+        ))
+
+        let reports = try harness.toolchainReports.fetchReports(buildID: result.build.id)
+        XCTAssertEqual(reports.map(\.detector), ["gbtoolsid"], "unknown is a result, not a missing one")
+        XCTAssertEqual(reports.first?.components, [])
+    }
+
+    func testAddingABuildByDetectionLeavesTheGameAsItWas() throws {
+        let harness = try ImportHarness.make()
+        let first = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(at: harness.writeExternalROM(TestROM.make(title: "PLAIN")), targetGameID: nil),
+            disposition: .createGame(title: "Plain"),
+            buildDisplayName: "Original",
+            markAsBase: true
+        ))
+        let second = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(at: harness.writeExternalROM(TestROM.make(title: "TRSE GB")), targetGameID: first.game.id),
+            disposition: .addBuild(gameID: first.game.id),
+            buildDisplayName: "Rebuilt",
+            markAsBase: false
+        ))
+
+        XCTAssertEqual(second.game.id, first.game.id)
+        XCTAssertEqual(try harness.games.fetchGame(id: first.game.id), first.game)
+        XCTAssertEqual(try harness.toolchainReports.fetchReports(buildID: second.build.id).first?.components.map(\.name), ["Turbo Rascal Syntax Error"])
+    }
+
     func testImportingTheSameROMAgainRepairsADamagedSourceFile() throws {
         let harness = try ImportHarness.make()
         let romURL = try harness.writeExternalROM(TestROM.make(title: "REPAIR", cgb: false))
@@ -103,6 +155,7 @@ private struct ImportHarness {
     let games: InMemoryGameRepository
     let builds: InMemoryBuildRepository
     let assets: InMemoryAssetRepository
+    let toolchainReports: InMemoryToolchainReportRepository
     let analyzer: ROMImportAnalyzer
     let committer: ImportCommitter
 
@@ -115,11 +168,13 @@ private struct ImportHarness {
         let games = InMemoryGameRepository()
         let builds = InMemoryBuildRepository()
         let assets = InMemoryAssetRepository()
+        let toolchainReports = InMemoryToolchainReportRepository()
         let analyzer = ROMImportAnalyzer(builds: builds, assetStore: store)
         let committer = ImportCommitter(
             games: games,
             builds: builds,
             assets: assets,
+            toolchainReports: toolchainReports,
             assetStore: store,
             transactions: transactionRunner,
             now: { Date(timeIntervalSince1970: 100) }
@@ -131,6 +186,7 @@ private struct ImportHarness {
             games: games,
             builds: builds,
             assets: assets,
+            toolchainReports: toolchainReports,
             analyzer: analyzer,
             committer: committer
         )

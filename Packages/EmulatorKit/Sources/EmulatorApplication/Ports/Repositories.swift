@@ -33,6 +33,13 @@ public protocol SaveStateRepository: Sendable {
     func deleteSaveState(id: UUID) throws
 }
 
+/// Each Build keeps one report per detector, the latest it ran.
+public protocol ToolchainReportRepository: Sendable {
+    /// Inserts the report, or replaces the Build's earlier report from the same detector.
+    func saveReport(_ report: ToolchainDetectionReport, buildID: UUID, detectedAt: Date) throws
+    func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport]
+}
+
 public protocol PatchRecipeRepository: Sendable {
     func insertPatchRecipe(_ recipe: PatchRecipe) throws
     func fetchPatchRecipe(resultBuildID: UUID) throws -> PatchRecipe?

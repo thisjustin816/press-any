@@ -113,6 +113,7 @@ final class QuickPlayTests: XCTestCase {
                 games: harness.games,
                 builds: harness.builds,
                 assets: harness.assets,
+                toolchainReports: InMemoryToolchainReportRepository(),
                 assetStore: harness.store,
                 transactions: PassthroughTransactionRunner()
             ),
@@ -156,6 +157,7 @@ final class QuickPlayTests: XCTestCase {
                 games: harness.games,
                 builds: harness.builds,
                 assets: harness.assets,
+                toolchainReports: InMemoryToolchainReportRepository(),
                 assetStore: harness.store,
                 transactions: PassthroughTransactionRunner()
             ),
@@ -307,6 +309,7 @@ private struct QuickPlayHarness {
             games: games,
             builds: builds,
             assets: assets,
+            toolchainReports: InMemoryToolchainReportRepository(),
             assetStore: store,
             transactions: PassthroughTransactionRunner(),
             now: { now }

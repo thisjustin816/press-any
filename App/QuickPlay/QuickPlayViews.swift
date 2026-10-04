@@ -100,6 +100,8 @@ struct QuickPlayPromotionView: View {
         Form {
             ImportDestinationSection(model: model.review)
 
+            ToolchainSection(reports: model.review.analysis.toolchainReports)
+
             Section {
                 if model.hasSave {
                     Picker("Save", selection: $model.saveChoice) {

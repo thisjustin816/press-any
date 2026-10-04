@@ -17,6 +17,9 @@ public struct ROMImportAnalysis: Equatable, Sendable {
     public let filenameMetadata: FilenameMetadata
     public let exactExistingBuildID: UUID?
     public let suggestedGameID: UUID?
+    /// What each toolchain detector found in the image. Shown for review and stored on the Build;
+    /// it never decides the Game.
+    public let toolchainReports: [ToolchainDetectionReport]
 
     public init(
         transactionID: UUID,
@@ -27,7 +30,8 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         header: GBROMHeader,
         filenameMetadata: FilenameMetadata,
         exactExistingBuildID: UUID?,
-        suggestedGameID: UUID?
+        suggestedGameID: UUID?,
+        toolchainReports: [ToolchainDetectionReport] = []
     ) {
         self.transactionID = transactionID
         self.stagedURL = stagedURL
@@ -38,6 +42,7 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         self.filenameMetadata = filenameMetadata
         self.exactExistingBuildID = exactExistingBuildID
         self.suggestedGameID = suggestedGameID
+        self.toolchainReports = toolchainReports
     }
 }
 

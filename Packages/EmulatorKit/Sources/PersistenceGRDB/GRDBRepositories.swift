@@ -347,6 +347,50 @@ public final class GRDBManagedAssetRepository: ManagedAssetInventoryRepository, 
     }
 }
 
+public final class GRDBToolchainReportRepository: ToolchainReportRepository, GRDBRepositoryBacking, @unchecked Sendable {
+    let writer: any DatabaseWriter
+
+    init(writer: any DatabaseWriter) {
+        self.writer = writer
+    }
+
+    public func saveReport(_ report: ToolchainDetectionReport, buildID: UUID, detectedAt: Date) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let json = String(decoding: try encoder.encode(report), as: UTF8.self)
+        try write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO build_toolchain_reports(
+                    build_id, detector, detector_version, corpus_revision, report_json, detected_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(build_id, detector) DO UPDATE SET
+                    detector_version = excluded.detector_version,
+                    corpus_revision = excluded.corpus_revision,
+                    report_json = excluded.report_json,
+                    detected_at = excluded.detected_at
+                """,
+                arguments: [
+                    PersistenceCodec.uuid(buildID), report.detector, report.detectorVersion,
+                    report.corpusRevision, json, PersistenceCodec.date(detectedAt),
+                ]
+            )
+        }
+    }
+
+    public func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport] {
+        let rows = try read { db in
+            try String.fetchAll(
+                db,
+                sql: "SELECT report_json FROM build_toolchain_reports WHERE build_id = ? ORDER BY detector",
+                arguments: [PersistenceCodec.uuid(buildID)]
+            )
+        }
+        return try rows.map { try JSONDecoder().decode(ToolchainDetectionReport.self, from: Data($0.utf8)) }
+    }
+}
+
 public final class GRDBSettingsStore: SettingsStore, GRDBRepositoryBacking, @unchecked Sendable {
     let writer: any DatabaseWriter
 
@@ -414,6 +458,7 @@ public struct GRDBRepositorySet: Sendable {
     public let saveProfiles: GRDBSaveProfileRepository
     public let saveStates: GRDBSaveStateRepository
     public let patchRecipes: GRDBPatchRecipeRepository
+    public let toolchainReports: GRDBToolchainReportRepository
     public let assets: GRDBManagedAssetRepository
     public let settings: GRDBSettingsStore
     public let transactions: GRDBLibraryTransactionRunner
@@ -424,6 +469,7 @@ public struct GRDBRepositorySet: Sendable {
         saveProfiles = GRDBSaveProfileRepository(writer: writer)
         saveStates = GRDBSaveStateRepository(writer: writer)
         patchRecipes = GRDBPatchRecipeRepository(writer: writer)
+        toolchainReports = GRDBToolchainReportRepository(writer: writer)
         assets = GRDBManagedAssetRepository(writer: writer)
         settings = GRDBSettingsStore(writer: writer)
         transactions = GRDBLibraryTransactionRunner(writer: writer)

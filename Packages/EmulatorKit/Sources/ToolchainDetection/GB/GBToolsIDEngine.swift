@@ -1,6 +1,7 @@
 // Port of gbtoolsid's src/gbtoolchainid.c and src/entries.c at the revision in GBToolsIDData.
 // Names follow the C source so the two can be read side by side.
 
+import EmulatorDomain
 import Foundation
 
 struct GBToolsIDPattern: Sendable {

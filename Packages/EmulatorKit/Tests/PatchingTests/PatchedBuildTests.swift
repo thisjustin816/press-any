@@ -31,6 +31,23 @@ final class PatchedBuildTests: XCTestCase {
         XCTAssertTrue(harness.store.fileExists(at: try harness.store.managedURL(relativePath: patchAsset.relativePath)))
     }
 
+    func testAPatchedBuildIsDetectedFromItsOwnImage() throws {
+        let harness = try PatchBuildHarness.make()
+        let target = TestROM.make(title: "TRSE GB")
+        let patchURL = try harness.writePatch(
+            bpsReplacingWholeImage(expectedSource: Data("ABC".utf8), target: target),
+            name: "rascal.bps"
+        )
+
+        let build = try harness.creator.execute(
+            .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patchURL)], displayName: "Rascal")
+        )
+
+        let reports = try harness.toolchainReports.fetchReports(buildID: build.id)
+        XCTAssertEqual(reports.flatMap(\.components).map(\.name), ["Turbo Rascal Syntax Error"])
+        XCTAssertEqual(try harness.toolchainReports.fetchReports(buildID: harness.baseBuild.id), [], "the base keeps its own")
+    }
+
     func testEvictedGeneratedROMIsRebuiltDeterministically() throws {
         let harness = try PatchBuildHarness.make()
         let patchURL = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "test.ips")
@@ -203,6 +220,7 @@ private struct PatchBuildHarness {
     let builds: InMemoryBuildRepository
     let assets: InMemoryAssetRepository
     let recipes: InMemoryPatchRecipeRepository
+    let toolchainReports: InMemoryToolchainReportRepository
     let creator: CreatePatchedBuild
     let resolver: PatchDerivedImageResolver
 
@@ -258,11 +276,13 @@ private struct PatchBuildHarness {
         try builds.insertBuild(baseBuild)
 
         let patcher = PatchStackApplier()
+        let toolchainReports = InMemoryToolchainReportRepository()
         let creator = CreatePatchedBuild(
             games: games,
             builds: builds,
             recipes: recipes,
             assets: assets,
+            toolchainReports: toolchainReports,
             assetStore: store,
             patcher: patcher,
             now: { timestamp }
@@ -284,6 +304,7 @@ private struct PatchBuildHarness {
             builds: builds,
             assets: assets,
             recipes: recipes,
+            toolchainReports: toolchainReports,
             creator: creator,
             resolver: resolver
         )

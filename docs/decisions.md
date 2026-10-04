@@ -3,6 +3,17 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-04: Toolchain detection runs on import and shows its findings
+
+**Decision.** The gbtoolsid port runs whenever an image becomes a Build: on import, where Import
+Review and Quick Play promotion show its findings, and on patching, where it detects the patched
+result. Each Build keeps one report per detector (`build_toolchain_reports`). A Build's Technical
+Info detects its image again and keeps the result if it changed, which covers Builds imported
+before detection and newer signature data. Each finding carries a categorical confidence from its
+own matched signatures: high for two or more, medium for one, low when it's inferred from other
+findings. "Not recognized" is a stored result too. Detection never names or groups a Game and
+never decides save compatibility.
+
 ## 2026-10-03: Controller themes
 
 **Decision.** Both controller layouts draw a controller body behind the controls, with the game

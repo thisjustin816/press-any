@@ -10,6 +10,7 @@ import Patching
 import PersistenceGRDB
 import QuickPlay
 import SameBoyAdapter
+import ToolchainDetection
 
 @MainActor
 final class AppContainer {
@@ -26,6 +27,7 @@ final class AppContainer {
     let preferredLaunchResolver: ResolvePreferredLaunchContext
     let patchCreator: CreatePatchedBuild
     let launchImageResolver: ResolveImageForLaunch
+    let toolchainRefresh: RefreshToolchainReports
     let evictGeneratedImage: EvictGeneratedImage
     let gameArtwork: GameArtwork
     let quickPlayWorkspace: QuickPlayWorkspace
@@ -57,6 +59,7 @@ final class AppContainer {
             games: repositories.games,
             builds: repositories.builds,
             assets: repositories.assets,
+            toolchainReports: repositories.toolchainReports,
             assetStore: fileStore,
             transactions: repositories.transactions
         )
@@ -94,6 +97,7 @@ final class AppContainer {
             builds: repositories.builds,
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
+            toolchainReports: repositories.toolchainReports,
             assetStore: fileStore,
             transactions: repositories.transactions
         )
@@ -102,6 +106,12 @@ final class AppContainer {
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
             assetStore: fileStore
+        )
+        toolchainRefresh = RefreshToolchainReports(
+            reports: repositories.toolchainReports,
+            images: launchImageResolver,
+            assetStore: fileStore,
+            detect: { ToolchainDetectorRegistry.standard.detect(image: $0, system: $1) }
         )
         evictGeneratedImage = EvictGeneratedImage(
             builds: repositories.builds,
