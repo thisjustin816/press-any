@@ -210,11 +210,15 @@ rm -f "$log.tmp"
 # Pop-up menus open only on a tap, so the UI tests in ScreenshotTests/ open them and save a
 # screenshot of each. A menu that doesn't open fails the run once everything else is saved.
 menus="$output/menus"
-menu_status=0
+# Without -quiet, which hides why a test failed; the filter keeps the results and failures.
+set +e
 TEST_RUNNER_SCREENSHOT_ROMS="$staging" TEST_RUNNER_SCREENSHOT_OUTPUT="$menus" \
   TEST_RUNNER_SCREENSHOT_GAME_ROM="$game_rom" TEST_RUNNER_SCREENSHOT_PLAY_ROM="$play_rom" \
-  xcodebuild -quiet test -project PressAny.xcodeproj -scheme PressAnyScreenshots \
-  -destination "id=$udid" -derivedDataPath "$derived_data" || menu_status=$?
+  xcodebuild test -project PressAny.xcodeproj -scheme PressAnyScreenshots \
+  -destination "id=$udid" -derivedDataPath "$derived_data" 2>&1 |
+  grep -E 'error:|Test Case .*(passed|failed)|Failing tests|\*\* TEST'
+menu_status=${PIPESTATUS[0]}
+set -e
 for file in "$menus"/*.png; do
   [[ -e $file ]] || continue
   shot=$((shot + 1))
