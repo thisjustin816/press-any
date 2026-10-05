@@ -46,4 +46,9 @@ Verify with a user-supplied legal ROM:
 - [ ] Save a state, then save in the game, then load the state: it asks first, and Load keeps the newer save as "<profile> before loading state".
 - [ ] In Quick Play the game menu shows Save State grayed with "Add to Library to save states", and Add to Library… opens the promotion review.
 - [ ] Settings > Systems > Game Boy Color opens settings that apply to every Game Boy Color game without its own.
+- [ ] Save in a game, then within a few seconds load a state taken before that save: it asks first, Cancel changes nothing, and Load keeps the newer save as "<profile> before loading state".
+- [ ] Quick Play a game with no battery save, play past the title screen, and Add to Library with a new profile: Play on the new Build resumes there.
+- [ ] Quick Play a ROM already in the library with a copy of its save, play, and Add to Library with a new profile: Play on that Build continues the Quick Play progress, and the Game's other Builds keep their saves.
+- [ ] A patch that turns a Game Boy game into a Game Boy Color one makes a Game Boy Color Build that boots in color, and still does after Remove Generated ROM.
+- [ ] Pull down Control Center and Notification Center mid-game: the game stops, and picks up again when they close. With a button held when they open, nothing stays pressed. Lock and unlock, and switch apps, with Resume Games set to Always, Ask and Never in turn. A game paused from the menu stays paused through all of these.
 - [ ] At the largest accessibility text size, the library shows one column with full titles, and a Game's Builds, saves and Technical Info hashes stay readable.

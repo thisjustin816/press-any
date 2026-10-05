@@ -33,7 +33,8 @@ let package = Package(
         .target(name: "EmulatorApplication", dependencies: ["EmulatorDomain", "EmulationCore"]),
         .target(name: "AssetStorage", dependencies: ["EmulatorDomain", "EmulatorApplication"]),
         .target(name: "Importing", dependencies: ["EmulatorDomain", "EmulatorApplication", "ToolchainDetection"]),
-        .target(name: "Patching", dependencies: ["EmulatorDomain", "EmulatorApplication", "ToolchainDetection"]),
+        // Importing for its ROM header rules, so a patched image is classified the way an import is.
+        .target(name: "Patching", dependencies: ["EmulatorDomain", "EmulatorApplication", "Importing", "ToolchainDetection"]),
         .target(name: "EmulationCore", dependencies: ["EmulatorDomain"]),
         .target(name: "EmulationSession", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore"]),
         .target(name: "QuickPlay", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore", "EmulationSession", "Importing"]),

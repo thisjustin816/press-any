@@ -7,6 +7,7 @@ import Foundation
 public enum FakeEmulatorCoreError: Error {
     case unsupportedSystem(GameSystem)
     case romNotLoaded
+    case stateLoadFailedPartway
 }
 
 public struct FakeCoreFactory: EmulatorCoreFactory {
@@ -37,6 +38,9 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability {
     private var pendingAudio = [StereoSample]()
     private var speed: EmulationSpeed = .normal
     public private(set) var bootAnimationSkips = 0
+    /// Makes the next state load write the state's cartridge RAM and then fail, as SameBoy does
+    /// with a state that ends early.
+    public var failsNextStateLoadPartway = false
 
     public init(
         descriptor: CoreDescriptor = .init(identifier: "fake", version: "1.0.0"),
@@ -118,6 +122,11 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability {
 
     public func deserializeState(_ data: Data) throws {
         let state = try JSONDecoder().decode(SerializedState.self, from: data)
+        if failsNextStateLoadPartway {
+            failsNextStateLoadPartway = false
+            battery = state.battery
+            throw FakeEmulatorCoreError.stateLoadFailedPartway
+        }
         frameCounter = state.frameCounter
         battery = state.battery
         loadedSystem = state.system

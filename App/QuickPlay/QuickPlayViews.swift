@@ -127,7 +127,7 @@ struct QuickPlayPromotionView: View {
             ToolchainSection(reports: model.review.analysis.toolchainReports)
 
             Section {
-                if model.hasSave {
+                if model.hasProgress {
                     Picker("Save", selection: $model.saveChoice) {
                         Text("New Save Profile").tag(QuickPlayPromotionViewModel.SaveChoice.newProfile)
                         if model.canReplaceSource, let source = model.sourceProfile {
@@ -141,7 +141,7 @@ struct QuickPlayPromotionView: View {
                         TextField("Profile name", text: $model.newProfileName)
                     }
                 } else {
-                    Text("This session has no battery save.")
+                    Text("This session has no save and nowhere to resume.")
                         .foregroundStyle(.secondary)
                 }
             } header: {
@@ -149,6 +149,8 @@ struct QuickPlayPromotionView: View {
             } footer: {
                 if model.effectiveSaveChoice == .replaceSource, let source = model.sourceProfile {
                     Text("\(source.displayName) is copied to “\(source.displayName) before Quick Play” first.")
+                } else if model.hasResumePoint, !model.hasBattery, model.effectiveSaveChoice == .newProfile {
+                    Text("This game doesn’t save on its own. The new profile keeps where you left off.")
                 }
             }
 
@@ -161,6 +163,14 @@ struct QuickPlayPromotionView: View {
         .navigationTitle("Add to Library")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
+        .alert(
+            "Added to Library",
+            isPresented: Binding(get: { model.shortfallNotice != nil }, set: { if !$0 { model.shortfallNotice = nil } })
+        ) {
+            Button("OK") { onPromoted() }
+        } message: {
+            Text(model.shortfallNotice ?? "")
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
@@ -170,7 +180,8 @@ struct QuickPlayPromotionView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Add") {
-                    if (try? model.promote()) != nil { onPromoted() }
+                    guard (try? model.promote()) != nil else { return }
+                    if model.shortfallNotice == nil { onPromoted() }
                 }
                 .disabled(!model.review.canCommit || model.needsFreshReview)
             }

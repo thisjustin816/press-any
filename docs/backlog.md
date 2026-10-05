@@ -469,7 +469,7 @@ Spec: v1.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Audio interruptions pause safely; route changes don't restart the game | v1 | Q173 | engine restarts after route change / interruption end; emulation keeps running silently on interruption |
+| partial | Audio interruptions pause safely; route changes don't restart the game | v1 | Q173 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio-only interruption that leaves the scene active still runs silently |
 | missing | Thermal-aware degradation | v1 | Q97 |  |
 | missing | Default shader sustains full speed on minimum QA device | v1 | Q94 | no shader yet; device gate not recorded |
 

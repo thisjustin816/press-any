@@ -31,6 +31,9 @@ final class GameplayDriver: @unchecked Sendable {
         self.input = input
     }
 
+    /// Whether the frame loop is running. It stops on its own when a frame fails.
+    var isRunning: Bool { stateLock.withLock { running } }
+
     func start() {
         let shouldStart = stateLock.withLock { () -> Bool in
             guard !running else { return false }

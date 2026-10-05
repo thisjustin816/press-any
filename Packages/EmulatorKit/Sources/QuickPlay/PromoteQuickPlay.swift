@@ -10,16 +10,36 @@ public enum QuickPlaySaveDisposition: Equatable, Sendable {
     case createProfile(name: String)
 }
 
+/// A step after the save that didn't finish. The Build and its save are in the library either way.
+public enum QuickPlayPromotionShortfall: Equatable, Hashable, Sendable {
+    /// The session's resume point couldn't be moved to the library, so the session is kept and
+    /// can still be continued from Quick Play.
+    case resumePointNotMoved
+    /// The promoted Build couldn't be set to play the kept save, so Play may pick another one.
+    case buildDefaultSaveNotSet
+}
+
 public struct QuickPlayPromotionResult: Equatable, Sendable {
     public let importResult: ROMImportResult
+    /// The promoted Build as it stands now, with the kept save as its default.
+    public let build: Build
     public let saveProfile: SaveProfile?
     /// The copy of a replaced profile taken before its save was overwritten.
     public let safetyCopy: SaveProfile?
+    public let shortfalls: Set<QuickPlayPromotionShortfall>
 
-    public init(importResult: ROMImportResult, saveProfile: SaveProfile?, safetyCopy: SaveProfile? = nil) {
+    public init(
+        importResult: ROMImportResult,
+        build: Build? = nil,
+        saveProfile: SaveProfile?,
+        safetyCopy: SaveProfile? = nil,
+        shortfalls: Set<QuickPlayPromotionShortfall> = []
+    ) {
         self.importResult = importResult
+        self.build = build ?? importResult.build
         self.saveProfile = saveProfile
         self.safetyCopy = safetyCopy
+        self.shortfalls = shortfalls
     }
 }
 
@@ -37,6 +57,7 @@ public struct PromoteQuickPlay: Sendable {
     private let analyzer: ROMImportAnalyzer
     private let committer: ImportCommitter
     private let workspace: QuickPlayWorkspace
+    private let builds: any BuildRepository
     private let profiles: any SaveProfileRepository
     private let states: any SaveStateRepository
     private let assets: any ManagedAssetRepository
@@ -49,6 +70,7 @@ public struct PromoteQuickPlay: Sendable {
         analyzer: ROMImportAnalyzer,
         committer: ImportCommitter,
         workspace: QuickPlayWorkspace,
+        builds: any BuildRepository,
         profiles: any SaveProfileRepository,
         states: any SaveStateRepository,
         assets: any ManagedAssetRepository,
@@ -59,6 +81,7 @@ public struct PromoteQuickPlay: Sendable {
         self.analyzer = analyzer
         self.committer = committer
         self.workspace = workspace
+        self.builds = builds
         self.profiles = profiles
         self.states = states
         self.assets = assets
@@ -143,13 +166,46 @@ public struct PromoteQuickPlay: Sendable {
         } catch {
             throw PromoteQuickPlayError.importedButSaveFailed(gameID: result.game.id, buildID: result.build.id)
         }
-        // The resume point is a convenience: the Build and its save are in the library either way.
+        // The Build and its save are in the library now, so what follows can't undo them. Each
+        // step that doesn't finish is reported instead, and the session is kept while it still
+        // holds the only copy of the resume point.
+        var build = result.build
+        var shortfalls: Set<QuickPlayPromotionShortfall> = []
         if let promotedProfile {
-            try? adoptAutoState(of: session, buildID: result.build.id, profileID: promotedProfile.id)
+            do {
+                try adoptAutoState(of: session, buildID: result.build.id, profileID: promotedProfile.id)
+            } catch {
+                shortfalls.insert(.resumePointNotMoved)
+            }
+            // Play on this Build continues what was kept, even when the Build was already in the
+            // library (docs/decisions.md). The Game's default and other Builds stay as they were.
+            do {
+                build = try setDefaultSave(promotedProfile.id, buildID: result.build.id)
+            } catch {
+                shortfalls.insert(.buildDefaultSaveNotSet)
+            }
         }
-        // Promotion is complete; a sandbox left behind is removed by retention.
-        try? workspace.discard(sessionID: session.id)
-        return QuickPlayPromotionResult(importResult: result, saveProfile: promotedProfile, safetyCopy: safetyCopy)
+        if !shortfalls.contains(.resumePointNotMoved) {
+            // Promotion is complete; a sandbox left behind is removed by retention.
+            try? workspace.discard(sessionID: session.id)
+        }
+        return QuickPlayPromotionResult(
+            importResult: result,
+            build: build,
+            saveProfile: promotedProfile,
+            safetyCopy: safetyCopy,
+            shortfalls: shortfalls
+        )
+    }
+
+    private func setDefaultSave(_ profileID: UUID, buildID: UUID) throws -> Build {
+        struct BuildMissing: Error {}
+        guard var build = try builds.fetchBuild(id: buildID) else { throw BuildMissing() }
+        guard build.preferredSaveProfileID != profileID else { return build }
+        build.preferredSaveProfileID = profileID
+        build.modifiedAt = now()
+        try builds.updateBuildMetadata(build)
+        return build
     }
 
     /// Brings the session's autosave in as the Build's Auto State for the promoted profile, so the

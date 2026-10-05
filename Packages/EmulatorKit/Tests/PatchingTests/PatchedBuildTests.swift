@@ -22,7 +22,7 @@ final class PatchedBuildTests: XCTestCase {
 
         XCTAssertEqual(build.sourceKind, .patchRecipe)
         XCTAssertEqual(build.parentBuildID, harness.baseBuild.id)
-        XCTAssertEqual(try harness.outputData(for: build), Data("AXC".utf8))
+        XCTAssertEqual(try harness.outputData(for: build), harness.base(changing: [1: 0x58]))
         let recipe = try XCTUnwrap(harness.recipes.fetchPatchRecipe(resultBuildID: build.id))
         XCTAssertEqual(recipe.baseBuildID, harness.baseBuild.id)
         XCTAssertEqual(recipe.items.count, 1)
@@ -50,7 +50,7 @@ final class PatchedBuildTests: XCTestCase {
         let harness = try PatchBuildHarness.make()
         let target = TestROM.make(title: "TRSE GB")
         let patchURL = try harness.writePatch(
-            bpsReplacingWholeImage(expectedSource: Data("ABC".utf8), target: target),
+            bpsReplacingWholeImage(expectedSource: harness.baseImage, target: target),
             name: "rascal.bps"
         )
 
@@ -77,7 +77,7 @@ final class PatchedBuildTests: XCTestCase {
         let resolved = try harness.resolver.resolveImageForLaunch(buildID: build.id)
 
         XCTAssertEqual(resolved, harness.store.generatedImageURL(sha256: build.imageSHA256))
-        XCTAssertEqual(try harness.store.readData(at: resolved), Data("AXC".utf8))
+        XCTAssertEqual(try harness.store.readData(at: resolved), harness.base(changing: [1: 0x58]))
         XCTAssertEqual(try harness.store.hashFile(at: resolved), build.imageSHA256)
     }
 
@@ -104,7 +104,7 @@ final class PatchedBuildTests: XCTestCase {
     func testWrongBaseNeedsApplyAnywayAndRebuildsTheSameWay() throws {
         let harness = try PatchBuildHarness.make()
         let patchURL = try harness.writePatch(
-            bpsReplacingWholeImage(expectedSource: Data("ZZZ".utf8), target: Data("QRS".utf8)),
+            bpsReplacingWholeImage(expectedSource: TestROM.make(title: "OTHER BASE", cgb: true), target: TestROM.make(title: "QRS", cgb: true)),
             name: "other-base.bps"
         )
 
@@ -128,7 +128,7 @@ final class PatchedBuildTests: XCTestCase {
 
         try harness.store.removeIfExists(harness.store.generatedImageURL(sha256: build.imageSHA256))
         let rebuilt = try harness.resolver.resolveImageForLaunch(buildID: build.id)
-        XCTAssertEqual(try harness.store.readData(at: rebuilt), Data("QRS".utf8))
+        XCTAssertEqual(try harness.store.readData(at: rebuilt), TestROM.make(title: "QRS", cgb: true))
     }
 
     func testACopiedPatchBuildRebuildsItsImageOnItsOwn() throws {
@@ -152,7 +152,7 @@ final class PatchedBuildTests: XCTestCase {
         try EvictGeneratedImage(builds: harness.builds, assets: harness.assets, assetStore: harness.store)
             .execute(buildID: patched.id)
         let rebuilt = try harness.resolver.resolveImageForLaunch(buildID: copy.id)
-        XCTAssertEqual(try harness.store.readData(at: rebuilt), Data("AXC".utf8))
+        XCTAssertEqual(try harness.store.readData(at: rebuilt), harness.base(changing: [1: 0x58]))
     }
 
     func testApplyingTheSamePatchAgainRepairsADamagedPatchFile() throws {
@@ -221,7 +221,7 @@ final class PatchedBuildTests: XCTestCase {
             .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: first), .init(url: second)], displayName: "Stack")
         )
 
-        XCTAssertEqual(try harness.outputData(for: build), Data("XYC".utf8))
+        XCTAssertEqual(try harness.outputData(for: build), harness.base(changing: [0: 0x58, 1: 0x59]))
         let recipe = try XCTUnwrap(harness.recipes.fetchPatchRecipe(resultBuildID: build.id))
         XCTAssertEqual(recipe.items.map(\.position), [0, 1])
     }
@@ -232,6 +232,8 @@ private struct PatchBuildHarness {
     let external: URL
     let gameID: UUID
     let baseBuild: Build
+    /// A Game Boy Color test ROM whose first bytes spell "ABC", for patches to change.
+    let baseImage: Data
     let store: ManagedFileStore
     let games: InMemoryGameRepository
     let builds: InMemoryBuildRepository
@@ -261,8 +263,10 @@ private struct PatchBuildHarness {
             modifiedAt: timestamp
         ))
 
+        var baseImage = TestROM.make(title: "BASE", cgb: true)
+        baseImage.replaceSubrange(0..<3, with: Data("ABC".utf8))
         let rawSource = external.appendingPathComponent("base.gb")
-        try Data("ABC".utf8).write(to: rawSource)
+        try baseImage.write(to: rawSource)
         let staged = try store.stageCopy(from: rawSource, transactionID: UUID())
         let hash = try store.hashFile(at: staged)
         let committed = try store.commitSourceROM(stagedURL: staged, sha256: hash)
@@ -271,7 +275,7 @@ private struct PatchBuildHarness {
             kind: .sourceImage,
             storageClass: .source,
             contentSHA256: hash,
-            byteLength: 3,
+            byteLength: Int64(baseImage.count),
             relativePath: try store.managedRelativePath(for: committed),
             originalFilename: "base.gb",
             integrityStatus: .verified,
@@ -316,6 +320,7 @@ private struct PatchBuildHarness {
             external: external,
             gameID: gameID,
             baseBuild: baseBuild,
+            baseImage: baseImage,
             store: store,
             games: games,
             builds: builds,
@@ -325,6 +330,13 @@ private struct PatchBuildHarness {
             creator: creator,
             resolver: resolver
         )
+    }
+
+    /// The base image with the given bytes changed.
+    func base(changing changes: [Int: UInt8]) -> Data {
+        var image = baseImage
+        for (offset, value) in changes { image[offset] = value }
+        return image
     }
 
     func writePatch(_ data: Data, name: String) throws -> URL {
@@ -380,4 +392,121 @@ private func singleByteIPS(offset: Int, value: UInt8) -> Data {
         value,
         0x45, 0x4f, 0x46,
     ])
+}
+
+
+// A patch that makes a Game Boy game color-only makes a Game Boy Color Build.
+extension PatchedBuildTests {
+    func testReviewColorizationPatchUsesResultHardwareSystem() throws {
+        let h = try PatchBuildHarness.make()
+        let timestamp = Date(timeIntervalSince1970: 100)
+        let source = TestROM.make(title: "MONO BASE", cgb: false)
+        let sourceURL = h.external.appendingPathComponent("mono.gb")
+        try source.write(to: sourceURL)
+        let staged = try h.store.stageCopy(from: sourceURL, transactionID: UUID())
+        let hash = try h.store.hashFile(at: staged)
+        let committed = try h.store.commitSourceROM(stagedURL: staged, sha256: hash)
+        let asset = ManagedAsset(
+            id: UUID(), kind: .sourceImage, storageClass: .source,
+            contentSHA256: hash, byteLength: Int64(source.count),
+            relativePath: try h.store.managedRelativePath(for: committed),
+            originalFilename: "mono.gb", integrityStatus: .verified, createdAt: timestamp
+        )
+        try h.assets.insertAsset(asset)
+        let mono = Build(
+            id: UUID(), gameID: h.gameID, system: .gameBoy, displayName: "Mono base",
+            imageAssetID: asset.id, imageSHA256: hash, sourceKind: .importedImage,
+            isBase: true, createdAt: timestamp, modifiedAt: timestamp
+        )
+        try h.builds.insertBuild(mono)
+        var target = TestROM.make(title: "COLOR ONLY", cgb: true)
+        target[0x143] = 0xc0
+        var headerChecksum: UInt8 = 0
+        for address in 0x134...0x14c { headerChecksum = headerChecksum &- target[address] &- 1 }
+        target[0x14d] = headerChecksum
+        var globalChecksum: UInt16 = 0
+        for address in target.indices where address != 0x14e && address != 0x14f {
+            globalChecksum &+= UInt16(target[address])
+        }
+        target[0x14e] = UInt8(globalChecksum >> 8)
+        target[0x14f] = UInt8(globalChecksum & 0xff)
+        let patch = try h.writePatch(
+            bpsReplacingWholeImage(expectedSource: source, target: target), name: "colorize.bps"
+        )
+        let result = try h.creator.execute(.init(
+            gameID: h.gameID, baseBuildID: mono.id,
+            patches: [.init(url: patch)], displayName: "Colorized"
+        ))
+        XCTAssertEqual(try h.outputData(for: result), target)
+        XCTAssertEqual(result.system, .gameBoyColor,
+                       "A CGB-only result must not inherit its monochrome base's hardware model")
+    }
+}
+
+extension PatchedBuildTests {
+    func testAPatchToMonochromeMakesAGameBoyBuild() throws {
+        let harness = try PatchBuildHarness.make()
+        XCTAssertEqual(harness.baseBuild.system, .gameBoyColor)
+        let mono = TestROM.make(title: "MONO HACK", cgb: false)
+        let patch = try harness.writePatch(
+            bpsReplacingWholeImage(expectedSource: harness.baseImage, target: mono), name: "mono.bps"
+        )
+
+        let build = try harness.creator.execute(.init(
+            gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patch)], displayName: "Mono"
+        ))
+        XCTAssertEqual(build.system, .gameBoy)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: build.id)?.system, .gameBoy, "as stored")
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.baseBuild.id)?.system, .gameBoyColor, "the base is unchanged")
+
+        // Rebuilding the evicted image gives the same bytes, so the Build's system still fits them.
+        try harness.store.removeIfExists(harness.store.generatedImageURL(sha256: build.imageSHA256))
+        let rebuilt = try harness.resolver.resolveImageForLaunch(buildID: build.id)
+        XCTAssertEqual(try harness.store.readData(at: rebuilt), mono)
+    }
+
+    func testAStackIsClassifiedByItsFinalResult() throws {
+        let harness = try PatchBuildHarness.make()
+        // Clearing the color flag makes the base monochrome; a disabled patch that would put it back
+        // is skipped, and a later enabled one that only touches the program leaves it monochrome.
+        let clearFlag = try harness.writePatch(singleByteIPS(offset: 0x143, value: 0x00), name: "mono.ips")
+        let setFlag = try harness.writePatch(singleByteIPS(offset: 0x143, value: 0xc0), name: "color.ips")
+        let program = try harness.writePatch(singleByteIPS(offset: 0x200, value: 0x01), name: "program.ips")
+
+        let build = try harness.creator.execute(.init(
+            gameID: harness.gameID,
+            baseBuildID: harness.baseBuild.id,
+            patches: [.init(url: clearFlag), .init(url: setFlag, enabled: false), .init(url: program)],
+            displayName: "Stack"
+        ))
+        XCTAssertEqual(build.system, .gameBoy)
+        XCTAssertEqual(try harness.outputData(for: build), harness.base(changing: [0x143: 0x00, 0x200: 0x01]))
+    }
+
+    func testAResultTooShortForAHeaderIsRefusedAndLeavesNothing() throws {
+        let harness = try PatchBuildHarness.make()
+        let patch = try harness.writePatch(
+            bpsReplacingWholeImage(expectedSource: harness.baseImage, target: Data("TINY".utf8)), name: "tiny.bps"
+        )
+        let assetsBefore = try harness.assets.fetchAssets().count
+
+        XCTAssertThrowsError(try harness.creator.execute(.init(
+            gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patch)], displayName: "Tiny"
+        ))) { error in
+            XCTAssertEqual(error as? CreatePatchedBuildError, .resultNotAROM(byteCount: 4))
+        }
+        XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.gameID).count, 1, "no Build")
+        XCTAssertEqual(try harness.assets.fetchAssets().count, assetsBefore, "no assets")
+        XCTAssertFalse(harness.store.fileExists(at: harness.store.generatedImageURL(sha256: harness.store.hashData(Data("TINY".utf8)))))
+    }
+
+    func testAResultWithAStaleChecksumIsStillAccepted() throws {
+        let harness = try PatchBuildHarness.make()
+        // Changing a title byte without fixing the checksums, as many hacks do.
+        let patch = try harness.writePatch(singleByteIPS(offset: 0x134, value: 0x5a), name: "title.ips")
+        let build = try harness.creator.execute(.init(
+            gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patch)], displayName: "Hack"
+        ))
+        XCTAssertEqual(build.system, .gameBoyColor)
+    }
 }

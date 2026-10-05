@@ -129,6 +129,7 @@ final class QuickPlayTests: XCTestCase {
                 transactions: PassthroughTransactionRunner()
             ),
             workspace: harness.workspace,
+            builds: harness.builds,
             profiles: InsertRefusingProfiles(inner: harness.profiles),
             states: harness.states,
             assets: harness.assets,
@@ -174,6 +175,7 @@ final class QuickPlayTests: XCTestCase {
                 transactions: PassthroughTransactionRunner()
             ),
             workspace: harness.workspace,
+            builds: harness.builds,
             profiles: UpdateRefusingProfiles(inner: harness.profiles),
             states: harness.states,
             assets: harness.assets,
@@ -333,6 +335,7 @@ private struct QuickPlayHarness {
             analyzer: analyzer,
             committer: committer,
             workspace: workspace,
+            builds: builds,
             profiles: profiles,
             states: states,
             assets: assets,
@@ -594,6 +597,222 @@ extension QuickPlayTests {
     }
 }
 
+extension QuickPlayTests {
+    /// Plays a few frames of a game with no battery save and closes, leaving only the autosave.
+    private func stateOnlySession(_ harness: QuickPlayHarness, title: String) throws -> QuickPlaySession {
+        let rom = try harness.writeExternalROM(TestROM.make(title: title, cgb: false, payloadByte: 21))
+        let session = try harness.workspace.start(romURL: rom)
+        let runtime = harness.makeRuntime(session)
+        try runtime.start()
+        for _ in 0..<3 { _ = try runtime.stepFrame() }
+        try runtime.stop()
+        XCTAssertNil(try harness.workspace.temporaryBatteryData(sessionID: session.id), "no battery save")
+        XCTAssertTrue(session.hasResumePoint(files: harness.store))
+        return session
+    }
+
+    private func resolver(_ harness: QuickPlayHarness) -> ResolvePreferredSaveProfile {
+        ResolvePreferredSaveProfile(
+            games: harness.games, builds: harness.builds, profiles: harness.profiles,
+            createBlank: CreateBlankSaveProfile(games: harness.games, profiles: harness.profiles)
+        )
+    }
+
+    func testAGameWithNoBatterySaveKeepsItsResumePointInANewGame() throws {
+        let harness = try QuickPlayHarness.make()
+        let session = try stateOnlySession(harness, title: "NO BATTERY")
+
+        let result = try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(session, targetGameID: nil),
+                disposition: .createGame(title: "No Battery"),
+                buildDisplayName: "No Battery",
+                markAsBase: true
+            ),
+            saveDisposition: .createProfile(name: "Quick Play")
+        )
+
+        XCTAssertEqual(result.shortfalls, [])
+        let profile = try XCTUnwrap(result.saveProfile)
+        XCTAssertNil(profile.persistentSaveAssetID, "a blank profile holds the resume point")
+        XCTAssertEqual(result.build.preferredSaveProfileID, profile.id)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: result.build.id)?.preferredSaveProfileID, profile.id)
+        let states = try harness.states.fetchSaveStates(buildID: result.build.id, saveProfileID: profile.id)
+        XCTAssertEqual(states.map(\.kind), [.auto])
+        XCTAssertEqual(try resolver(harness).execute(gameID: result.importResult.game.id, buildID: result.build.id).id, profile.id)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: session.rootURL.path), "everything moved, so the session goes")
+    }
+
+    func testAResumePointAddedToAnExistingGameLeavesItsOtherSavesAlone() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        var game = harness.game
+        game.preferredSaveProfileID = harness.profile.id
+        try harness.games.updateGame(game)
+        let otherSession = try harness.workspace.start(
+            romURL: harness.writeExternalROM(TestROM.make(title: "OTHER", cgb: false, payloadByte: 22))
+        )
+        let other = try harness.promoter.promote(
+            session: otherSession,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(otherSession, targetGameID: harness.game.id),
+                disposition: .addBuild(gameID: harness.game.id),
+                buildDisplayName: "Other",
+                markAsBase: false
+            ),
+            saveDisposition: .keepExisting
+        )
+        XCTAssertNil(other.build.preferredSaveProfileID, "keeping nothing sets nothing")
+        let session = try stateOnlySession(harness, title: "NO BATTERY")
+
+        let result = try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(session, targetGameID: harness.game.id),
+                disposition: .addBuild(gameID: harness.game.id),
+                buildDisplayName: "No Battery",
+                markAsBase: false
+            ),
+            saveDisposition: .createProfile(name: "Quick Play")
+        )
+
+        let profile = try XCTUnwrap(result.saveProfile)
+        XCTAssertEqual(result.build.preferredSaveProfileID, profile.id)
+        XCTAssertEqual(try harness.games.fetchGame(id: harness.game.id)?.preferredSaveProfileID, harness.profile.id, "the Game's default stays")
+        XCTAssertNil(try harness.builds.fetchBuild(id: other.build.id)?.preferredSaveProfileID, "other Builds stay")
+        XCTAssertEqual(try harness.libraryBatteryData(), Data([1]), "Main is untouched")
+        XCTAssertEqual(try resolver(harness).execute(gameID: harness.game.id, buildID: other.build.id).id, harness.profile.id)
+    }
+
+    func testReplacingTheCopiedProfileMakesItThePromotedBuildsSave() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let rom = try harness.writeExternalROM(TestROM.make(title: "REPLACE", cgb: false, payloadByte: 23))
+        let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
+        try harness.workspace.writeTemporaryBattery(Data([9]), sessionID: session.id)
+
+        let result = try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(session, targetGameID: harness.game.id),
+                disposition: .addBuild(gameID: harness.game.id),
+                buildDisplayName: "Replace",
+                markAsBase: false
+            ),
+            saveDisposition: .replaceExisting(profileID: harness.profile.id)
+        )
+        XCTAssertEqual(result.build.preferredSaveProfileID, harness.profile.id)
+        XCTAssertEqual(try harness.libraryBatteryData(profileID: XCTUnwrap(result.safetyCopy).id), Data([1]))
+    }
+
+    func testAddingAROMAlreadyInTheLibraryPointsThatBuildAtTheKeptSave() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let image = TestROM.make(title: "ALREADY", cgb: false, payloadByte: 24)
+        let first = try harness.workspace.start(romURL: harness.writeExternalROM(image))
+        let existing = try harness.promoter.promote(
+            session: first,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(first, targetGameID: harness.game.id),
+                disposition: .addBuild(gameID: harness.game.id),
+                buildDisplayName: "Already",
+                markAsBase: false
+            ),
+            saveDisposition: .keepExisting
+        ).build
+        var preferring = existing
+        preferring.preferredSaveProfileID = harness.profile.id
+        try harness.builds.updateBuildMetadata(preferring)
+
+        let session = try harness.workspace.start(romURL: harness.writeExternalROM(image), copiedSaveProfileID: harness.profile.id)
+        try harness.workspace.writeTemporaryBattery(Data([9]), sessionID: session.id)
+        let result = try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(session, targetGameID: harness.game.id),
+                disposition: .duplicateExisting(buildID: existing.id),
+                buildDisplayName: "Already",
+                markAsBase: false
+            ),
+            saveDisposition: .createProfile(name: "Quick Play")
+        )
+
+        XCTAssertEqual(result.build.id, existing.id, "the same Build")
+        let profile = try XCTUnwrap(result.saveProfile)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: existing.id)?.preferredSaveProfileID, profile.id)
+        XCTAssertEqual(try harness.libraryBatteryData(profileID: profile.id), Data([9]))
+    }
+
+    func testAResumePointThatCantBeMovedKeepsTheSession() throws {
+        let harness = try QuickPlayHarness.make()
+        let session = try stateOnlySession(harness, title: "NO BATTERY")
+        let refusing = PromoteQuickPlay(
+            analyzer: ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store),
+            committer: ImportCommitter(
+                games: harness.games,
+                builds: harness.builds,
+                assets: harness.assets,
+                toolchainReports: InMemoryToolchainReportRepository(),
+                assetStore: harness.store,
+                transactions: PassthroughTransactionRunner()
+            ),
+            workspace: harness.workspace,
+            builds: harness.builds,
+            profiles: harness.profiles,
+            states: InsertRefusingStates(),
+            assets: harness.assets,
+            assetStore: harness.store
+        )
+
+        let result = try refusing.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: try refusing.analyze(session, targetGameID: nil),
+                disposition: .createGame(title: "No Battery"),
+                buildDisplayName: "No Battery",
+                markAsBase: true
+            ),
+            saveDisposition: .createProfile(name: "Quick Play")
+        )
+
+        XCTAssertEqual(result.shortfalls, [.resumePointNotMoved])
+        XCTAssertTrue(session.hasResumePoint(files: harness.store), "the session still holds it")
+        XCTAssertTrue(try harness.workspace.sessions().contains { $0.id == session.id }, "and is kept for later")
+        XCTAssertEqual(try harness.assets.fetchAssets().filter { $0.kind == .saveState }, [], "no half-moved state")
+    }
+
+    func testDiscardingProgressSetsNoSaveAndRemovesTheSession() throws {
+        let harness = try QuickPlayHarness.make()
+        let session = try stateOnlySession(harness, title: "NO BATTERY")
+        let result = try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(session, targetGameID: nil),
+                disposition: .createGame(title: "No Battery"),
+                buildDisplayName: "No Battery",
+                markAsBase: true
+            ),
+            saveDisposition: .keepExisting
+        )
+        XCTAssertNil(result.saveProfile)
+        XCTAssertNil(result.build.preferredSaveProfileID)
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: result.importResult.game.id), [])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: session.rootURL.path))
+    }
+}
+
+/// Refuses new states, so moving the resume point fails.
+private struct InsertRefusingStates: SaveStateRepository {
+    let inner = InMemorySaveStateRepository()
+    struct Refused: Error {}
+
+    func insertSaveState(_ state: SaveState) throws { throw Refused() }
+    func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
+        try inner.fetchSaveStates(buildID: buildID, saveProfileID: saveProfileID)
+    }
+    func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] { try inner.fetchSaveStates(saveProfileID: saveProfileID) }
+    func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {}
+    func deleteSaveState(id: UUID) throws { try inner.deleteSaveState(id: id) }
+}
+
 /// Records the files the atomic writer puts in place.
 private final class RenameRecordingFileOperations: FileOperations, @unchecked Sendable {
     private let live = FoundationFileOperations()
@@ -660,4 +879,34 @@ private struct UpdateRefusingProfiles: SaveProfileRepository {
     func insertSaveProfile(_ profile: SaveProfile) throws { try inner.insertSaveProfile(profile) }
     func updateSaveProfile(_ profile: SaveProfile) throws { throw Refused() }
     func deleteSaveProfile(id: UUID) throws { try inner.deleteSaveProfile(id: id) }
+}
+
+
+// Play on a promoted Build continues the progress kept with it.
+extension QuickPlayTests {
+    func testReviewPromotedBuildPlaysWithItsPromotedSaveProfile() throws {
+        let h = try QuickPlayHarness.make(seedBattery: Data([1]))
+        var game = h.game
+        game.preferredSaveProfileID = h.profile.id
+        try h.games.updateGame(game)
+        let rom = try h.writeExternalROM(TestROM.make(title: "NEW BUILD", cgb: true))
+        let session = try h.workspace.start(romURL: rom, copiedSaveProfileID: h.profile.id)
+        try h.workspace.writeTemporaryBattery(Data([9]), sessionID: session.id)
+        let analysis = try h.promoter.analyze(session, targetGameID: h.game.id)
+        let promoted = try h.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(analysis: analysis, disposition: .addBuild(gameID: h.game.id),
+                                buildDisplayName: "Quick Play build", markAsBase: false),
+            saveDisposition: .createProfile(name: "Quick Play progress")
+        )
+        let promotedProfile = try XCTUnwrap(promoted.saveProfile)
+        XCTAssertEqual(try h.libraryBatteryData(profileID: promotedProfile.id), Data([9]))
+        let resolver = ResolvePreferredSaveProfile(
+            games: h.games, builds: h.builds, profiles: h.profiles,
+            createBlank: CreateBlankSaveProfile(games: h.games, profiles: h.profiles)
+        )
+        let selected = try resolver.execute(gameID: h.game.id, buildID: promoted.importResult.build.id)
+        XCTAssertEqual(selected.id, promotedProfile.id,
+                       "Play on the promoted Build should use its new progress, not the old Main profile")
+    }
 }

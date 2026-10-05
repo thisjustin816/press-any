@@ -3,6 +3,38 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Pause when the app goes inactive, and keep Quick Play progress with its Build
+
+**Decision.** The game pauses whenever its scene goes inactive, not only in the background, and
+lets go of every held button. After only an overlay such as Control Center, Notification Center or
+a call banner, it picks up again on its own, unless the player paused it. After a trip to the
+background, Resume Games (Always, Ask or Never) decides, as before. Loading or saving a state
+stops frames until it finishes, and loading a state asks first whenever the game has saved since
+its battery save was last written, since that in-game save is newer than any state. Taking a state
+writes the save first. A state that fails partway puts the latest save back in the game.
+
+When Quick Play is added to the library with its progress kept, the promoted Build plays that save
+by default, even when the ROM was already in the library as a Build: the player chose to keep this
+progress. The Game's default and other Builds don't change. A session with only a resume point,
+from a game with no battery save, can keep it in a new profile. If the resume point can't be
+moved, the Build and save are still added and the Quick Play session is kept, so the resume point
+isn't lost.
+
+A patched Build's system comes from the patched ROM's own header, by the rules import uses, so a
+patch can make a Game Boy game a Game Boy Color one or the reverse. A result too short to hold a
+header is refused. Patched Builds made before this keep the system they were given; none have been
+released, so there is no repair.
+
+The privacy manifest declares file timestamp access with reason C617.1, for the cleanup of stale
+temporary files inside the app's own container.
+
+**Why.** A review found that the state-load warning looked only at when the save was last written,
+so an in-game save not yet written could be lost; that Quick Play progress from a game with no
+battery save was dropped on promotion, and kept progress wasn't what Play picked; that patched
+Builds always took their base's system, which also picks SameBoy's model and boot ROM; that the
+game ran on under Control Center and other overlays; and that the manifest left out the cleanup's
+timestamp reads.
+
 ## 2026-10-05: Adaptive audio, and registries wait for v1
 
 **Decision.** Game sound plays through a buffer that starts at 40 ms. Each time playback runs out

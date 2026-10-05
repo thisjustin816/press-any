@@ -28,6 +28,15 @@ extension QuickPlaySession {
         return files.hashData(data)
     }
 
+    /// Whether the session has an autosave that promotion would bring into the library: one with
+    /// its record, taken no earlier than the battery save. A game with no battery save can still
+    /// have one, and it's then the only progress the session holds.
+    public func hasResumePoint(files: any AssetStore) -> Bool {
+        files.fileExists(at: autoStateURL)
+            && autoStateRecord(files: files) != nil
+            && !batteryIsNewerThanAutoState(files: files)
+    }
+
     /// Whether battery.sav was written after the autosave was taken. The state carries the
     /// cartridge RAM it was taken with, so restoring it would let the game's next save overwrite
     /// the newer one. The file's contents decide rather than its date, which is too coarse to
