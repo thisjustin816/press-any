@@ -3,6 +3,28 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Shared ROMs and patches, and Playtiles direction zones
+
+Incoming `.gb`, `.gbc`, `.ips` and `.bps` files use iOS document handoff into the
+app. Imported document types are registered in the app's Info.plist and share
+their identifiers with the file pickers. Receipt copies regular files into an
+isolated staging directory under the existing size limits, preserving the
+filename without changing the sender's file.
+
+ROMs offer Quick Play or the existing Import Review. Patches require an explicit
+Game and base Build and create a new Build through the existing patch use case;
+a BPS base mismatch retains the Apply Anyway warning. Incoming files wait for
+active gameplay and the Quick Play session sheet to close. Quick Play consumes
+its receipt before staging cleanup. This adds no separate share extension.
+
+Playtiles retains deliberate diagonals, but the weaker axis must exceed 65% of
+the stronger axis as well as the existing center dead zone. This widens the
+straight-direction zones for the physical overlay. The Game Boy layout keeps
+its previous direction mapping. Controller geometry stays the same.
+
+Skin package importing still needs a format decision; registering a package
+extension alone would not make its artwork or mapping usable.
+
 ## 2026-10-05: Reviewable Build metadata on import
 
 **Decision.** Import recognizes explicit region and language groups, Rev/Revision tags, numeric

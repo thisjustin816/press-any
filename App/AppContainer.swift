@@ -15,6 +15,7 @@ import ToolchainDetection
 @MainActor
 final class AppContainer {
     let fileStore: ManagedFileStore
+    let sharedFileInbox: SharedFileInbox
     let integrityChecker: ManagedAssetIntegrityChecker
     let database: AppDatabase
     let repositories: GRDBRepositorySet
@@ -57,6 +58,7 @@ final class AppContainer {
 
     init(rootURL: URL) throws {
         fileStore = try ManagedFileStore(rootURL: rootURL)
+        sharedFileInbox = SharedFileInbox(store: fileStore)
         database = try AppDatabase(url: rootURL.appendingPathComponent("Library.sqlite"))
         try database.migrate()
         repositories = database.makeRepositories()

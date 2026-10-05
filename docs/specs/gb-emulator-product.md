@@ -96,7 +96,7 @@ Multiple typed assets: front/back box, cartridge/label, title screen, screenshot
 
 ### Sources
 - Files/document picker.
-- Share Sheet/Open In.
+- Share Sheet/Open In. Direct `.gb`/`.gbc` files offer Quick Play or Import Review; `.ips`/`.bps` files require choosing a Game and base Build. Receive a bounded copy before review, keeping the sender's file untouched, and wait for active gameplay to close.
 - ZIP + 7z v1; RAR tentative v1.1.
 - Archives are temporary containers and are not retained.
 - Safe archive handling: path traversal protection, nested-depth and decompression limits, malformed/password-protected handling, no executable behavior.
@@ -212,7 +212,7 @@ Imports may analyze while gameplay continues. If a likely new Build of current G
 - Delta and Manic import adapters -> internal native skin model; preserve source package; preview/report unsupported elements.
 - Native layout import/export through Files/Share Sheet.
 - Hardware presets for passive accessories such as Playtiles/GameBaby; passive accessories are manual selection, with device-specific calibration offsets. Identifiable connected accessories may be suggested, never force-switched.
-- Sliding D-pad, natural diagonals; sliding A/B; multitouch A+B.
+- Sliding D-pad, natural diagonals; sliding A/B; multitouch A+B. Playtiles widens straight-direction zones: a diagonal's weaker axis must exceed 65% of its stronger axis and the center dead zone. Deliberate diagonals remain available.
 - Subtle pressed-state visual feedback.
 - Light touch haptics by default; automatically suppressed while physical controller is active unless overridden.
 - Optional gameplay gestures off by default.

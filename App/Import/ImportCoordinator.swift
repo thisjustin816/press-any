@@ -27,9 +27,9 @@ final class ImportCoordinator {
 }
 
 extension UTType {
-    static let gameBoyROM = UTType(filenameExtension: "gb") ?? .data
-    static let gameBoyColorROM = UTType(filenameExtension: "gbc") ?? .data
+    static let gameBoyROM = UTType(importedAs: "com.thisjustin816.emulator.rom.gb", conformingTo: .data)
+    static let gameBoyColorROM = UTType(importedAs: "com.thisjustin816.emulator.rom.gbc", conformingTo: .data)
     static let gameBoySave = UTType(filenameExtension: "sav") ?? .data
-    static let ipsPatch = UTType(filenameExtension: "ips") ?? .data
-    static let bpsPatch = UTType(filenameExtension: "bps") ?? .data
+    static let ipsPatch = UTType(importedAs: "com.thisjustin816.emulator.patch.ips", conformingTo: .data)
+    static let bpsPatch = UTType(importedAs: "com.thisjustin816.emulator.patch.bps", conformingTo: .data)
 }

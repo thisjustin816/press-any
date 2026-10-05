@@ -38,6 +38,11 @@ struct RootView: View {
     @State private var endedQuickPlayAddsToLibrary = false
     @State private var endedQuickPlay: QuickPlaySession?
     @State private var quickPlayToResume: QuickPlaySession?
+    @State private var queuedSharedFiles: [SharedFile] = []
+    @State private var sharedFile: SharedFile?
+    /// Retained until dismissal, so Quick Play can copy the ROM before receipt cleanup.
+    @State private var closingSharedFile: SharedFile?
+    @State private var sharedQuickPlay: QuickPlayRequest?
 
     var body: some View {
         Group {
@@ -57,6 +62,23 @@ struct RootView: View {
             }
         }
         .task { openScreenshotScene() }
+        .onOpenURL { receiveSharedFile($0) }
+        .onChange(of: pendingResume != nil || riskyLaunch != nil) { _, hasPendingLaunch in
+            if !hasPendingLaunch { presentNextSharedFile() }
+        }
+        .sheet(item: $sharedFile, onDismiss: finishSharedFile) { file in
+            if let container = bootstrap.container {
+                SharedFileView(
+                    file: file,
+                    container: container,
+                    onFinished: { sharedFile = nil },
+                    onQuickPlay: { request in
+                        sharedQuickPlay = request
+                        sharedFile = nil
+                    }
+                )
+            }
+        }
         .fullScreenCover(item: $gameplay, onDismiss: showClosingQuickPlay) { presentation in
             GameplayViewControllerRepresentable(
                 runtime: presentation.runtime,
@@ -131,10 +153,45 @@ struct RootView: View {
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) { errorMessage = nil }
+            Button("OK", role: .cancel) {
+                errorMessage = nil
+                presentNextSharedFile()
+            }
         } message: {
             Text(errorMessage ?? "Unknown error")
         }
+    }
+
+    private func receiveSharedFile(_ url: URL) {
+        guard let container = bootstrap.container else { return }
+        do {
+            queuedSharedFiles.append(try container.sharedFileInbox.receive(url))
+            presentNextSharedFile()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func presentNextSharedFile() {
+        guard gameplay == nil, endedQuickPlay == nil, closingQuickPlayID == nil,
+              pendingResume == nil, riskyLaunch == nil, errorMessage == nil,
+              closingSharedFile == nil, sharedFile == nil, !queuedSharedFiles.isEmpty else { return }
+        let next = queuedSharedFiles.removeFirst()
+        closingSharedFile = next
+        sharedFile = next
+    }
+
+    private func finishSharedFile() {
+        guard let container = bootstrap.container else { return }
+        if let request = sharedQuickPlay {
+            sharedQuickPlay = nil
+            quickPlay(request, container: container)
+        }
+        if let file = closingSharedFile {
+            container.sharedFileInbox.discard(file)
+            closingSharedFile = nil
+        }
+        presentNextSharedFile()
     }
 
     private func launch(_ context: LaunchContext, container: AppContainer, checkSave: Bool = true) {
@@ -268,7 +325,10 @@ struct RootView: View {
     }
 
     private func showClosingQuickPlay() {
-        guard let id = closingQuickPlayID else { return }
+        guard let id = closingQuickPlayID else {
+            presentNextSharedFile()
+            return
+        }
         closingQuickPlayID = nil
         let addsToLibrary = closingQuickPlayAddsToLibrary
         closingQuickPlayAddsToLibrary = false
@@ -283,7 +343,10 @@ struct RootView: View {
     }
 
     private func resumeChosenQuickPlay() {
-        guard let session = quickPlayToResume, let container = bootstrap.container else { return }
+        guard let session = quickPlayToResume, let container = bootstrap.container else {
+            presentNextSharedFile()
+            return
+        }
         quickPlayToResume = nil
         resumeQuickPlay(session, container: container)
     }

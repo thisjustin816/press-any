@@ -46,8 +46,7 @@ targets:
         PRODUCT_NAME: PressAny
         INFOPLIST_KEY_CFBundleDisplayName: Press Any
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
-        # Keys Xcode can't generate, merged into the generated Info.plist: only SHA-256 hashing
-        # uses cryptography, which is exempt, so uploads skip the export compliance question.
+        # Document types and exempt encryption declaration, merged into the generated Info.plist.
         INFOPLIST_FILE: Config/PressAny-Info.plist
         # Without a launch screen, iOS runs the app letterboxed at an old iPhone's size.
         INFOPLIST_KEY_UILaunchScreen_Generation: YES

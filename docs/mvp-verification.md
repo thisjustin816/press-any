@@ -12,6 +12,8 @@ Verify with a user-supplied legal ROM:
 - [ ] Generate/open the iOS project from a clean checkout.
 - [ ] Launch a GB game and a GBC game through SameBoy with correct colors, orientation, native speed and audio.
 - [ ] Touch input works with acceptable latency.
+- [ ] With Playtiles selected and the physical overlay aligned, press left/right/up/down slightly off-center: each stays straight. Deliberate diagonals and sliding back to straight directions still work.
+- [ ] From Files and a browser's downloaded-file share sheet, open `.gb`, `.gbc`, `.ips` and `.bps` in the app (use More if needed). ROMs offer Quick Play or Import Review; patches require a Game and base Build. Cancelling leaves the sender's file and library unchanged. While gameplay is open, the shared file waits until the game and its session sheet close.
 - [ ] Bluetooth controller works and disconnect behavior is safe.
 - [ ] Cartridge rumble routes correctly to controller/phone where supported.
 - [ ] Backgrounding pauses emulation, flushes battery save, and writes lifecycle autosave.
