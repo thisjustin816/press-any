@@ -466,6 +466,9 @@ private final class UndeletableSaveStateRepository: SaveStateRepository, @unchec
     func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] {
         try inner.fetchSaveStates(saveProfileID: saveProfileID)
     }
+    func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {
+        try inner.reassignSaveStates(buildID: buildID, fromSaveProfileID: fromSaveProfileID, toSaveProfileID: toSaveProfileID)
+    }
     func deleteSaveState(id: UUID) throws { throw Refused() }
 }
 

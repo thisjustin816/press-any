@@ -216,6 +216,7 @@ private struct ArchitectureHarness {
             games: games,
             builds: builds,
             profiles: profiles,
+            states: states,
             recipes: recipes,
             assets: assets,
             assetStore: store,

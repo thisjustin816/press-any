@@ -113,6 +113,27 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
         lock.withLock { values.values.filter { $0.saveProfileID == saveProfileID }.sorted { $0.createdAt > $1.createdAt } }
     }
 
+    public func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {
+        lock.withLock {
+            for state in values.values where state.buildID == buildID && state.saveProfileID == fromSaveProfileID {
+                values[state.id] = SaveState(
+                    id: state.id,
+                    buildID: state.buildID,
+                    saveProfileID: toSaveProfileID,
+                    core: state.core,
+                    stateSerializationVersion: state.stateSerializationVersion,
+                    stateAssetID: state.stateAssetID,
+                    screenshotAssetID: state.screenshotAssetID,
+                    kind: state.kind,
+                    autoSequence: state.autoSequence,
+                    label: state.label,
+                    playtimeSeconds: state.playtimeSeconds,
+                    createdAt: state.createdAt
+                )
+            }
+        }
+    }
+
     public func deleteSaveState(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
 }
 

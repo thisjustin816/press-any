@@ -245,6 +245,19 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
         }
     }
 
+    public func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {
+        try write { db in
+            try db.execute(
+                sql: "UPDATE save_states SET save_profile_id = ? WHERE build_id = ? AND save_profile_id = ?",
+                arguments: [
+                    PersistenceCodec.uuid(toSaveProfileID),
+                    PersistenceCodec.uuid(buildID),
+                    PersistenceCodec.uuid(fromSaveProfileID),
+                ]
+            )
+        }
+    }
+
     public func deleteSaveState(id: UUID) throws {
         try write { db in
             try db.execute(sql: "DELETE FROM save_states WHERE id = ?", arguments: [PersistenceCodec.uuid(id)])
