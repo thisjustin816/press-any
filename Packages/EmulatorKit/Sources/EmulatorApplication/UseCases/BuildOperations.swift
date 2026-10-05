@@ -371,7 +371,7 @@ public struct BuildOperations: Sendable {
     private func copyArtwork(_ assetID: UUID, to gameID: UUID) throws -> Game? {
         guard let asset = try assets.fetchAsset(id: assetID) else { return nil }
         let data = try assetStore.readData(at: try assetStore.managedURL(relativePath: asset.relativePath))
-        return try GameArtwork(games: games, assets: assets, assetStore: assetStore, now: now, makeID: makeID).set(
+        return try GameArtwork(games: games, assets: assets, assetStore: assetStore, now: now, makeID: makeID).store(
             gameID: gameID,
             imageData: data,
             fileExtension: URL(fileURLWithPath: asset.relativePath).pathExtension,

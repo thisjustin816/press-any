@@ -395,7 +395,8 @@ private struct Harness {
     }
 
     func setArtwork(_ bytes: Data, gameID: UUID) throws -> Game {
-        try GameArtwork(games: games, assets: assets, assetStore: store, now: { now })
+        // The test bytes aren't images, so they are stored as given.
+        try GameArtwork(games: games, assets: assets, assetStore: store, prepareImage: { ($0, $1) }, now: { now })
             .set(gameID: gameID, imageData: bytes, fileExtension: "png")
     }
 
