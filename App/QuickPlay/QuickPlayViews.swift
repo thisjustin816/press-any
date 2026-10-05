@@ -16,6 +16,9 @@ struct QuickPlaySessionView: View {
     @State private var confirmDiscard = false
     @State private var showsTechnicalInfo = false
     @State private var errorMessage: String?
+    /// The task runs again whenever the view reappears, such as after Add to Library is canceled,
+    /// so it opens Technical Info or Add to Library only the first time.
+    @State private var openedOnAppear = false
 
     var body: some View {
         Form {
@@ -68,6 +71,8 @@ struct QuickPlaySessionView: View {
             QuickPlayTechnicalInfoView(session: session)
         }
         .task {
+            guard !openedOnAppear else { return }
+            openedOnAppear = true
             if case .quickPlayInfo = ScreenshotScene.current { showsTechnicalInfo = true }
             if addsToLibrary { startPromotion() }
         }

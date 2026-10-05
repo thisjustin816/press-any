@@ -1,7 +1,7 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-04: 100 done, 32 partial and 165 missing. The specs stay the
+on 2026-10-03 and updated 2026-10-05: 104 done, 28 partial and 168 missing. The specs stay the
 source of truth for what each item means; this file tracks what's left and a suggested order.
 Update an item's row when its status changes, and move it to its area's "Done" line when it's
 finished.
@@ -34,26 +34,8 @@ None known.
 
 ## Spec conflicts to resolve
 
-Each needs a decision in `docs/decisions.md` before the work it touches:
-
-1. Autoresume scope: `dec 8` says per Game, `dec 9` and `Q146` say per Save Profile, and `D`
-   allows App, System, Game and Build only. The code follows `D`.
-2. Toolchain detection: `prod` says v1, `later 1` and `later 5` say MVP, and `later` wins.
-3. Quick Play detection: `dec 14` and `later 5` detect the toolchain in the background; `D` allows
-   skipping detection for Quick Play.
-4. Built-in layouts: `prod` names Classic, Minimal, Fullscreen and one-handed presets; `D` defines
-   Game Boy and Playtiles, and "Classic" now names a controller theme.
-5. Settings layer name: `later 7` calls the second layer Platform; the other documents and the
-   code call it System.
-6. Audio inheritance: `dec 10` makes audio inheritable; `D` makes Sound app-wide, along with
-   Controller Theme and Tap Game for Menu.
-7. Controller connected: `Q109` asks for touch-to-reveal and a user override; `D` has neither.
-8. Haptics: `Q91` says haptics can be turned off or adjusted; there's no setting.
-9. Fast Forward: the code's fixed 2x toggle isn't specified; `Q81` locks the preset list.
-10. Patch formats: `dec 5` lists IPS32 and UPS as likely; `Q78` settled on IPS and BPS.
-11. Merge review: `mvp` says merge happens with review; neither `D` nor the code has a review step.
-12. Display default: `Q108` asks for a system-authentic default look; `D` sets plain nearest
-    sampling and no post-processing on the Quick Play launch path.
+None open. The twelve listed on 2026-10-04 were settled on 2026-10-05 (`D` "Spec conflicts
+settled for the MVP").
 
 ## Inventory by area
 
@@ -109,9 +91,9 @@ camera and printer declared, and a missing one is a failed cast.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers); saves/states not verified on read |
+| partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers and stale temporary files); saves/states not verified on read |
 | missing | Storage screen by category, source vs disposable, safe cleanup | v1 | Q138 | none |
-| partial | Automatic cleanup of disposable data only | v1 | Q139 | expired Quick Play sessions removed at launch (AppContainer init); no generated-cache eviction under pressure |
+| partial | Automatic cleanup of disposable data only | v1 | Q139 | expired Quick Play sessions and staged copies left by interrupted imports removed at launch (AppContainer init); no generated-cache eviction under pressure |
 | missing | GC coordination / in-flight protection / orphan sweep in the running app | v1 | later 6 | logic only in the unused checker |
 
 Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed
@@ -192,7 +174,9 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 Done: Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
 re-import repairs damaged file; New Game vs Add Build choice, Base Build toggle; Toolchain
-findings in Import Review and Quick Play promotion.
+findings in Import Review and Quick Play promotion; Files over a size limit for their kind
+(ROM, patch, save, artwork, variable map) refused before they are read or staged; only regular
+files staged.
 
 ### Game/Build restructuring
 
@@ -233,7 +217,8 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later | dec 9/33 |  |
 
-Done: One .sav per Save Profile, atomic flush; Compatible Builds share a profile on purpose; New
+Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play
+once changed, at most every five seconds of play; Compatible Builds share a profile on purpose; New
 blank profile; duplicate profile (bytes copied, ancestry shown); Import .sav into a new profile,
 or into an existing one after confirming, keeping its old save as "<name> before import";
 Variable maps (GB Studio globals, RGBDS .sym, GBDK .noi) kept on the exact Build; Each profile
@@ -261,7 +246,10 @@ never cross Build/Profile/core/serialization context; Auto State on background, 
 switch; rolling 5; Resume Games Always/Ask/Never (default Always), inheritable System/Game/Build,
 Ask prompt, foreground policy; Auto State not restored once the profile's save is newer; Failed
 restore boots normally, keeps state, tells user; Backgrounding pauses emulation/audio; One active
-emulator session; Each state keeps a PNG thumbnail of its frame, shown in Load State.
+emulator session; Each state keeps a PNG thumbnail of its frame, shown in Load State; A failed
+battery write still saves the Auto State, and a failed close can be retried or closed without
+saving; Loading a state older than the profile's save warns and keeps the save as "<name> before
+loading state"; A separated Build's states follow it to the profile copies it plays.
 
 ### Quick Play
 
@@ -275,7 +263,8 @@ Done: Temporary sandbox, no library mutation until promotion; Time-to-first-fram
 validate, copy, hash; boot past logo (cgb_boot_fast); no optional assets; "First frame in N ms"; Use
 an existing save by copying it in; source never written; Promotion via Import Review: keep / replace
 after safety copy / new profile / discard save; Recent Quick Plays list with Keep/Import/Discard and
-resume from autosave; 24 h default retention, expired sessions purged.
+resume from autosave, skipped once the battery save is newer; Add to Library keeps the autosave as
+the Build's Auto State; 24 h default retention, expired sessions purged.
 
 ### Cheats and memory tools
 
@@ -338,8 +327,7 @@ Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inh
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Light on-screen haptics on by default, suppressed with controller | MVP | Q91 | hapticsEnabled toggled by connection; no user toggle, strength or override |
-| missing | Minimal / Fullscreen / one-handed presets | v1 | prod "Layouts, skins, touch" (see conflicts) |  |
+| missing | Minimal / Fullscreen / one-handed presets | v1 | prod "Layouts, skins, touch" |  |
 | missing | GameBaby preset; per-accessory/device calibration screen | v1 | Q113/Q114 |  |
 | missing | Lightweight editor: screen/control position+size, opacity, hitboxes, portrait/landscape, control styles, save preset | v1 | dec 22; Q119 |  |
 | missing | Edit Layout from gameplay on a frozen frame; Save for This Game vs Update Shared Preset | v1 | Q118/Q120 |  |
@@ -352,15 +340,15 @@ Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inh
 
 Done: Built-in "Game Boy" layout measured from DMG-01, default, inheritable; Built-in "Playtiles"
 layout from the Delta skin frames, START/SELECT swapped, alignment guide; Controller themes Classic
-/ Dark / Match System (app-wide), status bar follows; Tap wordmark opens game menu (44 pt, 10 pt
-slop), optional Tap Game for Menu (off), one-time hint, VoiceOver double-tap; Sliding D-pad with
+/ Dark / Match System (app-wide), status bar follows; Tap wordmark opens the game menu, with or
+without a controller (44 pt), optional Tap Game for Menu (off), one-time hint, VoiceOver Game Menu
+button; Touch Haptics Off / Light / Medium (Light), off while a controller hides the controls; Sliding D-pad with
 diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 
 ### Controllers and rumble
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Controller active hides touch controls | MVP | Q109 | hides (body and logo menu stay); user override missing |
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | Q111 | first connected used; selectPlayerOne() has no UI |
 | missing | Named reusable controller profiles, remapping, App/System/Game/Build inheritance | v1 | Q112 | fixed mapping (Select = Options or L1) |
 | missing | Controller hotkey combos and menu navigation | v1 | dec 24 | "Open Menu" is a mappable input with no default button, and Home is never taken (D "A controller opens the game menu") |
@@ -368,7 +356,8 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | missing | Separate phone and controller intensity | v1 | Q104 |  |
 
 Done: Apple GameController input (extendedGamepad); Unexpected disconnect pauses, reveals touch
-controls, shows notice; Cartridge rumble routed controller-first, phone fallback.
+controls, shows notice; A controller hides the touch controls, a touch brings them back until its
+next button press, and Settings can keep them; Cartridge rumble routed controller-first, phone fallback.
 
 ### Quick Actions
 
@@ -404,8 +393,8 @@ Spec: all v1 unless noted.
 | missing | Manual "Check for New Artwork"; cache only selected primary | v1 | Q166/Q98 |  |
 | missing | Artwork provenance (provider, URL, fetch time, rights) | v1 | later 8 |  |
 
-Done: Manual artwork from Photos/Files, remove, stored as user data; title placeholder fallback;
-Artwork follows Builds when a Game is emptied by promote/merge.
+Done: Manual artwork from Photos/Files, remove, stored as user data, downscaled to 1024 pixels;
+title placeholder fallback; Artwork follows Builds when a Game is emptied by promote/merge.
 
 ### External display / AirPlay
 
@@ -504,7 +493,7 @@ Spec: v1 baseline, Q93.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | VoiceOver labels for management UI and emulator controls | v1 |  | controls labeled "Game", double-tap opens menu; Close/Menu labeled; controls not playable by VoiceOver (accepted) |
+| partial | VoiceOver labels for management UI and emulator controls | v1 |  | the logo is the "Game Menu" button, with Close Game inside the menu; the default save's star reads "Default Save"; controls not playable by VoiceOver (accepted) |
 | partial | Dynamic Type in normal UI | v1 |  | SwiftUI defaults; controller drawing fixed size |
 | missing | Reduce Motion support | v1 |  | none |
 | partial | Large/configurable touch targets | v1 |  | hit areas extend 10-12 pt beyond drawn controls; not configurable |
@@ -515,27 +504,25 @@ Done: Good contrast / color-independent states; haptics never sole feedback.
 
 ### Settings inheritance
 
-| Status | Item | Target | Spec | Notes |
-|---|---|---|---|---|
-| partial | Settings UI per scope | MVP |  | App sheet + Game/Build sheets; no System (GB/GBC) settings screen |
+Nothing open.
 | missing | Narrow Save Profile overlay (cheats, RTC, autoresume, rewind) | v1 | dec 9; later 7 |  |
 
 Done: Resolver App -> System -> Game -> Build, only explicit overrides stored, inherited source
-shown, Reset to Inherited; Implemented keys.
+shown, Reset to Inherited; Implemented keys; Settings screens for App, System (Game Boy, Game Boy
+Color), Game and Build.
 
 ### SDK / toolchain detection
 
 Spec: later 5: MVP.
 
-| Status | Item | Target | Spec | Notes |
-|---|---|---|---|---|
-| partial | Wiring: run on import, persist per Build, Build Technical Info, Quick Play presentation, compatibility routing | MVP | later 5 | Quick Play shows findings at promotion, not during play (D allows skipping) |
+Nothing open.
 
 Done: Standalone detector seam + gbtoolsid port (engines, toolchains, music/SFX drivers,
 version/range, evidence, detector version, corpus revision), differential CI vs upstream; GB Studio
 detection, including 4.3+ by version, multi-layer (GB Studio over GBDK + audio driver); Categorical
 confidence; Runs on import and patching, stored per Build, shown in Import Review, promotion and
-Technical Info (which detects again); Feeds the save compatibility check.
+Technical Info (which detects again); Quick Play detects on demand in its Technical Info and at
+Add to Library, never before the first frame; Feeds the save compatibility check.
 
 ### Included Games
 
@@ -569,7 +556,8 @@ Spec: all missing.
 | missing | Game Boy Printer with preview/save/share | v1.1 |  | no PrinterCapability |
 | missing | RAR import (tentative) | v1.1 |  |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v1.1 |  |  |
-| missing | Video/GIF capture | v1.1 |  |  |
+| missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | D 2026-10-05 |  |
+| missing | Browse and download games: itch.io's Game Boy tag in an in-app browser and Homebrew Hub (hh.gbdev.io) by its API, from the library's + menu; downloads go straight to Import Review, with Quick Play | v1.1 | D 2026-10-05 | needs zip import; the app's first network use, so revisit the privacy manifest and label; confirm App Store guideline 4.7 wording |
 | missing | `.gbproject`-style project import/export | v1.1 |  |  |
 | missing | Better ROM comparison + BPS generation | v1.1 |  |  |
 | missing | iPad side-by-side manual/game | v1.1 |  |  |
@@ -580,4 +568,6 @@ Spec: all missing.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
+| missing | Developer tools: a watched Files or iCloud Drive folder whose new ROMs import as new Builds; GitHub releases or CI builds as Builds; a tester bug report bundle (save, state, screenshot, Build hash, toolchain) | later | D 2026-10-05 |  |
+| missing | iOS integration: Continue Playing widget, Siri and Shortcuts ("Resume <game>"), Spotlight | later | D 2026-10-05 |  |
 | missing | mGBA/GBA; network/internet link; RetroAchievements; full debugger/disassembler/VRAM; deterministic replay/movies; arbitrary .slang/.slangp; Apple TV/macOS/iPad-first polish; creator-controlled homebrew publishing; document annotations/OCR/bookmarks; community layout gallery; battery-saver mode; per-Build alternate core choice; bulk canonical rename | later |  |  |

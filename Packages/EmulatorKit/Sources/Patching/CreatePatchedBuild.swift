@@ -222,6 +222,7 @@ public struct CreatePatchedBuild: Sendable {
     }
 
     private func importPatch(at sourceURL: URL) throws -> ImportedPatch {
+        try ImportSizeLimit.patch.check(fileAt: sourceURL)
         let transactionID = makeID()
         let stagedURL = try assetStore.stageCopy(from: sourceURL, transactionID: transactionID)
         defer { try? assetStore.removeIfExists(stagedURL.deletingLastPathComponent()) }

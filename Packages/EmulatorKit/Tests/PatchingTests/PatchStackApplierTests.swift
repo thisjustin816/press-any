@@ -1,3 +1,4 @@
+import EmulatorApplication
 import Foundation
 import XCTest
 @testable import Patching
@@ -21,6 +22,13 @@ final class PatchStackApplierTests: XCTestCase {
         ]
 
         XCTAssertEqual(try PatchStackApplier().apply(items: items, to: Data("ABC".utf8)), Data("XYC".utf8))
+    }
+
+    func testAPatchOverTheSizeLimitIsNotApplied() {
+        let oversized = Data(count: Int(ImportSizeLimit.patch.bytes) + 1)
+        XCTAssertThrowsError(
+            try PatchStackApplier().apply(patch: oversized, fileExtension: "ips", to: Data(), ignoringBaseMismatch: false)
+        ) { XCTAssertEqual($0 as? ImportSizeError, .fileTooLarge(limit: ImportSizeLimit.patch.bytes)) }
     }
 
     func testUnsupportedPatchFormatIsExplicit() {

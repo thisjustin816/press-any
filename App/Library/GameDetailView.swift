@@ -25,6 +25,7 @@ struct GameDetailView: View {
 
     @StateObject private var model: GameDetailViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var newProfileName = "Main"
     @State private var showNewProfile = false
     @State private var fileRequest: FileRequest?
@@ -348,7 +349,11 @@ struct GameDetailView: View {
     private func buildRow(_ build: Build) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
+                // At accessibility sizes BASE gets its own line, so the name isn't squeezed.
+                let nameLayout = typeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 3))
+                    : AnyLayout(HStackLayout(spacing: 5))
+                nameLayout {
                     Text(build.displayName)
                     if build.isBase {
                         Text("BASE")
@@ -368,7 +373,7 @@ struct GameDetailView: View {
                 }
             }
             Spacer()
-            if model.game?.preferredBuildID == build.id {
+            if model.preferredBuild?.id == build.id {
                 Image(systemName: "star.fill")
                     .foregroundStyle(.yellow)
                     .accessibilityLabel("Preferred Build")
@@ -447,7 +452,7 @@ struct GameDetailView: View {
                 }
             }
             Spacer()
-            if model.game?.preferredSaveProfileID == profile.id {
+            if model.defaultSaveProfile?.id == profile.id {
                 Image(systemName: "star.fill")
                     .foregroundStyle(.yellow)
                     .accessibilityLabel("Default Save")

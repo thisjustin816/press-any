@@ -38,6 +38,7 @@ public struct PromoteQuickPlay: Sendable {
     private let committer: ImportCommitter
     private let workspace: QuickPlayWorkspace
     private let profiles: any SaveProfileRepository
+    private let states: any SaveStateRepository
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
     private let persistentSaveService: PersistentSaveService
@@ -49,6 +50,7 @@ public struct PromoteQuickPlay: Sendable {
         committer: ImportCommitter,
         workspace: QuickPlayWorkspace,
         profiles: any SaveProfileRepository,
+        states: any SaveStateRepository,
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
         now: @escaping @Sendable () -> Date = Date.init,
@@ -58,6 +60,7 @@ public struct PromoteQuickPlay: Sendable {
         self.committer = committer
         self.workspace = workspace
         self.profiles = profiles
+        self.states = states
         self.assets = assets
         self.assetStore = assetStore
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
@@ -140,9 +143,65 @@ public struct PromoteQuickPlay: Sendable {
         } catch {
             throw PromoteQuickPlayError.importedButSaveFailed(gameID: result.game.id, buildID: result.build.id)
         }
+        // The resume point is a convenience: the Build and its save are in the library either way.
+        if let promotedProfile {
+            try? adoptAutoState(of: session, buildID: result.build.id, profileID: promotedProfile.id)
+        }
         // Promotion is complete; a sandbox left behind is removed by retention.
         try? workspace.discard(sessionID: session.id)
         return QuickPlayPromotionResult(importResult: result, saveProfile: promotedProfile, safetyCopy: safetyCopy)
+    }
+
+    /// Brings the session's autosave in as the Build's Auto State for the promoted profile, so the
+    /// first launch resumes there under the usual Resume Games policy. An autosave taken before
+    /// the session's battery save was last written is left out, as it would roll that save back.
+    private func adoptAutoState(of session: QuickPlaySession, buildID: UUID, profileID: UUID) throws {
+        guard assetStore.fileExists(at: session.autoStateURL),
+              let record = session.autoStateRecord(files: assetStore),
+              !session.batteryIsNewerThanAutoState(files: assetStore)
+        else { return }
+        let payload = try assetStore.readData(at: session.autoStateURL)
+        let stateID = makeID()
+        let destination = assetStore.stateURL(stateID: stateID)
+        let relativePath = try assetStore.managedRelativePath(for: destination)
+        try assetStore.writeDataAtomically(payload, to: destination)
+
+        // Taken after the save was written, so the newer-save check offers it.
+        let timestamp = now()
+        let asset = ManagedAsset(
+            id: makeID(),
+            kind: .saveState,
+            storageClass: .userData,
+            contentSHA256: assetStore.hashData(payload),
+            byteLength: Int64(payload.count),
+            relativePath: relativePath,
+            integrityStatus: .verified,
+            createdAt: timestamp
+        )
+        do {
+            try assets.insertAsset(asset)
+            do {
+                let existing = try states.fetchSaveStates(buildID: buildID, saveProfileID: profileID)
+                try states.insertSaveState(SaveState(
+                    id: stateID,
+                    buildID: buildID,
+                    saveProfileID: profileID,
+                    core: record.core,
+                    stateSerializationVersion: record.stateSerializationVersion,
+                    stateAssetID: asset.id,
+                    kind: .auto,
+                    autoSequence: (existing.compactMap(\.autoSequence).max() ?? 0) + 1,
+                    playtimeSeconds: record.playtimeSeconds,
+                    createdAt: timestamp
+                ))
+            } catch {
+                try? assets.deleteAsset(id: asset.id)
+                throw error
+            }
+        } catch {
+            try? assetStore.removeIfExists(destination)
+            throw error
+        }
     }
 
     private func createProfile(gameID: UUID, name: String, temporaryBattery: Data?, writtenByBuildID: UUID) throws -> SaveProfile {

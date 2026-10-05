@@ -75,6 +75,7 @@ final class AppContainer {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
             assetStore: fileStore,
@@ -177,6 +178,7 @@ final class AppContainer {
             committer: importCommitter,
             workspace: quickPlayWorkspace,
             profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
             assets: repositories.assets,
             assetStore: fileStore
         )
@@ -184,6 +186,7 @@ final class AppContainer {
         settingsResolver = SettingsResolver(store: repositories.settings)
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
+        try? fileStore.removeStagedFiles()
     }
 
     /// The file behind a Game's artwork, or nil when it has none or the file is missing.
@@ -262,6 +265,16 @@ final class AppContainer {
     /// App-wide. Unset or unreadable means off: only the logo opens the menu.
     func tapGameForMenu() -> Bool {
         appSetting(Bool.self, .tapGameForMenu) ?? false
+    }
+
+    /// App-wide. Unset or unreadable means on: a controller hides the touch controls until a touch.
+    func hidesTouchControlsWithController() -> Bool {
+        appSetting(Bool.self, .hideTouchControlsWithController) ?? true
+    }
+
+    /// App-wide. Unset or unreadable means light.
+    func touchHaptics() -> TouchHaptics {
+        appSetting(TouchHaptics.self, .touchHaptics) ?? .light
     }
 
     /// A setting stored at the app scope only, or nil when it's unset or unreadable.

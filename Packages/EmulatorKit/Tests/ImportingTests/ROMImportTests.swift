@@ -26,6 +26,17 @@ final class ROMImportTests: XCTestCase {
         XCTAssertEqual(try harness.sourceROMFileCount(), 1)
     }
 
+    func testAFileLargerThanAnyCartridgeIsRefusedBeforeItIsStaged() throws {
+        let harness = try ImportHarness.make()
+        let huge = try ImportTestFiles.sparse(at: harness.external.appendingPathComponent("huge.gb"), byteCount: 9 * 1_048_576)
+
+        XCTAssertThrowsError(try harness.analyzer.analyzeROM(at: huge, targetGameID: nil)) {
+            XCTAssertEqual($0 as? ImportSizeError, .fileTooLarge(limit: 8 * 1_048_576))
+            XCTAssertEqual($0.localizedDescription, "This file is larger than 8 MB, the most this kind of file can be.")
+        }
+        XCTAssertEqual(ImportTestFiles.stagedItems(under: harness.store.rootURL), [])
+    }
+
     func testImportReviewShowsToolchainFindingsAndTheBuildKeepsThem() throws {
         let harness = try ImportHarness.make()
         // Turbo Rascal's marker is the header title "TRSE GB" with its terminating zero.

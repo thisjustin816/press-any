@@ -27,6 +27,11 @@ final class GameplayViewController: UIViewController {
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
     private let soundMode: SoundMode
+    private let hidesTouchControlsWithController: Bool
+    private let touchHaptics: TouchHaptics
+    /// Set by a touch while a controller hides the touch controls, and cleared by the controller's
+    /// next button press.
+    private var touchControlsRevealed = false
     /// Clear buttons over the layout's menu areas, the logo and, with Tap Game for Menu, the
     /// picture. They open the game menu with or without a controller connected.
     private var menuButtons: [GameMenuButton] = []
@@ -50,6 +55,8 @@ final class GameplayViewController: UIViewController {
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch,
+        hidesTouchControlsWithController: Bool = true,
+        touchHaptics: TouchHaptics = .light,
         controllerMonitor: PhysicalControllerMonitor = PhysicalControllerMonitor()
     ) {
         self.runtime = runtime
@@ -59,6 +66,8 @@ final class GameplayViewController: UIViewController {
         self.controllerTheme = controllerTheme
         self.tapGameForMenu = tapGameForMenu
         self.soundMode = soundMode
+        self.hidesTouchControlsWithController = hidesTouchControlsWithController
+        self.touchHaptics = touchHaptics
         self.firstFrameClock = firstFrameClock
         self.autoResumePolicy = autoResumePolicy
         self.launchMessage = launchMessage
@@ -109,7 +118,9 @@ final class GameplayViewController: UIViewController {
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         if isBeingDismissed || navigationController?.isBeingDismissed == true {
-            stopRuntime()
+            // Close and Add to Library stop first and ask when saving fails; this covers any
+            // other dismissal, which has no screen left to ask from.
+            try? stopRuntime()
         }
     }
 
@@ -246,14 +257,36 @@ final class GameplayViewController: UIViewController {
         }
     }
 
+    /// A state carries the game save from when it was made, so loading one older than the
+    /// current save asks first and keeps the newer save as a copy.
     private func loadState(_ state: SaveState) {
         guard let states = runtime as? any SaveStateRuntime else { return }
         do {
-            try states.loadState(state)
-            showTransientMessage("State loaded.")
+            guard try states.loadingWouldRollBackSave(state) else {
+                try states.loadState(state)
+                showTransientMessage("State loaded.")
+                return
+            }
         } catch {
             showTransientMessage("Couldn’t load that state: \(error)")
+            return
         }
+        let alert = UIAlertController(
+            title: "Load an Older State?",
+            message: "This state is older than the game’s save, so loading it takes the save back to then. The current save is kept as a copy named “before loading state”.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Load State", style: .default) { [weak self] _ in
+            guard let states = self?.runtime as? any SaveStateRuntime else { return }
+            do {
+                try states.loadStateKeepingCopy(state)
+                self?.showTransientMessage("State loaded. The newer save was kept as a copy.")
+            } catch {
+                self?.showTransientMessage("Couldn’t load that state: \(error)")
+            }
+        })
+        present(alert, animated: true)
     }
 
     private func configureRuntimeLoop() {
@@ -272,6 +305,11 @@ final class GameplayViewController: UIViewController {
         }
         driver.onError = { [weak self] error in
             DispatchQueue.main.async { self?.presentRuntimeError(error) }
+        }
+        driver.onSaveError = { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.showTransientMessage("Couldn’t save the game. Free up space on your iPhone; it will keep trying.")
+            }
         }
     }
 
@@ -292,27 +330,49 @@ final class GameplayViewController: UIViewController {
         touchControls.pictureOpensMenu = tapGameForMenu
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
-        controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
+        controllerMonitor.onInputChanged = { [weak self] controllerInput in
+            guard let self else { return }
+            self.input.setController(controllerInput)
+            if self.touchControlsRevealed, controllerInput != EmulatorInputState() {
+                self.touchControlsRevealed = false
+                self.updateTouchControls(controllerConnected: true)
+            }
+        }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }
-            self.touchControls.showsControls = !connected
-            self.touchControls.hapticsEnabled = !connected
+            self.touchControlsRevealed = false
+            self.updateTouchControls(controllerConnected: connected)
             self.rumble.setController(self.controllerMonitor.activeController)
         }
         controllerMonitor.onUnexpectedDisconnect = { [weak self] in
             guard let self else { return }
             self.userPaused = true
             self.pauseGameplay()
-            self.touchControls.showsControls = true
-            self.touchControls.hapticsEnabled = true
+            self.touchControlsRevealed = false
+            self.updateTouchControls(controllerConnected: false)
             self.input.resetController()
             self.showTransientMessage("Controller disconnected. Game paused.")
         }
 
-        let connected = controllerMonitor.isConnected
-        touchControls.showsControls = !connected
-        touchControls.hapticsEnabled = !connected
+        updateTouchControls(controllerConnected: controllerMonitor.isConnected)
         rumble.setController(controllerMonitor.activeController)
+    }
+
+    /// With a controller connected the touch controls hide, unless Settings keeps them or a touch
+    /// brought them back. Their haptics follow them, so a controller player feels only rumble.
+    private func updateTouchControls(controllerConnected: Bool) {
+        let shows = !controllerConnected || !hidesTouchControlsWithController || touchControlsRevealed
+        touchControls.showsControls = shows
+        touchControls.hapticIntensity = shows ? touchHaptics.intensity : nil
+    }
+
+    /// Touches reach this controller only while the touch controls are hidden, since they take
+    /// every touch otherwise; the menu buttons take their own.
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        guard !touchControls.showsControls else { return }
+        touchControlsRevealed = true
+        updateTouchControls(controllerConnected: controllerMonitor.isConnected)
     }
 
     private func applyLayout(_ layout: TouchControlLayout) {
@@ -328,6 +388,11 @@ final class GameplayViewController: UIViewController {
     private func placeMenuButtons(over areas: [TouchRect]) {
         while menuButtons.count < areas.count {
             let button = GameMenuButton(menu: gameMenu)
+            // Where a menu area overlaps a control, as on narrow screens, the control wins.
+            button.yieldsTouch = { [weak self] point in
+                guard let self, self.touchControls.showsControls else { return false }
+                return !self.touchControls.layout.opensMenu(at: TouchPoint(x: point.x, y: point.y))
+            }
             view.insertSubview(button, aboveSubview: touchControls)
             menuButtons.append(button)
         }
@@ -356,7 +421,9 @@ final class GameplayViewController: UIViewController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.backgrounded() }
+            // Saved before this returns: iOS can suspend the app soon after, and a hop to a later
+            // main-queue turn could leave the writes half done.
+            MainActor.assumeIsolated { self?.backgrounded() }
         })
         lifecycleObservers.append(center.addObserver(
             forName: UIApplication.willEnterForegroundNotification,
@@ -368,6 +435,11 @@ final class GameplayViewController: UIViewController {
     }
 
     private func backgrounded() {
+        // Asks iOS for time to finish writing the save and Auto State before suspending.
+        let saving = UIApplication.shared.beginBackgroundTask(withName: "Save game")
+        defer {
+            if saving != .invalid { UIApplication.shared.endBackgroundTask(saving) }
+        }
         driver.stop()
         audio.pause()
         touchControls.cancelInput()
@@ -434,25 +506,61 @@ final class GameplayViewController: UIViewController {
         }
     }
 
+    private enum Exit {
+        case close
+        case addToLibrary
+    }
+
     private func closeTapped() {
-        stopRuntime()
-        dismiss(animated: true)
-        onClose?()
+        finish(.close)
     }
 
     private func addToLibraryTapped() {
-        stopRuntime()
-        dismiss(animated: true)
-        onAddToLibrary?()
+        finish(.addToLibrary)
     }
 
-    private func stopRuntime() {
+    /// Saves and closes the game, then closes or adds it to the library. When saving fails the
+    /// game stays open and paused, and the player chooses to try again or to close without the
+    /// save.
+    private func finish(_ exit: Exit) {
+        do {
+            try stopRuntime()
+        } catch {
+            let alert = UIAlertController(
+                title: "Couldn’t Save",
+                message: "The game couldn’t be saved, so closing now would lose your latest progress. Free up space on your iPhone, then try again. (\(error))",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Try Again", style: .default) { [weak self] _ in
+                self?.finish(exit)
+            })
+            alert.addAction(UIAlertAction(title: "Close Without Saving", style: .destructive) { [weak self] _ in
+                guard let self else { return }
+                try? self.runtime.stop(createAutoState: true, discardUnsaved: true)
+                self.stopped = true
+                self.leave(exit)
+            })
+            present(alert, animated: true)
+            return
+        }
+        leave(exit)
+    }
+
+    private func leave(_ exit: Exit) {
+        dismiss(animated: true)
+        switch exit {
+        case .close: onClose?()
+        case .addToLibrary: onAddToLibrary?()
+        }
+    }
+
+    /// A failed stop leaves the session open, so `stopped` stays false and the next call retries.
+    private func stopRuntime() throws {
         guard !stopped else { return }
-        stopped = true
         driver.stop()
         audio.stop()
-        do { try runtime.stop(createAutoState: true) }
-        catch { /* Closing must remain possible even if persistence fails. */ }
+        try runtime.stop(createAutoState: true)
+        stopped = true
     }
 
     private func presentRuntimeError(_ error: Error) {
@@ -498,6 +606,9 @@ final class GameplayViewController: UIViewController {
 
 /// A clear button over a menu area that opens the game menu where the finger landed.
 private final class GameMenuButton: UIButton {
+    /// Whether a point in the superview belongs to something under the button instead.
+    var yieldsTouch: ((CGPoint) -> Bool)?
+
     init(menu: UIMenu) {
         super.init(frame: .zero)
         self.menu = menu
@@ -507,6 +618,11 @@ private final class GameMenuButton: UIButton {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        guard super.point(inside: point, with: event) else { return false }
+        return !(yieldsTouch?(convert(point, to: superview)) ?? false)
     }
 
     override func menuAttachmentPoint(for configuration: UIContextMenuConfiguration) -> CGPoint {

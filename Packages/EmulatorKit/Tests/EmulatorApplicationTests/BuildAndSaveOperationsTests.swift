@@ -150,6 +150,24 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertNil(try harness.games.fetchGame(id: harness.game.id))
     }
 
+    func testAnOversizedSaveIsNotImported() throws {
+        let harness = try Harness.make()
+        let huge = try ImportTestFiles.sparse(
+            at: FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).sav"),
+            byteCount: 5 * 1_048_576
+        )
+
+        XCTAssertThrowsError(try ImportBatterySave(
+            games: harness.games,
+            profiles: harness.profiles,
+            assets: harness.assets,
+            assetStore: harness.store
+        ).execute(gameID: harness.game.id, sourceURL: huge, name: "Huge")) {
+            XCTAssertEqual($0 as? ImportSizeError, .fileTooLarge(limit: ImportSizeLimit.batterySave.bytes))
+        }
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id), [])
+    }
+
     func testABaseBuildCanBeMarkedAfterImportButNotAPatchedOne() throws {
         let harness = try Harness.make(twoBuilds: true)
         let hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
@@ -301,6 +319,7 @@ private struct Harness {
     let games: InMemoryGameRepository
     let builds: InMemoryBuildRepository
     let profiles: InMemorySaveProfileRepository
+    let states = InMemorySaveStateRepository()
     let assets: InMemoryAssetRepository
     let store: ManagedFileStore
 
@@ -351,6 +370,7 @@ private struct Harness {
             games: games,
             builds: builds,
             profiles: profiles,
+            states: states,
             recipes: InMemoryPatchRecipeRepository(),
             assets: assets,
             assetStore: store,
@@ -375,7 +395,8 @@ private struct Harness {
     }
 
     func setArtwork(_ bytes: Data, gameID: UUID) throws -> Game {
-        try GameArtwork(games: games, assets: assets, assetStore: store, now: { now })
+        // The test bytes aren't images, so they are stored as given.
+        try GameArtwork(games: games, assets: assets, assetStore: store, prepareImage: { ($0, $1) }, now: { now })
             .set(gameID: gameID, imageData: bytes, fileExtension: "png")
     }
 

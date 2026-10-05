@@ -130,7 +130,8 @@ public struct TouchControlLayout: Equatable, Sendable {
         self.dpadDeadZoneFraction = min(max(dpadDeadZoneFraction, 0), 0.49)
     }
 
-    /// Whether a tap at `point` opens the menu. Game Boy controls take precedence.
+    /// Whether a tap at `point` opens the menu: it's in a menu area and not on a control, which
+    /// takes precedence where they overlap.
     public func opensMenu(at point: TouchPoint) -> Bool {
         guard ![dpadHitArea, a, b, start, select].contains(where: { $0.contains(point) }) else { return false }
         return menuAreas.contains { $0.contains(point) }

@@ -269,6 +269,19 @@ extension EmulationSessionTests {
         XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1, 2, 3]))
     }
 
+    func testAnOversizedFileReplacesNothing() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let huge = try ImportTestFiles.sparse(
+            at: FileManager.default.temporaryDirectory.appendingPathComponent("import-\(UUID().uuidString).sav"),
+            byteCount: 5 * 1_048_576
+        )
+        XCTAssertThrowsError(try harness.replaceSave().execute(profileID: harness.profile.id, sourceURL: huge)) {
+            XCTAssertEqual($0 as? ImportSizeError, .fileTooLarge(limit: ImportSizeLimit.batterySave.bytes))
+        }
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 1)
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1, 2, 3]))
+    }
+
     func testAutoStateIsNotOfferedOnceASharedProfileSaveIsNewer() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
         let early = Date(timeIntervalSince1970: 1_700_000_000)
@@ -361,6 +374,99 @@ extension EmulationSessionTests {
     }
 }
 
+extension EmulationSessionTests {
+    func testTheGameSaveIsWrittenDuringPlayAtMostEveryFiveSeconds() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        try XCTUnwrap(harness.factory.cores.last).writeBattery(Data([3, 4]))
+
+        for _ in 0..<298 {
+            _ = try session.stepFrame()
+            XCTAssertFalse(try session.flushBatteryIfChanged())
+        }
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1, 2]), "under five seconds played")
+
+        _ = try session.stepFrame()
+        XCTAssertTrue(try session.flushBatteryIfChanged())
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([3, 4]))
+
+        for _ in 0..<300 { _ = try session.stepFrame() }
+        XCTAssertFalse(try session.flushBatteryIfChanged(), "an unchanged save isn't written again")
+    }
+
+    func testAFailedBatteryWriteStillSavesTheAutoState() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        _ = try session.stepFrame()
+        try harness.breakSaveDirectory()
+
+        XCTAssertThrowsError(try session.background()) { error in
+            XCTAssertEqual((error as? SessionSaveError)?.failures.count, 1, "only the battery write failed")
+        }
+        let autos = try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
+        XCTAssertEqual(autos.map(\.kind), [.auto])
+        XCTAssertNotNil(try session.resumableAutoState(for: harness.contextA), "the state is the way back to the unsaved game")
+    }
+
+    func testAFailedStopStaysOpenToRetryOrToCloseWithoutSaving() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        try XCTUnwrap(harness.factory.cores.last).writeBattery(Data([5]))
+        try harness.breakSaveDirectory()
+
+        XCTAssertThrowsError(try session.stop(createAutoState: true))
+        XCTAssertEqual(session.state, .paused(harness.contextA))
+        try harness.repairSaveDirectory()
+        try session.stop(createAutoState: true)
+        XCTAssertEqual(session.state, .stopped)
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([5]))
+
+        let second = harness.makeSession()
+        try second.start(context: harness.contextA)
+        try XCTUnwrap(harness.factory.cores.last).writeBattery(Data([6]))
+        try harness.breakSaveDirectory()
+        XCTAssertThrowsError(try second.stop(createAutoState: true))
+        let statesBefore = try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
+
+        try second.stop(createAutoState: true, discardUnsaved: true)
+        XCTAssertEqual(second.state, .stopped)
+        XCTAssertEqual(
+            try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id),
+            statesBefore,
+            "closing without saving writes nothing"
+        )
+    }
+
+    func testLoadingAnOlderStateWarnsAndKeepsTheNewerSaveAsACopy() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1]))
+        let first = harness.makeSession(now: Date(timeIntervalSince1970: 1_700_000_000))
+        try first.start(context: harness.contextA)
+        let old = try first.saveManualState(label: "old")
+        try first.stop()
+        _ = try ReplaceBatterySave(
+            profiles: harness.profiles,
+            assets: harness.assets,
+            assetStore: harness.store,
+            now: { Date(timeIntervalSince1970: 1_700_000_100) }
+        ).execute(profileID: harness.profile.id, sourceURL: harness.writeExternalFile(Data([9])))
+
+        let second = harness.makeSession(now: Date(timeIntervalSince1970: 1_700_000_200))
+        try second.start(context: harness.contextA)
+        XCTAssertTrue(try second.loadingWouldRollBackSave(old))
+        XCTAssertFalse(try second.loadingWouldRollBackSave(second.saveManualState(label: "new")))
+
+        let copy = try second.loadStateKeepingCopy(old)
+        try second.stop()
+
+        XCTAssertEqual(copy.displayName, "Main before loading state")
+        XCTAssertEqual(try harness.batteryData(of: copy), Data([9]))
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1]), "the state's save, as chosen")
+    }
+}
+
 /// Fails every delete, so pruning old Auto States fails.
 private final class UndeletableSaveStateRepository: SaveStateRepository, @unchecked Sendable {
     private let inner = InMemorySaveStateRepository()
@@ -372,6 +478,9 @@ private final class UndeletableSaveStateRepository: SaveStateRepository, @unchec
     }
     func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] {
         try inner.fetchSaveStates(saveProfileID: saveProfileID)
+    }
+    func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {
+        try inner.reassignSaveStates(buildID: buildID, fromSaveProfileID: fromSaveProfileID, toSaveProfileID: toSaveProfileID)
     }
     func deleteSaveState(id: UUID) throws { throw Refused() }
 }
@@ -495,6 +604,17 @@ private struct SessionHarness {
             store: store,
             factory: factory
         )
+    }
+
+    /// Puts a file where the profile's save directory goes, so writing the battery save fails.
+    func breakSaveDirectory() throws {
+        let directory = store.persistentSaveURL(profileID: profile.id).deletingLastPathComponent()
+        try? FileManager.default.removeItem(at: directory)
+        try Data().write(to: directory)
+    }
+
+    func repairSaveDirectory() throws {
+        try FileManager.default.removeItem(at: store.persistentSaveURL(profileID: profile.id).deletingLastPathComponent())
     }
 
     func replaceSave() -> ReplaceBatterySave {

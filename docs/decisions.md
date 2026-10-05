@@ -3,6 +3,110 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Import hardening
+
+**Decision.** Every file the player picks is treated as untrusted. Each import checks the file's
+size before reading or staging it, against a limit for its kind: 8 MB for a ROM, the largest a
+header can declare; 64 MB for a patch; 4 MB for a battery save, since TPP1 cartridges can declare
+2 MB of RAM; 20 MB for artwork; and 4 MB for a variable map. A larger file is refused with a
+message saying so. Staging copies only regular files, never a link or a folder, under a fixed
+name, and the app empties the staging folder at launch to clear copies an interrupted import left.
+An IPS patch's trailing size can only truncate the result, as in Lunar IPS; a larger one is
+ignored. Artwork is decoded when it is set and stored as a PNG no larger than 1024 pixels on its
+long edge, and a file that isn't a readable image is refused. The SameBoy bridge hands battery
+saves to the core in a zero-padded copy, because SameBoy reads up to 48 bytes past the cartridge
+RAM when a save is longer than the RAM. SameBoy also doesn't check the allocation it makes when
+loading a ROM, so the bridge relies on these limits, and the 64 MB cap on patch results, to keep
+that allocation small.
+
+**Why.** A review with fuzzers and AddressSanitizer found a heap over-read in SameBoy's battery
+loading, imports that read whole files of any size into memory, staging that trusted the picked
+file's name and copied links, an IPS trailer that could grow any ROM to 16 MB, and artwork stored
+at whatever size it was picked. Each could be reached with a file a player picked.
+
+## 2026-10-05: Layouts at accessibility text sizes
+
+**Decision.** At accessibility text sizes the library grid shows one column, with each title
+wrapping in full, a Build's BASE tag moves to its own line under the name, and a full SHA-256
+shows one 16-character group a line, each shrinking to fit rather than breaking. The screenshot
+workflow can run at the largest size to check this.
+
+## 2026-10-05: Future features, and the layout keeps its name
+
+**Decision.** v1.1 adds browsing and downloading games from itch.io's Game Boy tag, in an in-app
+browser, and from Homebrew Hub (hh.gbdev.io) through its API, from the library's + menu.
+Downloads go straight to Import Review, with Quick Play. Video capture in v1.1 also frames
+screenshots and clips like a Game Boy. Later: developer tools (a watched Files or iCloud Drive
+folder whose new ROMs import as new Builds, GitHub releases or CI builds as Builds, and a tester
+bug report bundle with the save, state, screenshot, Build hash and toolchain) and iOS integration
+(a Continue Playing widget, Siri and Shortcuts, Spotlight). The controller layout keeps the name
+Game Boy, which describes the hardware it recreates, as the system names do; the App Store name,
+keywords and icon carry no Nintendo trademarks.
+
+**Why.** Most Game Boy homebrew is published on itch.io and catalogued by Homebrew Hub, and the
+app's Builds, toolchain detection and variable maps already serve the people who make it.
+
+## 2026-10-05: Save safety fixes
+
+**Decision.** A review found several ways a save could be lost or rolled back, and each now
+behaves as follows:
+
+- **In-game saves reach disk during play.** The game's battery save is written once it changes,
+  checked at most every five seconds of play, in library sessions and Quick Play alike. A crash or
+  a killed app loses at most those few seconds of in-game saving.
+- **Background and close attempt every save step.** A failed battery write no longer skips the
+  Auto State, which is then the way back to that progress. When a close fails, the game stays open
+  so the save can be retried, or closed without saving.
+- **Loading an older state warns first.** When a state is older than its profile's save, loading
+  it would take the save back with it. The app asks, and when the player goes ahead it keeps the
+  current save as "<profile> before loading state", as Replace Save from File does.
+- **Quick Play resumes only from a current autosave.** An autosave taken before `battery.sav` was
+  last written is skipped and the game boots from its save. Each autosave records the battery file
+  it was taken with, since file dates are too coarse to order two writes made moments apart.
+- **Make Separate Game takes a moved Build's states along.** They move to the profile copies the
+  Build plays, so Load State still lists them and deleting an original profile leaves them. A copy
+  keeps its original's save time, so its Auto States still resume.
+- **Add to Library keeps the Quick Play resume point.** The session's autosave becomes the new
+  Build's Auto State for the promoted profile, and the first launch resumes there under Resume
+  Games. Keeping the existing profile brings no state, since the state holds the discarded save.
+- **Writes are durable.** Atomic writes use `F_FULLFSYNC` where available and sync the directory
+  after the rename, and Quick Play writes through the same writer. Check Library Files removes
+  temporary files an interrupted write left behind, once they are ten minutes old.
+
+**Why.** Each of these lost a save, or a resume point, in a case a player could reach: a crash
+between backgrounds, a full disk, loading an old state, or reorganizing the library.
+
+## 2026-10-05: Spec conflicts settled for the MVP
+
+**Decision.** Each conflict the backlog listed between the specs, or between a spec and the code,
+is settled, and the specs are updated to match:
+
+- **Auto Resume** is set at App, System, Game and Build scope, like other settings. Save Profiles
+  don't override it (`dec 8`, `dec 9` and `Q146` updated).
+- **Toolchain detection** is an MVP feature, as `later 1` and `later 5` say (`prod` updated).
+- **Quick Play detection** runs on demand, when Technical Info or Add to Library opens, and never
+  before the first frame (`dec 14` updated).
+- **Built-in layouts** are Game Boy and Playtiles; Minimal, Fullscreen and one-handed presets come
+  with the layout editor, and "Classic" names a controller theme (`prod` updated).
+- **The second settings layer** is called System (`later 7` updated).
+- **Sound**, whether a game follows the silent switch, stays app-wide; other audio options can be
+  inheritable when they arrive (`dec 10` updated).
+- **With a controller connected**, a touch outside the logo brings the touch controls back until
+  the next controller button press, and Settings > Controls has Hide Touch Controls with a
+  Controller, on by default, as `Q109` says.
+- **Touch Haptics** in Settings > Controls offers Off, Light and Medium, Light by default, and
+  stays off while a controller is in use, as `Q91` says.
+- **Fast Forward** stays a 2x toggle for the MVP; `Q81`'s presets arrive with the play-feel work.
+- **Merging** reviews in the merge sheet, which shows Move or Copy, the target Game, and the Save
+  Profiles and artwork that come along before Merge. That is the review `mvp` asks for.
+- **Patch formats** are IPS and BPS for v1, as `Q78` says; IPS32, UPS and others come later
+  (`dec 5` updated).
+- **The default look** stays raw pixels for the MVP. `Q108`'s system-authentic default arrives
+  with the curated shader library and the community survey it requires.
+
+The MVP also gets a System settings screen for Game Boy and Game Boy Color, which the code
+already reads but nothing could edit.
+
 ## 2026-10-04: Design review changes
 
 **Decision.** Quick Play's game menu shows Save State grayed out with "Add to Library to save
@@ -16,7 +120,8 @@ spell them (GB Studio, GB BASIC), GBDK-2020 versions without the detector's "202
 ranges as "x to y" and open ranges as "x or later", and an audio driver's edition, such as
 hUGETracker's SuperDisk, beside its kind rather than as a version. Settings groups its items
 under Controls, Display, Sound and Playing. The Playtiles layout draws the Game Boy bezel in the
-skin's screen frame around the picture, where the black background showed before. The Dark
+skin's screen frame around the picture, where the black background showed before; under Fill the
+picture fills the frame, so there is none. The Dark
 controller theme's bezel is a charcoal lighter than the body, so it reads as its own part on
 both layouts. The library's view menu has Show Titles for the grid, on by default, for box art
 that carries the name. A Game's default Save Profile is starred, as its preferred Build is, and

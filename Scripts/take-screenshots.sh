@@ -9,7 +9,9 @@ set -euo pipefail
 # ROMS is `hero` (the default), `all`, or a comma-separated list of manifest tags and filenames.
 # Optional environment: SHOTS (`summary`, the default: one of each screen; `every-rom`: each
 # ROM's game, Technical Info and gameplay), DEVICE (simulator name), APPEARANCE (light or dark),
-# IMPORT_ROM (the file the import review opens, which is never seeded).
+# TEXT_SIZE (`default`, or a `simctl ui content_size` value such as
+# accessibility-extra-extra-extra-large), IMPORT_ROM (the file the import review opens, which is
+# never seeded).
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
@@ -18,6 +20,7 @@ roms="${1:-hero}"
 output="${2:-screenshots}"
 device="${DEVICE:-iPhone 17 Pro}"
 appearance="${APPEARANCE:-light}"
+text_size="${TEXT_SIZE:-default}"
 import_rom="${IMPORT_ROM:-gbdk450-badsum.gb}"
 shots="${SHOTS:-summary}"
 derived_data="build/screenshots/DerivedData"
@@ -94,6 +97,7 @@ done <<<"$plan"
 echo "Seeding: ${files[*]}"
 
 mkdir -p "$output"
+output="$(cd "$output" && pwd)"
 log="$output/app.log"
 : >"$log"
 
@@ -124,6 +128,9 @@ for attempt in 1 2 3 4 5 6; do
 done
 xcrun simctl terminate "$udid" com.apple.Preferences 2>/dev/null || true
 xcrun simctl ui "$udid" appearance "$appearance"
+if [ "$text_size" != default ]; then
+  xcrun simctl ui "$udid" content_size "$text_size"
+fi
 xcrun simctl status_bar "$udid" override --time 9:41 --dataNetwork wifi --wifiBars 3 \
   --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
 xcrun simctl install "$udid" "$app"
@@ -168,7 +175,7 @@ capture() {
   rm -f "$log.tmp"
   local attempt
   for attempt in 1 2 3; do
-    xcrun simctl launch --terminate-running-process --stdout="$PWD/$log.tmp" --stderr="$PWD/$log.tmp" \
+    xcrun simctl launch --terminate-running-process --stdout="$log.tmp" --stderr="$log.tmp" \
       "$udid" "$bundle_id" -ScreenshotScene "$scene" "$@" >/dev/null && break
     if ((attempt == 3)); then
       collect_diagnostics
@@ -202,12 +209,16 @@ rm -f "$log.tmp"
 
 # Pop-up menus open only on a tap, so the UI tests in ScreenshotTests/ open them and save a
 # screenshot of each. A menu that doesn't open fails the run once everything else is saved.
-menus="$PWD/$output/menus"
-menu_status=0
+menus="$output/menus"
+# Without -quiet, which hides why a test failed; the filter keeps the results and failures.
+set +e
 TEST_RUNNER_SCREENSHOT_ROMS="$staging" TEST_RUNNER_SCREENSHOT_OUTPUT="$menus" \
   TEST_RUNNER_SCREENSHOT_GAME_ROM="$game_rom" TEST_RUNNER_SCREENSHOT_PLAY_ROM="$play_rom" \
-  xcodebuild -quiet test -project PressAny.xcodeproj -scheme PressAnyScreenshots \
-  -destination "id=$udid" -derivedDataPath "$derived_data" || menu_status=$?
+  xcodebuild test -project PressAny.xcodeproj -scheme PressAnyScreenshots \
+  -destination "id=$udid" -derivedDataPath "$derived_data" 2>&1 |
+  grep -E 'error:|Test Case .*(passed|failed)|Failing tests|\*\* TEST'
+menu_status=${PIPESTATUS[0]}
+set -e
 for file in "$menus"/*.png; do
   [[ -e $file ]] || continue
   shot=$((shot + 1))

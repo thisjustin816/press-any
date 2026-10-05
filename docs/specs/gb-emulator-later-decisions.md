@@ -176,7 +176,7 @@ with the session and transfer them transactionally. No shared mutable save path.
 
 ## 7. Settings, input and display
 
-App -> Platform -> Game -> Build inheritance with unset versus explicit values
+App -> System -> Game -> Build inheritance with unset versus explicit values
 and Reset to Inherited. Narrow profile overlay only for playthrough-related
 cheats, RTC, autoresume and rewind where appropriate; not a universal fifth tier.
 

@@ -57,6 +57,18 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// Bool, unset means false. When true, tapping the game picture opens the game menu, as tapping
     /// the logo always does.
     case tapGameForMenu
+    /// Bool, unset means true. With a controller connected the touch controls hide, and a touch
+    /// brings them back until the next controller button press.
+    case hideTouchControlsWithController
+    /// `TouchHaptics`, unset means `.light`.
+    case touchHaptics
+}
+
+/// How strongly the on-screen controls tap back when pressed. Raw values are stored in settings.
+public enum TouchHaptics: String, Codable, Sendable, CaseIterable {
+    case off
+    case light
+    case medium
 }
 
 /// Whether game sound plays. Raw values are stored in settings.

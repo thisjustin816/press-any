@@ -22,6 +22,10 @@ protocol GameplayRuntime: AnyObject {
     func background() throws
     @discardableResult func foreground(policy: AutoResumePolicy) throws -> Bool
     func stop(createAutoState: Bool) throws
+    /// Retries a failed stop, or with `discardUnsaved` closes without the writes that failed.
+    func stop(createAutoState: Bool, discardUnsaved: Bool) throws
+    /// Writes the game's save once it changes, checking at most every few seconds of play.
+    @discardableResult func flushBatteryIfChanged() throws -> Bool
 }
 
 /// Library sessions also keep manual save states. Quick Play does not, since nothing in its
@@ -30,6 +34,10 @@ protocol SaveStateRuntime: GameplayRuntime {
     func saveManualState(label: String?) throws -> SaveState
     func saveStates() throws -> [SaveState]
     func loadState(_ saveState: SaveState) throws
+    /// Whether loading the state would take back a newer game save.
+    func loadingWouldRollBackSave(_ saveState: SaveState) throws -> Bool
+    /// Keeps the current save as "<profile> before loading state", then loads the state.
+    @discardableResult func loadStateKeepingCopy(_ saveState: SaveState) throws -> SaveProfile
     func thumbnailData(for state: SaveState) -> Data?
 }
 

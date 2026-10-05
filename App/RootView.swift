@@ -68,6 +68,8 @@ struct RootView: View {
                 controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
                 tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
+                hidesTouchControlsWithController: bootstrap.container?.hidesTouchControlsWithController() ?? true,
+                touchHaptics: bootstrap.container?.touchHaptics() ?? .light,
                 onClose: { endGameplay(presentation) },
                 onAddToLibrary: presentation.isQuickPlay
                     ? {
@@ -168,7 +170,7 @@ struct RootView: View {
             do {
                 endedQuickPlay = try container.quickPlayWorkspace.start(romURL: ScreenshotScene.romURL(file))
             } catch {
-                errorMessage = "Could not start Quick Play: \(error)"
+                errorMessage = "Couldn’t start Quick Play: \(error.localizedDescription)"
             }
         case .quickPlay(let file):
             quickPlay(
@@ -232,7 +234,7 @@ struct RootView: View {
             )
             try present(temporary, container: container, firstFrameClock: request.chosenAt)
         } catch {
-            errorMessage = "Could not start Quick Play: \(error)"
+            errorMessage = "Couldn’t start Quick Play: \(error.localizedDescription)"
         }
     }
 
@@ -246,7 +248,11 @@ struct RootView: View {
     }
 
     private func present(_ session: QuickPlaySession, container: AppContainer, firstFrameClock: UInt64?) throws {
-        let runtime = QuickPlayRuntimeSession(session: session, coreRegistry: container.coreRegistry)
+        let runtime = QuickPlayRuntimeSession(
+            session: session,
+            coreRegistry: container.coreRegistry,
+            assetStore: container.fileStore
+        )
         try runtime.start()
         gameplay = GameplayPresentation(
             kind: .quickPlay(session.id),
@@ -264,9 +270,16 @@ struct RootView: View {
     private func showClosingQuickPlay() {
         guard let id = closingQuickPlayID else { return }
         closingQuickPlayID = nil
-        endedQuickPlayAddsToLibrary = closingQuickPlayAddsToLibrary
+        let addsToLibrary = closingQuickPlayAddsToLibrary
         closingQuickPlayAddsToLibrary = false
-        endedQuickPlay = try? bootstrap.container?.quickPlayWorkspace.load(sessionID: id)
+        guard let container = bootstrap.container else { return }
+        do {
+            endedQuickPlayAddsToLibrary = addsToLibrary
+            endedQuickPlay = try container.quickPlayWorkspace.load(sessionID: id)
+        } catch {
+            endedQuickPlayAddsToLibrary = false
+            errorMessage = "Couldn’t reopen the Quick Play session: \(error.localizedDescription)"
+        }
     }
 
     private func resumeChosenQuickPlay() {

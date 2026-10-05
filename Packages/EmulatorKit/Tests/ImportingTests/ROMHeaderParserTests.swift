@@ -24,6 +24,13 @@ final class ROMHeaderParserTests: XCTestCase {
         XCTAssertEqual(header.title, "TEST DMG")
     }
 
+    func testParsesAnImageThatIsASlice() throws {
+        let rom = TestROM.make(title: "SLICED", cgb: true)
+        let framed = Data([0xff, 0xff]) + rom
+
+        XCTAssertEqual(try GBROMHeaderParser.parse(framed[2...]), try GBROMHeaderParser.parse(rom))
+    }
+
     func testRejectsFileSmallerThanHeader() {
         XCTAssertThrowsError(try GBROMHeaderParser.parse(Data(repeating: 0, count: 0x100)))
     }

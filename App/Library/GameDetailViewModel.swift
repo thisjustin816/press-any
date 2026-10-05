@@ -80,14 +80,17 @@ final class GameDetailViewModel: ObservableObject {
         return builds.first { $0.id == preferred } ?? builds.first
     }
 
-    /// The Build and save Play starts, picked as `ResolvePreferredSaveProfile` picks them, without
-    /// creating the blank profile it makes when the Game has none.
+    /// The save Play uses when the Build names none: the Game's default, or else its oldest, as
+    /// `ResolvePreferredSaveProfile` picks it.
+    var defaultSaveProfile: SaveProfile? {
+        saveProfiles.first { $0.id == game?.preferredSaveProfileID } ?? saveProfiles.first
+    }
+
+    /// The Build and save Play starts, without creating the blank profile Play makes when the
+    /// Game has none.
     var playSummary: String? {
         guard let build = preferredBuild else { return nil }
-        let save = profileName(id: build.preferredSaveProfileID)
-            ?? profileName(id: game?.preferredSaveProfileID)
-            ?? saveProfiles.first?.title
-            ?? "New Save"
+        let save = profileName(id: build.preferredSaveProfileID) ?? defaultSaveProfile?.title ?? "New Save"
         return "\(build.displayName) · \(save)"
     }
 
@@ -252,12 +255,7 @@ final class GameDetailViewModel: ObservableObject {
         perform {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            try artwork.set(
-                gameID: gameID,
-                imageData: Data(contentsOf: url),
-                fileExtension: url.pathExtension.isEmpty ? "img" : url.pathExtension,
-                originalFilename: url.lastPathComponent
-            )
+            try artwork.set(gameID: gameID, fileAt: url)
         }
     }
 

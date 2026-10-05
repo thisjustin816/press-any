@@ -173,6 +173,7 @@ public struct ImportBatterySave: Sendable {
         guard var game = try games.fetchGame(id: gameID) else {
             throw SaveProfileOperationError.gameNotFound(gameID)
         }
+        try ImportSizeLimit.batterySave.check(fileAt: sourceURL)
         let timestamp = now()
         let profileID = makeID()
         let destination = assetStore.persistentSaveURL(profileID: profileID)

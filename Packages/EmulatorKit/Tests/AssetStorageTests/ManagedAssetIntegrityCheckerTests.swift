@@ -48,6 +48,37 @@ final class ManagedAssetIntegrityCheckerTests: XCTestCase {
         XCTAssertFalse(harness.store.fileExists(at: source))
         XCTAssertFalse(harness.store.fileExists(at: cache))
     }
+
+    func testStaleWriterTemporaryFilesAreRemovedAndNothingElse() throws {
+        let harness = try IntegrityHarness.make()
+        let directory = harness.store.persistentSaveURL(profileID: UUID()).deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let hourAgo = Date().addingTimeInterval(-3_600)
+        func file(_ name: String, modified: Date) throws -> URL {
+            let url = directory.appendingPathComponent(name)
+            try Data([1]).write(to: url)
+            try FileManager.default.setAttributes([.modificationDate: modified], ofItemAtPath: url.path)
+            return url
+        }
+        let stale = try file(".\(UUID().uuidString.lowercased()).tmp", modified: hourAgo)
+        let inProgress = try file(".\(UUID().uuidString.lowercased()).tmp", modified: Date())
+        let others = [
+            try file(".notes.tmp", modified: hourAgo),
+            try file("battery.tmp", modified: hourAgo),
+            try file(".\(UUID().uuidString.lowercased()).sav", modified: hourAgo),
+        ]
+        let staleRelativePath = try harness.store.managedRelativePath(for: stale)
+
+        XCTAssertEqual(try harness.checker.inspect().issues, [.staleTemporaryFile(relativePath: staleRelativePath)])
+        XCTAssertTrue(harness.store.fileExists(at: stale), "reporting alone removes nothing")
+
+        let report = try harness.checker.inspect(cleanup: .removeProvableOrphans)
+        XCTAssertEqual(report.removedRelativePaths, [staleRelativePath])
+        XCTAssertFalse(harness.store.fileExists(at: stale))
+        for kept in [inProgress] + others {
+            XCTAssertTrue(harness.store.fileExists(at: kept), kept.lastPathComponent)
+        }
+    }
 }
 
 private struct IntegrityHarness {
