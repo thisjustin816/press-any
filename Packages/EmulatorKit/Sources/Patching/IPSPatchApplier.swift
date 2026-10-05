@@ -47,11 +47,11 @@ public struct IPSPatchApplier: Sendable {
 
         let remaining = bytes.count - index
         if remaining == 3 {
+            // The trailing size only truncates, as in Lunar IPS; a larger one is ignored rather than
+            // padding the image with up to 16 MB of zeros.
             let finalSize = Int(bytes[index]) << 16 | Int(bytes[index + 1]) << 8 | Int(bytes[index + 2])
             if finalSize < output.count {
                 output.removeLast(output.count - finalSize)
-            } else if finalSize > output.count {
-                output.append(contentsOf: repeatElement(0, count: finalSize - output.count))
             }
         } else if remaining != 0 {
             throw PatchError.malformedPatch
