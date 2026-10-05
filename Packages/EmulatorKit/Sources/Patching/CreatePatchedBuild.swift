@@ -1,12 +1,15 @@
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import Importing
 import ToolchainDetection
 
 public enum CreatePatchedBuildError: Error, Equatable {
     case gameNotFound(UUID)
     case baseBuildNotFound(UUID)
     case baseBuildBelongsToDifferentGame(buildID: UUID, gameID: UUID)
+    /// The patches produced something too short to hold a cartridge header.
+    case resultNotAROM(byteCount: Int)
 }
 
 public struct CreatePatchedBuild: Sendable {
@@ -149,6 +152,16 @@ public struct CreatePatchedBuild: Sendable {
                 )
             }
 
+            // The result's own header decides the hardware, by the rules import uses, since a patch
+            // can make a Game Boy game a Game Boy Color one or the reverse. Checksums aren't
+            // checked: homebrew and hacks often leave them stale, and import only warns about them.
+            let header: GBROMHeader
+            do {
+                header = try GBROMHeaderParser.parse(output)
+            } catch {
+                throw CreatePatchedBuildError.resultNotAROM(byteCount: output.count)
+            }
+
             let resultSHA = assetStore.hashData(output)
             let generatedURL = assetStore.generatedImageURL(sha256: resultSHA)
             let generatedExistedBefore = assetStore.fileExists(at: generatedURL)
@@ -171,7 +184,7 @@ public struct CreatePatchedBuild: Sendable {
             let build = Build(
                 id: makeID(),
                 gameID: input.gameID,
-                system: baseBuild.system,
+                system: header.system,
                 displayName: input.displayName,
                 imageAssetID: generatedAsset.id,
                 imageSHA256: resultSHA,
