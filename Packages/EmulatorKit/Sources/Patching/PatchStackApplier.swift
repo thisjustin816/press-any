@@ -26,14 +26,18 @@ public struct PatchStackApplier: PatchApplying, Sendable {
         let normalized = fileExtension
             .trimmingCharacters(in: CharacterSet(charactersIn: "."))
             .lowercased()
+        let result: Data
         switch normalized {
         case "ips":
-            return try IPSPatchApplier().apply(patch: patch, to: source)
+            result = try IPSPatchApplier().apply(patch: patch, to: source)
         case "bps":
-            return try BPSPatchApplier().apply(patch: patch, to: source, ignoringBaseMismatch: ignoringBaseMismatch)
+            result = try BPSPatchApplier().apply(patch: patch, to: source, ignoringBaseMismatch: ignoringBaseMismatch)
         default:
             throw PatchError.unsupportedFormat(normalized)
         }
+        // An IPS patch can address up to 16 MB, more than any cartridge maps or the core loads.
+        guard result.count <= ImportSizeLimit.rom.bytes else { throw PatchError.targetTooLarge(result.count) }
+        return result
     }
 
     public func apply(items: [PatchStackItem], to source: Data) throws -> Data {

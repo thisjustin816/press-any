@@ -1,9 +1,10 @@
+import EmulatorApplication
 import Foundation
 
 public struct BPSPatchApplier: Sendable {
-    /// Far above the 8 MB GB/GBC maximum. Sizes come from the patch, so they are capped before
-    /// anything is allocated for them.
-    public static let maximumTargetSize = 64 * 1024 * 1024
+    /// The 8 MB GB/GBC maximum. Sizes come from the patch, so they are capped before anything is
+    /// allocated for them.
+    public static let maximumTargetSize = Int(ImportSizeLimit.rom.bytes)
 
     public init() {}
 
