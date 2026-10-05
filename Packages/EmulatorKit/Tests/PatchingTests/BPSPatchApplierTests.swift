@@ -10,6 +10,17 @@ final class BPSPatchApplierTests: XCTestCase {
         XCTAssertEqual(try BPSPatchApplier().apply(patch: patch, to: source), Data("AXC".utf8))
     }
 
+    func testBPSAppliesAPatchAndSourceThatAreSlices() throws {
+        let patch = try XCTUnwrap(Data(hex: "4250533183838080815880480383a393f9ae1348dc32ee"))
+        let framedPatch = Data([0xff, 0xff, 0xff]) + patch + Data([0xff])
+        let framedSource = Data("--ABC".utf8)
+
+        XCTAssertEqual(
+            try BPSPatchApplier().apply(patch: framedPatch[3..<(3 + patch.count)], to: framedSource[2...]),
+            Data("AXC".utf8)
+        )
+    }
+
     func testBPSRejectsWrongSourceCRC() throws {
         let source = Data("ZBC".utf8)
         let patch = try XCTUnwrap(Data(hex: "4250533183838080815880480383a393f9ae1348dc32ee"))

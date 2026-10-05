@@ -10,6 +10,8 @@ public struct BPSPatchApplier: Sendable {
     /// With `ignoringBaseMismatch`, the source size and CRC and the resulting target CRC are not
     /// enforced, since a different base cannot produce the recorded target. The patch CRC is.
     public func apply(patch: Data, to source: Data, ignoringBaseMismatch: Bool = false) throws -> Data {
+        // Offsets below count from zero, which a slice of a larger Data does not start at.
+        let patch = Data(patch)
         guard patch.count >= 16, patch.prefix(4) == Data("BPS1".utf8) else {
             throw PatchError.malformedPatch
         }
