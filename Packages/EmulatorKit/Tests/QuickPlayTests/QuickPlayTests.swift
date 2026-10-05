@@ -119,6 +119,7 @@ final class QuickPlayTests: XCTestCase {
             ),
             workspace: harness.workspace,
             profiles: InsertRefusingProfiles(inner: harness.profiles),
+            states: harness.states,
             assets: harness.assets,
             assetStore: harness.store
         )
@@ -163,6 +164,7 @@ final class QuickPlayTests: XCTestCase {
             ),
             workspace: harness.workspace,
             profiles: UpdateRefusingProfiles(inner: harness.profiles),
+            states: harness.states,
             assets: harness.assets,
             assetStore: harness.store
         )
@@ -241,6 +243,7 @@ private struct QuickPlayHarness {
     let games: InMemoryGameRepository
     let builds: InMemoryBuildRepository
     let profiles: InMemorySaveProfileRepository
+    let states: InMemorySaveStateRepository
     let assets: InMemoryAssetRepository
     let game: Game
     let profile: SaveProfile
@@ -260,6 +263,7 @@ private struct QuickPlayHarness {
         let games = InMemoryGameRepository()
         let builds = InMemoryBuildRepository()
         let profiles = InMemorySaveProfileRepository()
+        let states = InMemorySaveStateRepository()
         let assets = InMemoryAssetRepository()
 
         let game = Game(
@@ -319,6 +323,7 @@ private struct QuickPlayHarness {
             committer: committer,
             workspace: workspace,
             profiles: profiles,
+            states: states,
             assets: assets,
             assetStore: store,
             now: { now }
@@ -330,6 +335,7 @@ private struct QuickPlayHarness {
             games: games,
             builds: builds,
             profiles: profiles,
+            states: states,
             assets: assets,
             game: game,
             profile: profile,
@@ -515,6 +521,65 @@ extension QuickPlayTests {
 
         XCTAssertTrue(operations.renamedTo.contains("battery.sav"))
         XCTAssertTrue(operations.renamedTo.contains("autosave.state"))
+    }
+}
+
+extension QuickPlayTests {
+    func testAddingQuickPlayToTheLibraryKeepsWhereItLeftOff() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let rom = try harness.writeExternalROM(TestROM.make(title: "RESUME", cgb: false, payloadByte: 12))
+        let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
+        let runtime = harness.makeRuntime(session)
+        try runtime.start()
+        for _ in 0..<3 { _ = try runtime.stepFrame() }
+        try runtime.stop()
+        let autosave = try Data(contentsOf: session.autoStateURL)
+
+        let result = try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(session, targetGameID: harness.game.id),
+                disposition: .addBuild(gameID: harness.game.id),
+                buildDisplayName: "Resume",
+                markAsBase: false
+            ),
+            saveDisposition: .createProfile(name: "Kept")
+        )
+
+        let profile = try XCTUnwrap(result.saveProfile)
+        let states = try harness.states.fetchSaveStates(buildID: result.importResult.build.id, saveProfileID: profile.id)
+        let state = try XCTUnwrap(states.first)
+        XCTAssertEqual(states.count, 1)
+        XCTAssertEqual(state.kind, .auto)
+        XCTAssertEqual(state.core, CoreDescriptor(identifier: "sameboy", version: "1.0.3"))
+        XCTAssertEqual(state.stateSerializationVersion, "fake-json-v1")
+        XCTAssertLessThanOrEqual(profile.modifiedAt, state.createdAt, "not older than the save, so the first launch resumes it")
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: state.stateAssetID))
+        XCTAssertEqual(try harness.store.readData(at: harness.store.managedURL(relativePath: asset.relativePath)), autosave)
+    }
+
+    func testAnAutosaveOlderThanTheQuickPlaySaveIsNotAddedToTheLibrary() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let rom = try harness.writeExternalROM(TestROM.make(title: "OLDER", cgb: false, payloadByte: 13))
+        let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
+        let runtime = harness.makeRuntime(session)
+        try runtime.start()
+        try runtime.stop()
+        try harness.workspace.writeTemporaryBattery(Data([9]), sessionID: session.id)
+
+        let result = try harness.promoter.promote(
+            session: session,
+            plan: ROMImportPlan(
+                analysis: try harness.promoter.analyze(session, targetGameID: harness.game.id),
+                disposition: .addBuild(gameID: harness.game.id),
+                buildDisplayName: "Older",
+                markAsBase: false
+            ),
+            saveDisposition: .replaceExisting(profileID: harness.profile.id)
+        )
+
+        XCTAssertEqual(try harness.libraryBatteryData(), Data([9]))
+        XCTAssertEqual(try harness.states.fetchSaveStates(buildID: result.importResult.build.id, saveProfileID: harness.profile.id), [])
     }
 }
 
