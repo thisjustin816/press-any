@@ -1,4 +1,5 @@
 import EmulationCore
+import EmulatorApplication
 import EmulationSession
 import EmulatorDomain
 import Foundation
@@ -23,15 +24,26 @@ public enum QuickPlayRuntimeError: Error, Equatable {
 public final class QuickPlayRuntimeSession: @unchecked Sendable {
     private let session: QuickPlaySession
     private let registry: CoreRegistry
+    private let files: any AssetStore
     private let lock = NSLock()
     private var worker: SessionWorker?
     private var _state: QuickPlayRuntimeState = .idle
     private var latestFrame: EmulatorVideoFrame?
     private var sessionNanoseconds: UInt64 = 0
+    private let batteryCheckIntervalNanoseconds: UInt64
+    private var lastBatteryCheckNanoseconds: UInt64 = 0
+    private var lastWrittenBattery = Data()
 
-    public init(session: QuickPlaySession, coreRegistry: CoreRegistry) {
+    public init(
+        session: QuickPlaySession,
+        coreRegistry: CoreRegistry,
+        assetStore: any AssetStore,
+        batteryCheckInterval: TimeInterval = 5
+    ) {
         self.session = session
         self.registry = coreRegistry
+        self.files = assetStore
+        self.batteryCheckIntervalNanoseconds = UInt64(batteryCheckInterval * 1_000_000_000)
     }
 
     public var state: QuickPlayRuntimeState { lock.withLock { _state } }
@@ -55,6 +67,9 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             ? try Data(contentsOf: session.persistentSaveURL, options: .mappedIfSafe)
             : nil
 
+        // The save as the core reports it, so an unchanged save isn't mistaken for a new one.
+        var savedBattery = Data()
+
         func bootedWorker() throws -> SessionWorker {
             let worker = SessionWorker(
                 core: try factory.makeCore(),
@@ -62,6 +77,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             )
             try worker.perform { try $0.loadImage(rom, system: self.session.system) }
             try worker.perform { try $0.loadPersistentSave(battery) }
+            savedBattery = try worker.perform { try $0.persistentSaveData() }
             return worker
         }
 
@@ -74,10 +90,11 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             return worker
         }
 
-        let autoStateURL = session.rootURL.appendingPathComponent("autosave.state")
+        let autoStateURL = session.autoStateURL
         var rejected = false
         let worker: SessionWorker
-        if resumeAutoState, FileManager.default.fileExists(atPath: autoStateURL.path) {
+        if resumeAutoState, FileManager.default.fileExists(atPath: autoStateURL.path),
+           !session.batteryIsNewerThanAutoState(files: files) {
             let candidate = try bootedWorker()
             do {
                 let state = try Data(contentsOf: autoStateURL, options: .mappedIfSafe)
@@ -99,6 +116,8 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             self.worker = worker
             latestFrame = nil
             sessionNanoseconds = 0
+            lastBatteryCheckNanoseconds = 0
+            lastWrittenBattery = savedBattery
             _autoStateRejected = rejected
             _state = .running(session.id)
         }
@@ -146,19 +165,44 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         let worker = try activeWorker(requireRunning: false)
         let data = try worker.perform { try $0.persistentSaveData() }
         guard !data.isEmpty else { return }
-        try atomicWrite(data, to: session.persistentSaveURL)
+        try files.writeDataAtomically(data, to: session.persistentSaveURL)
+        lock.withLock { lastWrittenBattery = data }
+    }
+
+    /// Writes the game's battery save if it changed, checking at most once per check interval of
+    /// play. Between checks it does nothing, so the frame loop can call it after every frame.
+    /// Returns true when it wrote.
+    @discardableResult
+    public func flushBatteryIfChanged() throws -> Bool {
+        let worker = try activeWorker(requireRunning: false)
+        let due = lock.withLock { () -> Bool in
+            guard sessionNanoseconds &- lastBatteryCheckNanoseconds >= batteryCheckIntervalNanoseconds else { return false }
+            lastBatteryCheckNanoseconds = sessionNanoseconds
+            return true
+        }
+        guard due else { return false }
+        let data = try worker.perform { try $0.persistentSaveData() }
+        guard !data.isEmpty, data != lock.withLock({ lastWrittenBattery }) else { return false }
+        try flushBattery()
+        return true
     }
 
     public func saveAutoState() throws {
         let worker = try activeWorker(requireRunning: false)
         let data = try worker.perform { try $0.serializeState() }
-        try atomicWrite(data, to: session.rootURL.appendingPathComponent("autosave.state"))
+        let record = QuickPlayAutoStateRecord(
+            core: try worker.perform { $0.descriptor },
+            stateSerializationVersion: try worker.perform { $0.stateSerializationVersion },
+            batterySHA256: session.batteryHash(files: files),
+            playtimeSeconds: playtimeSeconds
+        )
+        try files.writeDataAtomically(data, to: session.autoStateURL)
+        try files.writeDataAtomically(try JSONEncoder().encode(record), to: session.autoStateRecordURL)
     }
 
     public func background() throws {
         try pause()
-        try flushBattery()
-        try saveAutoState()
+        try SessionSaveError.attempting([flushBattery, saveAutoState])
     }
 
     public func foreground(policy: AutoResumePolicy) throws -> Bool {
@@ -171,14 +215,22 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         }
     }
 
+    /// Saves and ends the session. When a save step fails the session stays open and paused, so
+    /// calling stop again retries.
     public func stop(createAutoState: Bool = true) throws {
+        try stop(createAutoState: createAutoState, discardUnsaved: false)
+    }
+
+    /// `discardUnsaved` ends the session without saving anything, for closing after a failed stop.
+    public func stop(createAutoState: Bool, discardUnsaved: Bool) throws {
         guard lock.withLock({ worker != nil }) else {
             lock.withLock { _state = .stopped }
             return
         }
         try pause()
-        try flushBattery()
-        if createAutoState { try saveAutoState() }
+        if !discardUnsaved {
+            try SessionSaveError.attempting(createAutoState ? [flushBattery, saveAutoState] : [flushBattery])
+        }
         lock.withLock {
             worker = nil
             latestFrame = nil
@@ -195,13 +247,5 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             if requireRunning { throw QuickPlayRuntimeError.sessionNotRunning }
             return worker
         }
-    }
-
-    private func atomicWrite(_ data: Data, to destination: URL) throws {
-        try FileManager.default.createDirectory(
-            at: destination.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try data.write(to: destination, options: .atomic)
     }
 }
