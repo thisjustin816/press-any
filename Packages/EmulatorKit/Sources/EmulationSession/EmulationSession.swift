@@ -316,9 +316,31 @@ public final class EmulationSession: @unchecked Sendable {
         return true
     }
 
+    /// Writes the game's battery save now if it changed since the last write, whatever the check
+    /// interval. Returns true when it wrote.
+    @discardableResult
+    private func flushBatteryIfDirty() throws -> Bool {
+        let (worker, _, _) = try snapshotActive()
+        let battery = try worker.perform { try $0.persistentSaveData() }
+        guard !battery.isEmpty, battery != lock.withLock({ lastWrittenBattery }) else { return false }
+        try flushBattery()
+        return true
+    }
+
+    /// Whether the game has saved since its battery save was last written.
+    private func batteryIsDirty(worker: SessionWorker) throws -> Bool {
+        let battery = try worker.perform { try $0.persistentSaveData() }
+        return !battery.isEmpty && battery != lock.withLock({ lastWrittenBattery })
+    }
+
+    /// Writes the game's save before taking the state, so the state never holds in-game saving
+    /// that isn't on disk yet. That keeps `loadingWouldRollBackSave` exact: in-game saving that
+    /// is still unwritten is newer than every state.
     @discardableResult
     public func saveManualState(label: String? = nil) throws -> SaveState {
         let (worker, context, _) = try snapshotActive()
+        // A failed write leaves the save unwritten, so loading warns more often, never less.
+        _ = try? flushBatteryIfDirty()
         return try stateService.save(
             worker: worker,
             context: context,
@@ -332,6 +354,7 @@ public final class EmulationSession: @unchecked Sendable {
     @discardableResult
     public func saveAutoState() throws -> SaveState {
         let (worker, context, _) = try snapshotActive()
+        _ = try? flushBatteryIfDirty()
         return try stateService.save(
             worker: worker,
             context: context,
@@ -346,36 +369,73 @@ public final class EmulationSession: @unchecked Sendable {
         stateService.thumbnailData(for: state)
     }
 
+    /// Loads the state. Call it only when `loadingWouldRollBackSave` is false, with the frame loop
+    /// stopped between the two, and use `loadStateKeepingCopy` otherwise.
     public func loadState(_ saveState: SaveState) throws {
         let (worker, context, _) = try snapshotActive()
-        try stateService.load(saveState, worker: worker, context: context)
+        do {
+            try load(saveState, worker: worker, context: context, restoringBattery: lock.withLock { lastWrittenBattery })
+        } catch let failure as StateLoadFailure {
+            throw failure.underlying
+        }
     }
 
-    /// Whether loading the state would take the profile's battery save back to an older one. The
-    /// state carries the cartridge RAM it was taken with, and the game's next save writes it over
-    /// the save made since. This is the same test that keeps such an Auto State from resuming.
+    /// Whether loading the state could take the game's save back to an older one. The state
+    /// carries the cartridge RAM it was taken with, and the game's next save writes it over
+    /// whatever was saved since: a battery save written after the state, or in-game saving not
+    /// written yet, which is always newer than the state since taking one writes the save first.
+    /// Stop the frame loop before asking, so the game can't save between this and the load.
     public func loadingWouldRollBackSave(_ saveState: SaveState) throws -> Bool {
+        let (worker, _, _) = try snapshotActive()
         guard let profile = try profiles.fetchSaveProfile(id: saveState.saveProfileID) else {
             throw EmulationSessionError.saveProfileNotFound(saveState.saveProfileID)
         }
-        return saveState.createdAt < profile.modifiedAt
+        return try saveState.createdAt < profile.modifiedAt || batteryIsDirty(worker: worker)
     }
 
-    /// Loads the state after copying the profile, with the game's latest save written first, to
-    /// "<name> before loading state". Returns the copy. A load that fails removes the copy again.
+    /// Writes the game's latest save, copies the profile to "<name> before loading state", then
+    /// loads the state, and returns the copy. When the save or the copy can't be written, nothing
+    /// is loaded. A load that fails puts the latest save back in the game, and removes the copy
+    /// only once it has.
     @discardableResult
     public func loadStateKeepingCopy(_ saveState: SaveState) throws -> SaveProfile {
         let (worker, context, _) = try snapshotActive()
         let profile = try flushBattery()
+        let latest = lock.withLock { lastWrittenBattery }
         let copy = try DuplicateSaveProfile(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
             .execute(sourceProfileID: profile.id, name: "\(profile.displayName) before loading state")
         do {
-            try stateService.load(saveState, worker: worker, context: context)
-        } catch {
-            profiles.discardNewProfile(copy, assets: assets, files: assetStore)
-            throw error
+            try load(saveState, worker: worker, context: context, restoringBattery: latest)
+        } catch let failure as StateLoadFailure {
+            if failure.batteryRestored { profiles.discardNewProfile(copy, assets: assets, files: assetStore) }
+            throw failure.underlying
         }
         return copy
+    }
+
+    private struct StateLoadFailure: Error {
+        let underlying: Error
+        let batteryRestored: Bool
+    }
+
+    /// SameBoy writes a state's cartridge RAM into the game before it has read the whole state, so
+    /// a state that fails partway can leave the game holding the state's older save. Put
+    /// `battery` back then, so the next write doesn't take the save back.
+    private func load(
+        _ saveState: SaveState,
+        worker: SessionWorker,
+        context: LaunchContext,
+        restoringBattery battery: Data
+    ) throws {
+        do {
+            try stateService.load(saveState, worker: worker, context: context)
+        } catch {
+            var restored = battery.isEmpty
+            if !restored {
+                restored = (try? worker.perform { try $0.loadPersistentSave(battery) }) != nil
+            }
+            throw StateLoadFailure(underlying: error, batteryRestored: restored)
+        }
     }
 
     /// App lifecycle entry point. Gameplay is paused before persistent state is captured.

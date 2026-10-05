@@ -1,7 +1,7 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-05: 104 done, 28 partial and 168 missing. The specs stay the
+on 2026-10-03 and updated 2026-10-05. The specs stay the
 source of truth for what each item means; this file tracks what's left and a suggested order.
 Update an item's row when its status changes, and move it to its area's "Done" line when it's
 finished.
@@ -45,7 +45,7 @@ Open items in each area are in the table, finished ones on the line under it.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | prod "Platform", acceptance-matrix "Release" | only Config/Signing.xcconfig |
+| partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | prod "Platform", acceptance-matrix "Release" | manual TestFlight upload workflow and setup (docs/release.md); App Store listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | later 12 | none |
 | missing | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | Q183 | only the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | Q184, dec 12 | none |
@@ -63,7 +63,7 @@ Spec: later 2.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Registries for platforms, cores, image analyzers, toolchain detectors, patch formats | MVP | later 2 | CoreRegistry + ToolchainDetectorRegistry exist; no platform or analyzer registry; patch formats dispatched by file extension in PatchStackApplier |
+| partial | Registries for platforms, cores, image analyzers, toolchain detectors, patch formats | v1 | later 2, D "Adaptive audio, and registries wait for v1" | CoreRegistry + ToolchainDetectorRegistry exist; no platform or analyzer registry; patch formats dispatched by file extension in PatchStackApplier |
 | missing | PlatformDescriptor / HardwareDescriptor / DistributionDescriptor / CompatibilityRecord (core target + hardware target) | v1 | later 2 |  |
 | missing | Input and memory descriptors | v1 | later 2 |  |
 
@@ -94,7 +94,7 @@ camera and printer declared, and a missing one is a failed cast.
 | partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers and stale temporary files); saves/states not verified on read |
 | missing | Storage screen by category, source vs disposable, safe cleanup | v1 | Q138 | none |
 | partial | Automatic cleanup of disposable data only | v1 | Q139 | expired Quick Play sessions and staged copies left by interrupted imports removed at launch (AppContainer init); no generated-cache eviction under pressure |
-| missing | GC coordination / in-flight protection / orphan sweep in the running app | v1 | later 6 | logic only in the unused checker |
+| partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | later 6 | Check Library Files runs the orphan sweep on demand; in-flight protection and GC coordination remain |
 
 Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed
 collision-safe relative paths; Source-asset dedup; Source vs userData vs cache vs temporary classes;
@@ -107,7 +107,6 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 | missing | Game aliases/alternate titles (indexed) | v1 | Q162 | no field |
 | missing | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; mvp "Game" (provenance records) | none |
 | missing | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | no edit UI |
-| partial | Build region/language/revision/version + structured version sort key | MVP/v1 | mvp "Build"; Q152 | columns exist, never populated (import ignores filename/header), no edit UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1 | prod "Documents"; Q169 |  |
 | missing | Typed multi-artwork model with primary selection | v1 | prod "Artwork"; dec 20 | Game.artworkAssetID is a single image |
@@ -117,7 +116,9 @@ Done: Game: UUID, primary title, system family, preferred Build/Profile, timesta
 gameID, system, concise name, immutable hash, sourceKind, parent lineage, Base marker, preferred
 profile, core pin; SaveProfile: name, current save, ancestry, playtime/session count/last
 played/created; SaveState exact context (Build + Profile + core + serialization version), playtime,
-label, kind; PatchRecipe: exact base, ordered items, enabled flag, expected hash, Apply-Anyway flag;
+label, kind; Build region/language/revision/version suggested from recognized filename tags,
+nonzero header revision fallback, editable or clearable at import (including Quick Play promotion),
+numeric version sort key and Technical Info display; PatchRecipe: exact base, ordered items, enabled flag, expected hash, Apply-Anyway flag;
 ManagedAsset: hash, kind, length, relative path, original filename, provenance, integrity.
 
 ### Library
@@ -148,7 +149,7 @@ Done: Search by primary title.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | No-Intro / ROM-hack bracket parsing into structured fields | v1 | prod "ROM identity"; dec 17 | FilenameMetadataParser yields title + raw ()/[] groups only; no region/lang/rev/hack title/author/version/status flags |
+| partial | No-Intro / ROM-hack bracket parsing into structured fields | v1 | prod "ROM identity"; dec 17 | recognized region/language/revision/numeric-version tags and trailing v1.2-style versions populate reviewable Build fields; raw groups preserved; hack title/author/status flags and richer conventions remain |
 | partial | Header read/validate/display, no editing | v1 | dec 18 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
 | missing | Canonical normalized filename + explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 |  |
 | missing | Verification status Verified/Modified/Unknown; never auto-repair | v1 | dec 18 |  |
@@ -363,10 +364,12 @@ next button press, and Settings can keep them; Cartridge rumble routed controlle
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | In-game menu (wordmark tap, with or without a controller): Pause/Resume, Fast Forward, Save State, Load State, Close | MVP | D "One game menu" | menuElements, GameMenuButton |
 | missing | One shared action registry for menu, controller hotkeys and skin buttons | v1 | prod "Quick Actions" |  |
 | missing | Reorderable/customizable Quick Actions with favorites | v1 | prod "Quick Actions" |  |
 | missing | Remaining actions: rewind, slow-mo, screenshot, note, manual, cheats, shader, Build/Profile switch, Build info, watches, frame advance, layout edit | v1 | prod "Quick Actions" |  |
+
+Done: In-game menu from the wordmark with or without a controller: Pause/Resume, Fast Forward,
+Save State, Load State and Close; Quick Play offers Add to Library and explains disabled Save State.
 
 ### Manuals / documents
 
@@ -459,7 +462,7 @@ Spec: v1.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Delete Game/Build/Profile/State from the UI | v1 | dec 30 | repo deleteGame/deleteSaveProfile/deleteSaveState only |
+| partial | Delete Game/Build/Profile/State from the UI | v1 | dec 30 | profile deletion with confirmation is implemented; Game, Build and state deletion UI remain |
 | missing | Dependency-aware deletion showing affected Builds/assets; no broken base/patch links | v1 | dec 30 |  |
 | missing | Recently Deleted, 30 days, restorable | v1 | Q90 |  |
 | missing | Synchronized tombstones | v1 | Q90 |  |
@@ -469,13 +472,13 @@ Spec: v1.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Low-latency adaptive audio | MVP | Q96 | AudioOutputEngine fixed max queue, drops oldest; no adaptive buffer growth |
-| partial | Audio interruptions pause safely; route changes don't restart the game | v1 | Q173 | engine restarts after route change / interruption end; emulation keeps running silently on interruption |
+| partial | Audio interruptions pause safely; route changes don't restart the game | v1 | Q173 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio-only interruption that leaves the scene active still runs silently |
 | missing | Thermal-aware degradation | v1 | Q97 |  |
 | missing | Default shader sustains full speed on minimum QA device | v1 | Q94 | no shader yet; device gate not recorded |
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
-(default) / Always On / Always Off.
+(default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
+after shortfalls, frames paced against fixed deadlines).
 
 ### Privacy and telemetry
 

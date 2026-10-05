@@ -20,10 +20,11 @@ public struct ImportSizeLimit: Equatable, Sendable {
         self.bytes = bytes
     }
 
-    /// The largest size a GB/GBC header can declare (code $08).
+    /// The largest size a GB/GBC header can declare (code $08). Patch results and the images the
+    /// core loads are held to it too.
     public static let rom = ImportSizeLimit(bytes: 8 * 1_048_576)
-    /// Matches the largest result a BPS patch may produce.
-    public static let patch = ImportSizeLimit(bytes: 64 * 1_048_576)
+    /// Twice the largest result a patch may produce, room for any IPS or BPS encoding of it.
+    public static let patch = ImportSizeLimit(bytes: 16 * 1_048_576)
     /// TPP1 cartridges can declare 2 MB of RAM, and RTC trailers add under 100 bytes.
     public static let batterySave = ImportSizeLimit(bytes: 4 * 1_048_576)
     /// Stored artwork is downscaled, so only the file as picked can be this large.

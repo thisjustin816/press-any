@@ -250,6 +250,7 @@ private struct ArchitectureHarness {
             analyzer: analyzer,
             committer: committer,
             workspace: quickWorkspace,
+            builds: builds,
             profiles: profiles,
             states: states,
             assets: assets,

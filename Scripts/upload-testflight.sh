@@ -125,22 +125,18 @@ EOF
 xcodebuild -project PressAny.xcodeproj -scheme PressAny -configuration Release \
   -destination 'generic/platform=iOS' -archivePath "$archive" archive \
   CURRENT_PROJECT_VERSION="$version"
+./Scripts/verify-privacy-manifest.sh "$archive/Products/Applications/PressAny.app"
 
 python3 - "$signing_dir/ExportOptions.plist" "$team_id" "$profile_uuid" <<'PY'
 import plistlib
 import sys
 
+with open("Config/ExportOptions-TestFlight.plist", "rb") as source:
+    options = plistlib.load(source)
+options["teamID"] = sys.argv[2]
+options["provisioningProfiles"] = {"com.thisjustin816.PressAny": sys.argv[3]}
 with open(sys.argv[1], "wb") as output:
-    plistlib.dump({
-        "method": "app-store-connect",
-        "destination": "export",
-        "signingStyle": "manual",
-        "signingCertificate": "Apple Distribution",
-        "teamID": sys.argv[2],
-        "provisioningProfiles": {"com.thisjustin816.PressAny": sys.argv[3]},
-        "manageAppVersionAndBuildNumber": False,
-        "uploadSymbols": True,
-    }, output)
+    plistlib.dump(options, output)
 PY
 xcodebuild -exportArchive -archivePath "$archive" -exportPath "$export_dir" \
   -exportOptionsPlist "$signing_dir/ExportOptions.plist"

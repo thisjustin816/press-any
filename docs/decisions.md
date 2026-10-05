@@ -3,11 +3,94 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Reviewable Build metadata on import
+
+**Decision.** Import recognizes explicit region and language groups, Rev/Revision tags, numeric
+v/Version tags, and a trailing v1.2-style homebrew version. Recognized values fill optional Region,
+Language, Revision, and Version fields in Import Review, where the player can correct or clear them.
+A nonzero ROM-header revision fills in when the filename has no revision. Unknown groups stay
+uninterpreted, and the original filename is preserved. Numeric versions with up to four components
+have a numeric sort key; other labels have none. The Build keeps the reviewed values, and
+Technical Info shows them. Duplicate imports leave existing Build metadata alone.
+
+Quick Play promotion uses the picked filename for the suggestions and the managed source asset's
+original name. Analysis runs when Add to Library opens, after gameplay has started. Richer
+hack metadata conventions and metadata editing after import remain v1 work.
+
+**Why.** The Build columns existed but imports left them empty. Players need to distinguish
+regional and versioned Builds without having to put all their metadata into the display name.
+
+## 2026-10-05: TestFlight from CI, by hand, in portrait
+
+**Decision.** TestFlight builds are archived, signed and uploaded by a manual GitHub Actions
+workflow, using an App Store Connect API key and Xcode's cloud-managed signing, so no Mac is
+needed. A build ships only when someone runs it. The bundle ID stays `com.thisjustin816.PressAny`,
+the technical name in `AGENTS.md`; the name people see is the display name. The app is locked to
+portrait until the v1 landscape layouts.
+
+**Why.** The owner tests on an iPhone without building locally. Uploading on every merge would
+send testers half-finished work. Nothing kept the app in portrait, so it rotated into a landscape
+that no layout supports yet.
+
+## 2026-10-05: Pause when the app goes inactive, and keep Quick Play progress with its Build
+
+**Decision.** The game pauses whenever its scene goes inactive, not only in the background, and
+lets go of every held button. After only an overlay such as Control Center, Notification Center or
+a call banner, it picks up again on its own, unless the player paused it. After a trip to the
+background, Resume Games (Always, Ask or Never) decides, as before. Loading or saving a state
+stops frames until it finishes, and loading a state asks first whenever the game has saved since
+its battery save was last written, since that in-game save is newer than any state. Taking a state
+writes the save first. A state that fails partway puts the latest save back in the game.
+
+When Quick Play is added to the library with its progress kept, the promoted Build plays that save
+by default, even when the ROM was already in the library as a Build: the player chose to keep this
+progress. The Game's default and other Builds don't change. A session with only a resume point,
+from a game with no battery save, can keep it in a new profile. If the resume point can't be
+moved, the Build and save are still added and the Quick Play session is kept, so the resume point
+isn't lost.
+
+A patched Build's system comes from the patched ROM's own header, by the rules import uses, so a
+patch can make a Game Boy game a Game Boy Color one or the reverse. A result too short to hold a
+header is refused. Patched Builds made before this keep the system they were given; none have been
+released, so there is no repair.
+
+The privacy manifest declares file timestamp access with reason C617.1, for the cleanup of stale
+temporary files inside the app's own container.
+
+**Why.** A review found that the state-load warning looked only at when the save was last written,
+so an in-game save not yet written could be lost; that Quick Play progress from a game with no
+battery save was dropped on promotion, and kept progress wasn't what Play picked; that patched
+Builds always took their base's system, which also picks SameBoy's model and boot ROM; that the
+game ran on under Control Center and other overlays; and that the manifest left out the cleanup's
+timestamp reads.
+
+## 2026-10-05: Adaptive audio, and registries wait for v1
+
+**Decision.** Game sound plays through a buffer that starts at 40 ms. Each time playback runs out
+of sound, the buffer grows 20 ms, up to 160 ms, and playback waits for it to fill before it starts
+again, so a device under load gets one short gap instead of a crackle. After 30 seconds with no
+shortfall it shrinks 20 ms. To hold the buffer near its target as the output's clock drifts from
+the emulator's, playback runs up to 0.5% faster or slower; the game's speed never changes for the
+sound (Q96). Sound that piles up past three times the target, after a stall or in Fast Forward,
+is skipped so it doesn't play late. The app asks for 10 ms hardware buffers. Frames are scheduled
+against fixed deadlines, so time lost oversleeping one frame is made up on the next instead of
+running the game slightly slow.
+
+The registries for platforms, image analyzers and patch formats move to v1. Cores and toolchain
+detectors keep theirs.
+
+**Why.** The audio queue was a fixed 250 ms ceiling that dropped the oldest sound when it filled
+and played silence when it ran dry, with no target, so latency drifted anywhere up to 250 ms and
+every shortfall clicked. The frame loop slept a full frame after each one, so oversleeping ran
+the game a little slow and starved the queue. With Game Boy as the only platform, the three
+registries would add structure nothing uses, and v1 adds the next platform or analyzer that
+needs them.
+
 ## 2026-10-05: Import hardening
 
 **Decision.** Every file the player picks is treated as untrusted. Each import checks the file's
 size before reading or staging it, against a limit for its kind: 8 MB for a ROM, the largest a
-header can declare; 64 MB for a patch; 4 MB for a battery save, since TPP1 cartridges can declare
+header can declare; 16 MB for a patch; 4 MB for a battery save, since TPP1 cartridges can declare
 2 MB of RAM; 20 MB for artwork; and 4 MB for a variable map. A larger file is refused with a
 message saying so. Staging copies only regular files, never a link or a folder, under a fixed
 name, and the app empties the staging folder at launch to clear copies an interrupted import left.
@@ -16,8 +99,9 @@ ignored. Artwork is decoded when it is set and stored as a PNG no larger than 10
 long edge, and a file that isn't a readable image is refused. The SameBoy bridge hands battery
 saves to the core in a zero-padded copy, because SameBoy reads up to 48 bytes past the cartridge
 RAM when a save is longer than the RAM. SameBoy also doesn't check the allocation it makes when
-loading a ROM, so the bridge relies on these limits, and the 64 MB cap on patch results, to keep
-that allocation small.
+loading a ROM, so the bridge refuses any image over 8 MB, the most a cartridge maps, and makes
+sure the memory SameBoy will ask for is available before handing the image over. A patch whose
+result is over 8 MB fails when the Build is made, not when it's played.
 
 **Why.** A review with fuzzers and AddressSanitizer found a heap over-read in SameBoy's battery
 loading, imports that read whole files of any size into memory, staging that trusted the picked

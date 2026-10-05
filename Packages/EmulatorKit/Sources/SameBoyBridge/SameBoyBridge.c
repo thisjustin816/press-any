@@ -20,6 +20,9 @@
 #define SB_BOOT_SKIP_TICK_LIMIT (20ull * 8388608ull)
 // Larger than any battery trailer SameBoy reads after the cartridge RAM (48 bytes at most).
 #define SB_BATTERY_READ_PADDING 64u
+// The most a GB/GBC cartridge maps (MBC5's 512 banks of 16 KB), and the largest image the app
+// imports or a patch produces.
+#define SB_MAX_ROM_SIZE (8u * 1024u * 1024u)
 
 struct SBInstance {
     GB_gameboy_t *gb;
@@ -152,9 +155,15 @@ bool SBLoadBootROM(SBInstance *instance, const uint8_t *bytes, size_t size)
 
 bool SBLoadROM(SBInstance *instance, const uint8_t *bytes, size_t size)
 {
-    if (!instance || !instance->gb || !bytes || size < 0x150) return false;
-    // SameBoy does not check the allocation it makes for the image, so callers bound the size:
-    // imported ROMs at 8 MB and patched images at 64 MB.
+    if (!instance || !instance->gb || !bytes || size < 0x150 || size > SB_MAX_ROM_SIZE) return false;
+    // SameBoy copies the image into an allocation rounded up to a power of two, at least 32 KB,
+    // and writes to it without checking that the allocation succeeded. Make sure that much
+    // memory is available first, so a failure is reported instead of crashing the core.
+    size_t rounded = 0x8000;
+    while (rounded < size) rounded <<= 1;
+    void *probe = malloc(rounded);
+    if (!probe) return false;
+    free(probe);
     GB_load_rom_from_buffer(instance->gb, bytes, size);
     GB_reset(instance->gb);
     instance->has_run = false;

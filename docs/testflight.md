@@ -104,7 +104,8 @@ screenshots.
 
 The upload workflow bootstraps the generated project and SameBoy boot ROMs,
 imports the certificate into a temporary keychain, installs the provisioning
-profile, archives the app, exports an IPA and uploads it with Apple's `altool`.
+profile, archives the app, verifies its bundled privacy manifest, exports an IPA
+using `Config/ExportOptions-TestFlight.plist` and uploads it with Apple's `altool`.
 It deletes its temporary signing files and keychain when the script exits. It
 does not publish an App Store release or automatically invite testers.
 

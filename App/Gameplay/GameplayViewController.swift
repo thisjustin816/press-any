@@ -21,7 +21,11 @@ final class GameplayViewController: UIViewController {
     private let pausedOverlay = UIButton(type: .system)
     /// Uptime when Quick Play's file was chosen, cleared once the first frame is reported.
     private var firstFrameClock: UInt64?
-    private var userPaused = false
+    private var pauseReasons = GameplayPauseReasons()
+    /// Set when the scene went to the background, so returning applies Resume Games.
+    private var backgrounded = false
+    /// Set once an emulation error has stopped the game for good.
+    private var halted = false
     private let controlStyle: TouchControlStyle
     private let screenScaling: ScreenScaling
     private let controllerTheme: ControllerTheme
@@ -104,6 +108,7 @@ final class GameplayViewController: UIViewController {
             UserDefaults.standard.set(true, forKey: Self.menuHintShownKey)
             message = [message, "Tap \(AppBrand.displayName) for the menu."].compactMap { $0 }.joined(separator: " ")
         }
+        // Nothing is paused yet. Starting directly keeps a failed audio start to the one message.
         driver.start()
         if let message { showTransientMessage(message) }
     }
@@ -114,6 +119,10 @@ final class GameplayViewController: UIViewController {
     var showsTouchControls: Bool { touchControls.showsControls }
     /// Whether gameplay is paused behind the paused overlay, for tests.
     var isShowingPaused: Bool { !pausedOverlay.isHidden }
+    /// Whether frames are running, for tests.
+    var isRunningFrames: Bool { driver.isRunning }
+    /// The buttons the game sees held, for tests.
+    var heldInput: EmulatorInputState { input.current() }
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
@@ -177,7 +186,6 @@ final class GameplayViewController: UIViewController {
         var elements: [UIMenuElement] = []
         if pausedOverlay.isHidden {
             elements.append(UIAction(title: "Pause", image: UIImage(systemName: "pause.fill")) { [weak self] _ in
-                self?.userPaused = true
                 self?.pauseGameplay()
             })
         } else {
@@ -249,6 +257,8 @@ final class GameplayViewController: UIViewController {
 
     private func saveState() {
         guard let states = runtime as? any SaveStateRuntime else { return }
+        holdFrames()
+        defer { releaseFrames() }
         do {
             _ = try states.saveManualState(label: nil)
             showTransientMessage("State saved.")
@@ -258,16 +268,20 @@ final class GameplayViewController: UIViewController {
     }
 
     /// A state carries the game save from when it was made, so loading one older than the
-    /// current save asks first and keeps the newer save as a copy.
+    /// current save asks first and keeps the newer save as a copy. Frames stay stopped from the
+    /// check until the state is loaded or the player cancels, so the game can't save in between.
     private func loadState(_ state: SaveState) {
         guard let states = runtime as? any SaveStateRuntime else { return }
+        holdFrames()
         do {
             guard try states.loadingWouldRollBackSave(state) else {
                 try states.loadState(state)
+                releaseFrames()
                 showTransientMessage("State loaded.")
                 return
             }
         } catch {
+            releaseFrames()
             showTransientMessage("Couldn’t load that state: \(error)")
             return
         }
@@ -276,14 +290,18 @@ final class GameplayViewController: UIViewController {
             message: "This state is older than the game’s save, so loading it takes the save back to then. The current save is kept as a copy named “before loading state”.",
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.releaseFrames()
+        })
         alert.addAction(UIAlertAction(title: "Load State", style: .default) { [weak self] _ in
-            guard let states = self?.runtime as? any SaveStateRuntime else { return }
+            guard let self else { return }
+            defer { self.releaseFrames() }
+            guard let states = self.runtime as? any SaveStateRuntime else { return }
             do {
                 try states.loadStateKeepingCopy(state)
-                self?.showTransientMessage("State loaded. The newer save was kept as a copy.")
+                self.showTransientMessage("State loaded. The newer save was kept as a copy.")
             } catch {
-                self?.showTransientMessage("Couldn’t load that state: \(error)")
+                self.showTransientMessage("Couldn’t load that state: \(error)")
             }
         })
         present(alert, animated: true)
@@ -346,7 +364,6 @@ final class GameplayViewController: UIViewController {
         }
         controllerMonitor.onUnexpectedDisconnect = { [weak self] in
             guard let self else { return }
-            self.userPaused = true
             self.pauseGameplay()
             self.touchControlsRevealed = false
             self.updateTouchControls(controllerConnected: false)
@@ -414,58 +431,81 @@ final class GameplayViewController: UIViewController {
         driver.setSpeed(fastForward ? .multiplier(2) : .normal)
     }
 
+    /// Follows this game's own scene, so another window's changes don't pause or resume it.
     private func observeLifecycle() {
-        let center = NotificationCenter.default
-        lifecycleObservers.append(center.addObserver(
-            forName: UIApplication.didEnterBackgroundNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            // Saved before this returns: iOS can suspend the app soon after, and a hop to a later
-            // main-queue turn could leave the writes half done.
-            MainActor.assumeIsolated { self?.backgrounded() }
-        })
-        lifecycleObservers.append(center.addObserver(
-            forName: UIApplication.willEnterForegroundNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.foregrounded() }
-        })
+        let names: [Notification.Name] = [
+            UIScene.willDeactivateNotification,
+            UIScene.didEnterBackgroundNotification,
+            UIScene.didActivateNotification,
+        ]
+        for name in names {
+            lifecycleObservers.append(NotificationCenter.default.addObserver(
+                forName: name,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                // Only Sendable values cross into the main-actor block.
+                let posted = notification.name
+                let scene = (notification.object as? UIScene).map(ObjectIdentifier.init)
+                // Handled before this returns: entering the background, iOS can suspend the app
+                // soon after, and a hop to a later main-queue turn could leave the save half done.
+                MainActor.assumeIsolated {
+                    guard let self, self.isOwnScene(scene) else { return }
+                    switch posted {
+                    case UIScene.willDeactivateNotification: self.sceneWillDeactivate()
+                    case UIScene.didEnterBackgroundNotification: self.sceneDidEnterBackground()
+                    default: self.sceneDidActivate()
+                    }
+                }
+            })
+        }
     }
 
-    private func backgrounded() {
+    /// Before the view is in a window its scene is unknown, and any scene counts.
+    private func isOwnScene(_ scene: ObjectIdentifier?) -> Bool {
+        guard let own = view.window?.windowScene else { return true }
+        return scene == ObjectIdentifier(own)
+    }
+
+    /// Something covered the game or the app is leaving: stop frames and let go of every button,
+    /// so nothing stays held while the player can't see the game.
+    func sceneWillDeactivate() {
+        touchControls.cancelInput()
+        input.resetTouch()
+        input.resetController()
+        pauseReasons.inactive = true
+        applyPauseReasons()
+    }
+
+    func sceneDidEnterBackground() {
+        sceneWillDeactivate()
+        guard !stopped, !halted, !backgrounded else { return }
+        backgrounded = true
         // Asks iOS for time to finish writing the save and Auto State before suspending.
         let saving = UIApplication.shared.beginBackgroundTask(withName: "Save game")
         defer {
             if saving != .invalid { UIApplication.shared.endBackgroundTask(saving) }
         }
-        driver.stop()
-        audio.pause()
-        touchControls.cancelInput()
-        input.resetTouch()
         do { try runtime.background() }
         catch { presentRuntimeError(error) }
     }
 
-    private func foregrounded() {
-        guard !stopped else { return }
-        if userPaused {
-            pausedOverlay.isHidden = false
-            return
-        }
+    /// Back in front. After a trip to the background, Resume Games decides; after only an
+    /// overlay such as Control Center, the game picks up where it was (docs/decisions.md). A game
+    /// the player paused stays paused either way.
+    func sceneDidActivate() {
+        pauseReasons.inactive = false
+        defer { applyPauseReasons() }
+        guard backgrounded else { return }
+        backgrounded = false
+        guard !stopped, !halted, !pauseReasons.byPlayer else { return }
         do {
-            if try runtime.foreground(policy: autoResumePolicy) {
-                resumeAudio()
-                driver.start()
-                pausedOverlay.isHidden = true
-                return
-            }
+            if try runtime.foreground(policy: autoResumePolicy) { return }
         } catch {
             presentRuntimeError(error)
             return
         }
-        pausedOverlay.isHidden = false
+        pauseReasons.awaitingResume = true
         if autoResumePolicy == .ask, presentedViewController == nil {
             let alert = UIAlertController(title: "Resume Game?", message: nil, preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "Not Now", style: .cancel))
@@ -474,6 +514,31 @@ final class GameplayViewController: UIViewController {
             })
             present(alert, animated: true)
         }
+    }
+
+    /// Starts or stops frames and sound to match the pause reasons. Every pause and resume goes
+    /// through here.
+    private func applyPauseReasons() {
+        guard !stopped, !halted else { return }
+        pausedOverlay.isHidden = !pauseReasons.showsPausedOverlay
+        if pauseReasons.shouldRun {
+            guard !driver.isRunning else { return }
+            resumeAudio()
+            driver.start()
+        } else if driver.isRunning {
+            driver.stop()
+            audio.pause()
+        }
+    }
+
+    private func holdFrames() {
+        pauseReasons.holds += 1
+        applyPauseReasons()
+    }
+
+    private func releaseFrames() {
+        pauseReasons.holds = max(0, pauseReasons.holds - 1)
+        applyPauseReasons()
     }
 
     /// Sound is optional: the game keeps running silently when audio can't start.
@@ -486,21 +551,19 @@ final class GameplayViewController: UIViewController {
     }
 
     private func pauseGameplay() {
-        driver.stop()
-        audio.pause()
         touchControls.cancelInput()
         input.resetTouch()
+        pauseReasons.byPlayer = true
+        applyPauseReasons()
         try? runtime.pause()
-        pausedOverlay.isHidden = false
     }
 
     private func resumeTapped() {
         do {
             try runtime.resume()
-            resumeAudio()
-            userPaused = false
-            pausedOverlay.isHidden = true
-            driver.start()
+            pauseReasons.byPlayer = false
+            pauseReasons.awaitingResume = false
+            applyPauseReasons()
         } catch {
             presentRuntimeError(error)
         }
@@ -564,9 +627,10 @@ final class GameplayViewController: UIViewController {
     }
 
     private func presentRuntimeError(_ error: Error) {
-        guard presentedViewController == nil else { return }
+        halted = true
         driver.stop()
         audio.pause()
+        guard presentedViewController == nil else { return }
         let alert = UIAlertController(
             title: "Emulation Error",
             message: String(describing: error),

@@ -130,6 +130,25 @@ static void test_oversized_battery(void)
     SBDestroy(instance);
 }
 
+// The largest cartridge image loads, and one byte more is refused before SameBoy allocates for it.
+static void test_rom_size_limit(void)
+{
+    size_t largest = 8u * 1024u * 1024u;
+    uint8_t *rom = malloc(largest + 1);
+    assert(rom);
+    make_test_rom(rom, largest + 1);
+
+    uint8_t boot[256] = {0};
+    boot[0] = 0xc3; boot[1] = 0x00; boot[2] = 0x01; // jp $0100
+
+    SBInstance *instance = SBCreate(SB_MODEL_DMG);
+    assert(SBLoadBootROM(instance, boot, sizeof(boot)));
+    assert(SBLoadROM(instance, rom, largest));
+    assert(!SBLoadROM(instance, rom, largest + 1));
+    free(rom);
+    SBDestroy(instance);
+}
+
 int main(void)
 {
     SBInstance *instance = SBCreate(SB_MODEL_DMG);
@@ -166,6 +185,7 @@ int main(void)
     test_boot_skip(rom, sizeof(rom));
     test_cartridge_rumble();
     test_oversized_battery();
+    test_rom_size_limit();
     puts("sameboy bridge smoke: ok");
     return 0;
 }

@@ -3,6 +3,13 @@
 This repository is the implementation of the Press Any iPhone-first GB/GBC emulator.
 Read this file before making architectural changes.
 
+## Cloud Model Preflight
+
+When working in `/workspace/press-any`, read `/workspace/AGENTS.md` at session
+start and apply its Model Preflight instructions before starting each new task
+or question. The policy lives in the plugin source referenced there. If a
+preflight hook block is already present in the turn, follow that block.
+
 ## Source of truth
 
 Read these documents in order:

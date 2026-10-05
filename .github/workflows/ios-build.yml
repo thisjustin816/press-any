@@ -40,6 +40,8 @@ jobs:
         run: |
           set -o pipefail
           make build 2>&1 | tee build.log
+      - name: Check the privacy manifest in the built app
+        run: ./Scripts/verify-privacy-manifest.sh
       - name: Test
         run: |
           set -o pipefail
@@ -88,5 +90,41 @@ jobs:
             echo '### Xcode diagnostics'
             echo '```'
             grep -hE ' error: |✘|BUILD FAILED|TEST FAILED|\*\* .* FAILED|Testing failed' test.log 2>/dev/null | sort -u | head -80
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # The TestFlight workflow archives in Release for a device, which these simulator Debug builds
+  # don't compile. An unsigned archive here catches a Release-only failure before an upload.
+  release-archive:
+    name: Unsigned Release archive
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install XcodeGen and RGBDS
+        run: brew install xcodegen rgbds
+      - name: Bootstrap (boot ROMs and Xcode project)
+        run: make bootstrap
+      - name: Archive
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project PressAny.xcodeproj -scheme PressAny -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/PressAny.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee archive.log
+      - name: Check the privacy manifest in the archived app
+        run: ./Scripts/verify-privacy-manifest.sh "$RUNNER_TEMP/PressAny.xcarchive/Products/Applications/PressAny.app"
+      - name: Summarize failures
+        if: failure()
+        run: |
+          {
+            echo '### Xcode diagnostics'
+            echo '```'
+            grep -hE ' error: |ARCHIVE FAILED|\*\* .* FAILED' archive.log 2>/dev/null | sort -u | head -80
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"

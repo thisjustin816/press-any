@@ -103,6 +103,24 @@ struct ImportDestinationSection: View {
             } footer: {
                 Text("A Base Build is a clean, unmodified ROM that patches are applied to. A Game can have one for each revision or region.")
             }
+            Section {
+                metadataField("Region", text: $model.region)
+                metadataField("Language", text: $model.language)
+                metadataField("Revision", text: $model.revision)
+                metadataField("Version", text: $model.version)
+            } header: {
+                Text("Build Details")
+            } footer: {
+                Text("Suggested from the filename and ROM header. Correct or clear any detail before importing.")
+            }
+        }
+    }
+
+    private func metadataField(_ label: String, text: Binding<String>) -> some View {
+        LabeledContent(label) {
+            TextField("Optional", text: text)
+                .accessibilityLabel(label)
+                .multilineTextAlignment(.trailing)
         }
     }
 }

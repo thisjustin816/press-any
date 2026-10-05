@@ -20,7 +20,7 @@ public struct ROMImportAnalyzer: Sendable {
         self.makeTransactionID = makeTransactionID
     }
 
-    public func analyzeROM(at sourceURL: URL, targetGameID: UUID?) throws -> ROMImportAnalysis {
+    public func analyzeROM(at sourceURL: URL, targetGameID: UUID?, originalFilename: String? = nil) throws -> ROMImportAnalysis {
         try ImportSizeLimit.rom.check(fileAt: sourceURL)
         let transactionID = makeTransactionID()
         let stagedURL = try assetStore.stageCopy(from: sourceURL, transactionID: transactionID)
@@ -32,11 +32,11 @@ public struct ROMImportAnalyzer: Sendable {
             return ROMImportAnalysis(
                 transactionID: transactionID,
                 stagedURL: stagedURL,
-                originalFilename: sourceURL.lastPathComponent,
+                originalFilename: originalFilename ?? sourceURL.lastPathComponent,
                 sha256: sha256,
                 byteLength: Int64(data.count),
                 header: header,
-                filenameMetadata: FilenameMetadataParser.parse(filename: sourceURL.lastPathComponent),
+                filenameMetadata: FilenameMetadataParser.parse(filename: originalFilename ?? sourceURL.lastPathComponent),
                 exactExistingBuildID: existing?.id,
                 suggestedGameID: targetGameID ?? existing?.gameID,
                 toolchainReports: detectors.detect(image: data, system: header.system)

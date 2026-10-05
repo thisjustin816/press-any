@@ -17,6 +17,8 @@ Verify with a user-supplied legal ROM:
 - [ ] Backgrounding pauses emulation, flushes battery save, and writes lifecycle autosave.
 - [ ] Foreground autoresume honors Always / Ask / Never behavior.
 - [ ] Add a modified ROM as a second Build; Game identity remains stable.
+- [ ] Import a ROM with metadata tags, such as `Example (Europe) (En,Fr) (Rev A) [v1.10].gb`. Correct or clear Build Details in review. Reopen the app and confirm Technical Info shows the chosen values.
+- [ ] Quick Play that ROM, then Add to Library. Build Details uses the picked filename's metadata.
 - [ ] Share a compatible Save Profile between Builds, then fork it and confirm divergence.
 - [ ] State created on Build A is never loadable on Build B.
 - [ ] Create an IPS/BPS-derived Build and launch it.
@@ -39,3 +41,16 @@ Verify with a user-supplied legal ROM:
 - [ ] Deleting a profile asks first, naming it; a Build that played it plays the Game's default afterwards.
 - [ ] The library list labels a Game Boy Color game "Game Boy Color".
 - [ ] Settings > Check Library Files reports an intact library.
+- [ ] Play for five minutes with speaker sound, then with Bluetooth headphones: no crackle, the sound keeps up with the picture, and switching between them keeps the sound. With Low Power Mode on, any gap is short and doesn't keep recurring.
+- [ ] With a controller connected the touch controls hide; touching the screen shows them, and the controller's next button press hides them again. With Settings > Hide Touch Controls with a Controller off, they stay shown.
+- [ ] Touch Haptics: Light by default, Medium is stronger, Off has none, and there are none while a controller hides the touch controls.
+- [ ] Save in a game with a battery save, wait 10 seconds, then force-quit from the app switcher: relaunching keeps the in-game save.
+- [ ] Save a state, then save in the game, then load the state: it asks first, and Load keeps the newer save as "<profile> before loading state".
+- [ ] In Quick Play the game menu shows Save State grayed with "Add to Library to save states", and Add to Library… opens the promotion review.
+- [ ] Settings > Systems > Game Boy Color opens settings that apply to every Game Boy Color game without its own.
+- [ ] Save in a game, then within a few seconds load a state taken before that save: it asks first, Cancel changes nothing, and Load keeps the newer save as "<profile> before loading state".
+- [ ] Quick Play a game with no battery save, play past the title screen, and Add to Library with a new profile: Play on the new Build resumes there.
+- [ ] Quick Play a ROM already in the library with a copy of its save, play, and Add to Library with a new profile: Play on that Build continues the Quick Play progress, and the Game's other Builds keep their saves.
+- [ ] A patch that turns a Game Boy game into a Game Boy Color one makes a Game Boy Color Build that boots in color, and still does after Remove Generated ROM.
+- [ ] Pull down Control Center and Notification Center mid-game: the game stops, and picks up again when they close. With a button held when they open, nothing stays pressed. Lock and unlock, and switch apps, with Resume Games set to Always, Ask and Never in turn. A game paused from the menu stays paused through all of these.
+- [ ] At the largest accessibility text size, the library shows one column with full titles, and a Game's Builds, saves and Technical Info hashes stay readable.

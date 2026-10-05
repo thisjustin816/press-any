@@ -12,6 +12,7 @@ public struct GBROMHeader: Equatable, Sendable {
     public let headerChecksumValid: Bool
     public let globalChecksum: UInt16
     public let globalChecksumValid: Bool
+    public let revisionNumber: UInt8
 
     public init(
         title: String,
@@ -23,7 +24,8 @@ public struct GBROMHeader: Equatable, Sendable {
         headerChecksum: UInt8,
         headerChecksumValid: Bool,
         globalChecksum: UInt16,
-        globalChecksumValid: Bool
+        globalChecksumValid: Bool,
+        revisionNumber: UInt8 = 0
     ) {
         self.title = title
         self.system = system
@@ -35,6 +37,7 @@ public struct GBROMHeader: Equatable, Sendable {
         self.headerChecksumValid = headerChecksumValid
         self.globalChecksum = globalChecksum
         self.globalChecksumValid = globalChecksumValid
+        self.revisionNumber = revisionNumber
     }
 }
 
