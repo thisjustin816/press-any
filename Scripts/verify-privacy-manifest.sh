@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Checks the app's privacy manifest, then that the app `make build` produced carries it unchanged.
-# The manifest only counts once it is in the bundle, so a lint of the source file isn't enough.
-# Needs macOS and Xcode; run after `make build`.
+# Checks the app's privacy manifest, then that a built app carries it unchanged. The manifest only
+# counts once it is in the bundle, so a lint of the source file isn't enough. Pass the path of an
+# .app, such as the one in an archive; with none, it checks the app `make build` produced.
+# Needs macOS and Xcode.
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 project="${PROJECT_NAME:-PressAny}"
@@ -12,11 +13,16 @@ manifest="$repo_root/App/PrivacyInfo.xcprivacy"
 
 plutil -lint "$manifest"
 
-settings="$(xcodebuild -project "$repo_root/$project.xcodeproj" -scheme "$project" \
-  -destination "$destination" -showBuildSettings 2>/dev/null)"
-products="$(awk -F ' = ' '$1 ~ /^ *BUILT_PRODUCTS_DIR$/ { print $2; exit }' <<<"$settings")"
-app="$(awk -F ' = ' '$1 ~ /^ *FULL_PRODUCT_NAME$/ { print $2; exit }' <<<"$settings")"
-built="$products/$app/PrivacyInfo.xcprivacy"
+if [[ $# -gt 0 ]]; then
+  app_path="$1"
+else
+  settings="$(xcodebuild -project "$repo_root/$project.xcodeproj" -scheme "$project" \
+    -destination "$destination" -showBuildSettings 2>/dev/null)"
+  products="$(awk -F ' = ' '$1 ~ /^ *BUILT_PRODUCTS_DIR$/ { print $2; exit }' <<<"$settings")"
+  app_path="$products/$(awk -F ' = ' '$1 ~ /^ *FULL_PRODUCT_NAME$/ { print $2; exit }' <<<"$settings")"
+fi
+app="$(basename "$app_path")"
+built="$app_path/PrivacyInfo.xcprivacy"
 
 if [[ ! -f "$built" ]]; then
   echo "The built app has no privacy manifest at $built" >&2

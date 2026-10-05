@@ -3,6 +3,18 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: TestFlight from CI, by hand, in portrait
+
+**Decision.** TestFlight builds are archived, signed and uploaded by a manual GitHub Actions
+workflow, using an App Store Connect API key and Xcode's cloud-managed signing, so no Mac is
+needed. A build ships only when someone runs it. The bundle ID stays `com.thisjustin816.PressAny`,
+the technical name in `AGENTS.md`; the name people see is the display name. The app is locked to
+portrait until the v1 landscape layouts.
+
+**Why.** The owner tests on an iPhone without building locally. Uploading on every merge would
+send testers half-finished work. Nothing kept the app in portrait, so it rotated into a landscape
+that no layout supports yet.
+
 ## 2026-10-05: Pause when the app goes inactive, and keep Quick Play progress with its Build
 
 **Decision.** The game pauses whenever its scene goes inactive, not only in the background, and
