@@ -44,12 +44,15 @@ final class MenuScreenshots: XCTestCase {
         let settings = try settings()
         let app = try launch("game:\(settings.gameROM)")
         // A seeded Game has no profile until one is played or made, so make one.
-        app.buttons["New Blank Save"].tap()
+        let newSave = app.buttons["New Blank Save"]
+        scrollTo(newSave, in: app)
+        newSave.tap()
         let create = app.alerts.buttons["Create"]
         XCTAssertTrue(create.waitForExistence(timeout: 5), "the New Save Profile alert opens")
         create.tap()
         let profile = app.staticTexts["New Save"]
         XCTAssertTrue(profile.waitForExistence(timeout: 5), "the new profile is listed")
+        scrollTo(profile, in: app)
         profile.press(forDuration: 1)
         try expect(app.buttons["Duplicate"], then: "menu-save-profile")
     }
@@ -81,6 +84,14 @@ final class MenuScreenshots: XCTestCase {
         sleep(4)
         menu.tap()
         try expect(app.buttons[item], then: name)
+    }
+
+    /// At large text sizes the save profiles start below the screen.
+    private func scrollTo(_ element: XCUIElement, in app: XCUIApplication) {
+        XCTAssertTrue(element.waitForExistence(timeout: 5), "\(element) exists")
+        for _ in 0..<6 where !element.isHittable {
+            app.swipeUp()
+        }
     }
 
     private func settings() throws -> Settings {

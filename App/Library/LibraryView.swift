@@ -17,6 +17,7 @@ struct LibraryView: View {
 
     @StateObject private var model: LibraryViewModel
     @State private var displayMode: DisplayMode = .grid
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showROMImporter = false
     @State private var pendingFileAction: FileAction = .importROM
     @State private var importReview: ImportReviewPresentation?
@@ -206,7 +207,11 @@ struct LibraryView: View {
 
     private var gameGrid: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), spacing: 16, alignment: .top)], spacing: 20) {
+            // At accessibility text sizes two columns leave titles room for a word or two.
+            let columns = typeSize.isAccessibilitySize
+                ? [GridItem(.flexible(), alignment: .top)]
+                : [GridItem(.adaptive(minimum: 145), spacing: 16, alignment: .top)]
+            LazyVGrid(columns: columns, spacing: 20) {
                 ForEach(model.visibleGames) { game in
                     NavigationLink {
                         GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
@@ -310,6 +315,8 @@ private struct GameLibraryTile: View {
     let artworkURL: URL?
     let showsTitle: Bool
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             GameArtworkView(url: artworkURL, system: system, title: game.primaryTitle)
@@ -317,7 +324,7 @@ private struct GameLibraryTile: View {
             if showsTitle {
                 Text(game.primaryTitle)
                     .font(.headline)
-                    .lineLimit(2)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

@@ -3,6 +3,13 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Layouts at accessibility text sizes
+
+**Decision.** At accessibility text sizes the library grid shows one column, with each title
+wrapping in full, a Build's BASE tag moves to its own line under the name, and a full SHA-256
+shows one 16-character group a line, each shrinking to fit rather than breaking. The screenshot
+workflow can run at the largest size to check this.
+
 ## 2026-10-05: Future features, and the layout keeps its name
 
 **Decision.** v1.1 adds browsing and downloading games from itch.io's Game Boy tag, in an in-app
