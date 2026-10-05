@@ -15,11 +15,16 @@ final class GameplayDriver: @unchecked Sendable {
 
     private var running = false
     private var requestedSpeed: EmulationSpeed = .normal
+    /// Read and written only on the driver queue.
+    private var lastSaveFailed = false
 
     var onFrame: FrameHandler?
     var onAudio: AudioHandler?
     var onRumble: RumbleHandler?
     var onError: ErrorHandler?
+    /// A periodic game save failed after the last one succeeded. Play continues, and the next
+    /// check tries again.
+    var onSaveError: ErrorHandler?
 
     init(runtime: any GameplayRuntime, input: GameplayInputAccumulator) {
         self.runtime = runtime
@@ -58,6 +63,7 @@ final class GameplayDriver: @unchecked Sendable {
             let started = DispatchTime.now().uptimeNanoseconds
             do {
                 let frame = try runtime.stepFrame(input: input.current())
+                flushGameSave()
                 let samples = try runtime.drainAudio(maxFrames: 4096)
                 let rumble = try runtime.consumeRumbleAmplitude()
 
@@ -70,6 +76,15 @@ final class GameplayDriver: @unchecked Sendable {
                 stateLock.withLock { running = false }
                 onError?(error)
             }
+        }
+    }
+
+    private func flushGameSave() {
+        do {
+            if try runtime.flushBatteryIfChanged() { lastSaveFailed = false }
+        } catch {
+            if !lastSaveFailed { onSaveError?(error) }
+            lastSaveFailed = true
         }
     }
 

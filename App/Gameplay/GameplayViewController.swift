@@ -118,7 +118,9 @@ final class GameplayViewController: UIViewController {
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         if isBeingDismissed || navigationController?.isBeingDismissed == true {
-            stopRuntime()
+            // Close and Add to Library stop first and ask when saving fails; this covers any
+            // other dismissal, which has no screen left to ask from.
+            try? stopRuntime()
         }
     }
 
@@ -255,14 +257,36 @@ final class GameplayViewController: UIViewController {
         }
     }
 
+    /// A state carries the game save from when it was made, so loading one older than the
+    /// current save asks first and keeps the newer save as a copy.
     private func loadState(_ state: SaveState) {
         guard let states = runtime as? any SaveStateRuntime else { return }
         do {
-            try states.loadState(state)
-            showTransientMessage("State loaded.")
+            guard try states.loadingWouldRollBackSave(state) else {
+                try states.loadState(state)
+                showTransientMessage("State loaded.")
+                return
+            }
         } catch {
             showTransientMessage("Couldn’t load that state: \(error)")
+            return
         }
+        let alert = UIAlertController(
+            title: "Load an Older State?",
+            message: "This state is older than the game’s save, so loading it takes the save back to then. The current save is kept as a copy named “before loading state”.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Load State", style: .default) { [weak self] _ in
+            guard let states = self?.runtime as? any SaveStateRuntime else { return }
+            do {
+                try states.loadStateKeepingCopy(state)
+                self?.showTransientMessage("State loaded. The newer save was kept as a copy.")
+            } catch {
+                self?.showTransientMessage("Couldn’t load that state: \(error)")
+            }
+        })
+        present(alert, animated: true)
     }
 
     private func configureRuntimeLoop() {
@@ -281,6 +305,11 @@ final class GameplayViewController: UIViewController {
         }
         driver.onError = { [weak self] error in
             DispatchQueue.main.async { self?.presentRuntimeError(error) }
+        }
+        driver.onSaveError = { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.showTransientMessage("Couldn’t save the game. Free up space on your iPhone; it will keep trying.")
+            }
         }
     }
 
@@ -477,25 +506,61 @@ final class GameplayViewController: UIViewController {
         }
     }
 
+    private enum Exit {
+        case close
+        case addToLibrary
+    }
+
     private func closeTapped() {
-        stopRuntime()
-        dismiss(animated: true)
-        onClose?()
+        finish(.close)
     }
 
     private func addToLibraryTapped() {
-        stopRuntime()
-        dismiss(animated: true)
-        onAddToLibrary?()
+        finish(.addToLibrary)
     }
 
-    private func stopRuntime() {
+    /// Saves and closes the game, then closes or adds it to the library. When saving fails the
+    /// game stays open and paused, and the player chooses to try again or to close without the
+    /// save.
+    private func finish(_ exit: Exit) {
+        do {
+            try stopRuntime()
+        } catch {
+            let alert = UIAlertController(
+                title: "Couldn’t Save",
+                message: "The game couldn’t be saved, so closing now would lose your latest progress. Free up space on your iPhone, then try again. (\(error))",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Try Again", style: .default) { [weak self] _ in
+                self?.finish(exit)
+            })
+            alert.addAction(UIAlertAction(title: "Close Without Saving", style: .destructive) { [weak self] _ in
+                guard let self else { return }
+                try? self.runtime.stop(createAutoState: true, discardUnsaved: true)
+                self.stopped = true
+                self.leave(exit)
+            })
+            present(alert, animated: true)
+            return
+        }
+        leave(exit)
+    }
+
+    private func leave(_ exit: Exit) {
+        dismiss(animated: true)
+        switch exit {
+        case .close: onClose?()
+        case .addToLibrary: onAddToLibrary?()
+        }
+    }
+
+    /// A failed stop leaves the session open, so `stopped` stays false and the next call retries.
+    private func stopRuntime() throws {
         guard !stopped else { return }
-        stopped = true
         driver.stop()
         audio.stop()
-        do { try runtime.stop(createAutoState: true) }
-        catch { /* Closing must remain possible even if persistence fails. */ }
+        try runtime.stop(createAutoState: true)
+        stopped = true
     }
 
     private func presentRuntimeError(_ error: Error) {

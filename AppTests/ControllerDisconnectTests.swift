@@ -85,4 +85,6 @@ private final class FakeRuntime: GameplayRuntime, @unchecked Sendable {
     func background() throws {}
     func foreground(policy: AutoResumePolicy) throws -> Bool { true }
     func stop(createAutoState: Bool) throws {}
+    func stop(createAutoState: Bool, discardUnsaved: Bool) throws {}
+    func flushBatteryIfChanged() throws -> Bool { false }
 }

@@ -75,6 +75,7 @@ final class AppContainer {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
             assetStore: fileStore,
@@ -177,6 +178,7 @@ final class AppContainer {
             committer: importCommitter,
             workspace: quickPlayWorkspace,
             profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
             assets: repositories.assets,
             assetStore: fileStore
         )

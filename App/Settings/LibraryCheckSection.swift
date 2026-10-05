@@ -53,7 +53,7 @@ struct LibraryCheckSection: View {
             case .missingUserData: missingUserData += 1
             case .missingCache: missingGenerated += 1
             case .hashMismatch: damaged += 1
-            case .orphanSource, .orphanCache: break
+            case .orphanSource, .orphanCache, .staleTemporaryFile: break
             }
         }
         var lines: [String] = []

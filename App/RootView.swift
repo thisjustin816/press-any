@@ -248,7 +248,11 @@ struct RootView: View {
     }
 
     private func present(_ session: QuickPlaySession, container: AppContainer, firstFrameClock: UInt64?) throws {
-        let runtime = QuickPlayRuntimeSession(session: session, coreRegistry: container.coreRegistry)
+        let runtime = QuickPlayRuntimeSession(
+            session: session,
+            coreRegistry: container.coreRegistry,
+            assetStore: container.fileStore
+        )
         try runtime.start()
         gameplay = GameplayPresentation(
             kind: .quickPlay(session.id),
