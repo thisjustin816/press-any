@@ -1,8 +1,9 @@
 # Continuous integration
 
 Workflows live in `.github/workflows/`. Every action is pinned to a commit SHA, every
-workflow runs with `contents: read` and no secrets, and a fork pull request gets the same
-read-only token.
+workflow runs with `contents: read`, and a fork pull request gets the same
+read-only token. Build, test and screenshot workflows use no secrets. The manual
+TestFlight workflow uses repository secrets for Apple signing and upload.
 
 ## Implemented
 
@@ -15,8 +16,9 @@ read-only token.
 | `ci.yml` | All test targets are covered | `Scripts/verify-ci-test-coverage.sh` fails when a directory under `Packages/EmulatorKit/Tests/` is not named in `ci.yml` |
 | `ci.yml` | Repository hygiene | `Scripts/verify-repo-hygiene.sh` (no tracked game images, saves or generated Xcode projects; the ROMs in `TestROMs/roms/` are allowed only when `TestROMs/manifest.json` lists them with a matching SHA-256) and `shellcheck` at error severity |
 | `ios-build.yml` | Xcode simulator build and tests | `make bootstrap`, `make build`, `make test` on the `macos-26` runner; on failure, a last step repeats only the Xcode error lines in the job summary |
-| `screenshots.yml` | Simulator screenshots (manual only) | `Scripts/take-screenshots.sh`: seeds the library from `TestROMs/` (the hero ROMs, all of them, or chosen tags and filenames), opens each screen with the Debug-only `-ScreenshotScene` launch argument and uploads the PNGs as an artifact, one for Light Mode and one for Dark Mode unless a single appearance is chosen, optionally at the largest accessibility text size. By default it takes one of each screen, including Settings, gameplay with a controller attached, and the Playtiles layout with and without one, then runs the UI tests in `ScreenshotTests/` (the `PressAnyScreenshots` scheme), which tap open the pop-up menus, screenshot each, and fail the run if one doesn't open; `every-rom` adds each ROM's game, Technical Info, and gameplay. Nothing asserts on them |
+| `screenshots.yml` | Simulator screenshots (manual only) | `Scripts/take-screenshots.sh`: selects iPhone 17 Pro Max (default, for App Store screenshots) or iPhone 17 Pro, seeds the library from `TestROMs/`, opens screens with the Debug-only `-ScreenshotScene` argument and uploads PNGs and logs as light/dark artifacts. `summary` takes one of each screen; `every-rom` adds each ROM's game, Technical Info and gameplay. UI tests open pop-up menus and fail the run if one doesn't open. Text size can be default or the largest accessibility size. See `docs/testflight.md` for downloading and uploading selected PNGs |
 | `ios-build.yml` | Package tests on the iOS simulator | `make test-package-ios`: the `EmulatorKit-Package` scheme's tests against Apple's Foundation, with the same failure summary |
+| `testflight.yml` | TestFlight upload (manual, `main` only) | `make bootstrap`, then `Scripts/upload-testflight.sh`: signs a Release archive with an Apple Distribution certificate and App Store provisioning profile, exports an IPA, and uploads it with an App Store Connect team API key. See `docs/testflight.md` for secret setup and tester access |
 
 The Linux Swift jobs run in the `swift:6.1.2-noble` image, whose tag is not pinned by digest.
 The image has no SQLite headers, so each Swift job installs `libsqlite3-dev` first; GRDB needs

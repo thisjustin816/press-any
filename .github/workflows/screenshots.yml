@@ -1,11 +1,16 @@
 name: Screenshots
 
-# Manual only: captures the app on the iPhone 17 Pro simulator, seeded from TestROMs/, and uploads
+# Manual only: captures the app on an iPhone simulator, seeded from TestROMs/, and uploads
 # the PNGs as an artifact. Nothing checks them; they are for looking at.
 
 on:
   workflow_dispatch:
     inputs:
+      device:
+        description: Pro Max for App Store screenshots; Pro for layout inspection
+        type: choice
+        options: [iPhone 17 Pro Max, iPhone 17 Pro]
+        default: iPhone 17 Pro Max
       roms:
         description: "hero, all, or comma-separated manifest tags and filenames"
         default: hero
@@ -53,6 +58,7 @@ jobs:
         run: make bootstrap
       - name: Take screenshots
         env:
+          DEVICE: ${{ inputs.device }}
           ROMS: ${{ inputs.roms }}
           SHOTS: ${{ inputs.shots }}
           APPEARANCE: ${{ matrix.appearance }}

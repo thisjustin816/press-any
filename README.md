@@ -48,6 +48,7 @@ make test
 ```
 
 To install it on your own iPhone with a free Apple ID, follow `docs/device-build.md`.
+For TestFlight uploads and App Store screenshots without a Mac, follow `docs/testflight.md`.
 
 ## Documentation
 
