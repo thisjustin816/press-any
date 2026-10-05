@@ -91,7 +91,7 @@ camera and printer declared, and a missing one is a failed cast.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers); saves/states not verified on read |
+| partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers and stale temporary files); saves/states not verified on read |
 | missing | Storage screen by category, source vs disposable, safe cleanup | v1 | Q138 | none |
 | partial | Automatic cleanup of disposable data only | v1 | Q139 | expired Quick Play sessions removed at launch (AppContainer init); no generated-cache eviction under pressure |
 | missing | GC coordination / in-flight protection / orphan sweep in the running app | v1 | later 6 | logic only in the unused checker |
@@ -215,7 +215,8 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later | dec 9/33 |  |
 
-Done: One .sav per Save Profile, atomic flush; Compatible Builds share a profile on purpose; New
+Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play
+once changed, at most every five seconds of play; Compatible Builds share a profile on purpose; New
 blank profile; duplicate profile (bytes copied, ancestry shown); Import .sav into a new profile,
 or into an existing one after confirming, keeping its old save as "<name> before import";
 Variable maps (GB Studio globals, RGBDS .sym, GBDK .noi) kept on the exact Build; Each profile
@@ -243,7 +244,10 @@ never cross Build/Profile/core/serialization context; Auto State on background, 
 switch; rolling 5; Resume Games Always/Ask/Never (default Always), inheritable System/Game/Build,
 Ask prompt, foreground policy; Auto State not restored once the profile's save is newer; Failed
 restore boots normally, keeps state, tells user; Backgrounding pauses emulation/audio; One active
-emulator session; Each state keeps a PNG thumbnail of its frame, shown in Load State.
+emulator session; Each state keeps a PNG thumbnail of its frame, shown in Load State; A failed
+battery write still saves the Auto State, and a failed close can be retried or closed without
+saving; Loading a state older than the profile's save warns and keeps the save as "<name> before
+loading state"; A separated Build's states follow it to the profile copies it plays.
 
 ### Quick Play
 
@@ -257,7 +261,8 @@ Done: Temporary sandbox, no library mutation until promotion; Time-to-first-fram
 validate, copy, hash; boot past logo (cgb_boot_fast); no optional assets; "First frame in N ms"; Use
 an existing save by copying it in; source never written; Promotion via Import Review: keep / replace
 after safety copy / new profile / discard save; Recent Quick Plays list with Keep/Import/Discard and
-resume from autosave; 24 h default retention, expired sessions purged.
+resume from autosave, skipped once the battery save is newer; Add to Library keeps the autosave as
+the Build's Auto State; 24 h default retention, expired sessions purged.
 
 ### Cheats and memory tools
 
