@@ -21,6 +21,7 @@ public struct ROMImportAnalyzer: Sendable {
     }
 
     public func analyzeROM(at sourceURL: URL, targetGameID: UUID?) throws -> ROMImportAnalysis {
+        try ImportSizeLimit.rom.check(fileAt: sourceURL)
         let transactionID = makeTransactionID()
         let stagedURL = try assetStore.stageCopy(from: sourceURL, transactionID: transactionID)
         do {

@@ -37,6 +37,20 @@ final class SaveCompatibilityTests: XCTestCase {
         }
     }
 
+    func testAnOversizedMapIsRefusedBeforeItIsStaged() throws {
+        let fixture = try Fixture()
+        let build = try fixture.addBuild(title: "MAPS")
+        let huge = try ImportTestFiles.sparse(
+            at: fixture.root.appendingPathComponent("External/huge.sym"),
+            byteCount: 5 * 1_048_576
+        )
+
+        XCTAssertThrowsError(try fixture.attach.execute(buildID: build.id, sourceURL: huge)) {
+            XCTAssertEqual($0 as? ImportSizeError, .fileTooLarge(limit: ImportSizeLimit.variableMap.bytes))
+        }
+        XCTAssertEqual(ImportTestFiles.stagedItems(under: fixture.store.rootURL), [])
+    }
+
     // MARK: Assessing a launch's save
 
     func testASaveIsSafeForTheBuildThatWroteItOrWithNoKnownWriter() throws {

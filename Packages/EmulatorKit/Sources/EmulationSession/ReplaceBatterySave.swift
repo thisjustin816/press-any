@@ -42,6 +42,7 @@ public struct ReplaceBatterySave: Sendable {
         guard let profile = try profiles.fetchSaveProfile(id: profileID) else {
             throw ReplaceBatterySaveError.profileNotFound(profileID)
         }
+        try ImportSizeLimit.batterySave.check(fileAt: sourceURL)
         let battery = try assetStore.readData(at: sourceURL)
         guard !battery.isEmpty else { throw ReplaceBatterySaveError.emptyFile }
 

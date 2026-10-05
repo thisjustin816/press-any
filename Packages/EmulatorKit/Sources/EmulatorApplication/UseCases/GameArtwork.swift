@@ -29,12 +29,25 @@ public struct GameArtwork: Sendable {
         self.makeID = makeID
     }
 
+    /// Sets a picked image file, reading it only once its size is within the limit.
+    @discardableResult
+    public func set(gameID: UUID, fileAt url: URL) throws -> Game {
+        try ImportSizeLimit.artwork.check(fileAt: url)
+        return try set(
+            gameID: gameID,
+            imageData: assetStore.readData(at: url),
+            fileExtension: url.pathExtension.isEmpty ? "img" : url.pathExtension,
+            originalFilename: url.lastPathComponent
+        )
+    }
+
     @discardableResult
     public func set(gameID: UUID, imageData: Data, fileExtension: String, originalFilename: String? = nil) throws -> Game {
         guard var game = try games.fetchGame(id: gameID) else {
             throw GameArtworkError.gameNotFound(gameID)
         }
         guard !imageData.isEmpty else { throw GameArtworkError.emptyImage }
+        try ImportSizeLimit.artwork.check(byteCount: Int64(imageData.count))
 
         let sha256 = assetStore.hashData(imageData)
         let destination = try assetStore.artworkURL(gameID: gameID, sha256: sha256, extension: fileExtension)

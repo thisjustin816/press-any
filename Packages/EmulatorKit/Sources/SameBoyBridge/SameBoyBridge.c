@@ -153,6 +153,8 @@ bool SBLoadBootROM(SBInstance *instance, const uint8_t *bytes, size_t size)
 bool SBLoadROM(SBInstance *instance, const uint8_t *bytes, size_t size)
 {
     if (!instance || !instance->gb || !bytes || size < 0x150) return false;
+    // SameBoy does not check the allocation it makes for the image, so callers bound the size:
+    // imported ROMs at 8 MB and patched images at 64 MB.
     GB_load_rom_from_buffer(instance->gb, bytes, size);
     GB_reset(instance->gb);
     instance->has_run = false;

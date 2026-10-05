@@ -38,6 +38,7 @@ public struct QuickPlayWorkspace: Sendable {
         romURL: URL,
         copiedSaveProfileID: UUID? = nil
     ) throws -> QuickPlaySession {
+        try ImportSizeLimit.rom.check(fileAt: romURL)
         let id = makeID()
         let root = assetStore.quickPlayRoot(sessionID: id)
         let destinationROM = root.appendingPathComponent("rom.bin")

@@ -38,4 +38,27 @@ final class GameArtworkTests: XCTestCase {
             XCTAssertEqual(error as? GameArtworkError, .emptyImage)
         }
     }
+
+    func testAnOversizedImageIsRefusedBeforeItIsRead() throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let game = Game(id: UUID(), primaryTitle: "Art", systemFamily: "gameboy", createdAt: now, modifiedAt: now)
+        let games = InMemoryGameRepository([game])
+        let store = try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("emulatorkit-artwork-tests-\(UUID().uuidString)", isDirectory: true))
+        let artwork = GameArtwork(games: games, assets: InMemoryAssetRepository(), assetStore: store, now: { now })
+        let tooLarge = ImportSizeError.fileTooLarge(limit: ImportSizeLimit.artwork.bytes)
+
+        let huge = try ImportTestFiles.sparse(
+            at: FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).png"),
+            byteCount: UInt64(ImportSizeLimit.artwork.bytes) + 1
+        )
+        XCTAssertThrowsError(try artwork.set(gameID: game.id, fileAt: huge)) {
+            XCTAssertEqual($0 as? ImportSizeError, tooLarge)
+        }
+        let oversized = Data(count: Int(ImportSizeLimit.artwork.bytes) + 1)
+        XCTAssertThrowsError(try artwork.set(gameID: game.id, imageData: oversized, fileExtension: "png")) {
+            XCTAssertEqual($0 as? ImportSizeError, tooLarge)
+        }
+        XCTAssertNil(try games.fetchGame(id: game.id)?.artworkAssetID)
+    }
 }
