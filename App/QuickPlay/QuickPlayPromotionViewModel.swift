@@ -16,13 +16,20 @@ final class QuickPlayPromotionViewModel: ObservableObject {
     @Published var saveChoice: SaveChoice
     @Published var newProfileName = "Quick Play"
     @Published private(set) var errorMessage: String?
+    /// Set when the Build was added but a later step didn't finish, to tell the player before
+    /// the review closes.
+    @Published var shortfallNotice: String?
     /// The import already happened, so this review's analysis is spent; a retry starts over.
     @Published private(set) var needsFreshReview = false
 
     let review: ImportReviewViewModel
     let session: QuickPlaySession
     let sourceProfile: SaveProfile?
-    let hasSave: Bool
+    let hasBattery: Bool
+    /// An autosave promotion would keep. A game with no battery save can have one, and it's then
+    /// the session's only progress.
+    let hasResumePoint: Bool
+    var hasProgress: Bool { hasBattery || hasResumePoint }
 
     private let container: AppContainer
 
@@ -33,8 +40,9 @@ final class QuickPlayPromotionViewModel: ObservableObject {
             try container.repositories.saveProfiles.fetchSaveProfile(id: $0)
         }
         let battery = try container.quickPlayWorkspace.temporaryBatteryData(sessionID: session.id)
-        hasSave = !(battery?.isEmpty ?? true)
-        saveChoice = hasSave ? .newProfile : .discard
+        hasBattery = !(battery?.isEmpty ?? true)
+        hasResumePoint = session.hasResumePoint(files: container.fileStore)
+        saveChoice = hasBattery || hasResumePoint ? .newProfile : .discard
 
         let analysis = try container.quickPlayPromoter.analyze(session, targetGameID: sourceProfile?.gameID)
         review = ImportReviewViewModel(
@@ -55,7 +63,7 @@ final class QuickPlayPromotionViewModel: ObservableObject {
     /// Replacing is offered only for the profile the session copied, and only when the Build
     /// lands in that profile's Game.
     var canReplaceSource: Bool {
-        guard hasSave, let sourceProfile else { return false }
+        guard hasBattery, let sourceProfile else { return false }
         return targetGameID == sourceProfile.gameID
     }
 
@@ -96,6 +104,7 @@ final class QuickPlayPromotionViewModel: ObservableObject {
                 saveDisposition: disposition
             )
             errorMessage = nil
+            shortfallNotice = Self.notice(for: result.shortfalls)
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
             return result
         } catch let error as PromoteQuickPlayError {
@@ -115,5 +124,16 @@ final class QuickPlayPromotionViewModel: ObservableObject {
 
     func cancel() {
         review.cancel()
+    }
+
+    private static func notice(for shortfalls: Set<QuickPlayPromotionShortfall>) -> String? {
+        var lines: [String] = []
+        if shortfalls.contains(.resumePointNotMoved) {
+            lines.append("Where you left off couldn’t be moved to the library, so the Quick Play session is kept. You can still continue it from Quick Play.")
+        }
+        if shortfalls.contains(.buildDefaultSaveNotSet) {
+            lines.append("The Build couldn’t be set to play the kept save. Choose it from the Build’s menu.")
+        }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n\n")
     }
 }

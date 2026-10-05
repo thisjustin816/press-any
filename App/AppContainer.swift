@@ -177,6 +177,7 @@ final class AppContainer {
             analyzer: importAnalyzer,
             committer: importCommitter,
             workspace: quickPlayWorkspace,
+            builds: repositories.builds,
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
             assets: repositories.assets,
