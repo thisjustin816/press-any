@@ -29,7 +29,7 @@ needs them.
 
 **Decision.** Every file the player picks is treated as untrusted. Each import checks the file's
 size before reading or staging it, against a limit for its kind: 8 MB for a ROM, the largest a
-header can declare; 64 MB for a patch; 4 MB for a battery save, since TPP1 cartridges can declare
+header can declare; 16 MB for a patch; 4 MB for a battery save, since TPP1 cartridges can declare
 2 MB of RAM; 20 MB for artwork; and 4 MB for a variable map. A larger file is refused with a
 message saying so. Staging copies only regular files, never a link or a folder, under a fixed
 name, and the app empties the staging folder at launch to clear copies an interrupted import left.
@@ -38,8 +38,9 @@ ignored. Artwork is decoded when it is set and stored as a PNG no larger than 10
 long edge, and a file that isn't a readable image is refused. The SameBoy bridge hands battery
 saves to the core in a zero-padded copy, because SameBoy reads up to 48 bytes past the cartridge
 RAM when a save is longer than the RAM. SameBoy also doesn't check the allocation it makes when
-loading a ROM, so the bridge relies on these limits, and the 64 MB cap on patch results, to keep
-that allocation small.
+loading a ROM, so the bridge refuses any image over 8 MB, the most a cartridge maps, and makes
+sure the memory SameBoy will ask for is available before handing the image over. A patch whose
+result is over 8 MB fails when the Build is made, not when it's played.
 
 **Why.** A review with fuzzers and AddressSanitizer found a heap over-read in SameBoy's battery
 loading, imports that read whole files of any size into memory, staging that trusted the picked
