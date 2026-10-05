@@ -3,6 +3,27 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Import hardening
+
+**Decision.** Every file the player picks is treated as untrusted. Each import checks the file's
+size before reading or staging it, against a limit for its kind: 8 MB for a ROM, the largest a
+header can declare; 64 MB for a patch; 4 MB for a battery save, since TPP1 cartridges can declare
+2 MB of RAM; 20 MB for artwork; and 4 MB for a variable map. A larger file is refused with a
+message saying so. Staging copies only regular files, never a link or a folder, under a fixed
+name, and the app empties the staging folder at launch to clear copies an interrupted import left.
+An IPS patch's trailing size can only truncate the result, as in Lunar IPS; a larger one is
+ignored. Artwork is decoded when it is set and stored as a PNG no larger than 1024 pixels on its
+long edge, and a file that isn't a readable image is refused. The SameBoy bridge hands battery
+saves to the core in a zero-padded copy, because SameBoy reads up to 48 bytes past the cartridge
+RAM when a save is longer than the RAM. SameBoy also doesn't check the allocation it makes when
+loading a ROM, so the bridge relies on these limits, and the 64 MB cap on patch results, to keep
+that allocation small.
+
+**Why.** A review with fuzzers and AddressSanitizer found a heap over-read in SameBoy's battery
+loading, imports that read whole files of any size into memory, staging that trusted the picked
+file's name and copied links, an IPS trailer that could grow any ROM to 16 MB, and artwork stored
+at whatever size it was picked. Each could be reached with a file a player picked.
+
 ## 2026-10-05: Layouts at accessibility text sizes
 
 **Decision.** At accessibility text sizes the library grid shows one column, with each title
