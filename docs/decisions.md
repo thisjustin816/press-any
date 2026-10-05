@@ -3,6 +3,23 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Reviewable Build metadata on import
+
+**Decision.** Import recognizes explicit region and language groups, Rev/Revision tags, numeric
+v/Version tags, and a trailing v1.2-style homebrew version. Recognized values fill optional Region,
+Language, Revision, and Version fields in Import Review, where the player can correct or clear them.
+A nonzero ROM-header revision fills in when the filename has no revision. Unknown groups stay
+uninterpreted, and the original filename is preserved. Numeric versions with up to four components
+have a numeric sort key; other labels have none. The Build keeps the reviewed values, and
+Technical Info shows them. Duplicate imports leave existing Build metadata alone.
+
+Quick Play promotion uses the picked filename for the suggestions and the managed source asset's
+original name. Analysis runs when Add to Library opens, after gameplay has started. Richer
+hack metadata conventions and metadata editing after import remain v1 work.
+
+**Why.** The Build columns existed but imports left them empty. Players need to distinguish
+regional and versioned Builds without having to put all their metadata into the display name.
+
 ## 2026-10-05: TestFlight from CI, by hand, in portrait
 
 **Decision.** TestFlight builds are archived, signed and uploaded by a manual GitHub Actions

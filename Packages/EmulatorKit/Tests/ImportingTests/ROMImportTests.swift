@@ -7,6 +7,73 @@ import XCTest
 @testable import Importing
 
 final class ROMImportTests: XCTestCase {
+    func testImportPersistsFilenameMetadataAndAnExplicitReviewOverride() throws {
+        let harness = try ImportHarness.make()
+        let file = harness.external.appendingPathComponent("Example (Europe) (En,Fr) (Rev 2) [v1.10].gb")
+        try TestROM.make(title: "EXAMPLE").write(to: file)
+        let analysis = try harness.analyzer.analyzeROM(at: file, targetGameID: nil)
+        let result = try harness.committer.commit(ROMImportPlan(
+            analysis: analysis, disposition: .createGame(title: "Example"), buildDisplayName: "Revision 2", markAsBase: true
+        ))
+        XCTAssertEqual(result.build.region, "Europe")
+        XCTAssertEqual(result.build.language, "En, Fr")
+        XCTAssertEqual(result.build.revision, "2")
+        XCTAssertEqual(result.build.versionString, "1.10")
+        XCTAssertEqual(result.build.versionSortKey, BuildImportMetadata(versionString: "1.10").versionSortKey)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: result.build.id), result.build)
+        XCTAssertEqual(result.sourceAsset.originalFilename, file.lastPathComponent)
+
+        let nextFile = harness.external.appendingPathComponent("Example (Japan) [v2.0].gb")
+        try TestROM.make(title: "EXAMPLE", payloadByte: 1).write(to: nextFile)
+        let next = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(at: nextFile, targetGameID: result.game.id),
+            disposition: .addBuild(gameID: result.game.id), buildDisplayName: "Custom", markAsBase: false,
+            metadata: BuildImportMetadata(region: "World", versionString: "beta")
+        ))
+        XCTAssertEqual(next.build.region, "World")
+        XCTAssertNil(next.build.language)
+        XCTAssertNil(next.build.revision)
+        XCTAssertEqual(next.build.versionString, "beta")
+        XCTAssertNil(next.build.versionSortKey)
+        XCTAssertEqual(next.game.id, result.game.id)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: result.build.id), result.build)
+    }
+
+    func testNonzeroHeaderRevisionIsFallbackAndCanBeClearedInReview() throws {
+        let harness = try ImportHarness.make()
+        var rom = TestROM.make(title: "REVISION")
+        rom[0x14c] = 3
+        let file = try harness.writeExternalROM(rom)
+        let analysis = try harness.analyzer.analyzeROM(at: file, targetGameID: nil)
+        XCTAssertEqual(analysis.header.revisionNumber, 3)
+        let plan = ROMImportPlan(analysis: analysis, disposition: .createGame(title: "Revision"), buildDisplayName: "Original", markAsBase: true)
+        XCTAssertEqual(plan.metadata.revision, "3")
+        let cleared = try harness.committer.commit(ROMImportPlan(
+            analysis: analysis, disposition: plan.disposition, buildDisplayName: "Original", markAsBase: true, metadata: BuildImportMetadata()
+        ))
+        XCTAssertNil(cleared.build.revision)
+    }
+
+    func testFilenameRevisionWinsOverHeaderAndDuplicateDoesNotOverwriteMetadata() throws {
+        let harness = try ImportHarness.make()
+        var rom = TestROM.make(title: "REVISION")
+        rom[0x14c] = 3
+        let file = harness.external.appendingPathComponent("Example (Rev A).gb")
+        try rom.write(to: file)
+        let result = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(at: file, targetGameID: nil),
+            disposition: .createGame(title: "Example"), buildDisplayName: "Original", markAsBase: true
+        ))
+        XCTAssertEqual(result.build.revision, "A")
+        let again = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(at: file, targetGameID: nil),
+            disposition: .duplicateExisting(buildID: result.build.id), buildDisplayName: "Changed", markAsBase: false,
+            metadata: BuildImportMetadata(region: "Japan", revision: "9")
+        ))
+        XCTAssertEqual(again.build, result.build)
+        XCTAssertFalse(again.createdNewBuild)
+    }
+
     func testImportSameROMTwiceDetectsExistingBuildAndDeduplicatesBlob() throws {
         let harness = try ImportHarness.make()
         let romURL = try harness.writeExternalROM(TestROM.make(title: "SAME", cgb: false))

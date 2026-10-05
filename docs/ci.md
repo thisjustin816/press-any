@@ -1,8 +1,9 @@
 # Continuous integration
 
 Workflows live in `.github/workflows/`. Every action is pinned to a commit SHA, every
-workflow runs with `contents: read` and no secrets, and a fork pull request gets the same
-read-only token.
+workflow runs with `contents: read`, and a fork pull request gets the same read-only token.
+Pull-request checks use no secrets. The manually started TestFlight workflow uses signing
+secrets only in the archive and upload steps, as described in `docs/release.md`.
 
 ## Implemented
 
@@ -31,8 +32,15 @@ is listed.
 ## Not verified
 
 `ios-build.yml` builds the app and runs the app and package tests on the iPhone 17 Pro
-simulator, but nothing launches the app, so bundled resources, audio and controllers are compiled
-rather than exercised. `PressAnyTests` only checks that the app reads its display name.
+simulator. The hosted `PressAnyTests` launch the app and check its display name and bundled
+licenses, toolchain labels, controller disconnect and touch-to-reveal behavior, frame pacing,
+gameplay pause/lifecycle transitions, and import review edits through database reopen. Controller
+and gameplay tests use simulated input or fake runtimes; they do not prove real hardware behavior.
+The manual screenshot workflow also launches seeded gameplay and taps menus through UI tests.
+
+Audio buffering has package tests, but the sound, latency, audio routes and interruptions still
+need a physical iPhone. The unsigned archive job checks Release compilation and resources; it
+does not install or run the app on a device.
 
 Physical-iPhone verification is manual and is not part of any workflow. A green run of either
 workflow is not the MVP device gate.
