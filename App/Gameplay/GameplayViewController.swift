@@ -444,11 +444,14 @@ final class GameplayViewController: UIViewController {
                 object: nil,
                 queue: .main
             ) { [weak self] notification in
+                // Only Sendable values cross into the main-actor block.
+                let posted = notification.name
+                let scene = (notification.object as? UIScene).map(ObjectIdentifier.init)
                 // Handled before this returns: entering the background, iOS can suspend the app
                 // soon after, and a hop to a later main-queue turn could leave the save half done.
                 MainActor.assumeIsolated {
-                    guard let self, self.isOwnScene(notification.object as? UIScene) else { return }
-                    switch notification.name {
+                    guard let self, self.isOwnScene(scene) else { return }
+                    switch posted {
                     case UIScene.willDeactivateNotification: self.sceneWillDeactivate()
                     case UIScene.didEnterBackgroundNotification: self.sceneDidEnterBackground()
                     default: self.sceneDidActivate()
@@ -459,9 +462,9 @@ final class GameplayViewController: UIViewController {
     }
 
     /// Before the view is in a window its scene is unknown, and any scene counts.
-    private func isOwnScene(_ scene: UIScene?) -> Bool {
+    private func isOwnScene(_ scene: ObjectIdentifier?) -> Bool {
         guard let own = view.window?.windowScene else { return true }
-        return scene === own
+        return scene == ObjectIdentifier(own)
     }
 
     /// Something covered the game or the app is leaving: stop frames and let go of every button,
