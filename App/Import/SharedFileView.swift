@@ -60,9 +60,11 @@ struct SharedFileView: View {
             assetStore: container.fileStore
         )
         do {
+            let games = try container.repositories.games.fetchGames()
+            let analysis = try coordinator.analyzeROM(at: file.url)
             review = ImportReviewViewModel(
-                analysis: try coordinator.analyzeROM(at: file.url),
-                games: try container.repositories.games.fetchGames(),
+                analysis: analysis,
+                games: games,
                 coordinator: coordinator
             )
         } catch {

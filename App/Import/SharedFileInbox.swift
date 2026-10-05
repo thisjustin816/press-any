@@ -63,10 +63,11 @@ final class SharedFileInbox {
         let directory = staged.deletingLastPathComponent()
         do {
             try limit.check(fileAt: staged)
-            let destination = directory.appendingPathComponent(filename)
-            if destination != staged {
-                try FileManager.default.moveItem(at: staged, to: destination)
-            }
+            // A separate folder avoids a collision with "staged.gb" on case-insensitive storage.
+            let receiptDirectory = directory.appendingPathComponent("Receipt", isDirectory: true)
+            try FileManager.default.createDirectory(at: receiptDirectory, withIntermediateDirectories: true)
+            let destination = receiptDirectory.appendingPathComponent(filename)
+            try FileManager.default.moveItem(at: staged, to: destination)
             ownedDirectories[id] = directory
             return SharedFile(id: id, url: destination, originalFilename: filename, kind: kind)
         } catch {

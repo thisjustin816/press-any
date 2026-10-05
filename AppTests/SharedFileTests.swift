@@ -9,7 +9,7 @@ import XCTest
 final class SharedFileTests: XCTestCase {
     func testReceiptKeepsBytesAndFilenameAfterSenderRemovesItsFile() throws {
         try withInbox { inbox, root, _ in
-            for name in ["Example (Europe).GB", "Example.gbc", "Update.ips", "Update.bps"] {
+            for name in ["Example (Europe).GB", "staged.GB", "Example.gbc", "Update.ips", "Update.bps"] {
                 let source = root.appendingPathComponent(name)
                 let bytes = Data([1, 2, 3])
                 try bytes.write(to: source)
