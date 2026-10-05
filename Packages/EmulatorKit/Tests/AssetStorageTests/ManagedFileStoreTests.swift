@@ -103,6 +103,35 @@ final class ManagedFileStoreTests: XCTestCase {
         try harness.store.removeStagedFiles()
     }
 
+    func testStagedCopiesHaveAFixedNameKeepingOnlyASafeExtension() throws {
+        let harness = try StorageHarness.make()
+        let rom = try harness.write(Data([1]), named: "My Game (USA).GB")
+        let odd = try harness.write(Data([2]), named: "notes.not-an-extension")
+
+        let stagedROM = try harness.store.stageCopy(from: rom, transactionID: UUID())
+        let stagedOdd = try harness.store.stageCopy(from: odd, transactionID: UUID())
+        XCTAssertEqual(stagedROM.lastPathComponent, "staged.gb")
+        XCTAssertEqual(stagedOdd.lastPathComponent, "staged")
+        XCTAssertEqual(try Data(contentsOf: stagedOdd), Data([2]))
+    }
+
+    func testStagingRefusesAnythingButARegularFile() throws {
+        let harness = try StorageHarness.make()
+        let other = try harness.store.stageCopy(from: harness.write(Data([1]), named: "other.gb"), transactionID: UUID())
+        let target = try harness.write(Data([2]), named: "target.gb")
+        let link = harness.external.appendingPathComponent("link.gb")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+        let parent = harness.external.appendingPathComponent("folder", isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+
+        for source in [link, harness.external, URL(fileURLWithPath: parent.path + "/..")] {
+            XCTAssertThrowsError(try harness.store.stageCopy(from: source, transactionID: UUID())) {
+                XCTAssertEqual($0 as? ManagedFileStoreError, .notARegularFile(source.path))
+            }
+        }
+        XCTAssertTrue(harness.store.fileExists(at: other), "another import's staged copy is untouched")
+    }
+
     func testSourceROMPathUsesContentAddressedLayout() throws {
         let harness = try StorageHarness.make()
         let source = try harness.write(Data([1, 2, 3]), named: "game.gb")
