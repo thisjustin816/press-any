@@ -28,6 +28,20 @@ public enum EmulationSessionError: Error, Equatable {
     case sessionNotRunning
 }
 
+/// The save steps of a background or stop that failed. Each step is attempted whether or not
+/// an earlier one failed, so a failed battery write still leaves an Auto State to resume from.
+public struct SessionSaveError: Error {
+    public let failures: [any Error]
+
+    public static func attempting(_ steps: [() throws -> Void]) throws {
+        var failures: [any Error] = []
+        for step in steps {
+            do { try step() } catch { failures.append(error) }
+        }
+        guard failures.isEmpty else { throw SessionSaveError(failures: failures) }
+    }
+}
+
 public final class EmulationSession: @unchecked Sendable {
     private let builds: any BuildRepository
     private let profiles: any SaveProfileRepository
@@ -51,6 +65,9 @@ public final class EmulationSession: @unchecked Sendable {
     private var sessionCounted = false
     private let now: @Sendable () -> Date
     private var latestFrame: EmulatorVideoFrame?
+    private let batteryCheckIntervalNanoseconds: UInt64
+    private var lastBatteryCheckNanoseconds: UInt64 = 0
+    private var lastWrittenBattery = Data()
 
     public init(
         builds: any BuildRepository,
@@ -62,6 +79,7 @@ public final class EmulationSession: @unchecked Sendable {
         coreRegistry: CoreRegistry,
         settings: SettingsResolver? = nil,
         thumbnails: (any FrameImageEncoding)? = nil,
+        batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.builds = builds
@@ -81,6 +99,7 @@ public final class EmulationSession: @unchecked Sendable {
             now: now
         )
         self.settings = settings
+        self.batteryCheckIntervalNanoseconds = UInt64(batteryCheckInterval * 1_000_000_000)
     }
 
     public var state: EmulationSessionState {
@@ -116,11 +135,15 @@ public final class EmulationSession: @unchecked Sendable {
             let romURL = try imageResolver.resolveImageURL(buildID: build.id)
             let rom = try assetStore.readData(at: romURL)
             let battery = try persistentSaveService.loadPersistentSave(for: profile)
+            // The save as the core reports it, which can differ in size from the file, so an
+            // unchanged save isn't mistaken for a new one.
+            var savedBattery = Data()
 
             func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
                 let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
                 try newWorker.perform { try $0.loadImage(rom, system: build.system) }
                 try newWorker.perform { try $0.loadPersistentSave(battery) }
+                savedBattery = try newWorker.perform { try $0.persistentSaveData() }
                 if skipBoot {
                     try newWorker.perform { core in
                         _ = try (core as? any BootSkippingCapability)?.skipBootAnimation()
@@ -155,6 +178,8 @@ public final class EmulationSession: @unchecked Sendable {
                 sessionCounted = false
                 basePlaytimeSeconds = profile.totalPlaytimeSeconds
                 latestFrame = nil
+                lastBatteryCheckNanoseconds = 0
+                lastWrittenBattery = savedBattery
                 _state = .running(context)
             }
             return restore
@@ -261,7 +286,34 @@ public final class EmulationSession: @unchecked Sendable {
     @discardableResult
     public func flushBattery() throws -> SaveProfile {
         let (worker, context, _) = try snapshotActive()
-        return try persistentSaveService.flush(worker: worker, profileID: context.saveProfileID, buildID: context.buildID)
+        let battery = try worker.perform { try $0.persistentSaveData() }
+        let profile = try persistentSaveService.replacePersistentSaveData(
+            battery,
+            profileID: context.saveProfileID,
+            writtenByBuildID: context.buildID
+        )
+        lock.withLock { lastWrittenBattery = battery }
+        return profile
+    }
+
+    /// Writes the game's battery save if it changed, checking at most once per check interval of
+    /// play. Between checks it does nothing, so the frame loop can call it after every frame, and
+    /// a crash or a killed app loses at most that much in-game saving. Returns true when it wrote.
+    @discardableResult
+    public func flushBatteryIfChanged() throws -> Bool {
+        let (worker, _, _) = try snapshotActive()
+        let due = lock.withLock { () -> Bool in
+            guard sessionEmulatedNanoseconds &- lastBatteryCheckNanoseconds >= batteryCheckIntervalNanoseconds else {
+                return false
+            }
+            lastBatteryCheckNanoseconds = sessionEmulatedNanoseconds
+            return true
+        }
+        guard due else { return false }
+        let battery = try worker.perform { try $0.persistentSaveData() }
+        guard !battery.isEmpty, battery != lock.withLock({ lastWrittenBattery }) else { return false }
+        try flushBattery()
+        return true
     }
 
     @discardableResult
@@ -299,12 +351,41 @@ public final class EmulationSession: @unchecked Sendable {
         try stateService.load(saveState, worker: worker, context: context)
     }
 
+    /// Whether loading the state would take the profile's battery save back to an older one. The
+    /// state carries the cartridge RAM it was taken with, and the game's next save writes it over
+    /// the save made since. This is the same test that keeps such an Auto State from resuming.
+    public func loadingWouldRollBackSave(_ saveState: SaveState) throws -> Bool {
+        guard let profile = try profiles.fetchSaveProfile(id: saveState.saveProfileID) else {
+            throw EmulationSessionError.saveProfileNotFound(saveState.saveProfileID)
+        }
+        return saveState.createdAt < profile.modifiedAt
+    }
+
+    /// Loads the state after copying the profile, with the game's latest save written first, to
+    /// "<name> before loading state". Returns the copy. A load that fails removes the copy again.
+    @discardableResult
+    public func loadStateKeepingCopy(_ saveState: SaveState) throws -> SaveProfile {
+        let (worker, context, _) = try snapshotActive()
+        let profile = try flushBattery()
+        let copy = try DuplicateSaveProfile(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
+            .execute(sourceProfileID: profile.id, name: "\(profile.displayName) before loading state")
+        do {
+            try stateService.load(saveState, worker: worker, context: context)
+        } catch {
+            profiles.discardNewProfile(copy, assets: assets, files: assetStore)
+            throw error
+        }
+        return copy
+    }
+
     /// App lifecycle entry point. Gameplay is paused before persistent state is captured.
     public func background() throws {
         try pause()
-        _ = try flushBattery()
-        try recordPlaytime()
-        _ = try saveAutoState()
+        try SessionSaveError.attempting([
+            { _ = try self.flushBattery() },
+            { try self.recordPlaytime() },
+            { _ = try self.saveAutoState() },
+        ])
     }
 
     /// Returns true when gameplay resumed immediately. `.ask` and `.never` remain paused.
@@ -319,16 +400,26 @@ public final class EmulationSession: @unchecked Sendable {
         }
     }
 
+    /// Saves and ends the session. When a save step fails the session stays open and paused, so
+    /// calling stop again retries.
     public func stop(createAutoState: Bool = false) throws {
+        try stop(createAutoState: createAutoState, discardUnsaved: false)
+    }
+
+    /// `discardUnsaved` ends the session without saving anything, for closing after a failed stop.
+    public func stop(createAutoState: Bool, discardUnsaved: Bool) throws {
         guard lock.withLock({ activeContext != nil && worker != nil }) else {
             lock.withLock { _state = .stopped }
             return
         }
         try pause()
-        _ = try flushBattery()
-        try recordPlaytime()
-        if createAutoState {
-            _ = try saveAutoState()
+        if !discardUnsaved {
+            var steps: [() throws -> Void] = [
+                { _ = try self.flushBattery() },
+                { try self.recordPlaytime() },
+            ]
+            if createAutoState { steps.append { _ = try self.saveAutoState() } }
+            try SessionSaveError.attempting(steps)
         }
         lock.withLock {
             worker = nil
