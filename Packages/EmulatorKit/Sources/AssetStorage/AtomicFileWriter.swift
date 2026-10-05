@@ -10,6 +10,7 @@ public protocol FileOperations: Sendable {
     func fileExists(at url: URL) -> Bool
     func write(_ data: Data, to url: URL) throws
     func synchronizeFile(at url: URL) throws
+    func synchronizeDirectory(at url: URL) throws
     func moveItem(at source: URL, to destination: URL) throws
     func replaceItem(at destination: URL, with source: URL) throws
     func removeItemIfExists(at url: URL) throws
@@ -37,7 +38,25 @@ public struct FoundationFileOperations: FileOperations {
     public func synchronizeFile(at url: URL) throws {
         let handle = try FileHandle(forWritingTo: url)
         defer { try? handle.close() }
-        try handle.synchronize()
+        try Self.flushToStorage(handle.fileDescriptor)
+    }
+
+    /// Makes a rename in the directory durable; until then a power loss can bring back the old entry.
+    public func synchronizeDirectory(at url: URL) throws {
+        let descriptor = open(url.path, O_RDONLY)
+        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        defer { close(descriptor) }
+        try Self.flushToStorage(descriptor)
+    }
+
+    /// On Apple platforms fsync only hands the data to the drive, which can still lose it from
+    /// its cache on power loss; F_FULLFSYNC waits for the drive. Some file systems refuse
+    /// F_FULLFSYNC, and fsync is the best they offer.
+    private static func flushToStorage(_ descriptor: Int32) throws {
+        #if canImport(Darwin)
+        if fcntl(descriptor, F_FULLFSYNC) == 0 { return }
+        #endif
+        guard fsync(descriptor) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     }
 
     public func moveItem(at source: URL, to destination: URL) throws {
@@ -87,5 +106,8 @@ public struct AtomicFileWriter: Sendable {
             try? fileOperations.removeItemIfExists(at: temporary)
             throw error
         }
+        // The new bytes are in place either way. Failing here would tell the caller the write
+        // failed, and a caller that then restores the old file would lose the new one.
+        try? fileOperations.synchronizeDirectory(at: directory)
     }
 }
