@@ -92,7 +92,7 @@ public struct PromoteQuickPlay: Sendable {
     }
 
     public func analyze(_ session: QuickPlaySession, targetGameID: UUID?) throws -> ROMImportAnalysis {
-        try analyzer.analyzeROM(at: session.imageURL, targetGameID: targetGameID)
+        try analyzer.analyzeROM(at: session.imageURL, targetGameID: targetGameID, originalFilename: session.originalFilename)
     }
 
     public func promote(

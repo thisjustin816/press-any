@@ -34,7 +34,8 @@ public enum GBROMHeaderParser {
             headerChecksum: storedHeaderChecksum,
             headerChecksumValid: storedHeaderChecksum == computedHeaderChecksum,
             globalChecksum: storedGlobalChecksum,
-            globalChecksumValid: storedGlobalChecksum == computedGlobalChecksum
+            globalChecksumValid: storedGlobalChecksum == computedGlobalChecksum,
+            revisionNumber: byte(0x14c)
         )
     }
 

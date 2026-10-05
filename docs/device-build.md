@@ -11,7 +11,8 @@ iCloud, push notifications or App Groups, so free signing is enough.
 - An iPhone on iOS 17 or later.
 - [Homebrew](https://brew.sh).
 - An Apple ID.
-- A Game Boy or Game Boy Color ROM you are entitled to use. The repository ships none.
+- A Game Boy or Game Boy Color ROM you are entitled to use. The original homebrew ROMs in
+  `TestROMs/roms/` are available for testing; `TestROMs/README.md` describes them and their licenses.
 
 ## 1. Get the code and generate the project
 

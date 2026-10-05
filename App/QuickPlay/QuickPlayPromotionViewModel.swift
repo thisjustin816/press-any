@@ -54,9 +54,7 @@ final class QuickPlayPromotionViewModel: ObservableObject {
                 assetStore: container.fileStore
             )
         )
-        // The sandbox copy is always rom.bin, so name things after the file that was picked.
         let name = URL(fileURLWithPath: session.originalFilename).deletingPathExtension().lastPathComponent
-        review.gameTitle = name
         review.buildDisplayName = name
     }
 

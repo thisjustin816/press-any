@@ -51,17 +51,20 @@ public struct ROMImportPlan: Equatable, Sendable {
     public let disposition: ROMImportDisposition
     public let buildDisplayName: String
     public let markAsBase: Bool
+    public let metadata: BuildImportMetadata
 
     public init(
         analysis: ROMImportAnalysis,
         disposition: ROMImportDisposition,
         buildDisplayName: String,
-        markAsBase: Bool
+        markAsBase: Bool,
+        metadata: BuildImportMetadata? = nil
     ) {
         self.analysis = analysis
         self.disposition = disposition
         self.buildDisplayName = buildDisplayName
         self.markAsBase = markAsBase
+        self.metadata = metadata ?? BuildImportMetadata(analysis: analysis)
     }
 }
 

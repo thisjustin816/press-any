@@ -15,6 +15,10 @@ final class ImportReviewViewModel: ObservableObject {
     @Published var gameTitle: String
     @Published var buildDisplayName: String
     @Published var markAsBase: Bool
+    @Published var region: String
+    @Published var language: String
+    @Published var revision: String
+    @Published var version: String
     @Published private(set) var errorMessage: String?
 
     let analysis: ROMImportAnalysis
@@ -28,6 +32,11 @@ final class ImportReviewViewModel: ObservableObject {
             $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
         }
         self.coordinator = coordinator
+        let metadata = BuildImportMetadata(analysis: analysis)
+        region = metadata.region ?? ""
+        language = metadata.language ?? ""
+        revision = metadata.revision ?? ""
+        version = metadata.versionString ?? ""
 
         if let suggested = analysis.suggestedGameID {
             destination = .existing(suggested)
@@ -61,7 +70,8 @@ final class ImportReviewViewModel: ObservableObject {
             analysis: analysis,
             disposition: disposition,
             buildDisplayName: buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines),
-            markAsBase: markAsBase
+            markAsBase: markAsBase,
+            metadata: BuildImportMetadata(region: region, language: language, revision: revision, versionString: version)
         )
     }
 

@@ -17,6 +17,8 @@ Verify with a user-supplied legal ROM:
 - [ ] Backgrounding pauses emulation, flushes battery save, and writes lifecycle autosave.
 - [ ] Foreground autoresume honors Always / Ask / Never behavior.
 - [ ] Add a modified ROM as a second Build; Game identity remains stable.
+- [ ] Import a ROM with metadata tags, such as `Example (Europe) (En,Fr) (Rev A) [v1.10].gb`. Correct or clear Build Details in review. Reopen the app and confirm Technical Info shows the chosen values.
+- [ ] Quick Play that ROM, then Add to Library. Build Details uses the picked filename's metadata.
 - [ ] Share a compatible Save Profile between Builds, then fork it and confirm divergence.
 - [ ] State created on Build A is never loadable on Build B.
 - [ ] Create an IPS/BPS-derived Build and launch it.

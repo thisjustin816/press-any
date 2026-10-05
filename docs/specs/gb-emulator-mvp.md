@@ -94,6 +94,12 @@ Stable UUID. User-facing identity. Required fields include primary title, option
 ### Build
 Stable UUID, `gameID`, system, concise display name, immutable ROM content hash, source kind (`importedROM` or `patchRecipe`), region/language/revision/version metadata, optional parent Build lineage, optional Base Build marker, preferred Save Profile ID, pinned core ID/version after first launch, and provenance.
 
+Import suggests region, language, revision and numeric version from recognized filename tags;
+a nonzero header revision is a fallback. Review can correct or clear these fields before commit,
+and Technical Info shows the stored values. Unknown tags are not guessed. Quick Play promotion
+uses the original picked filename. Duplicate imports do not overwrite existing Build metadata
+(`docs/decisions.md`, 2026-10-05).
+
 A Game may have multiple Base Builds for revisions/regions.
 
 ### SaveProfile

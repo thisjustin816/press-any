@@ -130,6 +130,11 @@ public struct ImportCommitter: Sendable {
                     imageSHA256: plan.analysis.sha256,
                     sourceKind: .importedImage,
                     isBase: plan.markAsBase,
+                    region: plan.metadata.region,
+                    language: plan.metadata.language,
+                    revision: plan.metadata.revision,
+                    versionString: plan.metadata.versionString,
+                    versionSortKey: plan.metadata.versionSortKey,
                     createdAt: timestamp,
                     modifiedAt: timestamp
                 )
