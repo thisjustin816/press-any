@@ -97,6 +97,7 @@ done <<<"$plan"
 echo "Seeding: ${files[*]}"
 
 mkdir -p "$output"
+output="$(cd "$output" && pwd)"
 log="$output/app.log"
 : >"$log"
 
@@ -174,7 +175,7 @@ capture() {
   rm -f "$log.tmp"
   local attempt
   for attempt in 1 2 3; do
-    xcrun simctl launch --terminate-running-process --stdout="$PWD/$log.tmp" --stderr="$PWD/$log.tmp" \
+    xcrun simctl launch --terminate-running-process --stdout="$log.tmp" --stderr="$log.tmp" \
       "$udid" "$bundle_id" -ScreenshotScene "$scene" "$@" >/dev/null && break
     if ((attempt == 3)); then
       collect_diagnostics
@@ -208,7 +209,7 @@ rm -f "$log.tmp"
 
 # Pop-up menus open only on a tap, so the UI tests in ScreenshotTests/ open them and save a
 # screenshot of each. A menu that doesn't open fails the run once everything else is saved.
-menus="$PWD/$output/menus"
+menus="$output/menus"
 menu_status=0
 TEST_RUNNER_SCREENSHOT_ROMS="$staging" TEST_RUNNER_SCREENSHOT_OUTPUT="$menus" \
   TEST_RUNNER_SCREENSHOT_GAME_ROM="$game_rom" TEST_RUNNER_SCREENSHOT_PLAY_ROM="$play_rom" \

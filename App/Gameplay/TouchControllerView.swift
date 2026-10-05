@@ -205,7 +205,9 @@ final class TouchControllerView: UIView {
     private func drawBezel(_ bezelRect: TouchRect, around screen: TouchRect, palette: ControllerPalette, in context: CGContext) {
         let picture = cgRect(screen)
         let bezel = cgRect(bezelRect)
-        let border = max(picture.minY - bezel.minY, 1)
+        // Playtiles under Fill scaling fills its whole frame, leaving no border to draw.
+        let border = picture.minY - bezel.minY
+        guard border >= 1 else { return }
         let bottomRightRadius = (2.0.squareRoot() - 0.5) * border / (2.0.squareRoot() - 1)
         let path = roundedRect(bezel, radius: border * 0.8, bottomRightRadius: bottomRightRadius)
         path.append(UIBezierPath(rect: picture))

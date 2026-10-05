@@ -266,9 +266,16 @@ struct RootView: View {
     private func showClosingQuickPlay() {
         guard let id = closingQuickPlayID else { return }
         closingQuickPlayID = nil
-        endedQuickPlayAddsToLibrary = closingQuickPlayAddsToLibrary
+        let addsToLibrary = closingQuickPlayAddsToLibrary
         closingQuickPlayAddsToLibrary = false
-        endedQuickPlay = try? bootstrap.container?.quickPlayWorkspace.load(sessionID: id)
+        guard let container = bootstrap.container else { return }
+        do {
+            endedQuickPlayAddsToLibrary = addsToLibrary
+            endedQuickPlay = try container.quickPlayWorkspace.load(sessionID: id)
+        } catch {
+            endedQuickPlayAddsToLibrary = false
+            errorMessage = "Couldn’t reopen the Quick Play session: \(error.localizedDescription)"
+        }
     }
 
     private func resumeChosenQuickPlay() {

@@ -368,7 +368,7 @@ struct GameDetailView: View {
                 }
             }
             Spacer()
-            if model.game?.preferredBuildID == build.id {
+            if model.preferredBuild?.id == build.id {
                 Image(systemName: "star.fill")
                     .foregroundStyle(.yellow)
                     .accessibilityLabel("Preferred Build")
@@ -447,7 +447,7 @@ struct GameDetailView: View {
                 }
             }
             Spacer()
-            if model.game?.preferredSaveProfileID == profile.id {
+            if model.defaultSaveProfile?.id == profile.id {
                 Image(systemName: "star.fill")
                     .foregroundStyle(.yellow)
                     .accessibilityLabel("Default Save")

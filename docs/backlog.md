@@ -486,7 +486,7 @@ Spec: v1 baseline, Q93.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | VoiceOver labels for management UI and emulator controls | v1 |  | controls labeled "Game", double-tap opens menu; Close/Menu labeled; controls not playable by VoiceOver (accepted) |
+| partial | VoiceOver labels for management UI and emulator controls | v1 |  | the logo is the "Game Menu" button, with Close Game inside the menu; the default save's star reads "Default Save"; controls not playable by VoiceOver (accepted) |
 | partial | Dynamic Type in normal UI | v1 |  | SwiftUI defaults; controller drawing fixed size |
 | missing | Reduce Motion support | v1 |  | none |
 | partial | Large/configurable touch targets | v1 |  | hit areas extend 10-12 pt beyond drawn controls; not configurable |

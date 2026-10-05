@@ -359,6 +359,11 @@ final class GameplayViewController: UIViewController {
     private func placeMenuButtons(over areas: [TouchRect]) {
         while menuButtons.count < areas.count {
             let button = GameMenuButton(menu: gameMenu)
+            // Where a menu area overlaps a control, as on narrow screens, the control wins.
+            button.yieldsTouch = { [weak self] point in
+                guard let self, self.touchControls.showsControls else { return false }
+                return !self.touchControls.layout.opensMenu(at: TouchPoint(x: point.x, y: point.y))
+            }
             view.insertSubview(button, aboveSubview: touchControls)
             menuButtons.append(button)
         }
@@ -529,6 +534,9 @@ final class GameplayViewController: UIViewController {
 
 /// A clear button over a menu area that opens the game menu where the finger landed.
 private final class GameMenuButton: UIButton {
+    /// Whether a point in the superview belongs to something under the button instead.
+    var yieldsTouch: ((CGPoint) -> Bool)?
+
     init(menu: UIMenu) {
         super.init(frame: .zero)
         self.menu = menu
@@ -538,6 +546,11 @@ private final class GameMenuButton: UIButton {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        guard super.point(inside: point, with: event) else { return false }
+        return !(yieldsTouch?(convert(point, to: superview)) ?? false)
     }
 
     override func menuAttachmentPoint(for configuration: UIContextMenuConfiguration) -> CGPoint {

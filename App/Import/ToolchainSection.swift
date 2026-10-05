@@ -99,18 +99,25 @@ struct ToolchainDisplay: Equatable {
     init(_ component: DetectedToolchainComponent) {
         var name = Self.names[component.name] ?? component.name
         var label = component.version.flatMap { $0.isEmpty || $0 == "Unknown" ? nil : $0 }
-        // Audio drivers name editions where other components put versions, and editions have no dots.
-        if let edition = label, component.kind == .musicDriver || component.kind == .soundEffectsDriver, !edition.contains(".") {
+        // Audio drivers name editions where other components put versions. Editions are words, such
+        // as SuperDisk or X2; a label of digits and dots is a version.
+        let isVersionNumber = label.map { !$0.isEmpty && $0.allSatisfy { $0.isNumber || $0 == "." } } ?? false
+        if let edition = label, component.kind == .musicDriver || component.kind == .soundEffectsDriver,
+           !edition.contains("."), !isVersionNumber {
             variant = edition
             label = nil
         } else {
             variant = nil
         }
         // The detector numbers GBDK-2020 releases 2020.x.y.z; the project calls them GBDK-2020 x.y.z.
+        // A range reaching back into the original GBDK keeps the detector's numbering, since the
+        // two projects' version numbers overlap.
         if let range = label, name == "GBDK" {
             let parts = range.components(separatedBy: " - ")
-            if parts.allSatisfy({ $0.hasPrefix("2020.") }) { name = "GBDK-2020" }
-            label = parts.map { $0.hasPrefix("2020.") ? String($0.dropFirst(5)) : $0 }.joined(separator: " - ")
+            if parts.allSatisfy({ $0.hasPrefix("2020.") }) {
+                name = "GBDK-2020"
+                label = parts.map { String($0.dropFirst(5)) }.joined(separator: " - ")
+            }
         }
         self.name = name
         version = label.map {
