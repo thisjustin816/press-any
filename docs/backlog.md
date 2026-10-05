@@ -1,7 +1,7 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-05: 104 done, 28 partial and 165 missing. The specs stay the
+on 2026-10-03 and updated 2026-10-05: 104 done, 28 partial and 168 missing. The specs stay the
 source of truth for what each item means; this file tracks what's left and a suggested order.
 Update an item's row when its status changes, and move it to its area's "Done" line when it's
 finished.
@@ -549,7 +549,8 @@ Spec: all missing.
 | missing | Game Boy Printer with preview/save/share | v1.1 |  | no PrinterCapability |
 | missing | RAR import (tentative) | v1.1 |  |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v1.1 |  |  |
-| missing | Video/GIF capture | v1.1 |  |  |
+| missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | D 2026-10-05 |  |
+| missing | Browse and download games: itch.io's Game Boy tag in an in-app browser and Homebrew Hub (hh.gbdev.io) by its API, from the library's + menu; downloads go straight to Import Review, with Quick Play | v1.1 | D 2026-10-05 | needs zip import; the app's first network use, so revisit the privacy manifest and label; confirm App Store guideline 4.7 wording |
 | missing | `.gbproject`-style project import/export | v1.1 |  |  |
 | missing | Better ROM comparison + BPS generation | v1.1 |  |  |
 | missing | iPad side-by-side manual/game | v1.1 |  |  |
@@ -560,4 +561,6 @@ Spec: all missing.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
+| missing | Developer tools: a watched Files or iCloud Drive folder whose new ROMs import as new Builds; GitHub releases or CI builds as Builds; a tester bug report bundle (save, state, screenshot, Build hash, toolchain) | later | D 2026-10-05 |  |
+| missing | iOS integration: Continue Playing widget, Siri and Shortcuts ("Resume <game>"), Spotlight | later | D 2026-10-05 |  |
 | missing | mGBA/GBA; network/internet link; RetroAchievements; full debugger/disassembler/VRAM; deterministic replay/movies; arbitrary .slang/.slangp; Apple TV/macOS/iPad-first polish; creator-controlled homebrew publishing; document annotations/OCR/bookmarks; community layout gallery; battery-saver mode; per-Build alternate core choice; bulk canonical rename | later |  |  |

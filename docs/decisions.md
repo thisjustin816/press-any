@@ -3,6 +3,21 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Future features, and the layout keeps its name
+
+**Decision.** v1.1 adds browsing and downloading games from itch.io's Game Boy tag, in an in-app
+browser, and from Homebrew Hub (hh.gbdev.io) through its API, from the library's + menu.
+Downloads go straight to Import Review, with Quick Play. Video capture in v1.1 also frames
+screenshots and clips like a Game Boy. Later: developer tools (a watched Files or iCloud Drive
+folder whose new ROMs import as new Builds, GitHub releases or CI builds as Builds, and a tester
+bug report bundle with the save, state, screenshot, Build hash and toolchain) and iOS integration
+(a Continue Playing widget, Siri and Shortcuts, Spotlight). The controller layout keeps the name
+Game Boy, which describes the hardware it recreates, as the system names do; the App Store name,
+keywords and icon carry no Nintendo trademarks.
+
+**Why.** Most Game Boy homebrew is published on itch.io and catalogued by Homebrew Hub, and the
+app's Builds, toolchain detection and variable maps already serve the people who make it.
+
 ## 2026-10-05: Spec conflicts settled for the MVP
 
 **Decision.** Each conflict the backlog listed between the specs, or between a spec and the code,
