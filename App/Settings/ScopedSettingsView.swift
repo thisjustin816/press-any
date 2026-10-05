@@ -4,8 +4,9 @@ import Foundation
 import GameplayInput
 import SwiftUI
 
-/// Settings overridden for one Game or Build. Each setting either inherits, showing the value it
-/// gets and where that value comes from, or holds its own value until it is reset to inherit.
+/// Settings overridden for one system, Game or Build. Each setting either inherits, showing the
+/// value it gets and where that value comes from, or holds its own value until it is reset to
+/// inherit.
 struct ScopedSettingsView: View {
     let title: String
     let scope: SettingsScope

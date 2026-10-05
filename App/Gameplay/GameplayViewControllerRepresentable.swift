@@ -12,6 +12,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let controllerTheme: ControllerTheme
     let tapGameForMenu: Bool
     let soundMode: SoundMode
+    let hidesTouchControlsWithController: Bool
+    let touchHaptics: TouchHaptics
     let onClose: () -> Void
     var onAddToLibrary: (() -> Void)?
 
@@ -25,7 +27,9 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             screenScaling: screenScaling,
             controllerTheme: controllerTheme,
             tapGameForMenu: tapGameForMenu,
-            soundMode: soundMode
+            soundMode: soundMode,
+            hidesTouchControlsWithController: hidesTouchControlsWithController,
+            touchHaptics: touchHaptics
         )
         controller.onClose = onClose
         controller.onAddToLibrary = onAddToLibrary

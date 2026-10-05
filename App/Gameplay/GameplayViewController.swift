@@ -27,6 +27,11 @@ final class GameplayViewController: UIViewController {
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
     private let soundMode: SoundMode
+    private let hidesTouchControlsWithController: Bool
+    private let touchHaptics: TouchHaptics
+    /// Set by a touch while a controller hides the touch controls, and cleared by the controller's
+    /// next button press.
+    private var touchControlsRevealed = false
     /// Clear buttons over the layout's menu areas, the logo and, with Tap Game for Menu, the
     /// picture. They open the game menu with or without a controller connected.
     private var menuButtons: [GameMenuButton] = []
@@ -50,6 +55,8 @@ final class GameplayViewController: UIViewController {
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch,
+        hidesTouchControlsWithController: Bool = true,
+        touchHaptics: TouchHaptics = .light,
         controllerMonitor: PhysicalControllerMonitor = PhysicalControllerMonitor()
     ) {
         self.runtime = runtime
@@ -59,6 +66,8 @@ final class GameplayViewController: UIViewController {
         self.controllerTheme = controllerTheme
         self.tapGameForMenu = tapGameForMenu
         self.soundMode = soundMode
+        self.hidesTouchControlsWithController = hidesTouchControlsWithController
+        self.touchHaptics = touchHaptics
         self.firstFrameClock = firstFrameClock
         self.autoResumePolicy = autoResumePolicy
         self.launchMessage = launchMessage
@@ -292,27 +301,49 @@ final class GameplayViewController: UIViewController {
         touchControls.pictureOpensMenu = tapGameForMenu
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
-        controllerMonitor.onInputChanged = { [weak self] controllerInput in self?.input.setController(controllerInput) }
+        controllerMonitor.onInputChanged = { [weak self] controllerInput in
+            guard let self else { return }
+            self.input.setController(controllerInput)
+            if self.touchControlsRevealed, controllerInput != EmulatorInputState() {
+                self.touchControlsRevealed = false
+                self.updateTouchControls(controllerConnected: true)
+            }
+        }
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }
-            self.touchControls.showsControls = !connected
-            self.touchControls.hapticsEnabled = !connected
+            self.touchControlsRevealed = false
+            self.updateTouchControls(controllerConnected: connected)
             self.rumble.setController(self.controllerMonitor.activeController)
         }
         controllerMonitor.onUnexpectedDisconnect = { [weak self] in
             guard let self else { return }
             self.userPaused = true
             self.pauseGameplay()
-            self.touchControls.showsControls = true
-            self.touchControls.hapticsEnabled = true
+            self.touchControlsRevealed = false
+            self.updateTouchControls(controllerConnected: false)
             self.input.resetController()
             self.showTransientMessage("Controller disconnected. Game paused.")
         }
 
-        let connected = controllerMonitor.isConnected
-        touchControls.showsControls = !connected
-        touchControls.hapticsEnabled = !connected
+        updateTouchControls(controllerConnected: controllerMonitor.isConnected)
         rumble.setController(controllerMonitor.activeController)
+    }
+
+    /// With a controller connected the touch controls hide, unless Settings keeps them or a touch
+    /// brought them back. Their haptics follow them, so a controller player feels only rumble.
+    private func updateTouchControls(controllerConnected: Bool) {
+        let shows = !controllerConnected || !hidesTouchControlsWithController || touchControlsRevealed
+        touchControls.showsControls = shows
+        touchControls.hapticIntensity = shows ? touchHaptics.intensity : nil
+    }
+
+    /// Touches reach this controller only while the touch controls are hidden, since they take
+    /// every touch otherwise; the menu buttons take their own.
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        guard !touchControls.showsControls else { return }
+        touchControlsRevealed = true
+        updateTouchControls(controllerConnected: controllerMonitor.isConnected)
     }
 
     private func applyLayout(_ layout: TouchControlLayout) {

@@ -264,6 +264,16 @@ final class AppContainer {
         appSetting(Bool.self, .tapGameForMenu) ?? false
     }
 
+    /// App-wide. Unset or unreadable means on: a controller hides the touch controls until a touch.
+    func hidesTouchControlsWithController() -> Bool {
+        appSetting(Bool.self, .hideTouchControlsWithController) ?? true
+    }
+
+    /// App-wide. Unset or unreadable means light.
+    func touchHaptics() -> TouchHaptics {
+        appSetting(TouchHaptics.self, .touchHaptics) ?? .light
+    }
+
     /// A setting stored at the app scope only, or nil when it's unset or unreadable.
     private func appSetting<Value: Decodable>(_ type: Value.Type, _ key: SettingKey) -> Value? {
         guard let json = try? repositories.settings.valueJSON(key: key.rawValue, scope: .app) else { return nil }

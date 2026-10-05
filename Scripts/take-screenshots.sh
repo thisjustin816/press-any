@@ -9,7 +9,9 @@ set -euo pipefail
 # ROMS is `hero` (the default), `all`, or a comma-separated list of manifest tags and filenames.
 # Optional environment: SHOTS (`summary`, the default: one of each screen; `every-rom`: each
 # ROM's game, Technical Info and gameplay), DEVICE (simulator name), APPEARANCE (light or dark),
-# IMPORT_ROM (the file the import review opens, which is never seeded).
+# TEXT_SIZE (`default`, or a `simctl ui content_size` value such as
+# accessibility-extra-extra-extra-large), IMPORT_ROM (the file the import review opens, which is
+# never seeded).
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
@@ -18,6 +20,7 @@ roms="${1:-hero}"
 output="${2:-screenshots}"
 device="${DEVICE:-iPhone 17 Pro}"
 appearance="${APPEARANCE:-light}"
+text_size="${TEXT_SIZE:-default}"
 import_rom="${IMPORT_ROM:-gbdk450-badsum.gb}"
 shots="${SHOTS:-summary}"
 derived_data="build/screenshots/DerivedData"
@@ -124,6 +127,9 @@ for attempt in 1 2 3 4 5 6; do
 done
 xcrun simctl terminate "$udid" com.apple.Preferences 2>/dev/null || true
 xcrun simctl ui "$udid" appearance "$appearance"
+if [ "$text_size" != default ]; then
+  xcrun simctl ui "$udid" content_size "$text_size"
+fi
 xcrun simctl status_bar "$udid" override --time 9:41 --dataNetwork wifi --wifiBars 3 \
   --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
 xcrun simctl install "$udid" "$app"

@@ -68,6 +68,8 @@ struct RootView: View {
                 controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
                 tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
+                hidesTouchControlsWithController: bootstrap.container?.hidesTouchControlsWithController() ?? true,
+                touchHaptics: bootstrap.container?.touchHaptics() ?? .light,
                 onClose: { endGameplay(presentation) },
                 onAddToLibrary: presentation.isQuickPlay
                     ? {

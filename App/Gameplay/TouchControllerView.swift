@@ -1,4 +1,5 @@
 import EmulationCore
+import EmulatorDomain
 import GameplayInput
 import UIKit
 
@@ -7,7 +8,8 @@ final class TouchControllerView: UIView {
     var onInputChanged: ((EmulatorInputState) -> Void)?
     /// Called with every new layout, so the game picture can follow the layout's screen frame.
     var onLayoutChanged: ((TouchControlLayout) -> Void)?
-    var hapticsEnabled = true
+    /// How hard a new press taps back, or nil for no haptics.
+    var hapticIntensity: CGFloat? = 0.55
     var style: TouchControlStyle = .gameBoy {
         didSet { setNeedsLayout() }
     }
@@ -162,8 +164,8 @@ final class TouchControllerView: UIView {
 
     private func publish() {
         let next = resolver.input
-        if hapticsEnabled, hasNewPress(previous: lastInput, next: next) {
-            feedback.impactOccurred(intensity: 0.55)
+        if let hapticIntensity, hasNewPress(previous: lastInput, next: next) {
+            feedback.impactOccurred(intensity: hapticIntensity)
             feedback.prepare()
         }
         lastInput = next
@@ -398,5 +400,16 @@ final class TouchControllerView: UIView {
 
     private func cgRect(_ rect: TouchRect) -> CGRect {
         CGRect(x: rect.x, y: rect.y, width: rect.width, height: rect.height)
+    }
+}
+
+extension TouchHaptics {
+    /// The impact intensity for a press, or nil when haptics are off.
+    var intensity: CGFloat? {
+        switch self {
+        case .off: nil
+        case .light: 0.55
+        case .medium: 0.9
+        }
     }
 }

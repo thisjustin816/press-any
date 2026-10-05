@@ -36,12 +36,15 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(SettingKey.soundMode.rawValue, "soundMode")
         XCTAssertEqual(SettingKey.controllerTheme.rawValue, "controllerTheme")
         XCTAssertEqual(SettingKey.tapGameForMenu.rawValue, "tapGameForMenu")
+        XCTAssertEqual(SettingKey.hideTouchControlsWithController.rawValue, "hideTouchControlsWithController")
+        XCTAssertEqual(SettingKey.touchHaptics.rawValue, "touchHaptics")
         XCTAssertEqual(SettingKey.screenScaling.rawValue, "screenScaling")
     }
 
     func testSettingValuesAreStable() {
         XCTAssertEqual(AutoResumePolicy.allCases.map(\.rawValue), ["always", "ask", "never"])
         XCTAssertEqual(SoundMode.allCases.map(\.rawValue), ["followSilentSwitch", "alwaysOn", "alwaysOff"])
+        XCTAssertEqual(TouchHaptics.allCases.map(\.rawValue), ["off", "light", "medium"])
     }
 
     func testBuildSourceKindRawValuesAreStable() {

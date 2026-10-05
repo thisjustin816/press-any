@@ -203,7 +203,7 @@ Patch formats discussed as likely v1 candidates:
 - BPS
 - UPS
 
-xdelta/VCDIFF and other formats remain to be explicitly decided.
+Settled by Q78: IPS and BPS for v1. IPS32, UPS, xdelta/VCDIFF and other formats come later through the pluggable patch handling.
 
 A Build timeline is required:
 - version/name
@@ -303,7 +303,7 @@ Autosave lifecycle behavior:
 - flush battery save on background/exit
 - create/update dedicated Auto State
 - keep a rolling Auto State history (default target: last 5)
-- autoresume is configurable globally and per Game
+- autoresume is configurable at App, System, Game and Build scope, like other settings
 - global default: Always Resume
 - choices: Always / Ask / Never
 - if state restore is incompatible/fails, safely fall back to normal boot
@@ -323,7 +323,6 @@ Launch behavior:
 Limited Save Profile-level overrides are allowed for playthrough-specific behavior such as:
 - cheats
 - RTC offset
-- autoresume
 - rewind where appropriate
 
 Do not make Save Profile a full fifth visual/controller/theme settings layer.
@@ -351,7 +350,7 @@ Applicable to settings where sensible, including:
 - layout
 - rewind
 - fast-forward behavior
-- audio
+- audio options, except Sound (whether the game follows the silent switch), which is app-wide
 - controller mappings/profiles
 - autoresume
 - RTC
@@ -488,7 +487,7 @@ Opening a ROM should allow:
 Quick Play:
 - does not create a permanent Game/Build
 - launches from a temporary sandbox/workspace
-- still hashes/identifies/detects toolchain in background
+- still hashes and identifies; toolchain detection runs on demand (Technical Info, Add to Library), never before the first frame
 - can use battery saves, autosave state, screenshots, notes, debug captures
 - can later be promoted into the library while preserving generated data
 - if matching an existing Game, promotion can become "Add as New Build"
@@ -1280,7 +1279,7 @@ Locked: show compatibility report before commit and retain a summary afterward, 
 Locked: lightweight Undo for recent structural/library operations where practical; deletion remains handled by Recently Deleted.
 
 ## Q146: App relaunch
-Locked: return to previous game/session and honor the selected Save Profile's Auto Resume policy.
+Locked: return to previous game/session and honor the Auto Resume policy that applies to its Game and Build.
 
 ## Q147: Concurrent sessions
 Locked: one active emulator session at a time in v1. Multi-core simultaneous sessions arrive with link cable support.
@@ -1415,7 +1414,7 @@ Explicitly not required for MVP proof: iCloud, Community Catalog, Delta/Manic sk
 - Artwork/metadata: pluggable provider chain.
 - Rewind: memory-budgeted; visible presets 5s/15s/30s/1m/2m/5m; brief background survives, not long-term persisted.
 - Fast-forward presets: 1.5x/2x/3x/4x/8x/Unlimited; audio configurable accelerated or muted. Slow motion: 0.25x/0.5x/0.75x.
-- Lifecycle autosave: always write/update Auto State and battery save; autoresume global default Always with per-game/profile Always/Ask/Never; rolling 5 autosave states.
+- Lifecycle autosave: always write/update Auto State and battery save; autoresume global default Always with System, Game and Build Always/Ask/Never overrides; rolling 5 autosave states.
 - Save states are always Build-specific and also bound to Save Profile/core serialization context; never shared across Builds.
 - Save Profiles are manually creatable (blank, duplicate, import .sav, Quick Play promotion, future migration), flat list with subtle ancestry; one current .sav per profile; no rolling .sav history. Compatibility-risk operations fork/copy rather than mutate source.
 - GB Studio: detect toolchain where possible; variable maps may attach to Builds; v1 detects/warns/prepares, save migration targeted v1.1. Do not claim safe migration without required maps.

@@ -1,7 +1,7 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-04: 100 done, 32 partial and 165 missing. The specs stay the
+on 2026-10-03 and updated 2026-10-05: 104 done, 28 partial and 165 missing. The specs stay the
 source of truth for what each item means; this file tracks what's left and a suggested order.
 Update an item's row when its status changes, and move it to its area's "Done" line when it's
 finished.
@@ -34,26 +34,8 @@ None known.
 
 ## Spec conflicts to resolve
 
-Each needs a decision in `docs/decisions.md` before the work it touches:
-
-1. Autoresume scope: `dec 8` says per Game, `dec 9` and `Q146` say per Save Profile, and `D`
-   allows App, System, Game and Build only. The code follows `D`.
-2. Toolchain detection: `prod` says v1, `later 1` and `later 5` say MVP, and `later` wins.
-3. Quick Play detection: `dec 14` and `later 5` detect the toolchain in the background; `D` allows
-   skipping detection for Quick Play.
-4. Built-in layouts: `prod` names Classic, Minimal, Fullscreen and one-handed presets; `D` defines
-   Game Boy and Playtiles, and "Classic" now names a controller theme.
-5. Settings layer name: `later 7` calls the second layer Platform; the other documents and the
-   code call it System.
-6. Audio inheritance: `dec 10` makes audio inheritable; `D` makes Sound app-wide, along with
-   Controller Theme and Tap Game for Menu.
-7. Controller connected: `Q109` asks for touch-to-reveal and a user override; `D` has neither.
-8. Haptics: `Q91` says haptics can be turned off or adjusted; there's no setting.
-9. Fast Forward: the code's fixed 2x toggle isn't specified; `Q81` locks the preset list.
-10. Patch formats: `dec 5` lists IPS32 and UPS as likely; `Q78` settled on IPS and BPS.
-11. Merge review: `mvp` says merge happens with review; neither `D` nor the code has a review step.
-12. Display default: `Q108` asks for a system-authentic default look; `D` sets plain nearest
-    sampling and no post-processing on the Quick Play launch path.
+None open. The twelve listed on 2026-10-04 were settled on 2026-10-05 (`D` "Spec conflicts
+settled for the MVP").
 
 ## Inventory by area
 
@@ -338,8 +320,7 @@ Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inh
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Light on-screen haptics on by default, suppressed with controller | MVP | Q91 | hapticsEnabled toggled by connection; no user toggle, strength or override |
-| missing | Minimal / Fullscreen / one-handed presets | v1 | prod "Layouts, skins, touch" (see conflicts) |  |
+| missing | Minimal / Fullscreen / one-handed presets | v1 | prod "Layouts, skins, touch" |  |
 | missing | GameBaby preset; per-accessory/device calibration screen | v1 | Q113/Q114 |  |
 | missing | Lightweight editor: screen/control position+size, opacity, hitboxes, portrait/landscape, control styles, save preset | v1 | dec 22; Q119 |  |
 | missing | Edit Layout from gameplay on a frozen frame; Save for This Game vs Update Shared Preset | v1 | Q118/Q120 |  |
@@ -352,15 +333,15 @@ Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inh
 
 Done: Built-in "Game Boy" layout measured from DMG-01, default, inheritable; Built-in "Playtiles"
 layout from the Delta skin frames, START/SELECT swapped, alignment guide; Controller themes Classic
-/ Dark / Match System (app-wide), status bar follows; Tap wordmark opens game menu (44 pt, 10 pt
-slop), optional Tap Game for Menu (off), one-time hint, VoiceOver double-tap; Sliding D-pad with
+/ Dark / Match System (app-wide), status bar follows; Tap wordmark opens the game menu, with or
+without a controller (44 pt), optional Tap Game for Menu (off), one-time hint, VoiceOver Game Menu
+button; Touch Haptics Off / Light / Medium (Light), off while a controller hides the controls; Sliding D-pad with
 diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 
 ### Controllers and rumble
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Controller active hides touch controls | MVP | Q109 | hides (body and logo menu stay); user override missing |
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | Q111 | first connected used; selectPlayerOne() has no UI |
 | missing | Named reusable controller profiles, remapping, App/System/Game/Build inheritance | v1 | Q112 | fixed mapping (Select = Options or L1) |
 | missing | Controller hotkey combos and menu navigation | v1 | dec 24 | "Open Menu" is a mappable input with no default button, and Home is never taken (D "A controller opens the game menu") |
@@ -368,7 +349,8 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | missing | Separate phone and controller intensity | v1 | Q104 |  |
 
 Done: Apple GameController input (extendedGamepad); Unexpected disconnect pauses, reveals touch
-controls, shows notice; Cartridge rumble routed controller-first, phone fallback.
+controls, shows notice; A controller hides the touch controls, a touch brings them back until its
+next button press, and Settings can keep them; Cartridge rumble routed controller-first, phone fallback.
 
 ### Quick Actions
 
@@ -515,27 +497,25 @@ Done: Good contrast / color-independent states; haptics never sole feedback.
 
 ### Settings inheritance
 
-| Status | Item | Target | Spec | Notes |
-|---|---|---|---|---|
-| partial | Settings UI per scope | MVP |  | App sheet + Game/Build sheets; no System (GB/GBC) settings screen |
+Nothing open.
 | missing | Narrow Save Profile overlay (cheats, RTC, autoresume, rewind) | v1 | dec 9; later 7 |  |
 
 Done: Resolver App -> System -> Game -> Build, only explicit overrides stored, inherited source
-shown, Reset to Inherited; Implemented keys.
+shown, Reset to Inherited; Implemented keys; Settings screens for App, System (Game Boy, Game Boy
+Color), Game and Build.
 
 ### SDK / toolchain detection
 
 Spec: later 5: MVP.
 
-| Status | Item | Target | Spec | Notes |
-|---|---|---|---|---|
-| partial | Wiring: run on import, persist per Build, Build Technical Info, Quick Play presentation, compatibility routing | MVP | later 5 | Quick Play shows findings at promotion, not during play (D allows skipping) |
+Nothing open.
 
 Done: Standalone detector seam + gbtoolsid port (engines, toolchains, music/SFX drivers,
 version/range, evidence, detector version, corpus revision), differential CI vs upstream; GB Studio
 detection, including 4.3+ by version, multi-layer (GB Studio over GBDK + audio driver); Categorical
 confidence; Runs on import and patching, stored per Build, shown in Import Review, promotion and
-Technical Info (which detects again); Feeds the save compatibility check.
+Technical Info (which detects again); Quick Play detects on demand in its Technical Info and at
+Add to Library, never before the first frame; Feeds the save compatibility check.
 
 ### Included Games
 

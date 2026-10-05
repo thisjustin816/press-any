@@ -140,7 +140,7 @@ Imports may analyze while gameplay continues. If a likely new Build of current G
 - Analyze toolchain/build compatibility.
 - Normal compatible switches stay one-tap.
 - Risky switches offer migrate (when supported), duplicate into new profile, use same anyway, or blank save.
-- GB Studio detection in v1; accept variable-map sidecars as Build metadata. Automatic GB Studio save migration targeted v1.1 and must not claim reliability without the required old/new maps.
+- GB Studio detection from the MVP; accept variable-map sidecars as Build metadata. Automatic GB Studio save migration targeted v1.1 and must not claim reliability without the required old/new maps.
 
 ### Save states
 - Dedicated Auto State plus rolling history default 5.
@@ -205,7 +205,7 @@ Imports may analyze while gameplay continues. If a likely new Build of current G
 - System-authentic default; raw pixels readily available.
 
 ## Layouts, skins, touch
-- Built-in Classic/Minimal/Fullscreen/one-handed style presets as appropriate.
+- Built-in Game Boy and Playtiles layouts from the MVP; Minimal, Fullscreen and one-handed presets come with the layout editor. "Classic" names a controller theme.
 - Lightweight v1 editor: screen/control position/size, opacity, touch hitboxes, portrait/landscape independently, small built-in visual control styles.
 - Edit Layout from gameplay pauses on current frame for alignment.
 - Game-specific layout override vs update shared preset choice.

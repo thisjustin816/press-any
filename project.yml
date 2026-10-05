@@ -22,11 +22,33 @@ targets:
     configFiles:
       Debug: Config/Signing.xcconfig
       Release: Config/Signing.xcconfig
+    # The boot ROMs are built from SameBoy's source and not checked in; without them every game
+    # fails to start, so a build that lacks them stops here.
+    preBuildScripts:
+      - name: Check boot ROMs
+        inputFiles:
+          - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/dmg_boot.bin
+          - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/cgb_boot.bin
+          - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/cgb_boot_fast.bin
+        basedOnDependencyAnalysis: false
+        shell: /bin/bash
+        script: |
+          for i in $(seq 0 $((SCRIPT_INPUT_FILE_COUNT - 1))); do
+            file_var="SCRIPT_INPUT_FILE_$i"
+            if [ ! -f "${!file_var}" ]; then
+              echo "error: ${!file_var} is missing. Run make bootroms (or make bootstrap) first."
+              exit 1
+            fi
+          done
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.thisjustin816.PressAny$(BUNDLE_ID_SUFFIX)
         PRODUCT_NAME: PressAny
         INFOPLIST_KEY_CFBundleDisplayName: Press Any
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
+        # Keys Xcode can't generate, merged into the generated Info.plist: only SHA-256 hashing
+        # uses cryptography, which is exempt, so uploads skip the export compliance question.
+        INFOPLIST_FILE: Config/PressAny-Info.plist
         # Without a launch screen, iOS runs the app letterboxed at an old iPhone's size.
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

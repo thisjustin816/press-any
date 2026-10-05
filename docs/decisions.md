@@ -3,6 +3,37 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Spec conflicts settled for the MVP
+
+**Decision.** Each conflict the backlog listed between the specs, or between a spec and the code,
+is settled, and the specs are updated to match:
+
+- **Auto Resume** is set at App, System, Game and Build scope, like other settings. Save Profiles
+  don't override it (`dec 8`, `dec 9` and `Q146` updated).
+- **Toolchain detection** is an MVP feature, as `later 1` and `later 5` say (`prod` updated).
+- **Quick Play detection** runs on demand, when Technical Info or Add to Library opens, and never
+  before the first frame (`dec 14` updated).
+- **Built-in layouts** are Game Boy and Playtiles; Minimal, Fullscreen and one-handed presets come
+  with the layout editor, and "Classic" names a controller theme (`prod` updated).
+- **The second settings layer** is called System (`later 7` updated).
+- **Sound**, whether a game follows the silent switch, stays app-wide; other audio options can be
+  inheritable when they arrive (`dec 10` updated).
+- **With a controller connected**, a touch outside the logo brings the touch controls back until
+  the next controller button press, and Settings > Controls has Hide Touch Controls with a
+  Controller, on by default, as `Q109` says.
+- **Touch Haptics** in Settings > Controls offers Off, Light and Medium, Light by default, and
+  stays off while a controller is in use, as `Q91` says.
+- **Fast Forward** stays a 2x toggle for the MVP; `Q81`'s presets arrive with the play-feel work.
+- **Merging** reviews in the merge sheet, which shows Move or Copy, the target Game, and the Save
+  Profiles and artwork that come along before Merge. That is the review `mvp` asks for.
+- **Patch formats** are IPS and BPS for v1, as `Q78` says; IPS32, UPS and others come later
+  (`dec 5` updated).
+- **The default look** stays raw pixels for the MVP. `Q108`'s system-authentic default arrives
+  with the curated shader library and the community survey it requires.
+
+The MVP also gets a System settings screen for Game Boy and Game Boy Color, which the code
+already reads but nothing could edit.
+
 ## 2026-10-04: Design review changes
 
 **Decision.** Quick Play's game menu shows Save State grayed out with "Add to Library to save

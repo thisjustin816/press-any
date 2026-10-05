@@ -30,6 +30,41 @@ final class ControllerDisconnectTests: XCTestCase {
     }
 }
 
+/// Q109: a touch brings the hidden touch controls back until the controller's next button press,
+/// and Settings can keep them showing.
+@MainActor
+final class TouchControlRevealTests: XCTestCase {
+    func testATouchRevealsTheControlsUntilTheControllerIsUsed() {
+        let monitor = PhysicalControllerMonitor()
+        let gameplay = GameplayViewController(runtime: FakeRuntime(), autoResumePolicy: .always, controllerMonitor: monitor)
+        gameplay.loadViewIfNeeded()
+        monitor.selectPlayerOne(GCController.withExtendedGamepad())
+        XCTAssertFalse(gameplay.showsTouchControls, "a connected controller hides the touch controls")
+
+        gameplay.touchesBegan([], with: nil)
+        XCTAssertTrue(gameplay.showsTouchControls, "a touch brings them back")
+
+        monitor.onInputChanged?(EmulatorInputState())
+        XCTAssertTrue(gameplay.showsTouchControls, "a release with nothing pressed keeps them")
+
+        monitor.onInputChanged?(EmulatorInputState(a: true))
+        XCTAssertFalse(gameplay.showsTouchControls, "a controller press hides them again")
+    }
+
+    func testTheSettingKeepsTheControlsWithAController() {
+        let monitor = PhysicalControllerMonitor()
+        let gameplay = GameplayViewController(
+            runtime: FakeRuntime(),
+            autoResumePolicy: .always,
+            hidesTouchControlsWithController: false,
+            controllerMonitor: monitor
+        )
+        gameplay.loadViewIfNeeded()
+        monitor.selectPlayerOne(GCController.withExtendedGamepad())
+        XCTAssertTrue(gameplay.showsTouchControls)
+    }
+}
+
 private final class FakeRuntime: GameplayRuntime, @unchecked Sendable {
     private let lock = NSLock()
     private var pauses = 0
