@@ -77,6 +77,8 @@ targets:
       - package: EmulatorKit
         product: GameplayInput
       - package: EmulatorKit
+        product: GameplayAudio
+      - package: EmulatorKit
         product: ToolchainDetection
   PressAnyTests:
     type: bundle.unit-test

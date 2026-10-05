@@ -8,7 +8,7 @@ read-only token.
 
 | Workflow | Job | What it runs |
 |---|---|---|
-| `ci.yml` | L1 domain and application | `swift test` filtered to `EmulatorDomainTests`, `EmulatorApplicationTests`, `EmulationCoreTests`, `EmulationSessionTests`, `GameplayInputTests`, `ImportingTests`, `PatchingTests`, `QuickPlayTests`, `ToolchainDetectionTests` |
+| `ci.yml` | L1 domain and application | `swift test` filtered to `EmulatorDomainTests`, `EmulatorApplicationTests`, `EmulationCoreTests`, `EmulationSessionTests`, `GameplayInputTests`, `GameplayAudioTests`, `ImportingTests`, `PatchingTests`, `QuickPlayTests`, `ToolchainDetectionTests` |
 | `ci.yml` | L2 storage and persistence | `AssetStorageTests`, `PersistenceGRDBTests`, `ArchitectureProofTests` |
 | `ci.yml` | L3 headless SameBoy | `SameBoyAdapterTests` and `Scripts/test-sameboy-bridge-linux.sh` |
 | `ci.yml` | Toolchain detection matches gbtoolsid | `Scripts/test-toolchain-detection-differential.sh`: builds gbtoolsid at the ported revision, checks `GBToolsIDData.swift` regenerates unchanged, and requires the Swift port to match it on gbtoolsid's test ROMs and on generated ROMs |

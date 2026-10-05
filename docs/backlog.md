@@ -1,7 +1,7 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-05: 104 done, 28 partial and 168 missing. The specs stay the
+on 2026-10-03 and updated 2026-10-05: 105 done, 27 partial and 168 missing. The specs stay the
 source of truth for what each item means; this file tracks what's left and a suggested order.
 Update an item's row when its status changes, and move it to its area's "Done" line when it's
 finished.
@@ -63,7 +63,7 @@ Spec: later 2.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Registries for platforms, cores, image analyzers, toolchain detectors, patch formats | MVP | later 2 | CoreRegistry + ToolchainDetectorRegistry exist; no platform or analyzer registry; patch formats dispatched by file extension in PatchStackApplier |
+| partial | Registries for platforms, cores, image analyzers, toolchain detectors, patch formats | v1 | later 2, D "Adaptive audio, and registries wait for v1" | CoreRegistry + ToolchainDetectorRegistry exist; no platform or analyzer registry; patch formats dispatched by file extension in PatchStackApplier |
 | missing | PlatformDescriptor / HardwareDescriptor / DistributionDescriptor / CompatibilityRecord (core target + hardware target) | v1 | later 2 |  |
 | missing | Input and memory descriptors | v1 | later 2 |  |
 
@@ -469,13 +469,13 @@ Spec: v1.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Low-latency adaptive audio | MVP | Q96 | AudioOutputEngine fixed max queue, drops oldest; no adaptive buffer growth |
 | partial | Audio interruptions pause safely; route changes don't restart the game | v1 | Q173 | engine restarts after route change / interruption end; emulation keeps running silently on interruption |
 | missing | Thermal-aware degradation | v1 | Q97 |  |
 | missing | Default shader sustains full speed on minimum QA device | v1 | Q94 | no shader yet; device gate not recorded |
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
-(default) / Always On / Always Off.
+(default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
+after shortfalls, frames paced against fixed deadlines).
 
 ### Privacy and telemetry
 

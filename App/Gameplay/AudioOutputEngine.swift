@@ -2,15 +2,15 @@ import AVFoundation
 import EmulationCore
 import EmulatorDomain
 import Foundation
+import GameplayAudio
 
-/// Small lock-protected PCM queue feeding an AVAudioSourceNode at SameBoy's configured 48 kHz.
+/// Feeds game sound to an AVAudioSourceNode at SameBoy's configured 48 kHz, through a small
+/// buffer that grows when the device can't keep up (`AdaptiveAudioBuffer`).
 final class AudioOutputEngine: @unchecked Sendable {
     private let engine = AVAudioEngine()
     private let lock = NSLock()
-    private var samples: [StereoSample] = []
-    private var readIndex = 0
+    private var buffer = AdaptiveAudioBuffer()
     private var sourceNode: AVAudioSourceNode?
-    private let maximumQueuedFrames = 48_000 / 4 // ~250 ms hard ceiling
     /// Whether gameplay wants sound. A route change or an interruption stops the engine on its own,
     /// and this decides whether to start it again. Touched only on the main queue.
     private var wantsRunning = false
@@ -29,6 +29,8 @@ final class AudioOutputEngine: @unchecked Sendable {
             // Ambient mixes with other apps, so their audio keeps playing; the game is muted.
             try? session.setCategory(.ambient)
         }
+        // Ask for short hardware buffers, about 10 ms, to keep latency low.
+        try? session.setPreferredIOBufferDuration(0.01)
         engine.mainMixerNode.outputVolume = mode == .alwaysOff ? 0 : 1
     }
 
@@ -52,18 +54,7 @@ final class AudioOutputEngine: @unchecked Sendable {
 
             self.lock.lock()
             defer { self.lock.unlock() }
-            for frame in 0..<Int(frameCount) {
-                if self.readIndex < self.samples.count {
-                    let sample = self.samples[self.readIndex]
-                    left[frame] = Float(sample.left) / Float(Int16.max)
-                    right[frame] = Float(sample.right) / Float(Int16.max)
-                    self.readIndex += 1
-                } else {
-                    left[frame] = 0
-                    right[frame] = 0
-                }
-            }
-            self.compactIfNeededLocked()
+            self.buffer.read(frameCount: Int(frameCount), left: left, right: right)
             return noErr
         }
 
@@ -78,17 +69,17 @@ final class AudioOutputEngine: @unchecked Sendable {
         guard !newSamples.isEmpty else { return }
         lock.lock()
         defer { lock.unlock() }
-        samples.append(contentsOf: newSamples)
-        let unread = samples.count - readIndex
-        if unread > maximumQueuedFrames {
-            readIndex += unread - maximumQueuedFrames
-        }
-        compactIfNeededLocked()
+        buffer.write(newSamples)
     }
 
+    /// Drops the buffered sound too, so resuming waits for the buffer to fill again rather than
+    /// playing what's left and counting the wait for new sound as the device falling behind.
     func pause() {
         wantsRunning = false
         engine.pause()
+        lock.lock()
+        buffer.removeAll()
+        lock.unlock()
     }
 
     func resume() throws {
@@ -102,8 +93,7 @@ final class AudioOutputEngine: @unchecked Sendable {
         observers.removeAll()
         engine.stop()
         lock.lock()
-        samples.removeAll(keepingCapacity: false)
-        readIndex = 0
+        buffer.removeAll()
         lock.unlock()
     }
 
@@ -134,11 +124,5 @@ final class AudioOutputEngine: @unchecked Sendable {
     private func restartIfWanted() {
         guard wantsRunning, !engine.isRunning else { return }
         try? engine.start()
-    }
-
-    private func compactIfNeededLocked() {
-        guard readIndex > 4096 || readIndex == samples.count else { return }
-        samples.removeFirst(readIndex)
-        readIndex = 0
     }
 }

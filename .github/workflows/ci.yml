@@ -36,7 +36,7 @@ jobs:
       - name: Run L1 tests
         run: >-
           swift test --package-path Packages/EmulatorKit --filter
-          '^(EmulatorDomainTests|EmulatorApplicationTests|EmulationCoreTests|EmulationSessionTests|GameplayInputTests|ImportingTests|PatchingTests|QuickPlayTests|ToolchainDetectionTests)\.'
+          '^(EmulatorDomainTests|EmulatorApplicationTests|EmulationCoreTests|EmulationSessionTests|GameplayInputTests|GameplayAudioTests|ImportingTests|PatchingTests|QuickPlayTests|ToolchainDetectionTests)\.'
 
   l2-storage:
     name: L2 storage and persistence

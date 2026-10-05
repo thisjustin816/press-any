@@ -3,6 +3,28 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-05: Adaptive audio, and registries wait for v1
+
+**Decision.** Game sound plays through a buffer that starts at 40 ms. Each time playback runs out
+of sound, the buffer grows 20 ms, up to 160 ms, and playback waits for it to fill before it starts
+again, so a device under load gets one short gap instead of a crackle. After 30 seconds with no
+shortfall it shrinks 20 ms. To hold the buffer near its target as the output's clock drifts from
+the emulator's, playback runs up to 0.5% faster or slower; the game's speed never changes for the
+sound (Q96). Sound that piles up past three times the target, after a stall or in Fast Forward,
+is skipped so it doesn't play late. The app asks for 10 ms hardware buffers. Frames are scheduled
+against fixed deadlines, so time lost oversleeping one frame is made up on the next instead of
+running the game slightly slow.
+
+The registries for platforms, image analyzers and patch formats move to v1. Cores and toolchain
+detectors keep theirs.
+
+**Why.** The audio queue was a fixed 250 ms ceiling that dropped the oldest sound when it filled
+and played silence when it ran dry, with no target, so latency drifted anywhere up to 250 ms and
+every shortfall clicked. The frame loop slept a full frame after each one, so oversleeping ran
+the game a little slow and starved the queue. With Game Boy as the only platform, the three
+registries would add structure nothing uses, and v1 adds the next platform or analyzer that
+needs them.
+
 ## 2026-10-05: Import hardening
 
 **Decision.** Every file the player picks is treated as untrusted. Each import checks the file's

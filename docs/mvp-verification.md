@@ -39,3 +39,11 @@ Verify with a user-supplied legal ROM:
 - [ ] Deleting a profile asks first, naming it; a Build that played it plays the Game's default afterwards.
 - [ ] The library list labels a Game Boy Color game "Game Boy Color".
 - [ ] Settings > Check Library Files reports an intact library.
+- [ ] Play for five minutes with speaker sound, then with Bluetooth headphones: no crackle, the sound keeps up with the picture, and switching between them keeps the sound. With Low Power Mode on, any gap is short and doesn't keep recurring.
+- [ ] With a controller connected the touch controls hide; touching the screen shows them, and the controller's next button press hides them again. With Settings > Hide Touch Controls with a Controller off, they stay shown.
+- [ ] Touch Haptics: Light by default, Medium is stronger, Off has none, and there are none while a controller hides the touch controls.
+- [ ] Save in a game with a battery save, wait 10 seconds, then force-quit from the app switcher: relaunching keeps the in-game save.
+- [ ] Save a state, then save in the game, then load the state: it asks first, and Load keeps the newer save as "<profile> before loading state".
+- [ ] In Quick Play the game menu shows Save State grayed with "Add to Library to save states", and Add to Library… opens the promotion review.
+- [ ] Settings > Systems > Game Boy Color opens settings that apply to every Game Boy Color game without its own.
+- [ ] At the largest accessibility text size, the library shows one column with full titles, and a Game's Builds, saves and Technical Info hashes stay readable.

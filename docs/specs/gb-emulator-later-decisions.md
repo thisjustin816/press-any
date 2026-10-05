@@ -50,7 +50,10 @@ Genericize contracts where they already matter:
 `ROMImage -> GameImage`; persistent-save internals use `PersistentSave` rather
 than assuming every future platform has battery SRAM. GB-specific UI still says
 ROM and .sav. Add small registries/seams for platforms, cores, image analyzers,
-toolchain detectors and patch formats. Add input/memory descriptors.
+toolchain detectors and patch formats. Add input/memory descriptors. (Cores and
+toolchain detectors have registries in the MVP; platforms, image analyzers and
+patch formats wait for v1, per `docs/decisions.md` "Adaptive audio, and
+registries wait for v1".)
 
 Do not build disc swapping, arcade sets, generic BIOS management, light guns,
 multitaps or other future capabilities now. SameBoy/GB header/model/camera/

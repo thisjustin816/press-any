@@ -20,6 +20,7 @@ let package = Package(
         .library(name: "EmulationSession", targets: ["EmulationSession"]),
         .library(name: "QuickPlay", targets: ["QuickPlay"]),
         .library(name: "GameplayInput", targets: ["GameplayInput"]),
+        .library(name: "GameplayAudio", targets: ["GameplayAudio"]),
         .library(name: "SameBoyAdapter", targets: ["SameBoyAdapter"]),
         .library(name: "ToolchainDetection", targets: ["ToolchainDetection"]),
         .library(name: "PersistenceGRDB", targets: ["PersistenceGRDB"]),
@@ -37,6 +38,7 @@ let package = Package(
         .target(name: "EmulationSession", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore"]),
         .target(name: "QuickPlay", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore", "EmulationSession", "Importing"]),
         .target(name: "GameplayInput", dependencies: ["EmulationCore"]),
+        .target(name: "GameplayAudio", dependencies: ["EmulationCore"]),
         // Test doubles shared by the test targets; not a product, so the app never links it.
         .target(name: "EmulatorKitTestSupport", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore"]),
         .target(name: "ToolchainDetection", dependencies: ["EmulatorDomain"]),
@@ -84,6 +86,7 @@ let package = Package(
         .testTarget(name: "EmulationSessionTests", dependencies: ["EmulationSession", "EmulationCore", "EmulatorKitTestSupport", "AssetStorage"]),
         .testTarget(name: "QuickPlayTests", dependencies: ["QuickPlay", "EmulatorKitTestSupport", "AssetStorage", "Importing"]),
         .testTarget(name: "GameplayInputTests", dependencies: ["GameplayInput", "EmulationCore"]),
+        .testTarget(name: "GameplayAudioTests", dependencies: ["GameplayAudio", "EmulationCore"]),
         .testTarget(name: "SameBoyAdapterTests", dependencies: ["SameBoyAdapter", "EmulatorKitTestSupport"]),
         .testTarget(name: "ToolchainDetectionTests", dependencies: ["ToolchainDetection", "EmulatorDomain", "EmulatorKitTestSupport"]),
         .testTarget(
