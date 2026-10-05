@@ -1,11 +1,16 @@
 name: Screenshots
 
-# Manual only: captures the app on the iPhone 17 Pro simulator, seeded from TestROMs/, and uploads
-# the PNGs as an artifact. Nothing checks them; they are for looking at.
+# Manual only: captures the app on an iPhone simulator, seeded from TestROMs/, and uploads
+# the PNGs as an artifact. The 6.5-inch preset checks dimensions before upload.
 
 on:
   workflow_dispatch:
     inputs:
+      device:
+        description: 14 Plus for Apple's 6.5-inch slot; Pro Max for the 6.9-inch slot
+        type: choice
+        options: [iPhone 14 Plus, iPhone 17 Pro Max, iPhone 17 Pro]
+        default: iPhone 14 Plus
       roms:
         description: "hero, all, or comma-separated manifest tags and filenames"
         default: hero
@@ -51,8 +56,32 @@ jobs:
         run: brew install xcodegen rgbds
       - name: Bootstrap (boot ROMs and Xcode project)
         run: make bootstrap
+      - name: Prepare screenshot simulator
+        env:
+          DEVICE: ${{ inputs.device }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          def listing(kind):
+              return json.loads(subprocess.check_output(["xcrun", "simctl", "list", kind, "-j"]))
+
+          name = os.environ["DEVICE"]
+          devices = listing("devices")["devices"]
+          if not any(d["name"] == name and d.get("isAvailable")
+                     for runtime, group in devices.items() if ".iOS-" in runtime for d in group):
+              device_type = next(d for d in listing("devicetypes")["devicetypes"] if d["name"] == name)
+              runtimes = [r for r in listing("runtimes")["runtimes"]
+                          if r.get("isAvailable") and ".iOS-" in r["identifier"]]
+              runtime = max(runtimes, key=lambda r: tuple(map(int, r["version"].split("."))))
+              subprocess.run(["xcrun", "simctl", "create", name, device_type["identifier"],
+                              runtime["identifier"]], check=True)
+          PY
       - name: Take screenshots
         env:
+          DEVICE: ${{ inputs.device }}
           ROMS: ${{ inputs.roms }}
           SHOTS: ${{ inputs.shots }}
           APPEARANCE: ${{ matrix.appearance }}
@@ -61,11 +90,31 @@ jobs:
         run: |
           set -o pipefail
           ./Scripts/take-screenshots.sh "$ROMS" screenshots 2>&1 | tee screenshots.log
+      - name: Verify 6.5-inch screenshot dimensions
+        if: inputs.device == 'iPhone 14 Plus'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+
+          images = sorted(Path("screenshots").rglob("*.png"))
+          if not images:
+              raise SystemExit("No screenshot PNGs were generated.")
+          for image in images:
+              with image.open("rb") as source:
+                  header = source.read(24)
+              if header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+                  raise SystemExit(f"Invalid PNG: {image}")
+              size = struct.unpack(">II", header[16:24])
+              if size not in ((1284, 2778), (2778, 1284)):
+                  raise SystemExit(f"{image}: {size} does not fit Apple's 6.5-inch slot.")
+              print(f"Verified {image}: {size[0]} x {size[1]}")
+          PY
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: screenshots-${{ matrix.appearance }}${{ inputs.text_size == 'largest' && '-largest-text' || '' }}
+          name: screenshots-${{ matrix.appearance }}${{ inputs.device == 'iPhone 14 Plus' && '-6.5-inch' || '' }}${{ inputs.text_size == 'largest' && '-largest-text' || '' }}
           path: |
             screenshots/
             screenshots.log
