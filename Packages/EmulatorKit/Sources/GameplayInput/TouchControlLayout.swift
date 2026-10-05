@@ -97,6 +97,8 @@ public struct TouchControlLayout: Equatable, Sendable {
     /// Where the Press Any logo is printed. Drawn only; it takes no touches.
     public let logo: TouchRect?
     public let dpadDeadZoneFraction: Double
+    /// How large the weaker axis must be relative to the stronger one to count as a diagonal.
+    public let dpadDiagonalRatio: Double
 
     public init(
         dpad: TouchRect,
@@ -112,7 +114,8 @@ public struct TouchControlLayout: Equatable, Sendable {
         artwork: [TouchControl: TouchRect] = [:],
         alignmentGuide: TouchAlignmentGuide? = nil,
         logo: TouchRect? = nil,
-        dpadDeadZoneFraction: Double = 0.16
+        dpadDeadZoneFraction: Double = 0.16,
+        dpadDiagonalRatio: Double = 0
     ) {
         self.dpad = dpad
         self.dpadHitArea = dpadHitArea ?? dpad
@@ -128,6 +131,7 @@ public struct TouchControlLayout: Equatable, Sendable {
         self.alignmentGuide = alignmentGuide
         self.logo = logo
         self.dpadDeadZoneFraction = min(max(dpadDeadZoneFraction, 0), 0.49)
+        self.dpadDiagonalRatio = min(max(dpadDiagonalRatio, 0), 1)
     }
 
     /// Whether a tap at `point` opens the menu: it's in a menu area and not on a control, which
@@ -396,7 +400,8 @@ extension TouchControlLayout {
                 bar: frame(0, 1129, 1080, 83),
                 tab: frame(494, 1129, 92, 182)
             ),
-            logo: logo
+            logo: logo,
+            dpadDiagonalRatio: 0.65
         )
     }
 }
