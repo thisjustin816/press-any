@@ -392,7 +392,9 @@ final class GameplayViewController: UIViewController {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.backgrounded() }
+            // Saved before this returns: iOS can suspend the app soon after, and a hop to a later
+            // main-queue turn could leave the writes half done.
+            MainActor.assumeIsolated { self?.backgrounded() }
         })
         lifecycleObservers.append(center.addObserver(
             forName: UIApplication.willEnterForegroundNotification,
@@ -404,6 +406,11 @@ final class GameplayViewController: UIViewController {
     }
 
     private func backgrounded() {
+        // Asks iOS for time to finish writing the save and Auto State before suspending.
+        let saving = UIApplication.shared.beginBackgroundTask(withName: "Save game")
+        defer {
+            if saving != .invalid { UIApplication.shared.endBackgroundTask(saving) }
+        }
         driver.stop()
         audio.pause()
         touchControls.cancelInput()
