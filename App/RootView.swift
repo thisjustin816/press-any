@@ -170,7 +170,7 @@ struct RootView: View {
             do {
                 endedQuickPlay = try container.quickPlayWorkspace.start(romURL: ScreenshotScene.romURL(file))
             } catch {
-                errorMessage = "Could not start Quick Play: \(error)"
+                errorMessage = "Couldn’t start Quick Play: \(error.localizedDescription)"
             }
         case .quickPlay(let file):
             quickPlay(
@@ -234,7 +234,7 @@ struct RootView: View {
             )
             try present(temporary, container: container, firstFrameClock: request.chosenAt)
         } catch {
-            errorMessage = "Could not start Quick Play: \(error)"
+            errorMessage = "Couldn’t start Quick Play: \(error.localizedDescription)"
         }
     }
 
