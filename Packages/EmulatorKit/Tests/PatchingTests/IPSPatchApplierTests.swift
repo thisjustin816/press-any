@@ -41,6 +41,17 @@ final class IPSPatchApplierTests: XCTestCase {
         XCTAssertEqual(try IPSPatchApplier().apply(patch: patch, to: source), Data("ABC".utf8))
     }
 
+    func testIPSFinalSizeNeverGrowsTheOutput() throws {
+        let source = Data(repeating: 0x5a, count: 0x8000)
+        let patch = Data([
+            0x50, 0x41, 0x54, 0x43, 0x48,
+            0x45, 0x4f, 0x46,
+            0xff, 0xff, 0xff,
+        ])
+
+        XCTAssertEqual(try IPSPatchApplier().apply(patch: patch, to: source), source)
+    }
+
     func testIPSRejectsMalformedPatch() {
         XCTAssertThrowsError(try IPSPatchApplier().apply(patch: Data("PATCH".utf8), to: Data())) { error in
             XCTAssertEqual(error as? PatchError, .malformedPatch)

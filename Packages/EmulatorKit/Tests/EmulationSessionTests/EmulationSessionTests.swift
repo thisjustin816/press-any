@@ -269,6 +269,19 @@ extension EmulationSessionTests {
         XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1, 2, 3]))
     }
 
+    func testAnOversizedFileReplacesNothing() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let huge = try ImportTestFiles.sparse(
+            at: FileManager.default.temporaryDirectory.appendingPathComponent("import-\(UUID().uuidString).sav"),
+            byteCount: 5 * 1_048_576
+        )
+        XCTAssertThrowsError(try harness.replaceSave().execute(profileID: harness.profile.id, sourceURL: huge)) {
+            XCTAssertEqual($0 as? ImportSizeError, .fileTooLarge(limit: ImportSizeLimit.batterySave.bytes))
+        }
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 1)
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1, 2, 3]))
+    }
+
     func testAutoStateIsNotOfferedOnceASharedProfileSaveIsNewer() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
         let early = Date(timeIntervalSince1970: 1_700_000_000)

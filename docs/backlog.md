@@ -93,7 +93,7 @@ camera and printer declared, and a missing one is a failed cast.
 |---|---|---|---|---|
 | partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers and stale temporary files); saves/states not verified on read |
 | missing | Storage screen by category, source vs disposable, safe cleanup | v1 | Q138 | none |
-| partial | Automatic cleanup of disposable data only | v1 | Q139 | expired Quick Play sessions removed at launch (AppContainer init); no generated-cache eviction under pressure |
+| partial | Automatic cleanup of disposable data only | v1 | Q139 | expired Quick Play sessions and staged copies left by interrupted imports removed at launch (AppContainer init); no generated-cache eviction under pressure |
 | missing | GC coordination / in-flight protection / orphan sweep in the running app | v1 | later 6 | logic only in the unused checker |
 
 Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed
@@ -174,7 +174,9 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 Done: Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
 re-import repairs damaged file; New Game vs Add Build choice, Base Build toggle; Toolchain
-findings in Import Review and Quick Play promotion.
+findings in Import Review and Quick Play promotion; Files over a size limit for their kind
+(ROM, patch, save, artwork, variable map) refused before they are read or staged; only regular
+files staged.
 
 ### Game/Build restructuring
 
@@ -391,8 +393,8 @@ Spec: all v1 unless noted.
 | missing | Manual "Check for New Artwork"; cache only selected primary | v1 | Q166/Q98 |  |
 | missing | Artwork provenance (provider, URL, fetch time, rights) | v1 | later 8 |  |
 
-Done: Manual artwork from Photos/Files, remove, stored as user data; title placeholder fallback;
-Artwork follows Builds when a Game is emptied by promote/merge.
+Done: Manual artwork from Photos/Files, remove, stored as user data, downscaled to 1024 pixels;
+title placeholder fallback; Artwork follows Builds when a Game is emptied by promote/merge.
 
 ### External display / AirPlay
 

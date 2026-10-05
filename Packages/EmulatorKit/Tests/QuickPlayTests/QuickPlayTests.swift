@@ -27,6 +27,17 @@ final class QuickPlayTests: XCTestCase {
         XCTAssertEqual(try harness.workspace.temporaryBatteryData(sessionID: session.id), Data([9, 9, 9]))
     }
 
+    func testQuickPlayRefusesAFileLargerThanAnyCartridge() throws {
+        let harness = try QuickPlayHarness.make()
+        let huge = try ImportTestFiles.sparse(at: harness.external.appendingPathComponent("huge.gb"), byteCount: 9 * 1_048_576)
+
+        XCTAssertThrowsError(try harness.workspace.start(romURL: huge)) {
+            XCTAssertEqual($0 as? ImportSizeError, .fileTooLarge(limit: ImportSizeLimit.rom.bytes))
+        }
+        XCTAssertEqual(try harness.store.quickPlaySessionIDs(), [])
+        XCTAssertEqual(ImportTestFiles.stagedItems(under: harness.store.rootURL), [])
+    }
+
     func testExpiredQuickPlaySessionIsRemovedButUnknownDirectoryIsPreserved() throws {
         let start = Date(timeIntervalSince1970: 1_000)
         let harness = try QuickPlayHarness.make(now: start, retentionSeconds: 60)

@@ -255,12 +255,7 @@ final class GameDetailViewModel: ObservableObject {
         perform {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            try artwork.set(
-                gameID: gameID,
-                imageData: Data(contentsOf: url),
-                fileExtension: url.pathExtension.isEmpty ? "img" : url.pathExtension,
-                originalFilename: url.lastPathComponent
-            )
+            try artwork.set(gameID: gameID, fileAt: url)
         }
     }
 

@@ -22,6 +22,7 @@ public struct PatchStackApplier: PatchApplying, Sendable {
         to source: Data,
         ignoringBaseMismatch: Bool
     ) throws -> Data {
+        try ImportSizeLimit.patch.check(byteCount: Int64(patch.count))
         let normalized = fileExtension
             .trimmingCharacters(in: CharacterSet(charactersIn: "."))
             .lowercased()

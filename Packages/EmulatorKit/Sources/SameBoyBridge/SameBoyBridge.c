@@ -18,6 +18,8 @@
 #define SB_IO_BOOT_ROM_DISABLE 0xff50u
 // SameBoy's boot ROMs hand off within a few seconds; 20 emulated seconds (in 8 MHz ticks) is a backstop.
 #define SB_BOOT_SKIP_TICK_LIMIT (20ull * 8388608ull)
+// Larger than any battery trailer SameBoy reads after the cartridge RAM (48 bytes at most).
+#define SB_BATTERY_READ_PADDING 64u
 
 struct SBInstance {
     GB_gameboy_t *gb;
@@ -151,6 +153,8 @@ bool SBLoadBootROM(SBInstance *instance, const uint8_t *bytes, size_t size)
 bool SBLoadROM(SBInstance *instance, const uint8_t *bytes, size_t size)
 {
     if (!instance || !instance->gb || !bytes || size < 0x150) return false;
+    // SameBoy does not check the allocation it makes for the image, so callers bound the size:
+    // imported ROMs at 8 MB and patched images at 64 MB.
     GB_load_rom_from_buffer(instance->gb, bytes, size);
     GB_reset(instance->gb);
     instance->has_run = false;
@@ -260,7 +264,13 @@ bool SBSaveBattery(SBInstance *instance, uint8_t *output, size_t size)
 void SBLoadBattery(SBInstance *instance, const uint8_t *bytes, size_t size)
 {
     if (!instance || !instance->gb || !bytes || size == 0) return;
-    GB_load_battery_from_buffer(instance->gb, bytes, size);
+    // SameBoy copies a whole RTC trailer from after the cartridge RAM whenever the save is longer
+    // than the RAM, even by one byte. The zeroed padding keeps that copy inside memory we own.
+    uint8_t *padded = calloc(1, size + SB_BATTERY_READ_PADDING);
+    if (!padded) return;
+    memcpy(padded, bytes, size);
+    GB_load_battery_from_buffer(instance->gb, padded, size);
+    free(padded);
 }
 
 size_t SBStateSize(SBInstance *instance)

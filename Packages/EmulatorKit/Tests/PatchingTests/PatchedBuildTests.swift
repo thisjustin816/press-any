@@ -31,6 +31,21 @@ final class PatchedBuildTests: XCTestCase {
         XCTAssertTrue(harness.store.fileExists(at: try harness.store.managedURL(relativePath: patchAsset.relativePath)))
     }
 
+    func testAnOversizedPatchIsRefusedBeforeItIsStaged() throws {
+        let harness = try PatchBuildHarness.make()
+        let huge = try ImportTestFiles.sparse(at: harness.external.appendingPathComponent("huge.ips"), byteCount: 65 * 1_048_576)
+        let stagedBefore = ImportTestFiles.stagedItems(under: harness.store.rootURL)
+
+        XCTAssertThrowsError(try harness.creator.execute(.init(
+            gameID: harness.gameID,
+            baseBuildID: harness.baseBuild.id,
+            patches: [.init(url: huge)],
+            displayName: "Patched"
+        ))) { XCTAssertEqual($0 as? ImportSizeError, .fileTooLarge(limit: ImportSizeLimit.patch.bytes)) }
+        XCTAssertEqual(ImportTestFiles.stagedItems(under: harness.store.rootURL), stagedBefore, "the harness stages its base ROM")
+        XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.gameID).count, 1)
+    }
+
     func testAPatchedBuildIsDetectedFromItsOwnImage() throws {
         let harness = try PatchBuildHarness.make()
         let target = TestROM.make(title: "TRSE GB")

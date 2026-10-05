@@ -6,29 +6,31 @@ public enum GBROMHeaderParser {
         guard rom.count > 0x14f else {
             throw GBROMHeaderError.fileTooSmall(actual: rom.count)
         }
+        // Offsets count from the image's first byte, which is not index 0 when it is a slice.
+        func byte(_ offset: Int) -> UInt8 { rom[rom.startIndex + offset] }
 
-        let titleBytes = rom[0x134...0x142]
+        let titleBytes = (0x134...0x142).map(byte)
         let title = String(bytes: titleBytes.prefix { $0 != 0 }, encoding: .ascii)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let cgbFlag = rom[0x143]
+        let cgbFlag = byte(0x143)
         let system: GameSystem = (cgbFlag == 0x80 || cgbFlag == 0xc0) ? .gameBoyColor : .gameBoy
 
         var computedHeaderChecksum: UInt8 = 0
         for address in 0x134...0x14c {
-            computedHeaderChecksum = computedHeaderChecksum &- rom[address] &- 1
+            computedHeaderChecksum = computedHeaderChecksum &- byte(address) &- 1
         }
-        let storedHeaderChecksum = rom[0x14d]
+        let storedHeaderChecksum = byte(0x14d)
 
-        let storedGlobalChecksum = UInt16(rom[0x14e]) << 8 | UInt16(rom[0x14f])
+        let storedGlobalChecksum = UInt16(byte(0x14e)) << 8 | UInt16(byte(0x14f))
         let computedGlobalChecksum = globalChecksum(of: rom)
 
         return GBROMHeader(
             title: title,
             system: system,
             cgbFlag: cgbFlag,
-            cartridgeType: rom[0x147],
-            romSizeCode: rom[0x148],
-            ramSizeCode: rom[0x149],
+            cartridgeType: byte(0x147),
+            romSizeCode: byte(0x148),
+            ramSizeCode: byte(0x149),
             headerChecksum: storedHeaderChecksum,
             headerChecksumValid: storedHeaderChecksum == computedHeaderChecksum,
             globalChecksum: storedGlobalChecksum,

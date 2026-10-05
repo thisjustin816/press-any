@@ -6,6 +6,8 @@ public enum ManagedFileStoreError: Error, Equatable {
     case unsafeRelativePath(String)
     case invalidFileExtension(String)
     case contentHashMismatch(expected: String, actual: String)
+    /// A directory, symbolic link or device picked where a file was expected.
+    case notARegularFile(String)
 }
 
 public struct ManagedFileStore: AssetStore, Sendable {
@@ -18,18 +20,38 @@ public struct ManagedFileStore: AssetStore, Sendable {
         try FileManager.default.createDirectory(at: self.rootURL, withIntermediateDirectories: true)
     }
 
+    private var stagingURL: URL {
+        rootURL.appendingPathComponent("Staging", isDirectory: true)
+    }
+
+    /// Copies a picked file into its own staging directory. The copy's name is fixed, since the
+    /// picked name can be anything, including "..". Attributes are read without following links,
+    /// so a symbolic link is refused rather than copied as a link.
     public func stageCopy(from sourceURL: URL, transactionID: UUID) throws -> URL {
-        let directory = rootURL
-            .appendingPathComponent("Staging", isDirectory: true)
+        let type = try FileManager.default.attributesOfItem(atPath: sourceURL.path)[.type] as? FileAttributeType
+        guard type == .typeRegular else { throw ManagedFileStoreError.notARegularFile(sourceURL.path) }
+
+        let directory = stagingURL
             .appendingPathComponent(transactionID.uuidString.lowercased(), isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
-        let destination = directory.appendingPathComponent(sourceURL.lastPathComponent)
+        var name = "staged"
+        if let fileExtension = try? validateFileExtension(sourceURL.pathExtension) {
+            name += ".\(fileExtension)"
+        }
+        let destination = directory.appendingPathComponent(name)
         if FileManager.default.fileExists(atPath: destination.path) {
             try FileManager.default.removeItem(at: destination)
         }
         try FileManager.default.copyItem(at: sourceURL, to: destination)
         return destination
+    }
+
+    /// Empties the staging directory. Each import removes its own copy when it ends, so call this
+    /// only when no import is in progress, such as at launch, to clear copies an interrupted
+    /// import left behind.
+    public func removeStagedFiles() throws {
+        try removeIfExists(stagingURL)
     }
 
     public func hashFile(at url: URL) throws -> String {

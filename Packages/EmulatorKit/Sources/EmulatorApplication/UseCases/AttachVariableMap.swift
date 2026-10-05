@@ -38,6 +38,7 @@ public struct AttachVariableMap: Sendable {
 
     public func execute(buildID: UUID, sourceURL: URL) throws -> BuildVariableMap {
         guard try builds.fetchBuild(id: buildID) != nil else { throw AttachVariableMapError.buildNotFound(buildID) }
+        try ImportSizeLimit.variableMap.check(fileAt: sourceURL)
         let staged = try assetStore.stageCopy(from: sourceURL, transactionID: makeID())
         defer { try? assetStore.removeIfExists(staged.deletingLastPathComponent()) }
 
@@ -92,7 +93,7 @@ public struct AttachVariableMap: Sendable {
     /// The map's format, or nil when it isn't one. A file qualifies when most of its non-blank,
     /// non-comment lines have one format's shape.
     static func format(of data: Data) -> BuildVariableMap.Format? {
-        guard data.count <= 4_000_000, let text = String(data: data, encoding: .utf8) else { return nil }
+        guard data.count <= ImportSizeLimit.variableMap.bytes, let text = String(data: data, encoding: .utf8) else { return nil }
         let lines = text.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty && !$0.hasPrefix(";") && !$0.hasPrefix("#") && !$0.hasPrefix("//") }
