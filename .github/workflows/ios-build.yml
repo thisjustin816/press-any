@@ -40,6 +40,8 @@ jobs:
         run: |
           set -o pipefail
           make build 2>&1 | tee build.log
+      - name: Check the privacy manifest in the built app
+        run: ./Scripts/verify-privacy-manifest.sh
       - name: Test
         run: |
           set -o pipefail
