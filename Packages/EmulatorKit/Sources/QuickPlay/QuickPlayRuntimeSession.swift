@@ -176,7 +176,9 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
     public func flushBatteryIfChanged() throws -> Bool {
         let worker = try activeWorker(requireRunning: false)
         let due = lock.withLock { () -> Bool in
-            guard sessionNanoseconds &- lastBatteryCheckNanoseconds >= batteryCheckIntervalNanoseconds else { return false }
+            guard sessionNanoseconds &- lastBatteryCheckNanoseconds >= batteryCheckIntervalNanoseconds else {
+                return false
+            }
             lastBatteryCheckNanoseconds = sessionNanoseconds
             return true
         }
