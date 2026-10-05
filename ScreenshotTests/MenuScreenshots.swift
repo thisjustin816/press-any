@@ -86,12 +86,14 @@ final class MenuScreenshots: XCTestCase {
         try expect(app.buttons[item], then: name)
     }
 
-    /// At large text sizes the save profiles start below the screen.
+    /// At large text sizes the save profiles start below the screen, and the list doesn't create
+    /// a row until it scrolls into view, so the row may not exist until after a swipe.
     private func scrollTo(_ element: XCUIElement, in app: XCUIApplication) {
-        XCTAssertTrue(element.waitForExistence(timeout: 5), "\(element) exists")
-        for _ in 0..<6 where !element.isHittable {
+        _ = element.waitForExistence(timeout: 5)
+        for _ in 0..<6 where !(element.exists && element.isHittable) {
             app.swipeUp()
         }
+        XCTAssertTrue(element.exists && element.isHittable, "\(element) is on screen")
     }
 
     private func settings() throws -> Settings {
