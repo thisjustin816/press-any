@@ -33,6 +33,9 @@ struct RootView: View {
     @State private var riskyLaunch: RiskyLaunch?
     /// The Quick Play session whose gameplay screen is closing, shown once the cover is gone.
     @State private var closingQuickPlayID: UUID?
+    /// Set when the game menu's Add to Library closed the session, so its sheet opens on that step.
+    @State private var closingQuickPlayAddsToLibrary = false
+    @State private var endedQuickPlayAddsToLibrary = false
     @State private var endedQuickPlay: QuickPlaySession?
     @State private var quickPlayToResume: QuickPlaySession?
 
@@ -65,7 +68,13 @@ struct RootView: View {
                 controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
                 tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
-                onClose: { endGameplay(presentation) }
+                onClose: { endGameplay(presentation) },
+                onAddToLibrary: presentation.isQuickPlay
+                    ? {
+                        closingQuickPlayAddsToLibrary = true
+                        endGameplay(presentation)
+                    }
+                    : nil
             )
             .ignoresSafeArea()
             // The status bar sits on the controller's body: dark text on Classic, light on Dark.
@@ -77,6 +86,7 @@ struct RootView: View {
                     QuickPlaySessionView(
                         session: session,
                         container: container,
+                        addsToLibrary: endedQuickPlayAddsToLibrary,
                         onResume: { resumed in
                             quickPlayToResume = resumed
                             endedQuickPlay = nil
@@ -254,6 +264,8 @@ struct RootView: View {
     private func showClosingQuickPlay() {
         guard let id = closingQuickPlayID else { return }
         closingQuickPlayID = nil
+        endedQuickPlayAddsToLibrary = closingQuickPlayAddsToLibrary
+        closingQuickPlayAddsToLibrary = false
         endedQuickPlay = try? bootstrap.container?.quickPlayWorkspace.load(sessionID: id)
     }
 
@@ -289,6 +301,11 @@ private struct GameplayPresentation: Identifiable {
     let firstFrameClock: UInt64?
     let controlStyle: TouchControlStyle
     let screenScaling: ScreenScaling
+
+    var isQuickPlay: Bool {
+        if case .quickPlay = kind { return true }
+        return false
+    }
 }
 
 struct QuickPlayRequest {

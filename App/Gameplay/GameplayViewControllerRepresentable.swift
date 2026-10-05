@@ -13,6 +13,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let tapGameForMenu: Bool
     let soundMode: SoundMode
     let onClose: () -> Void
+    var onAddToLibrary: (() -> Void)?
 
     func makeUIViewController(context: Context) -> GameplayViewController {
         let controller = GameplayViewController(
@@ -27,6 +28,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             soundMode: soundMode
         )
         controller.onClose = onClose
+        controller.onAddToLibrary = onAddToLibrary
         return controller
     }
 

@@ -7,6 +7,8 @@ import SwiftUI
 struct QuickPlaySessionView: View {
     let session: QuickPlaySession
     let container: AppContainer
+    /// Opens straight to Add to Library, as the game menu's Add to Library asks.
+    var addsToLibrary = false
     let onResume: (QuickPlaySession) -> Void
     let onFinished: () -> Void
 
@@ -40,11 +42,7 @@ struct QuickPlaySessionView: View {
                     Label("Keep Playing", systemImage: "play.fill")
                 }
                 Button {
-                    do {
-                        promotion = try QuickPlayPromotionViewModel(session: session, container: container)
-                    } catch {
-                        errorMessage = "Couldn’t review this session: \(error.localizedDescription)"
-                    }
+                    startPromotion()
                 } label: {
                     Label("Add to Library…", systemImage: "square.and.arrow.down.on.square")
                 }
@@ -71,6 +69,7 @@ struct QuickPlaySessionView: View {
         }
         .task {
             if case .quickPlayInfo = ScreenshotScene.current { showsTechnicalInfo = true }
+            if addsToLibrary { startPromotion() }
         }
         .confirmationDialog("Discard this session?", isPresented: $confirmDiscard, titleVisibility: .visible) {
             Button("Discard", role: .destructive) {
@@ -83,6 +82,14 @@ struct QuickPlaySessionView: View {
             }
         } message: {
             Text("Its save and progress are deleted. Library saves it copied from are not affected.")
+        }
+    }
+
+    private func startPromotion() {
+        do {
+            promotion = try QuickPlayPromotionViewModel(session: session, container: container)
+        } catch {
+            errorMessage = "Couldn’t review this session: \(error.localizedDescription)"
         }
     }
 

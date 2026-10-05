@@ -256,7 +256,7 @@ states.
 | missing | App relaunch returns to the previous game/session | v1 | Q146 |  |
 | missing | In-game Build/Profile switching (save, check, relaunch) | v1 | Q148 |  |
 
-Done: Basic manual save + load state (menu lists all states; sheet "Load Latest State"); States
+Done: Basic manual save + load state (menu lists all states); States
 never cross Build/Profile/core/serialization context; Auto State on background, close and session
 switch; rolling 5; Resume Games Always/Ask/Never (default Always), inheritable System/Game/Build,
 Ask prompt, foreground policy; Auto State not restored once the profile's save is newer; Failed
@@ -360,10 +360,10 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Controller active hides touch controls | MVP | Q109 | hides (body stays, corner buttons return); touch-to-reveal and user override missing |
+| partial | Controller active hides touch controls | MVP | Q109 | hides (body and logo menu stay); user override missing |
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | Q111 | first connected used; selectPlayerOne() has no UI |
 | missing | Named reusable controller profiles, remapping, App/System/Game/Build inheritance | v1 | Q112 | fixed mapping (Select = Options or L1) |
-| missing | Controller hotkey combos and menu navigation | v1 | dec 24 |  |
+| missing | Controller hotkey combos and menu navigation | v1 | dec 24 | "Open Menu" is a mappable input with no default button, and Home is never taken (D "A controller opens the game menu") |
 | missing | Rumble routing override Phone / Controller / Both / Off | v1 | Q88 |  |
 | missing | Separate phone and controller intensity | v1 | Q104 |  |
 
@@ -374,7 +374,7 @@ controls, shows notice; Cartridge rumble routed controller-first, phone fallback
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | In-game menu (wordmark tap / corner button): Pause/Resume, Fast Forward, Save State, Load State, Close | MVP | D "Built-in controller layouts" | menuElements, presentMenuSheet |
+| partial | In-game menu (wordmark tap, with or without a controller): Pause/Resume, Fast Forward, Save State, Load State, Close | MVP | D "One game menu" | menuElements, GameMenuButton |
 | missing | One shared action registry for menu, controller hotkeys and skin buttons | v1 | prod "Quick Actions" |  |
 | missing | Reorderable/customizable Quick Actions with favorites | v1 | prod "Quick Actions" |  |
 | missing | Remaining actions: rewind, slow-mo, screenshot, note, manual, cheats, shader, Build/Profile switch, Build info, watches, frame advance, layout edit | v1 | prod "Quick Actions" |  |

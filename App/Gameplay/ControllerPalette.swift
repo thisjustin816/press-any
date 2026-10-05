@@ -55,8 +55,8 @@ struct ControllerPalette {
         ControllerPalette(
             bodyTop: rgb(36, 37, 40),
             bodyBottom: rgb(22, 22, 24),
-            bezelTop: rgb(12, 12, 13),
-            bezelBottom: rgb(8, 8, 9),
+            bezelTop: rgb(56, 56, 60),
+            bezelBottom: rgb(48, 48, 52),
             dpad: rgb(70, 70, 75),
             dpadPressed: rgb(96, 96, 102),
             dpadDimple: rgb(58, 58, 62),

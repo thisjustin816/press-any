@@ -122,9 +122,16 @@ struct GameDetailView: View {
             Button {
                 launch(build: model.preferredBuild)
             } label: {
-                Label("Play", systemImage: "play.fill")
-                    .labelStyle(.titleAndIcon)
-                    .frame(maxWidth: .infinity)
+                VStack(spacing: 2) {
+                    Label("Play", systemImage: "play.fill")
+                        .labelStyle(.titleAndIcon)
+                    if let summary = model.playSummary {
+                        Text(summary)
+                            .font(.caption)
+                            .opacity(0.85)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .disabled(model.preferredBuild == nil)
@@ -139,7 +146,7 @@ struct GameDetailView: View {
         } header: {
             Text("Builds")
         } footer: {
-            Text("Touch and hold a Build to pick its save, apply a patch, or move it to its own Game.")
+            Text("\(Image(systemName: "star.fill")) Play starts this Build. BASE is a clean ROM patches apply to. Touch and hold for more.")
         }
     }
 
@@ -163,7 +170,7 @@ struct GameDetailView: View {
         } header: {
             Text("Save Profiles")
         } footer: {
-            Text("Touch and hold a profile to duplicate it, give it a badge, replace its save, or delete it.")
+            Text("\(Image(systemName: "star.fill")) Play uses this save unless a Build picks its own. Touch and hold for more.")
         }
     }
 
@@ -191,6 +198,7 @@ struct GameDetailView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
+            .accessibilityIdentifier("game.moreMenu")
         }
     }
 
@@ -358,9 +366,6 @@ struct GameDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Text(String(build.imageSHA256.prefix(12)) + "…")
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
             }
             Spacer()
             if model.game?.preferredBuildID == build.id {
@@ -405,11 +410,7 @@ struct GameDetailView: View {
             }
         }
         Button("Set as Preferred") { model.setPreferredBuild(build) }
-        if build.sourceKind != .patchRecipe {
-            Button(build.isBase ? "Unmark as Base Build" : "Mark as Base Build") {
-                model.setBase(build, isBase: !build.isBase)
-            }
-        }
+        Divider()
         Button("Technical Info…") { technicalInfo = build }
         Button("Build Settings…") {
             settingsTarget = SettingsTarget(
@@ -419,12 +420,18 @@ struct GameDetailView: View {
                 buildID: build.id
             )
         }
+        if build.sourceKind != .patchRecipe {
+            Button(build.isBase ? "Unmark as Base Build" : "Mark as Base Build") {
+                model.setBase(build, isBase: !build.isBase)
+            }
+        }
         Divider()
         Button("Apply Patch…") { request(.patch(build)) }
         Button("Attach Variable Map…") { request(.variableMap(build)) }
         if build.sourceKind == .patchRecipe {
             Button("Remove Generated Image") { model.removeGeneratedImage(of: build) }
         }
+        Divider()
         Button("Make Separate Game…") { promotion = build }
     }
 
@@ -441,8 +448,9 @@ struct GameDetailView: View {
             }
             Spacer()
             if model.game?.preferredSaveProfileID == profile.id {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.secondary)
+                Image(systemName: "star.fill")
+                    .foregroundStyle(.yellow)
+                    .accessibilityLabel("Default Save")
             }
         }
         .contextMenu {

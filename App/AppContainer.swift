@@ -233,11 +233,11 @@ final class AppContainer {
         let style = launchSetting(
             TouchControlStyle.self, .controllerLayout, system: system, gameID: gameID, buildID: buildID
         )
-        return style ?? .gameBoy
+        return ScreenshotScene.layoutOverride ?? style ?? .gameBoy
     }
 
     func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
-        launchSetting(TouchControlStyle.self, .controllerLayout, for: context) ?? .gameBoy
+        ScreenshotScene.layoutOverride ?? launchSetting(TouchControlStyle.self, .controllerLayout, for: context) ?? .gameBoy
     }
 
     /// The game picture's scaling for a launch. Unset or unreadable means integer scaling.

@@ -63,6 +63,18 @@ targets:
       - path: AppTests
     dependencies:
       - target: PressAny
+  # Opens the pop-up menus for the screenshot workflow; only the PressAnyScreenshots scheme runs it.
+  PressAnyScreenshotTests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: ScreenshotTests
+    dependencies:
+      - target: PressAny
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.thisjustin816.PressAnyScreenshotTests
+        TEST_TARGET_NAME: PressAny
 schemes:
   PressAny:
     build:
@@ -72,3 +84,12 @@ schemes:
     test:
       targets:
         - PressAnyTests
+  PressAnyScreenshots:
+    build:
+      targets:
+        PressAny: all
+        PressAnyScreenshotTests: [test]
+    test:
+      config: Debug
+      targets:
+        - PressAnyScreenshotTests

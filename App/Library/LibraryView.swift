@@ -27,6 +27,8 @@ struct LibraryView: View {
     @State private var quickPlayToResume: QuickPlaySession?
     @State private var screenshotGameID: UUID?
     @State private var screenshotBuildInfo: Build?
+    /// Off hides the titles under grid tiles, for libraries whose box art carries the name.
+    @AppStorage("library.showsGridTitles") private var showsGridTitles = true
 
     let container: AppContainer
     let onPlay: (LaunchContext) -> Void
@@ -103,9 +105,13 @@ struct LibraryView: View {
                             Label("Grid", systemImage: "square.grid.2x2").tag(DisplayMode.grid)
                             Label("List", systemImage: "list.bullet").tag(DisplayMode.list)
                         }
+                        if displayMode == .grid {
+                            Toggle("Show Titles", isOn: $showsGridTitles)
+                        }
                     } label: {
                         Image(systemName: displayMode == .grid ? "square.grid.2x2" : "list.bullet")
                     }
+                    .accessibilityIdentifier("library.viewMenu")
 
                     Menu {
                         Button {
@@ -135,6 +141,7 @@ struct LibraryView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .accessibilityIdentifier("library.addMenu")
                 }
             }
             .onAppear { model.reload() }
@@ -204,7 +211,12 @@ struct LibraryView: View {
                     NavigationLink {
                         GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
                     } label: {
-                        GameLibraryTile(game: game, artworkURL: container.artworkURL(for: game))
+                        GameLibraryTile(
+                            game: game,
+                            system: model.system(of: game),
+                            artworkURL: container.artworkURL(for: game),
+                            showsTitle: showsGridTitles
+                        )
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
@@ -222,7 +234,7 @@ struct LibraryView: View {
                 GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
             } label: {
                 HStack(spacing: 12) {
-                    GameArtworkView(url: container.artworkURL(for: game))
+                    GameArtworkView(url: container.artworkURL(for: game), system: model.system(of: game), title: game.primaryTitle)
                         .frame(width: 56, height: 56)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(game.primaryTitle)
@@ -252,6 +264,8 @@ struct LibraryView: View {
     /// The library scenes; `RootView` opens the gameplay ones.
     private func openScreenshotScene() {
         switch ScreenshotScene.current {
+        case .settings:
+            showSettings = true
         case .game(let file):
             screenshotGameID = ScreenshotScene.build(romFile: file, in: container)?.gameID
         case .buildInfo(let file):
@@ -292,23 +306,32 @@ private struct ImportReviewPresentation: Identifiable {
 
 private struct GameLibraryTile: View {
     let game: Game
+    let system: GameSystem
     let artworkURL: URL?
+    let showsTitle: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            GameArtworkView(url: artworkURL)
+            GameArtworkView(url: artworkURL, system: system, title: game.primaryTitle)
                 .aspectRatio(1, contentMode: .fit)
-            Text(game.primaryTitle)
-                .font(.headline)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if showsTitle {
+                Text(game.primaryTitle)
+                    .font(.headline)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+        // The title stays readable to VoiceOver when it isn't shown.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(game.primaryTitle)
     }
 }
 
-/// The Game's assigned artwork, or a placeholder. The title is always shown beside it.
+/// The Game's assigned artwork, or a cartridge for its system with its title on the label.
 private struct GameArtworkView: View {
     let url: URL?
+    let system: GameSystem
+    let title: String
 
     var body: some View {
         if let url {
@@ -333,7 +356,7 @@ private struct GameArtworkView: View {
             .fill(.quaternary)
             .overlay {
                 GeometryReader { proxy in
-                    CartridgeIcon()
+                    CartridgeIcon(system: system, title: title)
                         .frame(width: min(proxy.size.width, proxy.size.height) * 0.42)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -347,6 +370,16 @@ private struct GameArtworkView: View {
 /// the lock notch at the top right, the framed label recess, and the arrow pointing into the slot.
 /// Drawn in millimeters.
 private struct CartridgeIcon: View {
+    let system: GameSystem
+    let title: String
+
+    /// Game Boy Color cartridges take the brand's magenta, so the two systems tell apart at a glance.
+    private var bodyStyle: AnyShapeStyle {
+        system == .gameBoyColor
+            ? AnyShapeStyle(Color(uiColor: AppBrand.Wordmark.accent).opacity(0.55))
+            : AnyShapeStyle(.tertiary)
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let mm = proxy.size.width / 57
@@ -355,7 +388,7 @@ private struct CartridgeIcon: View {
             }
             ZStack {
                 CartridgeShape()
-                    .fill(.tertiary)
+                    .fill(bodyStyle)
                 Capsule()
                     .path(in: rect(9, 2, 40, 8.5))
                     .stroke(.background.opacity(0.3), lineWidth: max(0.5 * mm, 0.5))
@@ -379,6 +412,17 @@ private struct CartridgeIcon: View {
                 RoundedRectangle(cornerRadius: 1 * mm, style: .continuous)
                     .path(in: rect(5.4, 14.4, 46.2, 39.7))
                     .fill(.background.opacity(0.6))
+                // Too small to read in the list's thumbnails, where the title sits beside it anyway.
+                if proxy.size.width >= 50 {
+                    Text(title)
+                        .font(.system(size: 6 * mm, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.6)
+                        .frame(width: 40 * mm, height: 34 * mm)
+                        .position(x: 28.5 * mm, y: 34.25 * mm)
+                }
                 Path { path in
                     path.move(to: CGPoint(x: 25.5 * mm, y: 57.2 * mm))
                     path.addLine(to: CGPoint(x: 31.5 * mm, y: 57.2 * mm))

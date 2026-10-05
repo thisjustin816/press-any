@@ -16,14 +16,15 @@ struct ToolchainSection: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(Array(components.enumerated()), id: \.offset) { _, component in
+                    let shown = ToolchainDisplay(component)
                     LabeledContent {
-                        if let version = component.version {
+                        if let version = shown.version {
                             Text(version)
                         }
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(component.name)
-                            Text("\(Self.kindName(component.kind)), \(Self.confidenceName(component.confidence))")
+                            Text(shown.name)
+                            Text(Self.detail(component, variant: shown.variant))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -61,6 +62,11 @@ struct ToolchainSection: View {
             .map(\.element)
     }
 
+    private static func detail(_ component: DetectedToolchainComponent, variant: String?) -> String {
+        let kind = variant.map { "\(kindName(component.kind)) (\($0))" } ?? kindName(component.kind)
+        return "\(kind), \(confidenceName(component.confidence))"
+    }
+
     private static func kindName(_ kind: ToolchainComponentKind) -> String {
         switch kind {
         case .toolchain: "Toolchain"
@@ -76,5 +82,46 @@ struct ToolchainSection: View {
         case .medium: "one signature matched"
         case .low: "inferred"
         }
+    }
+}
+
+/// A detected component as the interface shows it. The detector's labels are kept as written in
+/// the stored report; this turns them into the names and versions people know.
+struct ToolchainDisplay: Equatable {
+    let name: String
+    /// One version or a range, such as "4.3.0 or later" or "2.0.18 to 2.1.5". Nil when unknown.
+    let version: String?
+    /// A named edition of an audio driver, such as hUGETracker's SuperDisk.
+    let variant: String?
+
+    private static let names = ["GBStudio": "GB Studio", "GBBasic": "GB BASIC"]
+
+    init(_ component: DetectedToolchainComponent) {
+        var name = Self.names[component.name] ?? component.name
+        var label = component.version.flatMap { $0.isEmpty || $0 == "Unknown" ? nil : $0 }
+        // Audio drivers name editions where other components put versions, and editions have no dots.
+        if let edition = label, component.kind == .musicDriver || component.kind == .soundEffectsDriver, !edition.contains(".") {
+            variant = edition
+            label = nil
+        } else {
+            variant = nil
+        }
+        // The detector numbers GBDK-2020 releases 2020.x.y.z; the project calls them GBDK-2020 x.y.z.
+        if let range = label, name == "GBDK" {
+            let parts = range.components(separatedBy: " - ")
+            if parts.allSatisfy({ $0.hasPrefix("2020.") }) { name = "GBDK-2020" }
+            label = parts.map { $0.hasPrefix("2020.") ? String($0.dropFirst(5)) : $0 }.joined(separator: " - ")
+        }
+        self.name = name
+        version = label.map {
+            let range = $0.replacingOccurrences(of: " - ", with: " to ")
+            return range.hasSuffix("+") ? String(range.dropLast()) + " or later" : range
+        }
+    }
+
+    init(name: String, version: String?, variant: String?) {
+        self.name = name
+        self.version = version
+        self.variant = variant
     }
 }

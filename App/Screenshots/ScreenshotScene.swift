@@ -1,6 +1,7 @@
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameplayInput
 import Importing
 import Patching
 
@@ -9,6 +10,7 @@ import Patching
 /// `-ScreenshotScene <scene>[:<ROM file>]`, which only Debug builds read.
 enum ScreenshotScene: Equatable {
     case library
+    case settings
     case game(romFile: String)
     case buildInfo(romFile: String)
     case importReview(romFile: String)
@@ -26,17 +28,36 @@ enum ScreenshotScene: Equatable {
 
     /// Set with `-ScreenshotGamepad YES`: gameplay acts as if a controller were connected, so its
     /// touch controls hide, whatever controllers the simulator has.
-    static let simulatesGamepad: Bool = {
+    static let simulatesGamepad = flag("ScreenshotGamepad")
+
+    /// Set with `-ScreenshotLayout <layout>`, such as `playtiles`: gameplay uses that controller
+    /// layout instead of the one in Settings, which stays as it is.
+    static let layoutOverride: TouchControlStyle? = {
         #if DEBUG
-        return current != nil && UserDefaults.standard.bool(forKey: "ScreenshotGamepad")
+        guard current != nil else { return nil }
+        return UserDefaults.standard.string(forKey: "ScreenshotLayout").flatMap(TouchControlStyle.init(rawValue:))
         #else
-        return false
+        return nil
         #endif
     }()
 
-    /// Where the script copies the ROMs, patches and `manifest.json` from `TestROMs/`.
+    private static func flag(_ key: String) -> Bool {
+        #if DEBUG
+        return current != nil && UserDefaults.standard.bool(forKey: key)
+        #else
+        return false
+        #endif
+    }
+
+    /// Where the script copies the ROMs, patches and `manifest.json` from `TestROMs/`, or the folder
+    /// `-ScreenshotROMs <path>` names, which the menu UI tests pass.
     static var fixtureDirectory: URL {
-        URL.documentsDirectory.appendingPathComponent("ScreenshotROMs", isDirectory: true)
+        #if DEBUG
+        if current != nil, let path = UserDefaults.standard.string(forKey: "ScreenshotROMs") {
+            return URL(fileURLWithPath: path, isDirectory: true)
+        }
+        #endif
+        return URL.documentsDirectory.appendingPathComponent("ScreenshotROMs", isDirectory: true)
     }
 
     init?(argument: String) {
@@ -45,6 +66,7 @@ enum ScreenshotScene: Equatable {
         let file = parts.count == 2 ? parts[1] : nil
         switch (name, file) {
         case ("library", nil): self = .library
+        case ("settings", nil): self = .settings
         case ("game", let file?): self = .game(romFile: file)
         case ("build-info", let file?): self = .buildInfo(romFile: file)
         case ("import", let file?): self = .importReview(romFile: file)

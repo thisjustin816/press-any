@@ -69,66 +69,38 @@ final class TouchInputResolverTests: XCTestCase {
         let screens: [(Double, Double, Double, Double, Double)] = [
             (375, 667, 20, 0, 2), (393, 852, 59, 34, 3), (402, 874, 62, 34, 3), (440, 956, 62, 34, 3),
         ]
-        // The app clears its corner buttons, 58 points below the safe area.
         for style in TouchControlStyle.allCases {
             for (width, height, top, bottom, displayScale) in screens {
-                for clearance in [0.0, 58.0] {
-                    let layout = TouchControlLayout.make(
-                        style, width: width, height: height, safeTop: top, safeBottom: bottom, displayScale: displayScale,
-                        topClearance: clearance
-                    )
-                    let size = "\(style) at \(width)x\(height), clearance \(clearance)"
-                    let controls = [
-                        ("D-pad", layout.dpadHitArea), ("A", layout.a), ("B", layout.b),
-                        ("Start", layout.start), ("Select", layout.select),
-                    ]
-                    let pictureBottom = layout.screen.y + layout.screen.height
-                    let logo = try XCTUnwrap(layout.logo)
-                    let logoArea = try XCTUnwrap(layout.menuAreas.first)
-                    XCTAssertLessThanOrEqual(logoArea.height, 44.0 + 0.001)
-                    XCTAssertGreaterThanOrEqual(logoArea.height, 44.0 - 0.001, "the logo's tap area is 44 points tall, \(size)")
-                    XCTAssertLessThanOrEqual(logo.y + logo.height, height - max(bottom, 12), "the logo clears the home indicator, \(size)")
+                let layout = TouchControlLayout.make(
+                    style, width: width, height: height, safeTop: top, safeBottom: bottom, displayScale: displayScale
+                )
+                let size = "\(style) at \(width)x\(height)"
+                let controls = [
+                    ("D-pad", layout.dpadHitArea), ("A", layout.a), ("B", layout.b),
+                    ("Start", layout.start), ("Select", layout.select),
+                ]
+                let pictureBottom = layout.screen.y + layout.screen.height
+                let logo = try XCTUnwrap(layout.logo)
+                let logoArea = try XCTUnwrap(layout.menuAreas.first)
+                XCTAssertLessThanOrEqual(logoArea.height, 44.0 + 0.001)
+                XCTAssertGreaterThanOrEqual(logoArea.height, 44.0 - 0.001, "the logo's tap area is 44 points tall, \(size)")
+                XCTAssertLessThanOrEqual(logo.y + logo.height, height - max(bottom, 12), "the logo clears the home indicator, \(size)")
 
-                    XCTAssertGreaterThanOrEqual(layout.screen.y, top, "the picture clears the status bar, \(size)")
-                    XCTAssertLessThanOrEqual(layout.select.x + layout.select.width, layout.start.x, "SELECT is left of START, \(size)")
-                    for (index, (name, rect)) in controls.enumerated() {
-                        XCTAssertTrue(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width && rect.y + rect.height <= height,
-                                      "\(name) is on screen, \(size)")
-                        XCTAssertGreaterThanOrEqual(rect.y, pictureBottom, "\(name) covers the game picture, \(size)")
-                        if style == .gameBoy {
-                            XCTAssertLessThanOrEqual(rect.y + rect.height, logo.y, "\(name) runs into the logo, \(size)")
-                        }
-                        XCTAssertFalse(overlaps(rect, logoArea), "\(name) overlaps the logo's tap area, \(size)")
-                        for (otherName, other) in controls[(index + 1)...] {
-                            XCTAssertFalse(overlaps(rect, other), "\(name) overlaps \(otherName), \(size)")
-                        }
+                XCTAssertGreaterThanOrEqual(layout.screen.y, top, "the picture clears the status bar, \(size)")
+                XCTAssertLessThanOrEqual(layout.select.x + layout.select.width, layout.start.x, "SELECT is left of START, \(size)")
+                for (index, (name, rect)) in controls.enumerated() {
+                    XCTAssertTrue(rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= width && rect.y + rect.height <= height,
+                                  "\(name) is on screen, \(size)")
+                    XCTAssertGreaterThanOrEqual(rect.y, pictureBottom, "\(name) covers the game picture, \(size)")
+                    if style == .gameBoy {
+                        XCTAssertLessThanOrEqual(rect.y + rect.height, logo.y, "\(name) runs into the logo, \(size)")
+                    }
+                    XCTAssertFalse(overlaps(rect, logoArea), "\(name) overlaps the logo's tap area, \(size)")
+                    for (otherName, other) in controls[(index + 1)...] {
+                        XCTAssertFalse(overlaps(rect, other), "\(name) overlaps \(otherName), \(size)")
                     }
                 }
             }
-        }
-    }
-
-    func testTopClearanceLowersTheGameBoyLayoutOnlyIntoSpareRoom() {
-        // A tall iPhone has room for the whole clearance; an iPhone SE only for part of it.
-        for (width, height, top, wholeClearance) in [(402.0, 874.0, 62.0, true), (375.0, 667.0, 20.0, false)] {
-            let size = "\(width)x\(height)"
-            let standard = TouchControlLayout.make(.gameBoy, width: width, height: height, safeTop: top)
-            let cleared = TouchControlLayout.make(.gameBoy, width: width, height: height, safeTop: top, topClearance: 58)
-            if wholeClearance {
-                XCTAssertGreaterThanOrEqual(cleared.bezel!.y, top + 58, "the bezel starts below the clearance, \(size)")
-            } else {
-                XCTAssertLessThan(cleared.bezel!.y, top + 58, "the controls would have to shrink, \(size)")
-            }
-            XCTAssertGreaterThan(cleared.screen.y, standard.screen.y, "the picture moves down, \(size)")
-            XCTAssertEqual(cleared.screen.width, standard.screen.width, "the picture keeps its size, \(size)")
-            XCTAssertEqual(cleared.dpad.width, standard.dpad.width, "the D-pad keeps its size, \(size)")
-            XCTAssertEqual(cleared.select.x, standard.select.x, "SELECT keeps its place across, \(size)")
-            XCTAssertEqual(cleared.start.y - cleared.dpad.y, standard.start.y - standard.dpad.y, accuracy: 0.001,
-                           "START keeps the hardware's distance below the D-pad, \(size)")
-
-            let playtiles = TouchControlLayout.make(.playtiles, width: width, height: height, safeTop: top)
-            let playtilesCleared = TouchControlLayout.make(.playtiles, width: width, height: height, safeTop: top, topClearance: 58)
-            XCTAssertEqual(playtilesCleared.screen, playtiles.screen, "the playtiles artwork keeps its place, \(size)")
         }
     }
 
@@ -201,6 +173,15 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertEqual(guide.tab.center.x, 540, accuracy: 0.5, "the U is centered under the screen")
         XCTAssertGreaterThanOrEqual(guide.bar.y, layout.screen.y + layout.screen.height, "the guide is below the picture")
         XCTAssertNil(TouchControlLayout.make(.gameBoy, width: 393, height: 852).alignmentGuide)
+
+        // The bezel is the skin's screen frame, and the picture sits inside it in whole pixels.
+        let phone = TouchControlLayout.make(.playtiles, width: 393, height: 852, displayScale: 3)
+        let bezel = try! XCTUnwrap(phone.bezel)
+        XCTAssertEqual(bezel.width, 1058 * 393 / 1080, accuracy: 0.01, "the bezel is the skin's screen frame")
+        XCTAssertEqual(phone.screen.width * 3, 1120, accuracy: 0.001, "7 device pixels per Game Boy pixel")
+        XCTAssertTrue(phone.screen.x > bezel.x && phone.screen.y > bezel.y, "the bezel shows on every side")
+        XCTAssertTrue(phone.screen.x + phone.screen.width < bezel.x + bezel.width, "the bezel shows on the right")
+        XCTAssertTrue(phone.screen.y + phone.screen.height < bezel.y + bezel.height, "the bezel shows at the bottom")
 
         XCTAssertFalse(layout.opensMenu(at: TouchPoint(x: 148, y: 1950)), "the skin's Menu button is left out")
         XCTAssertFalse(layout.opensMenu(at: TouchPoint(x: 892, y: 1561)), "A is a Game Boy control")
