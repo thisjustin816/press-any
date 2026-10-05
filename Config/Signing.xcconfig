@@ -3,6 +3,7 @@
 // Copy Signing.local.xcconfig.example to Signing.local.xcconfig to create it.
 
 CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
 DEVELOPMENT_TEAM =
 BUNDLE_ID_SUFFIX =
 
