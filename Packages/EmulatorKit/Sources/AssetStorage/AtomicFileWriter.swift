@@ -110,4 +110,10 @@ public struct AtomicFileWriter: Sendable {
         // failed, and a caller that then restores the old file would lose the new one.
         try? fileOperations.synchronizeDirectory(at: directory)
     }
+
+    /// Whether `name` is how `write` names its temporary files.
+    static func isTemporaryFileName(_ name: String) -> Bool {
+        guard name.hasPrefix("."), name.hasSuffix(".tmp") else { return false }
+        return UUID(uuidString: String(name.dropFirst().dropLast(".tmp".count))) != nil
+    }
 }

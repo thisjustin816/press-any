@@ -9,6 +9,7 @@ public enum ManagedAssetIntegrityIssue: Equatable, Sendable {
     case hashMismatch(assetID: UUID, relativePath: String, expected: String, actual: String)
     case orphanSource(relativePath: String)
     case orphanCache(relativePath: String)
+    case staleTemporaryFile(relativePath: String)
 }
 
 public struct ManagedAssetIntegrityReport: Equatable, Sendable {
@@ -110,6 +111,14 @@ public struct ManagedAssetIntegrityChecker: Sendable {
             }
         }
 
+        for relativePath in try staleWriterTemporaryFiles() {
+            issues.append(.staleTemporaryFile(relativePath: relativePath))
+            if cleanup == .removeProvableOrphans {
+                try assetStore.removeIfExists(try assetStore.managedURL(relativePath: relativePath))
+                removed.append(relativePath)
+            }
+        }
+
         return ManagedAssetIntegrityReport(
             issues: issues.sorted(by: issueSort),
             removedRelativePaths: removed.sorted()
@@ -130,6 +139,22 @@ public struct ManagedAssetIntegrityChecker: Sendable {
             guard values.isRegularFile == true else { continue }
             let relative = try assetStore.managedRelativePath(for: url)
             if !knownPaths.contains(relative) { result.append(relative) }
+        }
+        return result.sorted()
+    }
+
+    /// Temporary files an interrupted atomic write left behind. Only the writer's own names
+    /// match, and only files old enough that no write can still be using them.
+    private func staleWriterTemporaryFiles() throws -> [String] {
+        let keys: [URLResourceKey] = [.isRegularFileKey, .contentModificationDateKey]
+        guard let enumerator = FileManager.default.enumerator(at: assetStore.rootURL, includingPropertiesForKeys: keys)
+        else { return [] }
+        let cutoff = Date().addingTimeInterval(-10 * 60)
+        var result: [String] = []
+        for case let url as URL in enumerator where AtomicFileWriter.isTemporaryFileName(url.lastPathComponent) {
+            let values = try url.resourceValues(forKeys: Set(keys))
+            guard values.isRegularFile == true, let modified = values.contentModificationDate, modified < cutoff else { continue }
+            result.append(try assetStore.managedRelativePath(for: url))
         }
         return result.sorted()
     }
