@@ -25,6 +25,36 @@ keywords and icon carry no Nintendo trademarks.
 **Why.** Most Game Boy homebrew is published on itch.io and catalogued by Homebrew Hub, and the
 app's Builds, toolchain detection and variable maps already serve the people who make it.
 
+## 2026-10-05: Save safety fixes
+
+**Decision.** A review found several ways a save could be lost or rolled back, and each now
+behaves as follows:
+
+- **In-game saves reach disk during play.** The game's battery save is written once it changes,
+  checked at most every five seconds of play, in library sessions and Quick Play alike. A crash or
+  a killed app loses at most those few seconds of in-game saving.
+- **Background and close attempt every save step.** A failed battery write no longer skips the
+  Auto State, which is then the way back to that progress. When a close fails, the game stays open
+  so the save can be retried, or closed without saving.
+- **Loading an older state warns first.** When a state is older than its profile's save, loading
+  it would take the save back with it. The app asks, and when the player goes ahead it keeps the
+  current save as "<profile> before loading state", as Replace Save from File does.
+- **Quick Play resumes only from a current autosave.** An autosave taken before `battery.sav` was
+  last written is skipped and the game boots from its save. Each autosave records the battery file
+  it was taken with, since file dates are too coarse to order two writes made moments apart.
+- **Make Separate Game takes a moved Build's states along.** They move to the profile copies the
+  Build plays, so Load State still lists them and deleting an original profile leaves them. A copy
+  keeps its original's save time, so its Auto States still resume.
+- **Add to Library keeps the Quick Play resume point.** The session's autosave becomes the new
+  Build's Auto State for the promoted profile, and the first launch resumes there under Resume
+  Games. Keeping the existing profile brings no state, since the state holds the discarded save.
+- **Writes are durable.** Atomic writes use `F_FULLFSYNC` where available and sync the directory
+  after the rename, and Quick Play writes through the same writer. Check Library Files removes
+  temporary files an interrupted write left behind, once they are ten minutes old.
+
+**Why.** Each of these lost a save, or a resume point, in a case a player could reach: a crash
+between backgrounds, a full disk, loading an old state, or reorganizing the library.
+
 ## 2026-10-05: Spec conflicts settled for the MVP
 
 **Decision.** Each conflict the backlog listed between the specs, or between a spec and the code,

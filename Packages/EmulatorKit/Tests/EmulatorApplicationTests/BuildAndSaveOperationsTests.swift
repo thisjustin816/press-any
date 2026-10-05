@@ -301,6 +301,7 @@ private struct Harness {
     let games: InMemoryGameRepository
     let builds: InMemoryBuildRepository
     let profiles: InMemorySaveProfileRepository
+    let states = InMemorySaveStateRepository()
     let assets: InMemoryAssetRepository
     let store: ManagedFileStore
 
@@ -351,6 +352,7 @@ private struct Harness {
             games: games,
             builds: builds,
             profiles: profiles,
+            states: states,
             recipes: InMemoryPatchRecipeRepository(),
             assets: assets,
             assetStore: store,

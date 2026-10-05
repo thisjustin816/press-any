@@ -219,6 +219,7 @@ struct PersistenceGRDBTests {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
             assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
@@ -249,6 +250,7 @@ struct PersistenceGRDBTests {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
             assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
@@ -265,6 +267,41 @@ struct PersistenceGRDBTests {
         #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id)?.gameID == last.id)
         #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: fixture.profile.id) == [fixture.state])
         #expect(try repositories.builds.fetchBuild(id: fixture.patchedBuild.id)?.gameID == separated.id)
+    }
+
+    @Test("separating a Build by move takes its save states to the profile copies it plays")
+    func promoteMoveTakesStatesToCopies() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let store = try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("grdb-operations-\(UUID().uuidString)", isDirectory: true))
+        try store.writeDataAtomically(Data([1]), to: store.managedURL(relativePath: "Saves/profile.sav"))
+        let operations = BuildOperations(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
+            recipes: repositories.patchRecipes,
+            assets: repositories.assets,
+            assetStore: store,
+            transactions: repositories.transactions,
+            now: { Date(timeIntervalSince1970: 1_700_000_100) }
+        )
+
+        let separated = try operations.promoteBuild(
+            buildID: fixture.build.id,
+            title: "Separate",
+            mode: .move,
+            carryOver: GameCarryOver(artwork: false, saveProfileIDs: [fixture.profile.id])
+        )
+
+        let copy = try #require(try repositories.saveProfiles.fetchSaveProfiles(gameID: separated.id).first)
+        #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: copy.id).map(\.id) == [fixture.state.id])
+        #expect(copy.modifiedAt <= fixture.state.createdAt, "the copy holds the same save, so its Auto States still resume")
+        try repositories.saveProfiles.deleteSaveProfile(id: fixture.profile.id)
+        #expect(try repositories.saveStates.fetchSaveStates(saveProfileID: copy.id).count == 1, "deleting the original keeps them")
     }
 
     @Test("merging a Game whose image the target already holds")
@@ -357,6 +394,7 @@ struct PersistenceGRDBTests {
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
             assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory

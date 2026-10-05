@@ -216,6 +216,7 @@ private struct ArchitectureHarness {
             games: games,
             builds: builds,
             profiles: profiles,
+            states: states,
             recipes: recipes,
             assets: assets,
             assetStore: store,
@@ -250,6 +251,7 @@ private struct ArchitectureHarness {
             committer: committer,
             workspace: quickWorkspace,
             profiles: profiles,
+            states: states,
             assets: assets,
             assetStore: store,
             now: now

@@ -126,6 +126,7 @@ final class PatchedBuildTests: XCTestCase {
             games: harness.games,
             builds: harness.builds,
             profiles: InMemorySaveProfileRepository(),
+            states: InMemorySaveStateRepository(),
             recipes: harness.recipes,
             assets: harness.assets,
             assetStore: harness.store
@@ -180,6 +181,7 @@ final class PatchedBuildTests: XCTestCase {
             games: harness.games,
             builds: harness.builds,
             profiles: InMemorySaveProfileRepository(),
+            states: InMemorySaveStateRepository(),
             recipes: harness.recipes,
             assets: harness.assets,
             assetStore: harness.store

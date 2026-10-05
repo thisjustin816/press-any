@@ -64,6 +64,11 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability {
         battery
     }
 
+    /// Stands in for the game writing its cartridge RAM.
+    public func writeBattery(_ data: Data) {
+        battery = data
+    }
+
     public func runFrame(input: EmulatorInputState) throws -> EmulatorVideoFrame {
         guard loadedSystem != nil else { throw FakeEmulatorCoreError.romNotLoaded }
         frameCounter &+= 1

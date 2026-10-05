@@ -42,6 +42,7 @@ public struct BuildOperations: Sendable {
     private let games: any GameRepository
     private let builds: any BuildRepository
     private let profiles: any SaveProfileRepository
+    private let states: any SaveStateRepository
     private let recipes: any PatchRecipeRepository
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
@@ -53,6 +54,7 @@ public struct BuildOperations: Sendable {
         games: any GameRepository,
         builds: any BuildRepository,
         profiles: any SaveProfileRepository,
+        states: any SaveStateRepository,
         recipes: any PatchRecipeRepository,
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
@@ -63,6 +65,7 @@ public struct BuildOperations: Sendable {
         self.games = games
         self.builds = builds
         self.profiles = profiles
+        self.states = states
         self.recipes = recipes
         self.assets = assets
         self.assetStore = assetStore
@@ -148,7 +151,7 @@ public struct BuildOperations: Sendable {
         }
         let sourceGame = try games.fetchGame(id: sourceBuild.gameID)
         let timestamp = now()
-        let promotedGame = try transactions.run { [games, builds, profiles, sourceBuild, makeID] in
+        let promotedGame = try transactions.run { [games, builds, profiles, states, sourceBuild, makeID] in
             let newGame = Game(
                 id: makeID(),
                 primaryTitle: title,
@@ -180,12 +183,26 @@ public struct BuildOperations: Sendable {
                 ? builds.fetchBuilds(gameID: sourceBuild.gameID).sorted(by: Self.preferredBuildSort)
                 : nil
             if remaining?.isEmpty != true {
-                try copyProfiles(
+                let copies = try copyProfiles(
                     carryOver.saveProfileIDs,
                     from: sourceBuild.gameID,
                     to: &updatedNewGame,
                     playedBy: [promoted.id: sourceBuild.preferredSaveProfileID]
                 )
+                // The moved Build plays the copies, so its states go with them. Left on the
+                // originals, Load State wouldn't list them and deleting an original would delete
+                // them. A copy holds the original's save unchanged, so it keeps the original's
+                // modifiedAt, which decides whether an Auto State is still safe to restore.
+                if mode == .move {
+                    for (originalID, copyID) in copies {
+                        try states.reassignSaveStates(buildID: promoted.id, fromSaveProfileID: originalID, toSaveProfileID: copyID)
+                        if let original = try profiles.fetchSaveProfile(id: originalID),
+                           var copy = try profiles.fetchSaveProfile(id: copyID) {
+                            copy.modifiedAt = original.modifiedAt
+                            try profiles.updateSaveProfile(copy)
+                        }
+                    }
+                }
             }
 
             if let remaining, var oldGame = try games.fetchGame(id: sourceBuild.gameID) {
@@ -316,13 +333,15 @@ public struct BuildOperations: Sendable {
     /// Copies the chosen profiles of `sourceGameID` into `target` under their own names.
     /// `playedBy` maps each Build now in the target to the profile its original played, so it
     /// plays that profile's copy, or no profile when that one stayed behind. The target's default
-    /// becomes the copy of the source's default, or the first copy, when it has none.
+    /// becomes the copy of the source's default, or the first copy, when it has none. Returns
+    /// each copied profile's ID mapped to its copy's.
+    @discardableResult
     private func copyProfiles(
         _ profileIDs: Set<UUID>,
         from sourceGameID: UUID,
         to target: inout Game,
         playedBy: [UUID: UUID?]
-    ) throws {
+    ) throws -> [UUID: UUID] {
         let duplicate = DuplicateSaveProfile(profiles: profiles, assets: assets, assetStore: assetStore, now: now, makeID: makeID)
         var copies: [UUID: UUID] = [:]
         var firstCopy: UUID?
@@ -344,6 +363,7 @@ public struct BuildOperations: Sendable {
             target.preferredSaveProfileID = copy
             try games.updateGame(target)
         }
+        return copies
     }
 
     /// Copies an artwork image into another Game as that Game's own asset, so replacing or
