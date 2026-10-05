@@ -186,6 +186,7 @@ final class AppContainer {
         settingsResolver = SettingsResolver(store: repositories.settings)
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
+        try? fileStore.removeStagedFiles()
     }
 
     /// The file behind a Game's artwork, or nil when it has none or the file is missing.

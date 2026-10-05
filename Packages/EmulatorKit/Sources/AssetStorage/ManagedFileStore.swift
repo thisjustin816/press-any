@@ -18,9 +18,12 @@ public struct ManagedFileStore: AssetStore, Sendable {
         try FileManager.default.createDirectory(at: self.rootURL, withIntermediateDirectories: true)
     }
 
+    private var stagingURL: URL {
+        rootURL.appendingPathComponent("Staging", isDirectory: true)
+    }
+
     public func stageCopy(from sourceURL: URL, transactionID: UUID) throws -> URL {
-        let directory = rootURL
-            .appendingPathComponent("Staging", isDirectory: true)
+        let directory = stagingURL
             .appendingPathComponent(transactionID.uuidString.lowercased(), isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
@@ -30,6 +33,13 @@ public struct ManagedFileStore: AssetStore, Sendable {
         }
         try FileManager.default.copyItem(at: sourceURL, to: destination)
         return destination
+    }
+
+    /// Empties the staging directory. Each import removes its own copy when it ends, so call this
+    /// only when no import is in progress, such as at launch, to clear copies an interrupted
+    /// import left behind.
+    public func removeStagedFiles() throws {
+        try removeIfExists(stagingURL)
     }
 
     public func hashFile(at url: URL) throws -> String {
