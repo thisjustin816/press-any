@@ -97,6 +97,39 @@ static void test_cartridge_rumble(void)
     SBDestroy(instance);
 }
 
+// A save one byte longer than the cartridge's 8 KiB of RAM. SameBoy reads an RTC trailer's worth
+// of bytes after the RAM whatever the file's length, so this catches a read past the caller's
+// buffer when built with AddressSanitizer.
+static void test_oversized_battery(void)
+{
+    static uint8_t rom[32768];
+    make_test_rom(rom, sizeof(rom));
+    rom[0x147] = 0x03; // MBC1+RAM+BATTERY
+    rom[0x149] = 0x02; // 8 KiB
+
+    uint8_t boot[256] = {0};
+    boot[0] = 0xc3; boot[1] = 0x00; boot[2] = 0x01; // jp $0100
+
+    SBInstance *instance = SBCreate(SB_MODEL_DMG);
+    assert(SBLoadBootROM(instance, boot, sizeof(boot)));
+    assert(SBLoadROM(instance, rom, sizeof(rom)));
+    assert(SBBatterySize(instance) == 0x2000);
+
+    size_t size = 0x2001;
+    uint8_t *save = malloc(size);
+    assert(save);
+    memset(save, 0x41, size);
+    SBLoadBattery(instance, save, size);
+    free(save);
+
+    uint8_t *loaded = malloc(0x2000);
+    assert(loaded);
+    assert(SBSaveBattery(instance, loaded, 0x2000));
+    for (size_t i = 0; i < 0x2000; i++) assert(loaded[i] == 0x41);
+    free(loaded);
+    SBDestroy(instance);
+}
+
 int main(void)
 {
     SBInstance *instance = SBCreate(SB_MODEL_DMG);
@@ -132,6 +165,7 @@ int main(void)
 
     test_boot_skip(rom, sizeof(rom));
     test_cartridge_rumble();
+    test_oversized_battery();
     puts("sameboy bridge smoke: ok");
     return 0;
 }
