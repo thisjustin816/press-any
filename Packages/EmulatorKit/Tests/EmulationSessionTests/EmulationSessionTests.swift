@@ -465,6 +465,98 @@ extension EmulationSessionTests {
         XCTAssertEqual(try harness.batteryData(of: copy), Data([9]))
         XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1]), "the state's save, as chosen")
     }
+
+    func testAnInGameSaveNotYetWrittenIsKeptInTheCopy() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        let state = try session.saveManualState(label: "before")
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        core.writeBattery(Data([9]))
+
+        XCTAssertTrue(try session.loadingWouldRollBackSave(state))
+        let copy = try session.loadStateKeepingCopy(state)
+        XCTAssertEqual(try harness.batteryData(of: copy), Data([9]), "the unwritten save is in the copy")
+        XCTAssertEqual(try core.persistentSaveData(), Data([1]), "the state is loaded")
+        try session.stop()
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([1]))
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 2)
+    }
+
+    func testTakingAStateWritesTheGameSaveFirst() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        try XCTUnwrap(harness.factory.cores.last).writeBattery(Data([9]))
+
+        let state = try session.saveManualState(label: "after saving")
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([9]))
+        XCTAssertFalse(try session.loadingWouldRollBackSave(state), "the state holds every save made so far")
+    }
+
+    func testLoadingWithNothingSavedSinceTheStateDoesNotWarn() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        let state = try session.saveManualState(label: "now")
+        _ = try session.stepFrame()
+        XCTAssertFalse(try session.loadingWouldRollBackSave(state))
+
+        let noBattery = try SessionHarness.make()
+        let other = noBattery.makeSession()
+        try other.start(context: noBattery.contextA)
+        let otherState = try other.saveManualState(label: "now")
+        XCTAssertFalse(try other.loadingWouldRollBackSave(otherState), "a game without a save has nothing to lose")
+    }
+
+    func testASaveThatCantBeWrittenStopsTheLoad() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        let state = try session.saveManualState(label: "before")
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        core.writeBattery(Data([9]))
+        try harness.breakSaveDirectory()
+
+        XCTAssertThrowsError(try session.loadStateKeepingCopy(state))
+        XCTAssertEqual(try core.persistentSaveData(), Data([9]), "nothing was loaded")
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 1)
+        try harness.repairSaveDirectory()
+        let copy = try session.loadStateKeepingCopy(state)
+        XCTAssertEqual(try harness.batteryData(of: copy), Data([9]), "trying again works once the save can be written")
+    }
+
+    func testAStateThatFailsPartwayPutsTheLatestSaveBack() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        let state = try session.saveManualState(label: "before")
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        core.writeBattery(Data([9]))
+        core.failsNextStateLoadPartway = true
+
+        XCTAssertThrowsError(try session.loadStateKeepingCopy(state))
+        XCTAssertEqual(try core.persistentSaveData(), Data([9]), "the game has its latest save again")
+        XCTAssertEqual(
+            try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count, 1,
+            "with the save back in the game, the copy isn't needed"
+        )
+        try session.stop()
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([9]))
+
+        // The plain load, used when nothing is at risk, puts the written save back the same way.
+        let second = harness.makeSession()
+        try second.start(context: harness.contextA)
+        let fresh = try second.saveManualState(label: "fresh")
+        let secondCore = try XCTUnwrap(harness.factory.cores.last)
+        secondCore.failsNextStateLoadPartway = true
+        XCTAssertThrowsError(try second.loadState(fresh)) { error in
+            guard case .stateLoadFailedPartway? = error as? FakeEmulatorCoreError else {
+                return XCTFail("expected the core's own error, got \(error)")
+            }
+        }
+        XCTAssertEqual(try secondCore.persistentSaveData(), Data([9]))
+    }
 }
 
 /// Fails every delete, so pruning old Auto States fails.
@@ -697,5 +789,31 @@ private struct FrameSizeEncoder: FrameImageEncoding {
 
     func encode(_ frame: EmulatorVideoFrame) throws -> Data {
         Self.bytes(of: frame)
+    }
+}
+
+
+// An in-game save made since the last write is newer than the state, so loading it warns.
+extension EmulationSessionTests {
+    func testReviewUnflushedBatteryChangeTriggersStateRollbackWarning() throws {
+        let h = try SessionHarness.make(seedBattery: Data([1]))
+        let session = h.makeSession(now: Date(timeIntervalSince1970: 1_700_000_001))
+        try session.start(context: h.contextA)
+        let state = try session.saveManualState(label: "Before new in-game save")
+        let core = try XCTUnwrap(h.factory.cores.last)
+        core.writeBattery(Data([9])) // An in-game save before the next periodic flush.
+        XCTAssertEqual(try h.batteryData(of: h.profile), Data([1]))
+        XCTAssertEqual(try core.persistentSaveData(), Data([9]))
+        let warns = try session.loadingWouldRollBackSave(state)
+        XCTAssertTrue(warns, "Newer live cartridge RAM needs protection, not just newer disk metadata")
+        if !warns {
+            // This is the exact unguarded path used by the gameplay view controller.
+            try session.loadState(state)
+            try session.flushBattery()
+            XCTAssertEqual(try h.batteryData(of: h.profile), Data([1]),
+                           "Demonstrates the newer [9] save has been overwritten")
+            XCTAssertEqual(try h.profiles.fetchSaveProfiles(gameID: h.game.id).count, 1,
+                           "No safety profile was created")
+        }
     }
 }
