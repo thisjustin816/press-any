@@ -25,6 +25,10 @@ The SKU is internal. Keep the bundle ID identical to `project.yml`, with no `.de
 suffix. A registered App ID prefix may equal the Team ID, but they are separate
 fields. The workflow reads the Team ID from Apple's provisioning profile.
 
+For the App Store listing and external testing, use this Privacy Policy URL after
+the policy is merged into `main`:
+`https://github.com/thisjustin816/press-any/blob/main/PRIVACY.md`.
+
 ## 2. Create an Apple Distribution certificate without a Mac
 
 On a trusted machine with OpenSSL (a Linux cloud terminal works), create a private

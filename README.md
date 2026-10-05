@@ -52,6 +52,7 @@ For TestFlight uploads and App Store screenshots without a Mac, follow `docs/tes
 
 ## Documentation
 
+- [Privacy policy](PRIVACY.md).
 - `docs/specs/`: the product and MVP specifications, the original decision log, and the
   decisions approved after it.
 - `docs/decisions.md`: decisions made since, newest first.

@@ -23,8 +23,9 @@ regional and versioned Builds without having to put all their metadata into the 
 ## 2026-10-05: TestFlight from CI, by hand, in portrait
 
 **Decision.** TestFlight builds are archived, signed and uploaded by a manual GitHub Actions
-workflow, using an App Store Connect API key and Xcode's cloud-managed signing, so no Mac is
-needed. A build ships only when someone runs it. The bundle ID stays `com.thisjustin816.PressAny`,
+workflow, using an App Store Connect API key, an Apple Distribution certificate, and an App Store
+provisioning profile stored in GitHub secrets. The runner imports the signing credentials into a
+temporary keychain, so no Mac is needed. A build ships only when someone runs it. The bundle ID stays `com.thisjustin816.PressAny`,
 the technical name in `AGENTS.md`; the name people see is the display name. The app is locked to
 portrait until the v1 landscape layouts.
 
