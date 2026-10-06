@@ -26,7 +26,7 @@ final class AppContainer {
     let createBlankSaveProfile: CreateBlankSaveProfile
     let duplicateSaveProfile: DuplicateSaveProfile
     let setSaveProfileBadge: SetSaveProfileBadge
-    let deleteSaveProfile: DeleteSaveProfile
+    let libraryDeletion: LibraryDeletionOperations
     let importBatterySave: ImportBatterySave
     let replaceBatterySave: ReplaceBatterySave
     let preferredLaunchResolver: ResolvePreferredLaunchContext
@@ -99,12 +99,13 @@ final class AppContainer {
             profiles: repositories.saveProfiles
         )
         setSaveProfileBadge = SetSaveProfileBadge(profiles: repositories.saveProfiles)
-        deleteSaveProfile = DeleteSaveProfile(
+        libraryDeletion = LibraryDeletionOperations(
             games: repositories.games,
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
-            assets: repositories.assets,
+            recipes: repositories.patchRecipes,
+            deletions: repositories.deletions,
             assetStore: fileStore,
             transactions: repositories.transactions
         )
@@ -209,6 +210,7 @@ final class AppContainer {
         settingsResolver = SettingsResolver(store: repositories.settings)
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
+        _ = try? libraryDeletion.purgeExpired()
         try? fileStore.removeStagedFiles()
     }
 
