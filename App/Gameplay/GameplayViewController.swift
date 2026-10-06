@@ -31,6 +31,7 @@ final class GameplayViewController: UIViewController {
     private var lcdFilter: LCDFilter
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
+    private var fastForwardAudio: FastForwardAudio
     private var screenScaling: ScreenScaling
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
@@ -65,6 +66,7 @@ final class GameplayViewController: UIViewController {
         lcdFilter: LCDFilter = .off,
         frameBlending: FrameBlending = .off,
         fastForwardSpeed: FastForwardSpeed = .x2,
+        fastForwardAudio: FastForwardAudio = .muted,
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch,
@@ -78,6 +80,7 @@ final class GameplayViewController: UIViewController {
         self.lcdFilter = lcdFilter
         self.frameBlending = frameBlending
         self.fastForwardSpeed = fastForwardSpeed
+        self.fastForwardAudio = fastForwardAudio
         self.screenScaling = screenScaling
         self.controllerTheme = controllerTheme
         self.tapGameForMenu = tapGameForMenu
@@ -469,11 +472,13 @@ final class GameplayViewController: UIViewController {
         screenScaling: ScreenScaling,
         lcdFilter: LCDFilter,
         frameBlending: FrameBlending,
-        fastForwardSpeed: FastForwardSpeed = .x2
+        fastForwardSpeed: FastForwardSpeed = .x2,
+        fastForwardAudio: FastForwardAudio = .muted
     ) {
-        if fastForwardSpeed != self.fastForwardSpeed {
+        if fastForwardSpeed != self.fastForwardSpeed || fastForwardAudio != self.fastForwardAudio {
             self.fastForwardSpeed = fastForwardSpeed
-            if fastForward { driver.setSpeed(Self.emulationSpeed(for: fastForwardSpeed)) }
+            self.fastForwardAudio = fastForwardAudio
+            if fastForward { applyEmulationSpeed() }
         }
         guard controlStyle != self.controlStyle || screenScaling != self.screenScaling
             || lcdFilter != self.lcdFilter || frameBlending != self.frameBlending else { return }
@@ -492,11 +497,16 @@ final class GameplayViewController: UIViewController {
 
     private func toggleFastForward() {
         fastForward.toggle()
-        driver.setSpeed(fastForward ? Self.emulationSpeed(for: fastForwardSpeed) : .normal)
+        applyEmulationSpeed()
     }
 
-    private static func emulationSpeed(for speed: FastForwardSpeed) -> EmulationSpeed {
-        speed.multiplier.map { .multiplier($0) } ?? .unlimited
+    /// Sets the game's speed and what its sound does at that speed.
+    private func applyEmulationSpeed() {
+        let speed: EmulationSpeed = fastForward
+            ? fastForwardSpeed.multiplier.map { .multiplier($0) } ?? .unlimited
+            : .normal
+        driver.setSpeed(speed)
+        audio.setSpeed(speed, fastForwardAudio: fastForwardAudio)
     }
 
     /// Follows this game's own scene, so another window's changes don't pause or resume it.

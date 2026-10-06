@@ -58,6 +58,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case frameBlending
     /// `FastForwardSpeed`, unset means `.x2`.
     case fastForwardSpeed
+    /// `FastForwardAudio`, unset means `.muted`.
+    case fastForwardAudio
     /// `SoundMode`, unset means `.followSilentSwitch`.
     case soundMode
     /// Bool, unset means false. When true, tapping the game picture opens the game menu, as tapping
@@ -137,6 +139,21 @@ public enum FastForwardSpeed: String, Codable, Sendable, CaseIterable {
         case .x4: 4
         case .x8: 8
         case .unlimited: nil
+        }
+    }
+}
+
+/// What game sound does while Fast Forward runs. Raw values are stored in settings.
+public enum FastForwardAudio: String, Codable, Sendable, CaseIterable {
+    case muted
+    /// Plays sped up with the game, its pitch rising with it. Only up to 4×; faster speeds and
+    /// Unlimited stay muted.
+    case accelerated
+
+    public var displayName: String {
+        switch self {
+        case .muted: "Muted"
+        case .accelerated: "Accelerated"
         }
     }
 }

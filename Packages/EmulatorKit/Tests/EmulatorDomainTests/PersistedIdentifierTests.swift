@@ -42,6 +42,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(SettingKey.lcdFilter.rawValue, "lcdFilter")
         XCTAssertEqual(SettingKey.frameBlending.rawValue, "frameBlending")
         XCTAssertEqual(SettingKey.fastForwardSpeed.rawValue, "fastForwardSpeed")
+        XCTAssertEqual(SettingKey.fastForwardAudio.rawValue, "fastForwardAudio")
     }
 
     func testSettingValuesAreStable() {
@@ -50,6 +51,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(TouchHaptics.allCases.map(\.rawValue), ["off", "light", "medium"])
         XCTAssertEqual(LCDFilter.allCases.map(\.rawValue), ["off", "lcd1x", "lcd3x"])
         XCTAssertEqual(FastForwardSpeed.allCases.map(\.rawValue), ["x1_5", "x2", "x3", "x4", "x8", "unlimited"])
+        XCTAssertEqual(FastForwardAudio.allCases.map(\.rawValue), ["muted", "accelerated"])
         XCTAssertEqual(FastForwardSpeed.allCases.map(\.multiplier), [1.5, 2, 3, 4, 8, nil])
         XCTAssertEqual(FrameBlending.allCases.map(\.rawValue), ["off", "blend", "ghosting"])
     }

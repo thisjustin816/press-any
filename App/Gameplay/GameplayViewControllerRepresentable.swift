@@ -32,6 +32,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             lcdFilter: display.lcdFilter,
             frameBlending: display.frameBlending,
             fastForwardSpeed: display.fastForwardSpeed,
+            fastForwardAudio: display.fastForwardAudio,
             controllerTheme: controllerTheme,
             tapGameForMenu: tapGameForMenu,
             soundMode: soundMode,
@@ -51,7 +52,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             screenScaling: display.screenScaling,
             lcdFilter: display.lcdFilter,
             frameBlending: display.frameBlending,
-            fastForwardSpeed: display.fastForwardSpeed
+            fastForwardSpeed: display.fastForwardSpeed,
+            fastForwardAudio: display.fastForwardAudio
         )
         // Updates repeat, and a close that fails to save waits on the player, so ask only once.
         if closeRequested, !context.coordinator.closeSent {

@@ -389,7 +389,8 @@ struct RootView: View {
                     screenScaling: container.screenScaling(for: launch.context),
                     lcdFilter: container.lcdFilter(for: launch.context),
                     frameBlending: container.frameBlending(for: launch.context),
-                    fastForwardSpeed: container.fastForwardSpeed(for: launch.context)
+                    fastForwardSpeed: container.fastForwardSpeed(for: launch.context),
+                    fastForwardAudio: container.fastForwardAudio(for: launch.context)
                 )
             )
         } catch {
