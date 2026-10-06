@@ -10,24 +10,24 @@
 		<description>Pocket Critters - Red Version (USA, Europe)</description>
 		<release name="Pocket Critters - Red Version (USA, Europe)" region="USA"/>
 		<release name="Pocket Critters - Red Version (USA, Europe)" region="EUR"/>
-		<rom name="Pocket Critters - Red Version (USA, Europe).gb" size="1048576" crc="00000001" sha1="0000000000000000000000000000000000000001" sha256="AA00000000000000000000000000000000000000000000000000000000000001"/>
+		<rom name="Pocket Critters - Red Version (USA, Europe).gb" size="1048576" crc="00000001" sha1="AA00000000000000000000000000000000000001"/>
 	</game>
 	<game name="Pocket Critters - Aka (Japan)" cloneof="Pocket Critters - Red Version (USA, Europe)" id="0002" cloneofid="0001">
 		<description>Pocket Critters - Aka (Japan)</description>
 		<release name="Pocket Critters - Aka (Japan)" region="JPN"/>
-		<rom name="Pocket Critters - Aka (Japan).gb" size="524288" crc="00000002" sha1="0000000000000000000000000000000000000002" sha256="0b00000000000000000000000000000000000000000000000000000000000002"/>
+		<rom name="Pocket Critters - Aka (Japan).gb" size="524288" crc="00000002" sha1="0b00000000000000000000000000000000000002"/>
 	</game>
 	<game name="Pocket Critters - Aka (Japan) (Rev 1)" id="0003" cloneofid="0001">
 		<description>Pocket Critters - Aka (Japan) (Rev 1)</description>
 		<release name="Pocket Critters - Aka (Japan) (Rev 1)" region="JPN"/>
-		<rom name="Pocket Critters - Aka (Japan) (Rev 1).gb" size="524288" crc="00000003" sha1="0000000000000000000000000000000000000003" sha256="0c00000000000000000000000000000000000000000000000000000000000003"/>
+		<rom name="Pocket Critters - Aka (Japan) (Rev 1).gb" size="524288" crc="00000003" sha1="0c00000000000000000000000000000000000003" status="baddump"/>
 	</game>
 	<game name="Moon Garden (World) (Aftermarket) (Unl)" id="0004">
 		<description>Moon Garden (World) (Aftermarket) (Unl)</description>
-		<rom name="Moon Garden (World) (Aftermarket) (Unl).gb" size="65536" crc="00000004" sha1="0000000000000000000000000000000000000004" sha256="dd00000000000000000000000000000000000000000000000000000000000004"/>
+		<rom name="Moon Garden (World) (Aftermarket) (Unl).gb" size="65536" crc="00000004" sha1="dd00000000000000000000000000000000000004"/>
 	</game>
 	<game name="Lost Ledger (USA) (Proto)" id="0005">
 		<description>Lost Ledger (USA) (Proto)</description>
-		<rom name="Lost Ledger (USA) (Proto).gb" size="131072" crc="00000005" sha1="0000000000000000000000000000000000000005"/>
+		<rom name="Lost Ledger (USA) (Proto).gb" size="131072" crc="00000005"/>
 	</game>
 </datafile>

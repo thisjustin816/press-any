@@ -39,7 +39,7 @@ class GenerateKnownDumpsTests(unittest.TestCase):
             [(s["system"], s["version"], s["dumps"]) for s in result["systems"]],
             [("gb", "20261006-105659", 4), ("gbc", "20261006-110346", 2)],
         )
-        hashes = [dump["sha256"] for dump in result["dumps"]]
+        hashes = [dump["sha1"] for dump in result["dumps"]]
         self.assertEqual(hashes, sorted(hashes))
         self.assertTrue(all(h == h.lower() for h in hashes))
         self.assertEqual(skipped, ["gb: Lost Ledger (USA) (Proto)"])
@@ -55,6 +55,8 @@ class GenerateKnownDumpsTests(unittest.TestCase):
         self.assertEqual(dumps["Pocket Critters - Aka (Japan) (Rev 1)"]["parent"], parent["name"])
         self.assertEqual(dumps["Pocket Critters - Crystal Version (Europe) (Fr)"]["system"], "gbc")
         self.assertNotIn("regions", dumps["Moon Garden (World) (Aftermarket) (Unl)"])
+        self.assertTrue(dumps["Pocket Critters - Aka (Japan) (Rev 1)"]["bad"])
+        self.assertNotIn("bad", parent)
 
     def test_the_same_input_gives_the_same_bytes(self):
         output = self.dir / "KnownDumps.json"
@@ -63,7 +65,10 @@ class GenerateKnownDumpsTests(unittest.TestCase):
             subprocess.run([sys.executable, SCRIPT, GB, GBC, output], check=True, capture_output=True)
             runs.append(output.read_bytes())
         self.assertEqual(runs[0], runs[1])
-        self.assertEqual(json.loads(runs[0])["source"], generator.SOURCE)
+        written = json.loads(runs[0])
+        self.assertEqual(written["source"], generator.SOURCE)
+        # One dump per line, after the header line, and the closing line.
+        self.assertEqual(runs[0].decode().count("\n"), len(written["dumps"]) + 2)
 
     def test_a_zip_download_reads_like_the_xml(self):
         archive = self.dir / "gb.zip"
@@ -85,17 +90,17 @@ class GenerateKnownDumpsTests(unittest.TestCase):
 
     def test_a_repeated_hash_is_refused(self):
         repeated = self.write("gbc.xml", GBC.read_text(encoding="utf-8").replace(
-            "1200000000000000000000000000000000000000000000000000000000000012",
-            "1100000000000000000000000000000000000000000000000000000000000011",
+            "1200000000000000000000000000000000000012",
+            "1100000000000000000000000000000000000011",
         ))
-        with self.assertRaisesRegex(generator.DatError, "same SHA-256"):
+        with self.assertRaisesRegex(generator.DatError, "same SHA-1"):
             generator.generate(GB, repeated)
 
     def test_the_summary_lists_added_removed_and_renamed_dumps(self):
         new, skipped = generator.generate(GB, GBC)
         old = json.loads(json.dumps(new))
         old["dumps"] = [dump for dump in old["dumps"] if not dump["name"].startswith("Moon Garden")]
-        old["dumps"].append({"sha256": "ff" * 32, "name": "Gone Game (USA)", "size": 1, "system": "gb"})
+        old["dumps"].append({"sha1": "ff" * 20, "name": "Gone Game (USA)", "size": 1, "system": "gb"})
         for dump in old["dumps"]:
             if dump["name"] == "Pocket Critters - Aka (Japan)":
                 dump["name"] = "Pocket Critters - Aka (Japan) (Old Name)"
@@ -103,7 +108,7 @@ class GenerateKnownDumpsTests(unittest.TestCase):
         self.assertIn("Added: 1\n- Moon Garden (World) (Aftermarket) (Unl)", text)
         self.assertIn("Removed: 1\n- Gone Game (USA)", text)
         self.assertIn("Renamed: 1\n- Pocket Critters - Aka (Japan) (Old Name) -> Pocket Critters - Aka (Japan)", text)
-        self.assertIn("no SHA-256 in the DAT: 1\n- gb: Lost Ledger (USA) (Proto)", text)
+        self.assertIn("no SHA-1 in the DAT: 1\n- gb: Lost Ledger (USA) (Proto)", text)
 
 
 if __name__ == "__main__":

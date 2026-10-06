@@ -3,7 +3,8 @@ import Foundation
 
 /// A ROM image No-Intro has verified, under its canonical name.
 public struct KnownDump: Codable, Equatable, Sendable {
-    public let sha256: String
+    /// No-Intro lists every dump's SHA-1 but only some dumps' SHA-256, so SHA-1 is the key.
+    public let sha1: String
     /// The canonical name without its extension, such as "Tetris (World) (Rev 1)". The filename
     /// parser reads it like any filename for the title, region, language, revision and flags.
     public let name: String
@@ -13,25 +14,29 @@ public struct KnownDump: Codable, Equatable, Sendable {
     public let parent: String?
     /// Release regions as the DAT codes them, such as "USA" or "EUR".
     public let regions: [String]
+    /// No-Intro knows this image to be a bad copy of the game.
+    public let bad: Bool
 
-    public init(sha256: String, name: String, size: Int64, system: GameSystem, parent: String? = nil, regions: [String] = []) {
-        self.sha256 = sha256.lowercased()
+    public init(sha1: String, name: String, size: Int64, system: GameSystem, parent: String? = nil, regions: [String] = [], bad: Bool = false) {
+        self.sha1 = sha1.lowercased()
         self.name = name
         self.size = size
         self.system = system
         self.parent = parent
         self.regions = regions
+        self.bad = bad
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
-            sha256: try container.decode(String.self, forKey: .sha256),
+            sha1: try container.decode(String.self, forKey: .sha1),
             name: try container.decode(String.self, forKey: .name),
             size: try container.decode(Int64.self, forKey: .size),
             system: try container.decode(GameSystem.self, forKey: .system),
             parent: try container.decodeIfPresent(String.self, forKey: .parent),
-            regions: try container.decodeIfPresent([String].self, forKey: .regions) ?? []
+            regions: try container.decodeIfPresent([String].self, forKey: .regions) ?? [],
+            bad: try container.decodeIfPresent(Bool.self, forKey: .bad) ?? false
         )
     }
 
@@ -86,6 +91,8 @@ public enum KnownDumpError: Error, Equatable {
 public enum DumpVerification: Equatable, Sendable {
     /// The image is this dump.
     case verified(KnownDump)
+    /// The image is a copy No-Intro lists as bad.
+    case badDump(KnownDump)
     /// A patched Build whose chain of bases starts at this dump.
     case modified(from: KnownDump)
     case unknown
@@ -99,17 +106,17 @@ public struct KnownDumpIndex: Sendable {
     }
 
     public let catalog: KnownDumpCatalog
-    private let bySHA256: [String: KnownDump]
+    private let bySHA1: [String: KnownDump]
     private let byName: [Key: KnownDump]
     private let clonesByParent: [Key: [KnownDump]]
 
     /// Checks what the generator promises: one dump per hash, every parent present, and the
     /// header's counts.
     public init(catalog: KnownDumpCatalog) throws {
-        var bySHA256: [String: KnownDump] = [:]
+        var bySHA1: [String: KnownDump] = [:]
         var byName: [Key: KnownDump] = [:]
         for dump in catalog.dumps {
-            guard bySHA256.updateValue(dump, forKey: dump.sha256) == nil else { throw KnownDumpError.repeatedHash(dump.sha256) }
+            guard bySHA1.updateValue(dump, forKey: dump.sha1) == nil else { throw KnownDumpError.repeatedHash(dump.sha1) }
             byName[Key(system: dump.system, name: dump.name)] = dump
         }
         var clonesByParent: [Key: [KnownDump]] = [:]
@@ -126,7 +133,7 @@ public struct KnownDumpIndex: Sendable {
             }
         }
         self.catalog = catalog
-        self.bySHA256 = bySHA256
+        self.bySHA1 = bySHA1
         self.byName = byName
         self.clonesByParent = clonesByParent.mapValues { $0.sorted { $0.name < $1.name } }
     }
@@ -143,8 +150,8 @@ public struct KnownDumpIndex: Sendable {
         return try KnownDumpIndex(data: Data(contentsOf: url))
     }
 
-    public func dump(sha256: String) -> KnownDump? {
-        bySHA256[sha256.lowercased()]
+    public func dump(sha1: String) -> KnownDump? {
+        bySHA1[sha1.lowercased()]
     }
 
     /// The parent and every clone of the dump's family, parent first, the dump itself included.
@@ -155,14 +162,15 @@ public struct KnownDumpIndex: Sendable {
 
     /// Whether the Build is a known dump, or patched from one. A patched Build whose result is
     /// itself a known dump, as an official revision made by a patch would be, is Verified.
-    /// `lookup` finds each base along the chain.
-    public func verification(of build: Build, lookup: (UUID) -> Build?) -> DumpVerification {
-        if let dump = dump(sha256: build.imageSHA256) { return .verified(dump) }
+    /// `sha1` gives a Build's image SHA-1, nil when it isn't known; `lookup` finds each base along
+    /// the chain.
+    public func verification(of build: Build, sha1: (Build) -> String?, lookup: (UUID) -> Build?) -> DumpVerification {
+        if let dump = sha1(build).flatMap(dump(sha1:)) { return dump.bad ? .badDump(dump) : .verified(dump) }
         var visited: Set<UUID> = [build.id]
         var current = build
         while current.sourceKind == .patchRecipe, let parentID = current.parentBuildID,
               visited.insert(parentID).inserted, let parent = lookup(parentID) {
-            if let dump = dump(sha256: parent.imageSHA256) { return .modified(from: dump) }
+            if let dump = sha1(parent).flatMap(dump(sha1:)), !dump.bad { return .modified(from: dump) }
             current = parent
         }
         return .unknown

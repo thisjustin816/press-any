@@ -8,10 +8,13 @@ bans clients it takes for bots (docs/decisions.md, "The game database is
 No-Intro's").
 
 The output keeps, per dump, what the app can't get from the canonical name: its
-SHA-256, size, system, parent and release regions. Records sort by SHA-256, so
-the same input always gives the same bytes. The summary printed at the end, the
-dumps added, removed and renamed against the file being replaced, is the pull
-request description for a refresh.
+SHA-1, size, system, parent, release regions and whether No-Intro marks it a bad
+dump. SHA-1 is the key because the P/C XML carries no SHA-256, and the standard
+DATs lack it for many Game Boy Color dumps; every entry has a SHA-1. Records sort
+by SHA-1, one per line, so the same input gives the same bytes and a refresh's
+diff reads line by line. The summary printed at the end, the dumps added, removed
+and renamed against the file being replaced, is the pull request description for
+a refresh.
 
 Usage: generate-known-dumps.py <gb .xml or .zip> <gbc .xml or .zip> <output .json>
 """
@@ -60,8 +63,8 @@ def parse_dat(path, system, expected_name):
         roms = game.findall("rom")
         if len(roms) != 1:
             raise DatError(f"{path}: {name!r} has {len(roms)} ROM entries, expected one")
-        sha256 = (roms[0].get("sha256") or "").lower()
-        if not sha256:
+        sha1 = (roms[0].get("sha1") or "").lower()
+        if not sha1:
             missing_hash.append(name)
             continue
         parent = game.get("cloneof")
@@ -74,11 +77,13 @@ def parse_dat(path, system, expected_name):
             region = release.get("region")
             if region and region not in regions:
                 regions.append(region)
-        dump = {"sha256": sha256, "name": name, "size": int(roms[0].get("size")), "system": system}
+        dump = {"sha1": sha1, "name": name, "size": int(roms[0].get("size")), "system": system}
         if parent:
             dump["parent"] = parent
         if regions:
             dump["regions"] = regions
+        if roms[0].get("status") == "baddump":
+            dump["bad"] = True
         dumps.append(dump)
 
     names = {dump["name"] for dump in dumps} | set(missing_hash)
@@ -98,22 +103,22 @@ def generate(gb_path, gbc_path, today=None):
 
     seen = {}
     for dump in dumps:
-        other = seen.setdefault(dump["sha256"], dump)
+        other = seen.setdefault(dump["sha1"], dump)
         if other is not dump:
-            raise DatError(f"{dump['name']!r} and {other['name']!r} have the same SHA-256 {dump['sha256']}")
+            raise DatError(f"{dump['name']!r} and {other['name']!r} have the same SHA-1 {dump['sha1']}")
 
     return {
         "source": SOURCE,
         "generated": (today or datetime.date.today()).isoformat(),
         "systems": systems,
-        "dumps": sorted(dumps, key=lambda dump: dump["sha256"]),
+        "dumps": sorted(dumps, key=lambda dump: dump["sha1"]),
     }, skipped
 
 
 def summary(new, old, skipped):
     """What changed against the file being replaced, for the pull request."""
-    old_dumps = {dump["sha256"]: dump for dump in (old or {}).get("dumps", [])}
-    new_dumps = {dump["sha256"]: dump for dump in new["dumps"]}
+    old_dumps = {dump["sha1"]: dump for dump in (old or {}).get("dumps", [])}
+    new_dumps = {dump["sha1"]: dump for dump in new["dumps"]}
     added = sorted(new_dumps[key]["name"] for key in new_dumps.keys() - old_dumps.keys())
     removed = sorted(old_dumps[key]["name"] for key in old_dumps.keys() - new_dumps.keys())
     renamed = sorted(
@@ -128,9 +133,19 @@ def summary(new, old, skipped):
     lines.append(f"\nRenamed: {len(renamed)}")
     lines += [f"- {before} -> {after}" for before, after in renamed]
     if skipped:
-        lines.append(f"\nLeft out, no SHA-256 in the DAT: {len(skipped)}")
+        lines.append(f"\nLeft out, no SHA-1 in the DAT: {len(skipped)}")
         lines += [f"- {item}" for item in skipped]
     return "\n".join(lines)
+
+
+def render(data):
+    """JSON with one dump per line: compact, and a refresh's diff shows each dump changed."""
+    head = {key: value for key, value in data.items() if key != "dumps"}
+    lines = [json.dumps(head, ensure_ascii=False)[:-1] + ', "dumps": [']
+    rows = [json.dumps(dump, ensure_ascii=False, separators=(",", ":")) for dump in data["dumps"]]
+    lines += [row + ("," if index < len(rows) - 1 else "") for index, row in enumerate(rows)]
+    lines.append("]}")
+    return "\n".join(lines) + "\n"
 
 
 def main(argv):
@@ -144,7 +159,7 @@ def main(argv):
         print(f"error: {error}", file=sys.stderr)
         return 1
     old = json.loads(output.read_text(encoding="utf-8")) if output.exists() else None
-    output.write_text(json.dumps(new, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    output.write_text(render(new), encoding="utf-8")
     print(summary(new, old, skipped))
     return 0
 

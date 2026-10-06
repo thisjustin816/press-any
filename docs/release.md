@@ -37,6 +37,6 @@ file is more than 90 days old or still empty.
 2. Run `make known-dumps GB=<Game Boy .zip> GBC=<Game Boy Color .zip>`. The script reads the zips
    as downloaded.
 3. Open a pull request with the updated file. Its description is the summary the script printed:
-   the dumps added, removed and renamed, and any it left out for lacking a SHA-256.
+   the dumps added, removed and renamed, and any it left out for lacking a SHA-1.
 
 The data reaches testers with the next TestFlight upload from `main`.

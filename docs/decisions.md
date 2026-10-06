@@ -11,12 +11,14 @@ combined, published, distributed, and otherwise reused by anyone for any lawful 
 commercial projects included, with no attribution required. The app credits No-Intro in
 Acknowledgements anyway, with the date of the data it carries.
 
-The source is the Parent/Clone XML for "Nintendo - Game Boy" and "Nintendo - Game Boy Color",
-with Aftermarket included, since homebrew sold on cartridges is part of this app's library. A
-generator turns the two files into one compact file the app bundles: for each dump its canonical
-name, SHA-256, size, system, parent and release regions. Everything else the app needs, title,
-region, language, revision and status flags, comes from the same filename parser that reads the
-player's own files, applied to the canonical name, so there is one naming parser.
+The source is the Parent/Clone XML for "Nintendo - Game Boy" and "Nintendo - Game Boy Color", with
+Aftermarket included, since homebrew sold on cartridges is part of this app's library. A generator
+turns the two files into one compact file the app bundles: for each dump its canonical name, SHA-1,
+size, system, parent, release regions and whether No-Intro marks it a bad dump. The key is SHA-1
+because the P/C XML carries no SHA-256 and the standard DATs lack it for most Game Boy Color dumps;
+every entry has a SHA-1. Everything else the app needs, title, region, language, revision and
+status flags, comes from the same filename parser that reads the player's own files, applied to the
+canonical name, so there is one naming parser.
 
 Refreshing is a human step. DAT-o-MATIC bans clients it takes for bots, lifts bans only by email,
 and its download is a browser form, so no workflow or build fetches from it; a scheduled job could
@@ -27,20 +29,21 @@ updates in `dec 18` wait until the app has a host for them and a signing key; th
 carries its date and counts. CI warns when the file is more than 90 days old. Downloading the data
 during a build, or from devices, is ruled out for the same reasons.
 
-Matching and grouping persist nothing new. A Build's hash is its identity, so whether it is a
-known dump, which family it belongs to, and the regional titles of that family are looked up in
-the bundled data whenever they are needed. A library never carries stale family names, and a
-renamed dump upstream changes nothing stored. An import whose hash is a known dump takes the
-dump's canonical name ahead of the filename; its original filename stays preserved. It joins the
-one Game in the library that already holds a Build from the same family, shown in Import Review
-before commit, as Q157 requires; with several candidate Games it is a choice, not a default. A
-Game created from a known dump is titled by that dump. When a family member arrives from a
-region the player ranks higher, Import Review proposes the better title and the Preferred mark,
-and the player confirms; nothing renames a Game on its own.
+Matching persists one fact about each imported image, its SHA-1, beside the SHA-256 that stays its
+identity. Nothing No-Intro says about a dump is stored: whether it is a known dump, which family it
+belongs to, and the regional titles of that family are looked up in the bundled data whenever they
+are needed. A library never carries stale family names, and a renamed dump upstream changes nothing
+stored. An import whose hash is a known dump takes the dump's canonical name ahead of the filename;
+its original filename stays preserved. It joins the one Game in the library that already holds a
+Build from the same family, shown in Import Review before commit, as Q157 requires; with several
+candidate Games it is a choice, not a default. A Game created from a known dump is titled by that
+dump. When a family member arrives from a region the player ranks higher, Import Review proposes
+the better title and the Preferred mark, and the player confirms; nothing renames a Game on its
+own.
 
-Verification shows in a Build's Technical Info: Verified when the hash is a known dump, with the
-dump's name; Modified for a Build patched from a verified dump; Unknown otherwise. The app never
-alters a ROM to make it match.
+Verification shows in a Build's Technical Info: Verified when the image is a known dump, with the
+dump's name; Bad Dump when No-Intro marks that dump bad; Modified for a Build patched from a
+verified dump; Unknown otherwise. The app never alters a ROM to make it match.
 
 ## 2026-10-06: Exports and a Files folder
 

@@ -9,11 +9,11 @@
 	<game name="Pocket Critters - Crystal Version (USA, Europe) (Rev 1)" id="0001">
 		<description>Pocket Critters - Crystal Version (USA, Europe) (Rev 1)</description>
 		<release name="Pocket Critters - Crystal Version (USA, Europe) (Rev 1)" region="USA"/>
-		<rom name="Pocket Critters - Crystal Version (USA, Europe) (Rev 1).gbc" size="2097152" crc="00000011" sha1="0000000000000000000000000000000000000011" sha256="1100000000000000000000000000000000000000000000000000000000000011"/>
+		<rom name="Pocket Critters - Crystal Version (USA, Europe) (Rev 1).gbc" size="2097152" crc="00000011" sha1="1100000000000000000000000000000000000011"/>
 	</game>
 	<game name="Pocket Critters - Crystal Version (Europe) (Fr)" cloneof="Pocket Critters - Crystal Version (USA, Europe) (Rev 1)" id="0002" cloneofid="0001">
 		<description>Pocket Critters - Crystal Version (Europe) (Fr)</description>
 		<release name="Pocket Critters - Crystal Version (Europe) (Fr)" region="FRA"/>
-		<rom name="Pocket Critters - Crystal Version (Europe) (Fr).gbc" size="2097152" crc="00000012" sha1="0000000000000000000000000000000000000012" sha256="1200000000000000000000000000000000000000000000000000000000000012"/>
+		<rom name="Pocket Critters - Crystal Version (Europe) (Fr).gbc" size="2097152" crc="00000012" sha1="1200000000000000000000000000000000000012"/>
 	</game>
 </datafile>
