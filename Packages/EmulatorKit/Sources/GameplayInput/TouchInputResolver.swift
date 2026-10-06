@@ -59,10 +59,12 @@ public final class TouchInputResolver {
         let normalizedX = (point.x - center.x) / halfWidth
         let normalizedY = (point.y - center.y) / halfHeight
         let deadZone = layout.dpadDeadZoneFraction
+        let horizontalThreshold = max(deadZone, abs(normalizedY) * layout.dpadDiagonalRatio)
+        let verticalThreshold = max(deadZone, abs(normalizedX) * layout.dpadDiagonalRatio)
 
-        if normalizedX < -deadZone { input.left = true }
-        if normalizedX > deadZone { input.right = true }
-        if normalizedY < -deadZone { input.up = true }
-        if normalizedY > deadZone { input.down = true }
+        if normalizedX < -horizontalThreshold { input.left = true }
+        if normalizedX > horizontalThreshold { input.right = true }
+        if normalizedY < -verticalThreshold { input.up = true }
+        if normalizedY > verticalThreshold { input.down = true }
     }
 }

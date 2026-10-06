@@ -183,6 +183,11 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
     var revision: String?
     var versionString: String?
     var versionSortKey: String?
+    var baseTitle: String?
+    var hackTitle: String?
+    var author: String?
+    var translation: String?
+    var status: String?
     var preferredSaveProfileID: String?
     var pinnedCoreID: String?
     var pinnedCoreVersion: String?
@@ -191,7 +196,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
     var modifiedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, system, region, language, revision
+        case id, system, region, language, revision, author, translation, status
         case gameID = "game_id"
         case displayName = "display_name"
         case imageAssetID = "rom_asset_id"
@@ -201,6 +206,8 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         case isBase = "is_base"
         case versionString = "version_string"
         case versionSortKey = "version_sort_key"
+        case baseTitle = "base_title"
+        case hackTitle = "hack_title"
         case preferredSaveProfileID = "preferred_save_profile_id"
         case pinnedCoreID = "pinned_core_id"
         case pinnedCoreVersion = "pinned_core_version"
@@ -224,6 +231,11 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         revision = value.revision
         versionString = value.versionString
         versionSortKey = value.versionSortKey
+        baseTitle = value.baseTitle
+        hackTitle = value.hackTitle
+        author = value.author
+        translation = value.translation
+        status = value.status
         preferredSaveProfileID = value.preferredSaveProfileID.map(PersistenceCodec.uuid)
         pinnedCoreID = value.corePin?.descriptor.identifier
         pinnedCoreVersion = value.corePin?.descriptor.version
@@ -266,6 +278,11 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
             revision: revision,
             versionString: versionString,
             versionSortKey: versionSortKey,
+            baseTitle: baseTitle,
+            hackTitle: hackTitle,
+            author: author,
+            translation: translation,
+            status: status,
             preferredSaveProfileID: try PersistenceCodec.optionalUUID(preferredSaveProfileID),
             corePin: pin,
             createdAt: try PersistenceCodec.date(createdAt),

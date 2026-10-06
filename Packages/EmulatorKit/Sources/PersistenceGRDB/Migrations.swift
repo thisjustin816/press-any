@@ -12,8 +12,56 @@ extension AppDatabase {
         migrator.registerMigration("mvp-v3") { db in
             try db.execute(sql: MVPV3Schema.sql)
         }
+        migrator.registerMigration("v1-v4-naming") { db in
+            try db.execute(sql: V1V4NamingSchema.sql)
+        }
+        migrator.registerMigration("v1-v5-single-base") { db in
+            try db.execute(sql: V1V5SingleBaseSchema.sql)
+        }
+        migrator.registerMigration("v1-v6-release-sort-marker") { db in
+            try db.execute(sql: V1V6ReleaseSortMarkerSchema.sql)
+        }
         return migrator
     }
+}
+
+/// Version sort keys gained a suffix so a prerelease sorts before its release: "~" ends a release's
+/// key. Keys stored before then were only ever a release's numbers, so each gains the "~".
+enum V1V6ReleaseSortMarkerSchema {
+    static let sql = #"""
+    UPDATE builds SET version_sort_key = version_sort_key || '~'
+    WHERE version_sort_key IS NOT NULL AND version_sort_key NOT GLOB '*[^0-9.]*';
+    """#
+}
+
+enum V1V5SingleBaseSchema {
+    static let sql = #"""
+    UPDATE builds SET is_base = 0
+    WHERE is_base = 1 AND id NOT IN (
+        SELECT id FROM (
+            SELECT builds.id,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY game_id
+                       ORDER BY CASE WHEN builds.id = games.preferred_build_id THEN 0 ELSE 1 END,
+                                builds.created_at DESC, builds.id
+                   ) AS base_rank
+            FROM builds JOIN games ON games.id = builds.game_id
+            WHERE is_base = 1 AND source_kind = 'importedROM'
+        ) WHERE base_rank = 1
+    );
+
+    CREATE UNIQUE INDEX builds_single_base ON builds(game_id) WHERE is_base = 1;
+    """#
+}
+
+enum V1V4NamingSchema {
+    static let sql = #"""
+    ALTER TABLE builds ADD COLUMN base_title TEXT;
+    ALTER TABLE builds ADD COLUMN hack_title TEXT;
+    ALTER TABLE builds ADD COLUMN author TEXT;
+    ALTER TABLE builds ADD COLUMN translation TEXT;
+    ALTER TABLE builds ADD COLUMN status TEXT;
+    """#
 }
 
 enum MVPV1Schema {

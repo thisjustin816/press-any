@@ -17,6 +17,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  shared-file-ui:
+    name: Shared ROM and patch UI flows
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install XcodeGen and RGBDS
+        run: brew install xcodegen rgbds
+      - name: Bootstrap (boot ROMs and Xcode project)
+        run: make bootstrap
+      - name: Share-sheet UI tests and refresh/menu regression controls
+        run: make test-share-ui
+      - name: Export UI attachments
+        if: always()
+        run: |
+          for result in build/share-ui/*.xcresult; do
+            [ -d "$result" ] || continue
+            name="$(basename "$result" .xcresult)"
+            xcrun xcresulttool export attachments --path "$result" --output-path "build/share-ui/attachments/$name"
+          done
+      - name: Upload UI results and failure screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: shared-file-ui-results
+          path: |
+            build/share-ui/*.log
+            build/share-ui/*.xcresult
+            build/share-ui/attachments/
+          if-no-files-found: ignore
+          retention-days: 7
+
   simulator:
     name: Xcode simulator build and tests
     # The Makefile targets the iPhone 17 Pro simulator, which needs the Xcode 26 runner image.

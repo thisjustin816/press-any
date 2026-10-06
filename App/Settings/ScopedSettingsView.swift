@@ -14,6 +14,8 @@ struct ScopedSettingsView: View {
     let gameID: UUID?
     let buildID: UUID?
     let store: any SettingsStore
+    /// Called after each saved change, so an open game can apply it.
+    var onChange: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -42,6 +44,20 @@ struct ScopedSettingsView: View {
                     context: context
                 )
                 InheritableSettingRow(
+                    title: "LCD Filter",
+                    key: .lcdFilter,
+                    defaultValue: LCDFilter.off,
+                    options: LCDFilter.allCases.map { ($0, $0.displayName) },
+                    context: context
+                )
+                InheritableSettingRow(
+                    title: "Frame Blending",
+                    key: .frameBlending,
+                    defaultValue: FrameBlending.off,
+                    options: FrameBlending.allCases.map { ($0, $0.displayName) },
+                    context: context
+                )
+                InheritableSettingRow(
                     title: "Resume Games",
                     key: .autoResumePolicy,
                     defaultValue: AutoResumePolicy.always,
@@ -60,7 +76,14 @@ struct ScopedSettingsView: View {
     }
 
     private var context: InheritableSettingContext {
-        InheritableSettingContext(scope: scope, system: system, gameID: gameID, buildID: buildID, store: store)
+        InheritableSettingContext(
+            scope: scope,
+            system: system,
+            gameID: gameID,
+            buildID: buildID,
+            store: store,
+            onChange: onChange
+        )
     }
 }
 
@@ -70,6 +93,7 @@ struct InheritableSettingContext {
     let gameID: UUID?
     let buildID: UUID?
     let store: any SettingsStore
+    var onChange: (() -> Void)?
 
     func edit(_ key: SettingKey) -> ScopedSetting? {
         try? SettingsResolver(store: store).edit(
@@ -160,6 +184,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                 try context.store.set(value, key: key.rawValue, scope: context.scope)
             }
             errorMessage = nil
+            context.onChange?()
         } catch {
             errorMessage = "Could not save the setting: \(error.localizedDescription)"
         }

@@ -6,6 +6,34 @@ import Foundation
 import XCTest
 
 final class BuildAndSaveOperationsTests: XCTestCase {
+    func testMergingGamesKeepsTheTargetsBaseBuild() throws {
+        for mode in [ReorganizationMode.move, .copy] {
+            let harness = try Harness.make(twoBuilds: true)
+            let second = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+            let operations = harness.buildOperations()
+            let source = try operations.promoteBuild(buildID: second.id, title: "Separate", mode: .move)
+            try operations.setBase(buildID: second.id, isBase: true)
+
+            try operations.mergeGame(sourceGameID: source.id, into: harness.game.id, mode: mode)
+
+            let builds = try harness.builds.fetchBuilds(gameID: harness.game.id)
+            XCTAssertEqual(builds.count, 2)
+            XCTAssertEqual(builds.filter(\.isBase).map(\.id), [harness.baseBuild.id])
+        }
+    }
+
+    func testRenameBuildTrimsTheNameAndRejectsABlankName() throws {
+        let harness = try Harness.make()
+        let operations = harness.buildOperations()
+
+        try operations.renameBuild(buildID: harness.baseBuild.id, displayName: "  Revision 2  ")
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.baseBuild.id)?.displayName, "Revision 2")
+
+        XCTAssertThrowsError(try operations.renameBuild(buildID: harness.baseBuild.id, displayName: "  \n ")) {
+            XCTAssertEqual($0 as? BuildOperationError, .invalidBuildName)
+        }
+    }
+
     func testDuplicateSaveProfileCopiesBytesThenDiverges() throws {
         let harness = try Harness.make()
         let source = try harness.createProfile(name: "Main", battery: Data([1, 2, 3]))
@@ -124,7 +152,13 @@ final class BuildAndSaveOperationsTests: XCTestCase {
 
     func testPromoteBuildCopyReusesImmutableROMAsset() throws {
         let harness = try Harness.make(twoBuilds: true)
-        let second = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        var second = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        second.baseTitle = "Base Game"
+        second.hackTitle = "Standalone Hack"
+        second.author = "Hacker"
+        second.translation = "Spanish"
+        second.status = "Beta"
+        try harness.builds.updateBuildMetadata(second)
         let newGame = try harness.buildOperations().promoteBuild(
             buildID: second.id,
             title: "Standalone Copy",
@@ -135,6 +169,11 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertNotEqual(copied.id, second.id)
         XCTAssertEqual(copied.imageAssetID, second.imageAssetID)
         XCTAssertEqual(copied.imageSHA256, second.imageSHA256)
+        XCTAssertEqual(copied.baseTitle, second.baseTitle)
+        XCTAssertEqual(copied.hackTitle, second.hackTitle)
+        XCTAssertEqual(copied.author, second.author)
+        XCTAssertEqual(copied.translation, second.translation)
+        XCTAssertEqual(copied.status, second.status)
         XCTAssertNotNil(try harness.builds.fetchBuild(id: second.id))
     }
 
@@ -168,14 +207,14 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id), [])
     }
 
-    func testABaseBuildCanBeMarkedAfterImportButNotAPatchedOne() throws {
+    func testMarkingABaseBuildReplacesThePreviousBaseButAPatchedBuildCannotBeBase() throws {
         let harness = try Harness.make(twoBuilds: true)
         let hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
         let operations = harness.buildOperations()
 
         try operations.setBase(buildID: hack.id, isBase: true)
-        XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.game.id).filter(\.isBase).count, 2, "a Game can have several")
-        try operations.setBase(buildID: harness.baseBuild.id, isBase: false)
+        let builds = try harness.builds.fetchBuilds(gameID: harness.game.id)
+        XCTAssertEqual(builds.filter(\.isBase).map(\.id), [hack.id])
         XCTAssertEqual(try harness.builds.fetchBuild(id: harness.baseBuild.id)?.isBase, false)
 
         let patched = Build(

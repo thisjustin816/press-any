@@ -52,10 +52,9 @@ final class QuickPlayPromotionViewModel: ObservableObject {
                 analyzer: container.importAnalyzer,
                 committer: container.importCommitter,
                 assetStore: container.fileStore
-            )
+            ),
+            existingBuilds: { container.builds(in: $0) }
         )
-        let name = URL(fileURLWithPath: session.originalFilename).deletingPathExtension().lastPathComponent
-        review.buildDisplayName = name
     }
 
     /// Replacing is offered only for the profile the session copied, and only when the Build

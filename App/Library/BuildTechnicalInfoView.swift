@@ -19,10 +19,16 @@ struct BuildTechnicalInfoView: View {
                     LabeledContent("Name", value: build.displayName)
                     LabeledContent("System", value: build.system.displayName)
                     LabeledContent("Source", value: build.sourceKind == .patchRecipe ? "Patched" : "Imported")
+                    LabeledContent("Added", value: build.createdAt.formatted(date: .abbreviated, time: .shortened))
                     if let region = build.region { LabeledContent("Region", value: region) }
                     if let language = build.language { LabeledContent("Language", value: language) }
                     if let revision = build.revision { LabeledContent("Revision", value: revision) }
                     if let version = build.versionString { LabeledContent("Version", value: version) }
+                    if let baseTitle = build.baseTitle { LabeledContent("Base Title", value: baseTitle) }
+                    if let hackTitle = build.hackTitle { LabeledContent("Hack Title", value: hackTitle) }
+                    if let author = build.author { LabeledContent("Author", value: author) }
+                    if let translation = build.translation { LabeledContent("Translation", value: translation) }
+                    if let status = build.status { LabeledContent("Status", value: status) }
                     if let pin = build.corePin {
                         LabeledContent("Core", value: "\(pin.descriptor.identifier) \(pin.descriptor.version)")
                     }

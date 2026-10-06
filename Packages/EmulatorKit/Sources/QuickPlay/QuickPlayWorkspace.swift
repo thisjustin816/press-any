@@ -53,7 +53,7 @@ public struct QuickPlayWorkspace: Sendable {
             let session = QuickPlaySession(
                 id: id,
                 imageSHA256: assetStore.hashData(romData),
-                originalFilename: romURL.lastPathComponent,
+                originalFilename: romURL.lastPathComponent.removingPercentEncoding ?? romURL.lastPathComponent,
                 system: header.system,
                 rootURL: root,
                 startedAt: startedAt,

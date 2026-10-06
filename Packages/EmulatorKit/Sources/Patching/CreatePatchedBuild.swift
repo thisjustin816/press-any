@@ -32,19 +32,25 @@ public struct CreatePatchedBuild: Sendable {
         public let patches: [PatchInput]
         public let displayName: String
         public let isBase: Bool
+        public let makePreferred: Bool
+        public let metadata: BuildImportMetadata
 
         public init(
             gameID: UUID,
             baseBuildID: UUID,
             patches: [PatchInput],
             displayName: String,
-            isBase: Bool = false
+            isBase: Bool = false,
+            makePreferred: Bool = true,
+            metadata: BuildImportMetadata = BuildImportMetadata()
         ) {
             self.gameID = gameID
             self.baseBuildID = baseBuildID
             self.patches = patches
             self.displayName = displayName
             self.isBase = isBase
+            self.makePreferred = makePreferred
+            self.metadata = metadata
         }
 
         public init(
@@ -52,14 +58,18 @@ public struct CreatePatchedBuild: Sendable {
             baseBuildID: UUID,
             patchURLs: [URL],
             displayName: String,
-            isBase: Bool = false
+            isBase: Bool = false,
+            makePreferred: Bool = true,
+            metadata: BuildImportMetadata = BuildImportMetadata()
         ) {
             self.init(
                 gameID: gameID,
                 baseBuildID: baseBuildID,
                 patches: patchURLs.map { PatchInput(url: $0) },
                 displayName: displayName,
-                isBase: isBase
+                isBase: isBase,
+                makePreferred: makePreferred,
+                metadata: metadata
             )
         }
     }
@@ -109,7 +119,7 @@ public struct CreatePatchedBuild: Sendable {
     }
 
     public func execute(_ input: Input) throws -> Build {
-        guard try games.fetchGame(id: input.gameID) != nil else {
+        guard let game = try games.fetchGame(id: input.gameID) else {
             throw CreatePatchedBuildError.gameNotFound(input.gameID)
         }
         guard let baseBuild = try builds.fetchBuild(id: input.baseBuildID) else {
@@ -191,6 +201,16 @@ public struct CreatePatchedBuild: Sendable {
                 sourceKind: .patchRecipe,
                 parentBuildID: baseBuild.id,
                 isBase: input.isBase,
+                region: input.metadata.region,
+                language: input.metadata.language,
+                revision: input.metadata.revision,
+                versionString: input.metadata.versionString,
+                versionSortKey: input.metadata.versionSortKey,
+                baseTitle: input.metadata.baseTitle ?? game.primaryTitle,
+                hackTitle: input.metadata.hackTitle,
+                author: input.metadata.author,
+                translation: input.metadata.translation,
+                status: input.metadata.status,
                 createdAt: timestamp,
                 modifiedAt: timestamp
             )
@@ -214,11 +234,17 @@ public struct CreatePatchedBuild: Sendable {
             )
 
             do {
-                try transactions.run { [assets, builds, recipes, toolchainReports, assetsToInsert] in
+                try transactions.run { [assets, builds, games, recipes, toolchainReports, assetsToInsert] in
                     for asset in assetsToInsert { try assets.insertAsset(asset) }
                     if existingGenerated == nil { try assets.insertAsset(generatedAsset) }
                     try builds.insertBuild(build)
                     try recipes.insertPatchRecipe(recipe)
+                    if input.makePreferred {
+                        var updatedGame = game
+                        updatedGame.preferredBuildID = build.id
+                        updatedGame.modifiedAt = timestamp
+                        try games.updateGame(updatedGame)
+                    }
                     for report in reports {
                         try toolchainReports.saveReport(report, buildID: build.id, detectedAt: timestamp)
                     }

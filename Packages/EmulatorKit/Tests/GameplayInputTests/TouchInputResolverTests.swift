@@ -23,6 +23,55 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertFalse(resolver.input.down)
     }
 
+    func testPlaytilesCardinalPressesTolerateOffAxisContact() {
+        for (width, height) in [(375.0, 667.0), (393, 852), (440, 956)] {
+            let layout = TouchControlLayout.make(.playtiles, width: width, height: height)
+            for (x, y, expected) in [
+                (-0.8, -0.4, EmulatorInputState(left: true)),
+                (-0.8, 0.4, EmulatorInputState(left: true)),
+                (0.8, -0.4, EmulatorInputState(right: true)),
+                (0.8, 0.4, EmulatorInputState(right: true)),
+                (-0.4, -0.8, EmulatorInputState(up: true)),
+                (0.4, -0.8, EmulatorInputState(up: true)),
+                (-0.4, 0.8, EmulatorInputState(down: true)),
+                (0.4, 0.8, EmulatorInputState(down: true)),
+            ] {
+                let resolver = TouchInputResolver(layout: layout)
+                resolver.touchBegan(id: 1, point: .init(
+                    x: layout.dpad.center.x + x * layout.dpad.width / 2,
+                    y: layout.dpad.center.y + y * layout.dpad.height / 2
+                ))
+                XCTAssertEqual(resolver.input, expected, "\(width)x\(height), \(x), \(y)")
+            }
+        }
+    }
+
+    func testPlaytilesKeepsIntentionalDiagonalsAndSliding() {
+        let layout = TouchControlLayout.make(.playtiles, width: 393, height: 852)
+        let resolver = TouchInputResolver(layout: layout)
+        for (x, y, expected) in [
+            (-0.8, -0.8, EmulatorInputState(up: true, left: true)),
+            (0.8, -0.8, EmulatorInputState(up: true, right: true)),
+            (-0.8, 0.8, EmulatorInputState(down: true, left: true)),
+            (0.8, 0.8, EmulatorInputState(down: true, right: true)),
+            (0.8, 0.3, EmulatorInputState(right: true)),
+            (0.0, 0.0, EmulatorInputState()),
+        ] {
+            let point = TouchPoint(
+                x: layout.dpad.center.x + x * layout.dpad.width / 2,
+                y: layout.dpad.center.y + y * layout.dpad.height / 2
+            )
+            if resolver.input == EmulatorInputState() {
+                resolver.touchBegan(id: 1, point: point)
+            } else {
+                resolver.touchMoved(id: 1, point: point)
+            }
+            XCTAssertEqual(resolver.input, expected)
+        }
+        resolver.touchEnded(id: 1)
+        XCTAssertEqual(resolver.input, EmulatorInputState())
+    }
+
     func testSlidingBetweenAAndBChangesButtonWithoutLift() {
         let resolver = TouchInputResolver(layout: .testLayout)
         resolver.touchBegan(id: 1, point: .init(x: 260, y: 60))

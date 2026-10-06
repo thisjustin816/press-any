@@ -3,6 +3,202 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Settings open from the game menu, and frame blending joins them
+
+The game menu gains Settings, which opens over the paused game at half height so each change shows
+in the picture above it. A library game edits its Game's settings, as Game Settings in Game Details
+does. Quick Play has no Game yet, so it edits its system's settings. Controller layout, scaling,
+the LCD filter and frame blending apply to the open game at once; the rest apply at the next launch.
+The game stays paused when the sheet closes, as after a shared file.
+
+Frame Blending is a new inheritable display setting. Blend averages each frame with the one before,
+as the Game Boy's slow LCD does, so a sprite a game draws on alternate frames to look see-through
+stays steady instead of flickering. LCD Ghosting weights the newest frame 0.5 and the two before it
+0.3 and 0.2, for a short trail behind moving things. Both mix emulated frames, not screen
+refreshes, so the result is the same at 60 Hz and 120 Hz. Off stays the default.
+
+The Playtiles alignment guide is pressed deeper into the body, with a shadow under its top edge
+and light along its bottom edge, so it stands out in Dark as well as Classic. The wordmark on the
+menu button is pressed into the button the same way, where it was printed flat on a raised face.
+
+## 2026-10-06: Untagged Builds are named for the day they were added
+
+A file with no version tags no longer gets the Build name "Original". Base already marks the
+primary Build, so the name only needs to tell Builds apart. An untagged Build is named for the day
+it is added, "2026-10-06", then the time for one added the same day, as with the repeated names
+below. That includes the first Build of a new Game. Suggest Build Names offers the dated name for
+every Build still called "Original". A hack with nothing else to name it is still "Hack".
+
+## 2026-10-06: Date-stamped filenames name their Builds
+
+A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version, shown
+as "2026-10-06" in the Build name and sorted by date. Words after it, "classic" here, become the
+status and stay in the name. Only a valid date of eight digits, or written with hyphens, counts, and
+never as the whole title. Suggest Build Names treats the generic "Original" and "Hack", with or
+without a date added, as generated, so Builds named before this can take the dated name.
+
+## 2026-10-06: New Builds default to Preferred and Base, and match existing Games
+
+Import Review now defaults every new Build to Preferred. It defaults to Base when the Game has no
+Base yet, unless the file is a ROM hack. Where the Game has a Base, only a newer homebrew release
+defaults to replacing it: a file whose version or date sorts after the Base's, or any versioned
+file when the Base has none. A retail revision or a beta has no version, so it leaves a clean Base
+alone. A ROM hack or a patch-created Build is Preferred but not Base. The toggles remain in review,
+and a role the player sets stays when the destination changes. This replaces the conservative
+default for ordinary additional ROMs in "New Build roles are reviewable suggestions".
+
+Import Review also suggests an existing Game whose title matches the file's title, header title or,
+for a hack, base title, compared without case, punctuation or spacing. Only a whole-title match
+counts, so "Mega Man 2" never joins "Mega Man", and two matching Games suggest neither.
+
+A file shared while another sheet is open, such as Import Review mid-edit or the game's Resume
+prompt, waits in the queue until that sheet closes, so work in progress is never replaced.
+
+## 2026-10-06: A dotted Rev is a homebrew version
+
+Filenames use "Rev" two ways. A number or a letter, as in "(Rev 1)" or "(Rev A)", stays a retail
+revision. A dotted value, as in "(Rev 0.2.0)", is how homebrew labels a release, so it becomes the
+version. Versions keep a semver prerelease or build suffix such as "-beta.3" or "+deferred6", and
+sort with their numeric part. Loose forms such as "r2" or a bare trailing number stay part of the
+title, since names like "R-Type" and "Mega Man 2" look the same.
+
+## 2026-10-06: Repeated Build names gain when they were added
+
+Only one Build in a Game is ever "Original". A later file without version tags is named for the day
+it is added, "2026-10-06", as date-stamped files are. Any other suggested name that repeats one in
+the Game gains the day: "v1.0 · Oct 6". Both add the time for Builds added the same day, then a
+number. Import Review, Quick Play promotion and Open Patch suggest names this way, and a name the
+player typed is left alone. Technical Info shows when a Build was added, and a Build whose name
+another Build shares shows its date and time in the list.
+
+Suggest Build Names, in the library's view menu, applies the same rules to Builds already in the
+library. It lists only names that look generated: ones still carrying URL escapes, ones that are
+just the source filename, and repeats of an earlier Build's name. Each suggestion can be edited or
+turned off, and nothing is renamed until the player chooses Rename.
+
+## 2026-10-06: Frames follow the display refresh
+
+Gameplay frames run on the display's refresh instead of a sleep timer. Each refresh adds the time
+since the last one to what the game is owed, measured on the display's clock, and the game runs
+whole frames while it is owed one, then shows the newest. The game keeps its native 59.73 Hz rate
+(Q95): on a 60 Hz screen each frame shows for one refresh and one repeats about every four
+seconds. A sleep timer woke at slightly different times each frame, so frames landing near a
+refresh were repeated or skipped in clusters, which felt jerky. ProMotion iPhones refresh at up to
+120 Hz, where a repeat lasts 8 ms. After a stall, a refresh longer than four frames counts as
+one frame, so the game doesn't race to catch up. This replaces the fixed-deadline schedule in
+"2026-10-05: Adaptive audio, and registries wait for v1".
+
+## 2026-10-06: Shared files open over a running game
+
+A ROM or patch shared to the app mid-game opens over the game. The game pauses as it does for the
+game menu and stays paused when the sheet closes, so the player resumes it. Import Review and Open
+Patch work as they do from the library. Quick Play from that sheet reads "Close Game and Quick
+Play": the running game closes the normal way, saving first, and a closing Quick Play session still
+shows its Keep for Later sheet before the shared ROM starts. Choosing Resume on that sheet drops the
+shared ROM instead. This replaces the wait for active gameplay in the 2026-10-05 shared-files entry.
+
+Import Review lists the destination and Build details first, as Quick Play promotion does, so
+choosing an existing Game comes before the ROM details.
+
+## 2026-10-06: A Game has at most one Base Build
+
+**Decision.** Base Build is a single role within a Game, not a tag shared by region or revision
+variants. Marking or importing a new Base Build automatically demotes the previous one. A hack-only
+Game may still have no Base Build, and every existing patch recipe continues to name its exact
+source Build and hash.
+
+## 2026-10-06: New Build roles are reviewable suggestions
+
+Import Review suggests both Base and Preferred roles instead of silently deciding them. A
+recognized development release added to an existing Game defaults to Base and Preferred. A
+recognized ROM hack defaults to Preferred but not Base. An ordinary additional retail or unknown
+ROM keeps the conservative defaults: neither role is changed automatically. The first Build in a
+new Game is necessarily Preferred, while a hack-only Game may have no Base Build.
+
+Patch-created Builds follow the ROM-hack default: Preferred and not Base. These are starting
+points in review, not permanent classifications; manual choices continue to win.
+
+## 2026-10-06: The working MVP is complete; naming and LCD effects are v1 work
+
+The owner accepted the MVP as done and working. The physical-iPhone checklist remains a
+regression record rather than a gate that blocks v1 development.
+
+Automatic No-Intro and ROM-hack naming moves to v1. Keep its reviewable suggestions,
+structured metadata, original-file preservation and shared behavior across import, Quick Play
+promotion and patch-created Builds. The first lightweight LCD 1× and LCD 3× effects also begin
+the v1 display work; they do not expand the scope of the completed MVP.
+
+## 2026-10-06: The gameplay logo is a button, and opening its menu pauses the game
+
+Render the bottom wordmark as a raised, rounded button in both controller layouts
+and themes, including when a physical controller hides the touch controls. Keep
+the existing tap area and optional Tap Game for Menu target.
+
+Opening the game menu stops frames and audio and releases held touch/controller
+input before building its actions. The menu offers Resume. Dismissing the menu,
+changing Fast Forward or returning from another app keeps gameplay paused until
+the player chooses Resume. Reuse the existing explicit-player pause reason.
+
+## 2026-10-06: No-Intro and ROM-hack naming belongs in the MVP
+
+Move automatic No-Intro and ROM-hack filename parsing and naming suggestions into
+the MVP. Suggest clean Game titles and concise Build names, and extract recognized
+base/hack titles, authors, versions, regions, languages, revisions and status tags
+into reviewable metadata. Generate a normalized filename suggestion from the
+recognized fields. Unknown tags stay available rather than being guessed away.
+
+Filename guesses retain their source and confidence; manual corrections win.
+Preserve the original imported ROM and patch filenames, and keep Game/Build identity
+and ROM bytes unchanged. Apply naming suggestions in ROM Import Review, Quick Play
+promotion and patch-created Builds. A hack's title may be the Game title while its
+base title remains lineage metadata.
+
+The current implementation is partial: region/language/revision/version parsing
+exists, but richer hack metadata and normalized filename suggestions are still
+missing. Physical "Rename File to Canonical Name", database/catalog lookup and bulk
+rename retain their existing later targets.
+
+## 2026-10-06: Shared game pages
+
+Add shared-page imports to the v1.1 backlog alongside in-app game browsing. Sharing
+an itch.io game page or a GitHub page with a ROM download offers supported downloads,
+asks the player to choose when there are several, and sends the downloaded ROM to
+Import Review or Quick Play. Public GitHub release assets and direct ROM links are
+initial sources. itch.io purchases, donations and login use the site's normal flow.
+
+This needs a web-URL share extension and downloader; the current document handoff
+handles local files. ZIP downloads depend on safe archive extraction and ROM selection.
+
+## 2026-10-06: TestFlight can test feature branches before merge
+
+The manual TestFlight workflow accepts repository branches, including feature
+branches, so the owner can verify fixes on an iPhone before merging them. The
+selected branch supplies the app and workflow; review its release scripts before
+dispatch because the upload uses signing secrets. Tags and automatic events skip
+the upload job. All branches share the existing upload queue and build numbering.
+
+## 2026-10-05: Shared ROMs and patches, and Playtiles direction zones
+
+Incoming `.gb`, `.gbc`, `.ips` and `.bps` files use iOS document handoff into the
+app. Imported document types are registered in the app's Info.plist and share
+their identifiers with the file pickers. Receipt copies regular files into an
+isolated staging directory under the existing size limits, preserving the
+filename without changing the sender's file.
+
+ROMs offer Quick Play or the existing Import Review. Patches require an explicit
+Game and base Build and create a new Build through the existing patch use case;
+a BPS base mismatch retains the Apply Anyway warning. Incoming files wait for
+active gameplay and the Quick Play session sheet to close. Quick Play consumes
+its receipt before staging cleanup. This adds no separate share extension.
+
+Playtiles retains deliberate diagonals, but the weaker axis must exceed 65% of
+the stronger axis as well as the existing center dead zone. This widens the
+straight-direction zones for the physical overlay. The Game Boy layout keeps
+its previous direction mapping. Controller geometry stays the same.
+
+Skin package importing still needs a format decision; registering a package
+extension alone would not make its artwork or mapping usable.
+
 ## 2026-10-05: Reviewable Build metadata on import
 
 **Decision.** Import recognizes explicit region and language groups, Rev/Revision tags, numeric
@@ -138,7 +334,9 @@ behaves as follows:
 
 - **In-game saves reach disk during play.** The game's battery save is written once it changes,
   checked at most every five seconds of play, in library sessions and Quick Play alike. A crash or
-  a killed app loses at most those few seconds of in-game saving.
+  a killed app loses at most those few seconds of in-game saving. Periodic persistence runs on a
+  separate serial queue so file and database writes do not stall frame pacing; pause and close wait
+  for an outstanding write before touching the runtime.
 - **Background and close attempt every save step.** A failed battery write no longer skips the
   Auto State, which is then the way back to that progress. When a close fails, the game stays open
   so the save can be retried, or closed without saving.
@@ -299,7 +497,7 @@ title stays after the source Game is deleted. Promoting a Game's only Build by M
 Game, so it records no lineage.
 
 A Build's menu also has Mark as Base Build / Unmark as Base Build, for imported Builds. A Game
-can have several Base Builds, one per region or revision.
+has at most one Base Build; see "2026-10-06: A Game has at most one Base Build".
 
 ## 2026-10-04: Importing a .sav into an existing profile keeps a copy
 

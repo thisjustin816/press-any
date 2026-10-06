@@ -89,7 +89,6 @@ final class TouchControllerView: UIView {
         let palette = self.palette
         drawBody(around: layout.screen, palette: palette, in: context)
         if let bezel = layout.bezel { drawBezel(bezel, around: layout.screen, palette: palette, in: context) }
-        if let logo = layout.logo { drawLogo(in: cgRect(logo), palette: palette) }
         guard showsControls else { return }
 
         switch style {
@@ -191,14 +190,6 @@ final class TouchControllerView: UIView {
         context.restoreGState()
     }
 
-    /// The app's wordmark, printed at the bottom of the body. It stands a few points taller than
-    /// its box, still inside the box's tap area.
-    private func drawLogo(in rect: CGRect, palette: ControllerPalette) {
-        let string = AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent)
-        let textSize = string.size()
-        string.draw(at: CGPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2))
-    }
-
     /// The glass around the game picture, rounded more at the bottom right, as on a Game Boy. That
     /// corner's arc passes the picture's corner at half the border's width: with radius r and border
     /// b the gap is r - √2 (r - b), so r = (√2 - 1/2) b / (√2 - 1), about 2.2 b.
@@ -219,6 +210,7 @@ final class TouchControllerView: UIView {
     }
 
     /// Where the physical controller lines up: a band with a U-shaped tab, pressed into the body.
+    /// Lit from above, its top edge shades the floor and its bottom edge catches the light.
     private func drawAlignmentGuide(_ guide: TouchAlignmentGuide, palette: ControllerPalette, in context: CGContext) {
         let tab = cgRect(guide.tab)
         let path = UIBezierPath(rect: cgRect(guide.bar))
@@ -227,9 +219,21 @@ final class TouchControllerView: UIView {
             byRoundingCorners: [.bottomLeft, .bottomRight],
             cornerRadii: CGSize(width: tab.width / 2, height: tab.width / 2)
         ))
-        context.setFillColor(palette.groove.cgColor)
+        func fill(_ color: UIColor, offsetBy dy: CGFloat) {
+            context.saveGState()
+            context.translateBy(x: 0, y: dy)
+            context.setFillColor(color.cgColor)
+            context.addPath(path.cgPath)
+            context.fillPath()
+            context.restoreGState()
+        }
+        fill(palette.guideRim, offsetBy: 1)
+        context.saveGState()
         context.addPath(path.cgPath)
-        context.fillPath()
+        context.clip()
+        fill(palette.guideShadow, offsetBy: 0)
+        fill(palette.guide, offsetBy: 1.5)
+        context.restoreGState()
     }
 
     /// A Game Boy's D-pad: a cross, each pressed arm darker.

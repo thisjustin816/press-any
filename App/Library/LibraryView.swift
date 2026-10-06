@@ -2,6 +2,7 @@ import EmulatorDomain
 import Importing
 import QuickPlay
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct LibraryView: View {
     enum DisplayMode: String, CaseIterable {
@@ -22,6 +23,7 @@ struct LibraryView: View {
     @State private var pendingFileAction: FileAction = .importROM
     @State private var importReview: ImportReviewPresentation?
     @State private var showSettings = false
+    @State private var showBuildNameReview = false
     @State private var showSaveChooser = false
     @State private var chosenQuickPlaySave: UUID?
     @State private var showQuickPlaySessions = false
@@ -109,6 +111,13 @@ struct LibraryView: View {
                         if displayMode == .grid {
                             Toggle("Show Titles", isOn: $showsGridTitles)
                         }
+                        Section {
+                            Button {
+                                showBuildNameReview = true
+                            } label: {
+                                Label("Suggest Build Names…", systemImage: "character.cursor.ibeam")
+                            }
+                        }
                     } label: {
                         Image(systemName: displayMode == .grid ? "square.grid.2x2" : "list.bullet")
                     }
@@ -158,7 +167,7 @@ struct LibraryView: View {
             .refreshable { model.reload() }
             .fileImporter(
                 isPresented: $showROMImporter,
-                allowedContentTypes: [.gameBoyROM, .gameBoyColorROM],
+                allowedContentTypes: UTType.romFileTypes,
                 allowsMultipleSelection: false
             ) { result in
                 handleImportSelection(result)
@@ -190,6 +199,9 @@ struct LibraryView: View {
                     onImported: { _ in model.reload() },
                     onCancel: {}
                 )
+            }
+            .sheet(isPresented: $showBuildNameReview) {
+                BuildNameReviewView(container: container)
             }
             .sheet(isPresented: $showSettings) {
                 AppSettingsView(store: container.repositories.settings, integrityChecker: container.integrityChecker)
@@ -294,7 +306,8 @@ struct LibraryView: View {
                 let reviewModel = ImportReviewViewModel(
                     analysis: analysis,
                     games: model.games,
-                    coordinator: importCoordinator
+                    coordinator: importCoordinator,
+                    existingBuilds: { container.builds(in: $0) }
                 )
                 importReview = ImportReviewPresentation(model: reviewModel)
             } catch {

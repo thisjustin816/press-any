@@ -74,6 +74,10 @@ elif shots == "summary":
             shot(f"play:{f}", 10, f"play-{system.lower()}")
 else:
     sys.exit(f"SHOTS must be summary or every-rom, not {shots!r}")
+for system in ("GB", "GBC"):
+    if f := first(lambda r: r["system"] == system):
+        for preset in ("lcd1x", "lcd3x"):
+            shot(f"play:{f}", 10, f"play-{system.lower()}-{preset}", f"-ScreenshotLCDFilter {preset}")
 shot(f"play:{names[0]}", 10, "play-gamepad", "-ScreenshotGamepad YES")
 # The Playtiles layout is drawn after a GBC skin, so it shows a GBC game when one was chosen.
 playtiles_rom = first(lambda r: r["system"] == "GBC") or names[0]

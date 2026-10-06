@@ -16,10 +16,11 @@ secrets for Apple signing and upload, as described in `docs/testflight.md`.
 | `ci.yml` | All test targets are covered | `Scripts/verify-ci-test-coverage.sh` fails when a directory under `Packages/EmulatorKit/Tests/` is not named in `ci.yml` |
 | `ci.yml` | Repository hygiene | `Scripts/verify-repo-hygiene.sh` (no tracked game images, saves or generated Xcode projects; the ROMs in `TestROMs/roms/` are allowed only when `TestROMs/manifest.json` lists them with a matching SHA-256) and `shellcheck` at error severity |
 | `ios-build.yml` | Xcode simulator build and tests | `make bootstrap`, `make build`, `Scripts/verify-privacy-manifest.sh` (lints the privacy manifest and checks the built app carries it unchanged), `make test` on the `macos-26` runner; on failure, a last step repeats only the Xcode error lines in the job summary |
-| `screenshots.yml` | Simulator screenshots (manual only) | Selects iPhone 14 Plus (default, verified 1284 × 2778 PNGs for Apple's 6.5-inch slot), iPhone 17 Pro Max (6.9-inch slot) or iPhone 17 Pro. Creates the simulator if needed, seeds the library from `TestROMs/`, captures the app and menu UI, and uploads PNGs and logs as light/dark artifacts. See `docs/testflight.md` for downloading and uploading selected PNGs |
+| `ios-build.yml` | Shared ROM and patch UI flows | `make test-share-ui`: installs a test-only sender, selects Press Any from the system share sheet, and checks GB import/cancellation, GBC Quick Play, IPS/BPS application, queued delivery and open Game Details refresh. Controls remove the refresh listener and game-menu pause hook separately and require the new-Build and menu-Resume assertions to fail. Logs, screenshots and xcresults are uploaded as `shared-file-ui-results` |
+| `screenshots.yml` | Simulator screenshots (manual only) | Selects iPhone 14 Plus (default, verified 1284 × 2778 PNGs for Apple's 6.5-inch slot), iPhone 17 Pro Max (6.9-inch slot) or iPhone 17 Pro. Creates the simulator if needed, seeds the library from `TestROMs/`, captures the app, menu, and GB/GBC LCD 1×/3× effects, and uploads PNGs and logs as light/dark artifacts. See `docs/testflight.md` for downloading and uploading selected PNGs |
 | `ios-build.yml` | Package tests on the iOS simulator | `make test-package-ios`: the `EmulatorKit-Package` scheme's tests against Apple's Foundation, with the same failure summary |
 | `ios-build.yml` | Unsigned Release archive | `make bootstrap`, a Release archive for a device with signing off, and `Scripts/verify-privacy-manifest.sh` on the archived app, so a Release-only failure shows before a TestFlight upload |
-| `testflight.yml` | Archive and upload to TestFlight | Manual, `main` only. `make bootstrap`, then `Scripts/upload-testflight.sh`: validates the distribution certificate and App Store profile, signs a Release archive in a temporary keychain, verifies its privacy manifest, exports an IPA and uploads it with an App Store Connect team API key. Needs the six secrets in `docs/testflight.md` |
+| `testflight.yml` | Archive and upload to TestFlight | Manual, from a repository branch including feature branches. `make bootstrap`, then `Scripts/upload-testflight.sh`: validates the distribution certificate and App Store profile, signs a Release archive in a temporary keychain, verifies its privacy manifest, exports an IPA and uploads it with an App Store Connect team API key. Needs the six secrets in `docs/testflight.md`; uploads share one queue across branches |
 
 The Linux Swift jobs run in the `swift:6.1.2-noble` image, whose tag is not pinned by digest.
 The image has no SQLite headers, so each Swift job installs `libsqlite3-dev` first; GRDB needs
@@ -29,14 +30,27 @@ Every job that builds the package checks out submodules, because SameBoy is one.
 Add each new test target to one of the layer filters in `ci.yml`; the coverage job fails until it
 is listed.
 
-## Not verified
+## Simulator coverage and device checks
 
 `ios-build.yml` builds the app and runs the app and package tests on the iPhone 17 Pro
 simulator. The hosted `PressAnyTests` launch the app and check its display name and bundled
 licenses, toolchain labels, controller disconnect and touch-to-reveal behavior, frame pacing,
-gameplay pause/lifecycle transitions, and import review edits through database reopen. Controller
+gameplay pause/lifecycle transitions (including frozen frame counts and explicit menu Resume), and import review edits through database reopen. Controller
 and gameplay tests use simulated input or fake runtimes; they do not prove real hardware behavior.
 The manual screenshot workflow also launches seeded gameplay and taps menus through UI tests.
+
+The shared-file UI suite uses the existing original fixtures in `TestROMs/`, with a separate
+Debug library for each test. Run `make bootstrap && make test-share-ui` on macOS; `DEVICE` can
+select another simulator. The sender is a separate test app and is excluded from the Release
+app's scheme. These simulator flows still leave Files/browser variants and physical-iPhone
+handoff in the device checklist.
+
+On October 6, 2026, [run 37419621678](https://github.com/thisjustin816/press-any/actions/runs/37419621678)
+passed all six shared-file UI scenarios on commit `8dd51ca`. Both controls reached their intended
+assertions: removing the refresh listener failed the new-Build check, and removing the game-menu
+pause hook failed the Resume check. Hosted app tests, iOS package tests and the unsigned Release
+archive also passed; [Linux CI](https://github.com/thisjustin816/press-any/actions/runs/37419621685)
+passed on the same commit.
 
 Audio buffering has package tests, but the sound, latency, audio routes and interruptions still
 need a physical iPhone. The unsigned archive job checks Release compilation and resources; it

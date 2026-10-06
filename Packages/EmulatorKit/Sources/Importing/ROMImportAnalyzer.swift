@@ -29,14 +29,16 @@ public struct ROMImportAnalyzer: Sendable {
             let sha256 = try assetStore.hashFile(at: stagedURL)
             let header = try GBROMHeaderParser.parse(data)
             let existing = try builds.fetchBuild(imageSHA256: sha256)
+            let suppliedFilename = originalFilename ?? sourceURL.lastPathComponent
+            let visibleFilename = suppliedFilename.removingPercentEncoding ?? suppliedFilename
             return ROMImportAnalysis(
                 transactionID: transactionID,
                 stagedURL: stagedURL,
-                originalFilename: originalFilename ?? sourceURL.lastPathComponent,
+                originalFilename: visibleFilename,
                 sha256: sha256,
                 byteLength: Int64(data.count),
                 header: header,
-                filenameMetadata: FilenameMetadataParser.parse(filename: originalFilename ?? sourceURL.lastPathComponent),
+                filenameMetadata: FilenameMetadataParser.parse(filename: visibleFilename),
                 exactExistingBuildID: existing?.id,
                 suggestedGameID: targetGameID ?? existing?.gameID,
                 toolchainReports: detectors.detect(image: data, system: header.system)

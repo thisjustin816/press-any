@@ -1,7 +1,7 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-05. The specs stay the
+on 2026-10-03 and updated 2026-10-06. The specs stay the
 source of truth for what each item means; this file tracks what's left and a suggested order.
 Update an item's row when its status changes, and move it to its area's "Done" line when it's
 finished.
@@ -16,14 +16,15 @@ later.
 
 Nothing below is in progress.
 
-1. Finish the MVP. The real-device check in `docs/mvp-verification.md` still has to pass on a
-   phone.
-2. Display and play feel, small changes that make games look and play right on day one: frame
-   blending, GBC color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
+The MVP is complete and working. Its device checklist remains a regression record.
+
+1. Complete No-Intro and ROM-hack naming suggestions and review metadata for v1.
+2. Display and play feel, small changes that make games look and play right on day one: GBC
+   color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
 3. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
    profiles and remapping, landscape and the layout editor, cheats and memory tools, external
-   display, and the curated shader library, which `AGENTS.md` holds until the MVP check passes.
+   display, and the curated shader library.
 4. Library and services: Share Sheet and archive import, search and collections, automatic
    artwork, manuals, screenshots and notes, deletion and undo, backups, iCloud and the Community
    Catalog.
@@ -105,8 +106,8 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Game aliases/alternate titles (indexed) | v1 | Q162 | no field |
-| missing | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; mvp "Game" (provenance records) | none |
-| missing | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | no edit UI |
+| partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; prod "ROM identity" | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
+| partial | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | Rename Build and Suggest Build Names; no Game rename UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1 | prod "Documents"; Q169 |  |
 | missing | Typed multi-artwork model with primary selection | v1 | prod "Artwork"; dec 20 | Game.artworkAssetID is a single image |
@@ -149,9 +150,10 @@ Done: Search by primary title.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | No-Intro / ROM-hack bracket parsing into structured fields | v1 | prod "ROM identity"; dec 17 | recognized region/language/revision/numeric-version tags and trailing v1.2-style versions populate reviewable Build fields; raw groups preserved; hack title/author/status flags and richer conventions remain |
+| partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; a repeated name gains the date the Build was added; Suggest Build Names reviews existing Builds; broader real-world corpus tuning remains |
 | partial | Header read/validate/display, no editing | v1 | dec 18 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
-| missing | Canonical normalized filename + explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 |  |
+| partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
+| missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |
 | missing | Verification status Verified/Modified/Unknown; never auto-repair | v1 | dec 18 |  |
 | missing | Bundled No-Intro baseline + signed/validated updates; parent/clone family grouping shown in review | v1 | prod "ROM identity"; Q157; later 11 no-intro-update.yml |  |
 | partial | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | dec 17 | user can pick an existing Game as destination; no lineage-without-base metadata |
@@ -174,7 +176,8 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 
 Done: Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
-re-import repairs damaged file; New Game vs Add Build choice, Base Build toggle; Toolchain
+re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Preferred suggestions
+(development releases default to both; ROM hacks default Preferred only); Toolchain
 findings in Import Review and Quick Play promotion; Files over a size limit for their kind
 (ROM, patch, save, artwork, variable map) refused before they are read or staged; only regular
 files staged.
@@ -184,7 +187,6 @@ files staged.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | partial | Import-Review-style inheritance step (artwork, docs, tags, compatible profiles; deselectable) on promote/merge | v1 (mvp says merge "with review") | Q83/Q84 | review sheet copies artwork and chosen Save Profiles; docs and tags don't exist yet |
-| missing | Preferred Base Build among several | v1 | Q155 (optional) |  |
 | missing | Lightweight Build timeline (versions, hashes, parents, notes, import/activation history) | v1 | prod "Game/Build restructuring" |  |
 | missing | Build comparison (changed bytes/ranges, size, banks, header) | v1 | dec 5 |  |
 
@@ -192,7 +194,8 @@ Done: Make Separate Game: Move/Copy, default Move, Build UUID/blob preserved, Bu
 follows; Merge into Game: Move/Copy, lineage/recipes remapped; Same image already in target: Copy
 skips, Move refused naming the Builds; Profiles/artwork/preferences follow when the source Game is
 emptied or merged away; Promoted Game records the Game it split from (Split From), kept by title
-once that Game is gone; Mark or unmark imported Builds as Base Builds after import.
+once that Game is gone; Mark or unmark imported Builds as Base Builds after import, with a new Base
+automatically replacing the previous one; rename a Build from its long-press menu.
 
 ### Patching
 
@@ -219,7 +222,8 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | Save Profile locking | later | dec 9/33 |  |
 
 Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play
-once changed, at most every five seconds of play; Compatible Builds share a profile on purpose; New
+once changed, at most every five seconds of play and off the frame-pacing queue; Compatible Builds
+share a profile on purpose; New
 blank profile; duplicate profile (bytes copied, ancestry shown); Import .sav into a new profile,
 or into an existing one after confirming, keeping its old save as "<name> before import";
 Variable maps (GB Studio globals, RGBDS .sym, GBDK .noi) kept on the exact Build; Each profile
@@ -311,18 +315,18 @@ Done: Pause / Resume from menu with paused overlay.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Adaptive presentation on high-refresh displays | v1 | Q95 | MTKView redraws per submitted frame; no display-link pacing or ProMotion handling |
+| partial | Adaptive presentation on high-refresh displays | v1 | Q95 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; thermal or Low Power Mode rate changes not handled |
 | missing | GB/GBC color correction | v1 | dec 23 |  |
 | missing | DMG palettes / system-authentic default look; raw pixels available | v1 | Q108 | SameBoy default output only |
-| missing | Frame blending, LCD ghosting | v1 | dec 23 |  |
-| missing | Curated RetroArch-compatible shader set (lcd1x, lcd3x, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1 | prod "Rendering and shaders"; later 9 |  |
-| missing | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1 | Q105/Q106/Q107 |  |
+| partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1 | prod "Rendering and shaders"; later 9 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
+| partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1 | Q105/Q106/Q107 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v1 | dec 23 |  |
 | missing | Thermal-aware degradation of optional work | v1 | Q97 |  |
 | missing | Arbitrary .slang/.slangp import; shader preset file import/export | later | Q106 |  |
 
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
-Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable.
+Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable; Frame
+Blending Off (default) / Blend / LCD Ghosting, inheritable.
 
 ### Layouts, skins, touch
 
@@ -478,7 +482,7 @@ Spec: v1.
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
-after shortfalls, frames paced against fixed deadlines).
+after shortfalls); frames run on the display refresh at native speed, up to 120 Hz.
 
 ### Privacy and telemetry
 
@@ -561,6 +565,7 @@ Spec: all missing.
 | missing | Visual skin/layout authoring beyond the lightweight editor | v1.1 |  |  |
 | missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | D 2026-10-05 |  |
 | missing | Browse and download games: itch.io's Game Boy tag in an in-app browser and Homebrew Hub (hh.gbdev.io) by its API, from the library's + menu; downloads go straight to Import Review, with Quick Play | v1.1 | D 2026-10-05 | needs zip import; the app's first network use, so revisit the privacy manifest and label; confirm App Store guideline 4.7 wording |
+| missing | Share an itch.io game page or GitHub page to download and import a ROM | v1.1 | D 2026-10-06 "Shared game pages" | web-URL share extension; resolve supported ROM downloads, choose when several exist, then Import Review or Quick Play; safe ZIP extraction; preserve itch.io's normal purchase/login flow |
 | missing | `.gbproject`-style project import/export | v1.1 |  |  |
 | missing | Better ROM comparison + BPS generation | v1.1 |  |  |
 | missing | iPad side-by-side manual/game | v1.1 |  |  |

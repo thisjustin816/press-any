@@ -11,12 +11,14 @@ import XCTest
 final class QuickPlayTests: XCTestCase {
     func testPromotionPreservesThePickedFilenameAndItsMetadata() throws {
         let harness = try QuickPlayHarness.make()
-        let rom = harness.external.appendingPathComponent("Example v1.10 (Europe) (En,Fr).gb")
+        let rom = harness.external.appendingPathComponent("Example%20v1.10%20(Europe)%20(En,Fr).gb")
+        let decodedFilename = "Example v1.10 (Europe) (En,Fr).gb"
         try TestROM.make(title: "EXAMPLE").write(to: rom)
         let session = try harness.workspace.start(romURL: rom)
         XCTAssertEqual(session.imageURL.lastPathComponent, "rom.bin")
+        XCTAssertEqual(session.originalFilename, decodedFilename)
         let analysis = try harness.promoter.analyze(session, targetGameID: nil)
-        XCTAssertEqual(analysis.originalFilename, rom.lastPathComponent)
+        XCTAssertEqual(analysis.originalFilename, decodedFilename)
         XCTAssertEqual(analysis.filenameMetadata.suggestedTitle, "Example")
         let result = try harness.promoter.promote(
             session: session,
@@ -26,7 +28,7 @@ final class QuickPlayTests: XCTestCase {
         XCTAssertEqual(result.importResult.build.region, "Europe")
         XCTAssertEqual(result.importResult.build.language, "En, Fr")
         XCTAssertEqual(result.importResult.build.versionString, "1.10")
-        XCTAssertEqual(result.importResult.sourceAsset.originalFilename, rom.lastPathComponent)
+        XCTAssertEqual(result.importResult.sourceAsset.originalFilename, decodedFilename)
     }
 
     func testQuickPlayWithExistingSaveNeverMutatesLibraryProfile() throws {

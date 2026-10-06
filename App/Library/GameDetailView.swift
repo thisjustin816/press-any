@@ -14,7 +14,7 @@ struct GameDetailView: View {
 
         var contentTypes: [UTType] {
             switch self {
-            case .patch: [.ipsPatch, .bpsPatch]
+            case .patch: UTType.patchFileTypes
             // `.i`, `.sym` and `.noi` files have no system type; the import checks the contents.
             case .variableMap: [.data]
             case .batterySave, .replacementSave: [.gameBoySave]
@@ -40,6 +40,8 @@ struct GameDetailView: View {
     @State private var badgeTarget: SaveProfile?
     @State private var badgeText = ""
     @State private var deletionTarget: SaveProfile?
+    @State private var renamingBuild: Build?
+    @State private var buildName = ""
 
     private struct SettingsTarget: Identifiable {
         let id = UUID()
@@ -80,6 +82,7 @@ struct GameDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .task { model.reload() }
+            .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in model.reload() }
     }
 
     // The screen is split into pieces the compiler type-checks one at a time; as one expression
@@ -135,6 +138,7 @@ struct GameDetailView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("game.play")
             .disabled(model.preferredBuild == nil)
         }
     }
@@ -317,6 +321,14 @@ struct GameDetailView: View {
 
     private func withAlerts(_ content: some View) -> some View {
         content
+            .alert("Rename Build", isPresented: Binding(
+                get: { renamingBuild != nil },
+                set: { if !$0 { renamingBuild = nil } }
+            ), presenting: renamingBuild) { build in
+                TextField("Build Name", text: $buildName)
+                Button("Rename") { model.rename(build, to: buildName) }
+                Button("Cancel", role: .cancel) {}
+            }
             .alert("New Save Profile", isPresented: $showNewProfile) {
                 TextField("Name", text: $newProfileName)
                 Button("Create") {
@@ -363,6 +375,14 @@ struct GameDetailView: View {
                 }
                 if build.sourceKind == .patchRecipe, let parent = model.buildName(id: build.parentBuildID) {
                     Text("Patched from \(parent)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                // Names alone can't tell these Builds apart.
+                if model.builds.contains(where: {
+                    $0.id != build.id && $0.displayName.caseInsensitiveCompare(build.displayName) == .orderedSame
+                }) {
+                    Text("Added \(build.createdAt.formatted(date: .abbreviated, time: .shortened))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -416,6 +436,10 @@ struct GameDetailView: View {
         }
         Button("Set as Preferred") { model.setPreferredBuild(build) }
         Divider()
+        Button("Rename Build…") {
+            buildName = build.displayName
+            renamingBuild = build
+        }
         Button("Technical Info…") { technicalInfo = build }
         Button("Build Settings…") {
             settingsTarget = SettingsTarget(

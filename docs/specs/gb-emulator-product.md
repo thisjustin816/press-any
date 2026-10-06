@@ -47,7 +47,7 @@ Stable user-facing identity. Owns metadata, aliases, collections/tags, default a
 Exact executable ROM identity. Immutable ROM hash. May be imported complete ROM or generated from Base Build + patch recipe. Stores region/language/revision/version, lineage, toolchain detection, preferred Save Profile, core pin, settings overrides, optional artwork/docs overrides, notes and per-Build playtime.
 
 ### Base Builds
-A Game may have multiple bases (regions/revisions). Patch recipes always reference exact base hash.
+A Game has at most one current base. Choosing a new Base Build demotes the previous one. Patch recipes keep their exact source Build and hash even after that change.
 
 ### Save Profile
 Named playthrough battery save. Manually creatable: blank, duplicate, import `.sav`, Quick Play promotion, future migration. Flat list with subtle ancestry. One current battery save per profile. Narrow overrides for cheats/RTC/autoresume/rewind where appropriate. Per-profile playtime/last played/session count.
@@ -83,7 +83,7 @@ Multiple typed assets: front/back box, cartridge/label, title screen, screenshot
 - Use No-Intro parent/clone/family relationships as high-confidence grouping evidence, not as an inflexible definition of Game.
 - Unambiguous family relationships may be pre-grouped in Import Review; user can change before commit.
 - Revisions/regions/languages normally become Builds of same Game; user may separate.
-- Parse No-Intro naming and ROM-hack bracket conventions best-effort.
+- Parse No-Intro naming and ROM-hack bracket conventions best-effort in v1, with clean title/Build and normalized filename suggestions in import, Quick Play promotion and patching.
 - Extract hack title/author/version into structured metadata instead of cluttering display title.
 - Preserve original imported filename permanently.
 - Normalize internally; physical Rename to Canonical Name is explicit.
@@ -96,7 +96,7 @@ Multiple typed assets: front/back box, cartridge/label, title screen, screenshot
 
 ### Sources
 - Files/document picker.
-- Share Sheet/Open In.
+- Share Sheet/Open In. Direct `.gb`/`.gbc` files offer Quick Play or Import Review; `.ips`/`.bps` files require choosing a Game and base Build. Receive a bounded copy before review, keeping the sender's file untouched. During gameplay the file opens over the paused game; Quick Play closes that game first.
 - ZIP + 7z v1; RAR tentative v1.1.
 - Archives are temporary containers and are not retained.
 - Safe archive handling: path traversal protection, nested-depth and decompression limits, malformed/password-protected handling, no executable behavior.
@@ -117,6 +117,7 @@ Imports may analyze while gameplay continues. If a likely new Build of current G
 - Merge into Game: move/copy Builds with asset/save review.
 - Lightweight Build timeline: versions, hashes, parent relationships, notes, import/activation history.
 - v1 Build comparison: metadata + changed byte/range counts, ROM size/bank differences, header changes. Symbol-aware diff/patch generation later.
+- Import suggests Build roles for review: development releases default Base + Preferred; ROM hacks and patch-created Builds default Preferred but not Base; ordinary additional images remain conservative.
 
 ## Patching
 - v1 formats: IPS + BPS.
@@ -212,7 +213,7 @@ Imports may analyze while gameplay continues. If a likely new Build of current G
 - Delta and Manic import adapters -> internal native skin model; preserve source package; preview/report unsupported elements.
 - Native layout import/export through Files/Share Sheet.
 - Hardware presets for passive accessories such as Playtiles/GameBaby; passive accessories are manual selection, with device-specific calibration offsets. Identifiable connected accessories may be suggested, never force-switched.
-- Sliding D-pad, natural diagonals; sliding A/B; multitouch A+B.
+- Sliding D-pad, natural diagonals; sliding A/B; multitouch A+B. Playtiles widens straight-direction zones: a diagonal's weaker axis must exceed 65% of its stronger axis and the center dead zone. Deliberate diagonals remain available.
 - Subtle pressed-state visual feedback.
 - Light touch haptics by default; automatically suppressed while physical controller is active unless overridden.
 - Optional gameplay gestures off by default.

@@ -22,12 +22,15 @@ final class GameplayViewController: UIViewController {
     /// Uptime when Quick Play's file was chosen, cleared once the first frame is reported.
     private var firstFrameClock: UInt64?
     private var pauseReasons = GameplayPauseReasons()
+    private var coveredBySheet = false
     /// Set when the scene went to the background, so returning applies Resume Games.
     private var backgrounded = false
     /// Set once an emulation error has stopped the game for good.
     private var halted = false
-    private let controlStyle: TouchControlStyle
-    private let screenScaling: ScreenScaling
+    private var controlStyle: TouchControlStyle
+    private var lcdFilter: LCDFilter
+    private var frameBlending: FrameBlending
+    private var screenScaling: ScreenScaling
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
     private let soundMode: SoundMode
@@ -36,8 +39,7 @@ final class GameplayViewController: UIViewController {
     /// Set by a touch while a controller hides the touch controls, and cleared by the controller's
     /// next button press.
     private var touchControlsRevealed = false
-    /// Clear buttons over the layout's menu areas, the logo and, with Tap Game for Menu, the
-    /// picture. They open the game menu with or without a controller connected.
+    /// The wordmark button and optional clear picture target share the same game menu.
     private var menuButtons: [GameMenuButton] = []
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
@@ -48,6 +50,9 @@ final class GameplayViewController: UIViewController {
     var onClose: (() -> Void)?
     /// Set for Quick Play: the menu then offers Add to Library, which closes the game and calls this.
     var onAddToLibrary: (() -> Void)?
+    /// When set, the menu offers Settings, which calls this. The game stays paused under the
+    /// settings, which arrive through `applyDisplaySettings` as they change.
+    var onOpenSettings: (() -> Void)?
 
     init(
         runtime: any GameplayRuntime,
@@ -56,6 +61,8 @@ final class GameplayViewController: UIViewController {
         firstFrameClock: UInt64? = nil,
         controlStyle: TouchControlStyle = .gameBoy,
         screenScaling: ScreenScaling = .integer,
+        lcdFilter: LCDFilter = .off,
+        frameBlending: FrameBlending = .off,
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch,
@@ -66,6 +73,8 @@ final class GameplayViewController: UIViewController {
         self.runtime = runtime
         self.controllerMonitor = controllerMonitor
         self.controlStyle = controlStyle
+        self.lcdFilter = lcdFilter
+        self.frameBlending = frameBlending
         self.screenScaling = screenScaling
         self.controllerTheme = controllerTheme
         self.tapGameForMenu = tapGameForMenu
@@ -90,9 +99,14 @@ final class GameplayViewController: UIViewController {
         configureRuntimeLoop()
         configureInput()
         observeLifecycle()
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: GameplayViewController, _: UITraitCollection) in
+            self.updateMenuButtonAppearance()
+        }
 
         renderer = MetalRenderer(view: metalView)
         renderer?.scaling = screenScaling
+        renderer?.lcdFilter = lcdFilter
+        renderer?.frameBlending = frameBlending
         applyLayout(touchControls.layout)
         // Audio can be unavailable, during a call for example. The game still runs, silently,
         // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
@@ -103,7 +117,7 @@ final class GameplayViewController: UIViewController {
         } catch {
             message = [launchMessage, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
         }
-        // The menu has no visible button, so the first game played says where it is.
+        // Introduce the menu button once, on the first game played.
         if !UserDefaults.standard.bool(forKey: Self.menuHintShownKey) {
             UserDefaults.standard.set(true, forKey: Self.menuHintShownKey)
             message = [message, "Tap \(AppBrand.displayName) for the menu."].compactMap { $0 }.joined(separator: " ")
@@ -123,6 +137,8 @@ final class GameplayViewController: UIViewController {
     var isRunningFrames: Bool { driver.isRunning }
     /// The buttons the game sees held, for tests.
     var heldInput: EmulatorInputState { input.current() }
+    /// The controller layout drawn, for tests.
+    var touchControlStyle: TouchControlStyle { touchControls.style }
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
@@ -160,6 +176,7 @@ final class GameplayViewController: UIViewController {
         resumeConfiguration.cornerStyle = .capsule
         resumeConfiguration.buttonSize = .large
         pausedOverlay.configuration = resumeConfiguration
+        pausedOverlay.accessibilityLabel = "Resume Game"
         pausedOverlay.translatesAutoresizingMaskIntoConstraints = false
         pausedOverlay.isHidden = true
         pausedOverlay.addAction(UIAction { [weak self] _ in self?.resumeTapped() }, for: .touchUpInside)
@@ -177,12 +194,13 @@ final class GameplayViewController: UIViewController {
     private func makeGameMenu() -> UIMenu {
         UIMenu(children: [
             UIDeferredMenuElement.uncached { [weak self] completion in
-                MainActor.assumeIsolated { completion(self?.menuElements() ?? []) }
+                MainActor.assumeIsolated { completion(self?.prepareGameMenu() ?? []) }
             },
         ])
     }
 
-    private func menuElements() -> [UIMenuElement] {
+    func prepareGameMenu() -> [UIMenuElement] {
+        pauseGameplay()
         var elements: [UIMenuElement] = []
         if pausedOverlay.isHidden {
             elements.append(UIAction(title: "Pause", image: UIImage(systemName: "pause.fill")) { [weak self] _ in
@@ -232,6 +250,11 @@ final class GameplayViewController: UIViewController {
                 image: UIImage(systemName: "square.and.arrow.down"),
                 attributes: .disabled
             ) { _ in })
+        }
+        if onOpenSettings != nil {
+            elements.append(UIAction(title: "Settings…", image: UIImage(systemName: "gearshape")) { [weak self] _ in
+                self?.onOpenSettings?()
+            })
         }
         if onAddToLibrary != nil {
             elements.append(UIAction(title: "Add to Library…", image: UIImage(systemName: "square.and.arrow.down.on.square")) { [weak self] _ in
@@ -398,6 +421,8 @@ final class GameplayViewController: UIViewController {
             ? CGRect(x: screen.x, y: screen.y, width: screen.width, height: screen.height)
             : nil
         placeMenuButtons(over: layout.menuAreas)
+        // A paused game draws only when asked, so a new layout redraws the held picture in place.
+        metalView.setNeedsDisplay()
     }
 
     /// The menu buttons sit under the paused overlay and above the touch controls, which pass
@@ -424,6 +449,37 @@ final class GameplayViewController: UIViewController {
             // The first area is the logo; VoiceOver finds the menu there, once.
             button.isAccessibilityElement = index == 0
         }
+        updateMenuButtonAppearance()
+    }
+
+    private func updateMenuButtonAppearance() {
+        let palette = ControllerPalette.resolve(controllerTheme, for: traitCollection)
+        for (index, button) in menuButtons.enumerated() {
+            button.configureWordmark(palette: index == 0 ? palette : nil)
+        }
+    }
+
+    /// Settings changed while the game is open, from its settings sheet. The paused picture redraws
+    /// with them, so the player sees each change behind the sheet.
+    func applyDisplaySettings(
+        controlStyle: TouchControlStyle,
+        screenScaling: ScreenScaling,
+        lcdFilter: LCDFilter,
+        frameBlending: FrameBlending
+    ) {
+        guard controlStyle != self.controlStyle || screenScaling != self.screenScaling
+            || lcdFilter != self.lcdFilter || frameBlending != self.frameBlending else { return }
+        self.controlStyle = controlStyle
+        self.screenScaling = screenScaling
+        self.lcdFilter = lcdFilter
+        self.frameBlending = frameBlending
+        // The touch controls lay out again and report the new layout, which moves the picture.
+        touchControls.style = controlStyle
+        touchControls.scaling = screenScaling
+        renderer?.scaling = screenScaling
+        renderer?.lcdFilter = lcdFilter
+        renderer?.frameBlending = frameBlending
+        metalView.setNeedsDisplay()
     }
 
     private func toggleFastForward() {
@@ -553,6 +609,7 @@ final class GameplayViewController: UIViewController {
     private func pauseGameplay() {
         touchControls.cancelInput()
         input.resetTouch()
+        input.resetController()
         pauseReasons.byPlayer = true
         applyPauseReasons()
         try? runtime.pause()
@@ -576,6 +633,21 @@ final class GameplayViewController: UIViewController {
 
     private func closeTapped() {
         finish(.close)
+    }
+
+    /// Closes the game as the menu's Close Game does, for a caller replacing it with another game.
+    func requestClose() {
+        closeTapped()
+    }
+
+    /// A sheet over the game, such as a file shared mid-game, pauses it as the game menu does, so
+    /// the player resumes when the sheet closes. A sheet never opens over this screen's own alerts,
+    /// the Resume Game? prompt included: a shared file waits until the player answers it.
+    func setCoveredBySheet(_ covered: Bool) {
+        guard covered != coveredBySheet else { return }
+        coveredBySheet = covered
+        guard covered else { return }
+        pauseGameplay()
     }
 
     private func addToLibraryTapped() {
@@ -668,8 +740,15 @@ final class GameplayViewController: UIViewController {
     }
 }
 
-/// A clear button over a menu area that opens the game menu where the finger landed.
+/// The logo has a raised face with the wordmark pressed into it; an optional game-picture target
+/// remains clear.
 private final class GameMenuButton: UIButton {
+    private let face = CAGradientLayer()
+    private let wordmark = UIImageView()
+    private var palette: ControllerPalette?
+    /// The width the wordmark image was drawn for, so layout redraws it only when that changes. A
+    /// new palette clears it.
+    private var drawnWordmarkWidth: CGFloat?
     /// Whether a point in the superview belongs to something under the button instead.
     var yieldsTouch: ((CGPoint) -> Bool)?
 
@@ -678,10 +757,97 @@ private final class GameMenuButton: UIButton {
         self.menu = menu
         showsMenuAsPrimaryAction = true
         accessibilityLabel = "Game Menu"
+        accessibilityHint = "Pauses the game and opens the menu"
+        layer.insertSublayer(face, at: 0)
+        wordmark.isUserInteractionEnabled = false
+        wordmark.contentMode = .center
+        addSubview(wordmark)
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowRadius = 2
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func configureWordmark(palette: ControllerPalette?) {
+        self.palette = palette
+        face.isHidden = palette == nil
+        wordmark.isHidden = palette == nil
+        if let palette {
+            face.borderColor = palette.logo.withAlphaComponent(0.35).cgColor
+            face.borderWidth = 1
+        }
+        drawnWordmarkWidth = nil
+        updatePressedAppearance()
+        setNeedsLayout()
+    }
+
+    override var isHighlighted: Bool {
+        didSet { updatePressedAppearance() }
+    }
+
+    private func updatePressedAppearance() {
+        guard let palette else {
+            layer.shadowOpacity = 0
+            return
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        face.colors = isHighlighted
+            ? [palette.bodyBottom.cgColor, palette.bodyBottom.cgColor]
+            : [palette.bodyTop.cgColor, palette.bodyBottom.cgColor]
+        layer.shadowOpacity = isHighlighted ? 0.15 : 0.4
+        layer.shadowOffset = CGSize(width: 0, height: isHighlighted ? 1 : 3)
+        CATransaction.commit()
+        wordmark.transform = CGAffineTransform(translationX: 0, y: isHighlighted ? 1 : 0)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        face.frame = bounds
+        face.cornerRadius = bounds.height / 2
+        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: bounds.height / 2).cgPath
+        CATransaction.commit()
+        wordmark.bounds = bounds
+        wordmark.center = CGPoint(x: bounds.midX, y: bounds.midY)
+        if let palette, drawnWordmarkWidth != bounds.width {
+            wordmark.image = Self.debossedWordmark(fitting: bounds.width - 16, palette: palette)
+            drawnWordmarkWidth = bounds.width
+        }
+    }
+
+    /// The wordmark at 28 points, or down to 80% of that to fit `width`, pressed into the face. Lit
+    /// from above, each letter's top edge shades the floor of its recess, which shows as a band
+    /// in the recess colors, and its bottom edge catches the light, which shows as a line below.
+    private static func debossedWordmark(fitting width: CGFloat, palette: ControllerPalette) -> UIImage {
+        let natural = AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent).size()
+        let size = 28 * min(1, max(0.8, width / max(natural.width, 1)))
+        let fill = AppBrand.Wordmark.attributedString(size: size, ink: palette.logo, accent: palette.logoAccent)
+        let recess = AppBrand.Wordmark.attributedString(size: size, ink: palette.logoRecess, accent: palette.logoAccentRecess)
+        let highlight = AppBrand.Wordmark.attributedString(size: size, ink: palette.logoHighlight, accent: palette.logoHighlight)
+        let textSize = fill.size()
+        let canvas = CGSize(width: ceil(textSize.width) + 2, height: ceil(textSize.height) + 2)
+        let origin = CGPoint(x: 1, y: 0)
+        // One point deep, so the edges land on whole pixels.
+        let depth: CGFloat = 1
+        func image(_ draw: () -> Void) -> UIImage {
+            UIGraphicsImageRenderer(size: canvas).image { _ in draw() }
+        }
+        let shaded = image { recess.draw(at: origin) }
+        let lit = image { fill.draw(at: CGPoint(x: origin.x, y: origin.y + depth)) }
+        // Source-atop keeps the lit letters inside the shaded ones, so the shade stays only along
+        // the top edges.
+        let letters = image {
+            shaded.draw(at: .zero)
+            lit.draw(at: .zero, blendMode: .sourceAtop, alpha: 1)
+        }
+        return image {
+            highlight.draw(at: CGPoint(x: origin.x, y: origin.y + 1))
+            letters.draw(at: .zero)
+        }
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

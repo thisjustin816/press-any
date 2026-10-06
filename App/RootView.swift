@@ -5,6 +5,7 @@ import GameplayInput
 import Foundation
 import QuickPlay
 import SwiftUI
+import UIKit
 
 @MainActor
 final class AppBootstrap: ObservableObject {
@@ -38,6 +39,20 @@ struct RootView: View {
     @State private var endedQuickPlayAddsToLibrary = false
     @State private var endedQuickPlay: QuickPlaySession?
     @State private var quickPlayToResume: QuickPlaySession?
+    /// Shared files in arrival order, with any that couldn't be received, each shown in turn.
+    @State private var queuedSharedFiles: [SharedArrival] = []
+    @State private var sharedFile: SharedFile?
+    /// Retained until dismissal, so Quick Play can copy the ROM before receipt cleanup.
+    @State private var closingSharedFile: SharedFile?
+    @State private var sharedQuickPlay: QuickPlayRequest?
+    /// Quick Play was chosen for a file shared mid-game, so that game closes first.
+    @State private var closesGameForSharedQuickPlay = false
+    /// A shared file that couldn't be received, reported over the library or over gameplay.
+    @State private var sharedFileError: String?
+    /// Set while a queued shared file waits for another sheet to close.
+    @State private var sharedFileRetryScheduled = false
+    /// The open game's settings, from its menu.
+    @State private var showsGameplaySettings = false
 
     var body: some View {
         Group {
@@ -57,30 +72,56 @@ struct RootView: View {
             }
         }
         .task { openScreenshotScene() }
+        .onOpenURL { receiveSharedFile($0) }
+        .onChange(of: pendingResume != nil || riskyLaunch != nil) { _, hasPendingLaunch in
+            if !hasPendingLaunch { presentNextSharedFile() }
+        }
+        .sheet(item: sharedFileBinding(overGameplay: false), onDismiss: finishSharedFile) { file in
+            sharedFileView(file)
+        }
+        .alert("Couldn’t Open the File", isPresented: sharedFileErrorBinding(overGameplay: false)) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(sharedFileError ?? "")
+        }
         .fullScreenCover(item: $gameplay, onDismiss: showClosingQuickPlay) { presentation in
             GameplayViewControllerRepresentable(
                 runtime: presentation.runtime,
                 autoResumePolicy: presentation.autoResumePolicy,
                 launchMessage: presentation.launchMessage,
                 firstFrameClock: presentation.firstFrameClock,
-                controlStyle: presentation.controlStyle,
-                screenScaling: presentation.screenScaling,
+                display: presentation.display,
                 controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
                 tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
                 hidesTouchControlsWithController: bootstrap.container?.hidesTouchControlsWithController() ?? true,
                 touchHaptics: bootstrap.container?.touchHaptics() ?? .light,
+                isCoveredBySheet: sharedFile != nil || showsGameplaySettings,
+                closeRequested: closesGameForSharedQuickPlay,
                 onClose: { endGameplay(presentation) },
                 onAddToLibrary: presentation.isQuickPlay
                     ? {
                         closingQuickPlayAddsToLibrary = true
                         endGameplay(presentation)
                     }
-                    : nil
+                    : nil,
+                onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true }
             )
             .ignoresSafeArea()
             // The status bar sits on the controller's body: dark text on Classic, light on Dark.
             .preferredColorScheme(bootstrap.container?.controllerTheme().colorScheme)
+            .sheet(isPresented: $showsGameplaySettings, onDismiss: presentNextSharedFile) {
+                gameplaySettingsView(presentation)
+            }
+            // The library's sheet can't show over this cover, so a file shared mid-game opens here.
+            .sheet(item: sharedFileBinding(overGameplay: true), onDismiss: finishSharedFile) { file in
+                sharedFileView(file)
+            }
+            .alert("Couldn’t Open the File", isPresented: sharedFileErrorBinding(overGameplay: true)) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(sharedFileError ?? "")
+            }
         }
         .sheet(item: $endedQuickPlay, onDismiss: resumeChosenQuickPlay) { session in
             if let container = bootstrap.container {
@@ -131,9 +172,137 @@ struct RootView: View {
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) { errorMessage = nil }
+            Button("OK", role: .cancel) {
+                errorMessage = nil
+                presentNextSharedFile()
+            }
         } message: {
             Text(errorMessage ?? "Unknown error")
+        }
+    }
+
+    private func receiveSharedFile(_ url: URL) {
+        guard let container = bootstrap.container else { return }
+        do {
+            queuedSharedFiles.append(.file(try container.sharedFileInbox.receive(url)))
+        } catch {
+            // Reported when nothing else is on screen, as a file would be shown.
+            queuedSharedFiles.append(.failure(error.localizedDescription))
+        }
+        presentNextSharedFile()
+    }
+
+    private func sharedFileErrorBinding(overGameplay: Bool) -> Binding<Bool> {
+        Binding(
+            get: { sharedFileError != nil && (gameplay != nil) == overGameplay },
+            set: { shown in
+                guard !shown else { return }
+                sharedFileError = nil
+                presentNextSharedFile()
+            }
+        )
+    }
+
+    /// One shared file shows at a time: over the library, or over gameplay, which it pauses.
+    private func sharedFileBinding(overGameplay: Bool) -> Binding<SharedFile?> {
+        Binding(
+            get: { (gameplay != nil) == overGameplay ? sharedFile : nil },
+            set: { sharedFile = $0 }
+        )
+    }
+
+    /// The open game's settings, at half height so the paused game shows each change above it.
+    @ViewBuilder
+    private func gameplaySettingsView(_ presentation: GameplayPresentation) -> some View {
+        if let container = bootstrap.container, let target = presentation.settings {
+            ScopedSettingsView(
+                title: target.title,
+                scope: target.scope,
+                system: target.system,
+                gameID: target.gameID,
+                buildID: target.buildID,
+                store: container.repositories.settings,
+                onChange: {
+                    // The cover's item keeps its identity, so the game updates in place.
+                    gameplay?.display = container.gameplayDisplay(for: target)
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
+    }
+
+    @ViewBuilder
+    private func sharedFileView(_ file: SharedFile) -> some View {
+        if let container = bootstrap.container {
+            SharedFileView(
+                file: file,
+                container: container,
+                quickPlayClosesGame: gameplay != nil,
+                onFinished: { sharedFile = nil },
+                onQuickPlay: { request in
+                    sharedQuickPlay = request
+                    sharedFile = nil
+                }
+            )
+        }
+    }
+
+    private func presentNextSharedFile() {
+        guard endedQuickPlay == nil, closingQuickPlayID == nil,
+              pendingResume == nil, riskyLaunch == nil, errorMessage == nil, sharedFileError == nil,
+              closingSharedFile == nil, sharedFile == nil, !queuedSharedFiles.isEmpty else { return }
+        // A sheet the library or Game Details opened, such as Import Review, may hold work in
+        // progress, so the file waits for it to close.
+        guard !hasOtherPresentation else {
+            guard !sharedFileRetryScheduled else { return }
+            sharedFileRetryScheduled = true
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(500))
+                sharedFileRetryScheduled = false
+                presentNextSharedFile()
+            }
+            return
+        }
+        switch queuedSharedFiles.removeFirst() {
+        case .file(let next):
+            closingSharedFile = next
+            sharedFile = next
+        case .failure(let message):
+            sharedFileError = message
+        }
+    }
+
+    /// Whether something other than RootView's own presentations is on screen: anything above the
+    /// library, or above the game while one is running. Those sheets aren't RootView state, so UIKit
+    /// is the one place that knows about them.
+    private var hasOtherPresentation: Bool {
+        let root = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow?.rootViewController }
+            .first
+        let library = root?.presentedViewController
+        return gameplay == nil ? library != nil : library?.presentedViewController != nil
+    }
+
+    private func finishSharedFile() {
+        if sharedQuickPlay != nil, gameplay != nil {
+            closesGameForSharedQuickPlay = true
+            return
+        }
+        startSharedQuickPlay()
+        presentNextSharedFile()
+    }
+
+    /// Starts Quick Play chosen for a shared file, then lets the file's receipt go. Quick Play
+    /// copies the ROM first, so the receipt has to outlive it.
+    private func startSharedQuickPlay() {
+        guard let container = bootstrap.container else { return }
+        if let request = sharedQuickPlay {
+            sharedQuickPlay = nil
+            quickPlay(request, container: container)
+        }
+        if let file = closingSharedFile {
+            container.sharedFileInbox.discard(file)
+            closingSharedFile = nil
         }
     }
 
@@ -214,8 +383,13 @@ struct RootView: View {
                 autoResumePolicy: launch.policy,
                 launchMessage: message,
                 firstFrameClock: nil,
-                controlStyle: container.controllerStyle(for: launch.context),
-                screenScaling: container.screenScaling(for: launch.context)
+                settings: container.gameplaySettingsTarget(for: launch.context),
+                display: GameplayDisplaySettings(
+                    controlStyle: container.controllerStyle(for: launch.context),
+                    screenScaling: container.screenScaling(for: launch.context),
+                    lcdFilter: container.lcdFilter(for: launch.context),
+                    frameBlending: container.frameBlending(for: launch.context)
+                )
             )
         } catch {
             errorMessage = "Could not start the game: \(error)"
@@ -262,13 +436,17 @@ struct RootView: View {
                 ? "Couldn’t resume where you left off, so the game started over from its save."
                 : nil,
             firstFrameClock: firstFrameClock,
-            controlStyle: container.controllerStyle(system: session.system),
-            screenScaling: container.screenScaling(system: session.system)
+            settings: container.gameplaySettingsTarget(system: session.system),
+            display: container.gameplayDisplay(for: container.gameplaySettingsTarget(system: session.system))
         )
     }
 
     private func showClosingQuickPlay() {
-        guard let id = closingQuickPlayID else { return }
+        guard let id = closingQuickPlayID else {
+            startSharedQuickPlay()
+            presentNextSharedFile()
+            return
+        }
         closingQuickPlayID = nil
         let addsToLibrary = closingQuickPlayAddsToLibrary
         closingQuickPlayAddsToLibrary = false
@@ -278,17 +456,30 @@ struct RootView: View {
             endedQuickPlay = try container.quickPlayWorkspace.load(sessionID: id)
         } catch {
             endedQuickPlayAddsToLibrary = false
+            // Its sheet won't show, so a shared ROM waiting on it is dropped and its receipt let go.
+            sharedQuickPlay = nil
+            startSharedQuickPlay()
             errorMessage = "Couldn’t reopen the Quick Play session: \(error.localizedDescription)"
         }
     }
 
+    /// After a Quick Play session's sheet. Resuming that session drops a shared file's pending
+    /// Quick Play, since the player chose the earlier game instead.
     private func resumeChosenQuickPlay() {
-        guard let session = quickPlayToResume, let container = bootstrap.container else { return }
+        guard let session = quickPlayToResume, let container = bootstrap.container else {
+            startSharedQuickPlay()
+            presentNextSharedFile()
+            return
+        }
         quickPlayToResume = nil
+        sharedQuickPlay = nil
+        startSharedQuickPlay()
         resumeQuickPlay(session, container: container)
     }
 
     private func endGameplay(_ presentation: GameplayPresentation) {
+        closesGameForSharedQuickPlay = false
+        showsGameplaySettings = false
         switch presentation.kind {
         case .library:
             bootstrap.container?.stopActiveSession(createAutoState: false)
@@ -297,6 +488,11 @@ struct RootView: View {
         }
         gameplay = nil
     }
+}
+
+private enum SharedArrival {
+    case file(SharedFile)
+    case failure(String)
 }
 
 private struct GameplayPresentation: Identifiable {
@@ -312,8 +508,10 @@ private struct GameplayPresentation: Identifiable {
     let launchMessage: String?
     /// `DispatchTime` uptime when the file was chosen, for Quick Play's time-to-first-frame report.
     let firstFrameClock: UInt64?
-    let controlStyle: TouchControlStyle
-    let screenScaling: ScreenScaling
+    /// Where the game menu's Settings saves, or nil when the game's Build couldn't be read.
+    let settings: GameplaySettingsTarget?
+    /// Updated as the settings sheet changes them.
+    var display: GameplayDisplaySettings
 
     var isQuickPlay: Bool {
         if case .quickPlay = kind { return true }

@@ -11,8 +11,12 @@ struct ImportReviewView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // First, as in Quick Play promotion, so choosing an existing Game isn't missed below the ROM details.
+                ImportDestinationSection(model: model)
+
                 Section {
                     LabeledContent("File", value: model.analysis.originalFilename)
+                    LabeledContent("Suggested Filename", value: model.normalizedFilename)
                     LabeledContent("Header title", value: model.analysis.header.title.isEmpty ? "Unknown" : model.analysis.header.title)
                     LabeledContent("System", value: model.analysis.header.system.displayName)
                     LabeledContent("SHA-256", value: model.shortHash + "…")
@@ -29,8 +33,6 @@ struct ImportReviewView: View {
                 }
 
                 ToolchainSection(reports: model.analysis.toolchainReports)
-
-                ImportDestinationSection(model: model)
 
                 if let message = model.errorMessage {
                     Section {
@@ -86,6 +88,7 @@ struct ImportDestinationSection: View {
                             .tag(ImportReviewViewModel.Destination.existing(game.id))
                     }
                 }
+                .onChange(of: model.destination) { _, _ in model.destinationChanged() }
 
                 if model.destination == .newGame {
                     LabeledContent("Game Title") {
@@ -98,20 +101,30 @@ struct ImportDestinationSection: View {
                         .multilineTextAlignment(.trailing)
                 }
                 Toggle("Base Build", isOn: $model.markAsBase)
+                if model.destination == .newGame {
+                    LabeledContent("Preferred Build", value: "Yes — first Build")
+                } else {
+                    Toggle("Preferred Build", isOn: $model.markAsPreferred)
+                }
             } header: {
                 Text("Destination")
             } footer: {
-                Text("A Base Build is a clean, unmodified ROM that patches are applied to. A Game can have one for each revision or region.")
+                Text("A Base Build is the clean, unmodified ROM that patches are applied to. Choosing it replaces this Game’s previous Base Build.")
             }
             Section {
                 metadataField("Region", text: $model.region)
                 metadataField("Language", text: $model.language)
                 metadataField("Revision", text: $model.revision)
                 metadataField("Version", text: $model.version)
+                metadataField("Base Title", text: $model.baseTitle)
+                metadataField("Hack Title", text: $model.hackTitle)
+                metadataField("Author", text: $model.author)
+                metadataField("Translation", text: $model.translation)
+                metadataField("Status", text: $model.status)
             } header: {
                 Text("Build Details")
             } footer: {
-                Text("Suggested from the filename and ROM header. Correct or clear any detail before importing.")
+                Text("\(model.namingEvidence). Correct or clear any detail before importing.")
             }
         }
     }

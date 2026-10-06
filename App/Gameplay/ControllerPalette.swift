@@ -12,8 +12,14 @@ struct ControllerPalette {
     let dpadPressed: UIColor
     /// The shallow dip at the D-pad's center.
     let dpadDimple: UIColor
-    /// Recesses in the body: the channel A and B sit in and the Playtiles alignment guide.
+    /// The channel A and B sit in on the Game Boy layout.
     let groove: UIColor
+    /// The Playtiles alignment guide, pressed deeper into the body than the groove so it's easy to
+    /// line the controller up against: its floor, the shadow under its top edge, and the light
+    /// catching its bottom edge.
+    let guide: UIColor
+    let guideShadow: UIColor
+    let guideRim: UIColor
     /// A and B are lighter at the top, like a domed button under light.
     let buttonTop: UIColor
     let buttonBottom: UIColor
@@ -27,6 +33,11 @@ struct ControllerPalette {
     /// The app's wordmark (`AppBrand.Wordmark`) in this theme's colors.
     let logo: UIColor
     let logoAccent: UIColor
+    /// The wordmark is pressed into the menu button: the shade under each letter's top edge, in
+    /// the ink and accent's darker tones, and the light along each letter's bottom edge.
+    let logoRecess: UIColor
+    let logoAccentRecess: UIColor
+    let logoHighlight: UIColor
 
     static var classic: ControllerPalette {
         ControllerPalette(
@@ -39,6 +50,9 @@ struct ControllerPalette {
             dpadPressed: rgb(30, 30, 32),
             dpadDimple: rgb(38, 38, 40),
             groove: rgb(170, 168, 165),
+            guide: rgb(160, 158, 155),
+            guideShadow: rgb(140, 138, 135),
+            guideRim: rgb(214, 213, 210),
             buttonTop: rgb(150, 44, 100),
             buttonBottom: rgb(124, 32, 80),
             buttonPressed: rgb(100, 24, 64),
@@ -47,7 +61,10 @@ struct ControllerPalette {
             pillText: rgb(236, 234, 232),
             lettering: rgb(52, 52, 136),
             logo: AppBrand.Wordmark.lightInk,
-            logoAccent: AppBrand.Wordmark.lightAccent
+            logoAccent: AppBrand.Wordmark.lightAccent,
+            logoRecess: rgb(20, 20, 22),
+            logoAccentRecess: rgb(92, 22, 60),
+            logoHighlight: rgb(236, 235, 232)
         )
     }
 
@@ -62,6 +79,9 @@ struct ControllerPalette {
             dpadDimple: rgb(58, 58, 62),
             // Lighter than the body, so the channel behind A and B reads as a tray.
             groove: rgb(46, 46, 50),
+            guide: rgb(14, 14, 16),
+            guideShadow: rgb(6, 6, 7),
+            guideRim: rgb(70, 70, 76),
             buttonTop: rgb(166, 58, 112),
             buttonBottom: rgb(136, 44, 90),
             buttonPressed: rgb(112, 36, 74),
@@ -70,7 +90,10 @@ struct ControllerPalette {
             pillText: rgb(210, 212, 218),
             lettering: rgb(132, 160, 205),
             logo: AppBrand.Wordmark.darkInk,
-            logoAccent: AppBrand.Wordmark.darkAccent
+            logoAccent: AppBrand.Wordmark.darkAccent,
+            logoRecess: rgb(64, 64, 68),
+            logoAccentRecess: rgb(96, 30, 66),
+            logoHighlight: rgb(58, 58, 64)
         )
     }
 

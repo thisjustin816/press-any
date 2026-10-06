@@ -27,6 +27,7 @@ public struct GameCarryOver: Equatable, Sendable {
 
 public enum BuildOperationError: Error, Equatable {
     case buildNotFound(UUID)
+    case invalidBuildName
     case gameNotFound(UUID)
     case buildBelongsToDifferentGame(buildID: UUID, gameID: UUID)
     case profileNotFound(UUID)
@@ -100,15 +101,38 @@ public struct BuildOperations: Sendable {
         try builds.updateBuildMetadata(build)
     }
 
-    /// Marks or unmarks an imported Build as a clean original that patches start from. A Game
-    /// can have several, one per region or revision.
-    public func setBase(buildID: UUID, isBase: Bool) throws {
-        guard var build = try builds.fetchBuild(id: buildID) else { throw BuildOperationError.buildNotFound(buildID) }
-        if isBase, build.sourceKind == .patchRecipe { throw BuildOperationError.patchedBuildCannotBeBase(buildID) }
-        guard build.isBase != isBase else { return }
-        build.isBase = isBase
+    public func renameBuild(buildID: UUID, displayName: String) throws {
+        let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { throw BuildOperationError.invalidBuildName }
+        guard var build = try builds.fetchBuild(id: buildID) else {
+            throw BuildOperationError.buildNotFound(buildID)
+        }
+        guard build.displayName != name else { return }
+        build.displayName = name
         build.modifiedAt = now()
         try builds.updateBuildMetadata(build)
+    }
+
+    /// Marks or unmarks an imported Build as the clean original that patches start from. Marking
+    /// one automatically replaces the Game's previous Base Build.
+    public func setBase(buildID: UUID, isBase: Bool) throws {
+        guard let build = try builds.fetchBuild(id: buildID) else { throw BuildOperationError.buildNotFound(buildID) }
+        if isBase, build.sourceKind == .patchRecipe { throw BuildOperationError.patchedBuildCannotBeBase(buildID) }
+        let timestamp = now()
+        try transactions.run { [builds] in
+            var updatedBuild = build
+            if isBase {
+                try builds.demoteOtherBaseBuilds(
+                    gameID: updatedBuild.gameID,
+                    keeping: updatedBuild.id,
+                    modifiedAt: timestamp
+                )
+            }
+            guard updatedBuild.isBase != isBase else { return }
+            updatedBuild.isBase = isBase
+            updatedBuild.modifiedAt = timestamp
+            try builds.updateBuildMetadata(updatedBuild)
+        }
     }
 
     /// What a promotion's review step selects at first: the Game's artwork, and the Save Profiles
@@ -244,8 +268,9 @@ public struct BuildOperations: Sendable {
         guard sourceGameID != targetGameID else { return }
         guard let sourceGame = try games.fetchGame(id: sourceGameID) else { throw BuildOperationError.gameNotFound(sourceGameID) }
         guard let targetGame = try games.fetchGame(id: targetGameID) else { throw BuildOperationError.gameNotFound(targetGameID) }
+        let targetBuilds = try builds.fetchBuilds(gameID: targetGameID)
         let targetBuildsByImage = Dictionary(
-            try builds.fetchBuilds(gameID: targetGameID).map { ($0.imageSHA256, $0.id) },
+            targetBuilds.map { ($0.imageSHA256, $0.id) },
             uniquingKeysWith: { first, _ in first }
         )
         let targetImages = Set(targetBuildsByImage.keys)
@@ -276,13 +301,23 @@ public struct BuildOperations: Sendable {
             var updatedTargetGame = targetGame
             var firstMergedBuildID: UUID?
             var played: [UUID: UUID?] = [:]
+            var targetHasBase = targetBuilds.contains { $0.isBase }
             for source in sourceBuilds {
+                var merged = source
+                if merged.isBase {
+                    merged.isBase = !targetHasBase
+                    targetHasBase = true
+                }
                 switch mode {
                 case .move:
+                    if merged.isBase != source.isBase {
+                        merged.modifiedAt = timestamp
+                        try builds.updateBuildMetadata(merged)
+                    }
                     try builds.moveBuild(id: source.id, toGameID: targetGameID)
                     if firstMergedBuildID == nil { firstMergedBuildID = source.id }
                 case .copy:
-                    let copied = try copy(source, to: targetGameID, timestamp: timestamp, replacing: replacements)
+                    let copied = try copy(merged, to: targetGameID, timestamp: timestamp, replacing: replacements)
                     played[copied.id] = source.preferredSaveProfileID
                     if firstMergedBuildID == nil { firstMergedBuildID = copied.id }
                 }
@@ -432,6 +467,11 @@ public struct BuildOperations: Sendable {
             revision: source.revision,
             versionString: source.versionString,
             versionSortKey: source.versionSortKey,
+            baseTitle: source.baseTitle,
+            hackTitle: source.hackTitle,
+            author: source.author,
+            translation: source.translation,
+            status: source.status,
             preferredSaveProfileID: nil,
             corePin: source.corePin,
             createdAt: timestamp,

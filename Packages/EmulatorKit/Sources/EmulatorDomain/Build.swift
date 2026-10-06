@@ -45,6 +45,11 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
     public var revision: String?
     public var versionString: String?
     public var versionSortKey: String?
+    public var baseTitle: String?
+    public var hackTitle: String?
+    public var author: String?
+    public var translation: String?
+    public var status: String?
     public var preferredSaveProfileID: UUID?
     public var corePin: CorePin?
     public let createdAt: Date
@@ -65,6 +70,11 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         revision: String? = nil,
         versionString: String? = nil,
         versionSortKey: String? = nil,
+        baseTitle: String? = nil,
+        hackTitle: String? = nil,
+        author: String? = nil,
+        translation: String? = nil,
+        status: String? = nil,
         preferredSaveProfileID: UUID? = nil,
         corePin: CorePin? = nil,
         createdAt: Date,
@@ -84,6 +94,11 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         self.revision = revision
         self.versionString = versionString
         self.versionSortKey = versionSortKey
+        self.baseTitle = baseTitle
+        self.hackTitle = hackTitle
+        self.author = author
+        self.translation = translation
+        self.status = status
         self.preferredSaveProfileID = preferredSaveProfileID
         self.corePin = corePin
         self.createdAt = createdAt

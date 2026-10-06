@@ -3,6 +3,7 @@ import EmulationSession
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import Importing
 import Patching
 
 @MainActor
@@ -151,6 +152,17 @@ final class GameDetailViewModel: ObservableObject {
         perform { try buildOperations.setPreferredBuild(gameID: gameID, buildID: build.id) }
     }
 
+    func rename(_ build: Build, to displayName: String) {
+        do {
+            try buildOperations.renameBuild(buildID: build.id, displayName: displayName)
+            reload()
+        } catch BuildOperationError.invalidBuildName {
+            errorMessage = "A Build name can’t be blank."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     /// Sharing a profile between Builds is this choice: each Build names the profile it plays.
     func setDefaultProfile(_ profile: SaveProfile?, for build: Build) {
         perform { try buildOperations.setPreferredSaveProfile(buildID: build.id, profileID: profile?.id) }
@@ -227,11 +239,31 @@ final class GameDetailViewModel: ObservableObject {
             }
         }
         do {
+            let naming = urls.map { FilenameMetadataParser.parse(filename: $0.lastPathComponent) }
+            let displayName: String
+            let metadata: BuildImportMetadata
+            if let first = naming.first, naming.count == 1 {
+                displayName = BuildNaming.distinctName(
+                    BuildNaming.patchBuildName(for: first),
+                    existing: builds.map(\.displayName),
+                    addedAt: .now
+                )
+                metadata = BuildNaming.patchMetadata(for: first)
+            } else {
+                displayName = BuildNaming.distinctName(
+                    urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + "),
+                    existing: builds.map(\.displayName),
+                    addedAt: .now
+                )
+                metadata = BuildImportMetadata()
+            }
             let patched = try patchCreator.execute(.init(
                 gameID: gameID,
                 baseBuildID: build.id,
                 patches: urls.map { .init(url: $0, ignoreBaseMismatch: ignoringBaseMismatch) },
-                displayName: urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + ")
+                displayName: displayName,
+                makePreferred: true,
+                metadata: metadata
             ))
             reload()
             infoMessage = "Created \(patched.displayName) from \(build.displayName)."
