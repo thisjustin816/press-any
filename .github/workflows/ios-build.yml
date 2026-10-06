@@ -30,7 +30,7 @@ jobs:
         run: brew install xcodegen rgbds
       - name: Bootstrap (boot ROMs and Xcode project)
         run: make bootstrap
-      - name: Share-sheet UI tests and refresh regression control
+      - name: Share-sheet UI tests and refresh/menu regression controls
         run: make test-share-ui
       - name: Export UI attachments
         if: always()

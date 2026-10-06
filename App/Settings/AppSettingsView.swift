@@ -67,7 +67,7 @@ struct AppSettingsView: View {
                 Section {
                     Toggle("Tap Game for Menu", isOn: $tapGameForMenu)
                 } footer: {
-                    Text("Tapping \(AppBrand.displayName) at the bottom of the screen always opens the game menu. This adds tapping the game itself.")
+                    Text("Tapping the \(AppBrand.displayName) button pauses the game and opens the menu. This adds tapping the game itself.")
                 }
 
                 Section {

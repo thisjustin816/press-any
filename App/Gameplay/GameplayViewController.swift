@@ -36,8 +36,7 @@ final class GameplayViewController: UIViewController {
     /// Set by a touch while a controller hides the touch controls, and cleared by the controller's
     /// next button press.
     private var touchControlsRevealed = false
-    /// Clear buttons over the layout's menu areas, the logo and, with Tap Game for Menu, the
-    /// picture. They open the game menu with or without a controller connected.
+    /// The wordmark button and optional clear picture target share the same game menu.
     private var menuButtons: [GameMenuButton] = []
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
@@ -90,6 +89,9 @@ final class GameplayViewController: UIViewController {
         configureRuntimeLoop()
         configureInput()
         observeLifecycle()
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: GameplayViewController, _: UITraitCollection) in
+            self.updateMenuButtonAppearance()
+        }
 
         renderer = MetalRenderer(view: metalView)
         renderer?.scaling = screenScaling
@@ -103,7 +105,7 @@ final class GameplayViewController: UIViewController {
         } catch {
             message = [launchMessage, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
         }
-        // The menu has no visible button, so the first game played says where it is.
+        // Introduce the menu button once, on the first game played.
         if !UserDefaults.standard.bool(forKey: Self.menuHintShownKey) {
             UserDefaults.standard.set(true, forKey: Self.menuHintShownKey)
             message = [message, "Tap \(AppBrand.displayName) for the menu."].compactMap { $0 }.joined(separator: " ")
@@ -160,6 +162,7 @@ final class GameplayViewController: UIViewController {
         resumeConfiguration.cornerStyle = .capsule
         resumeConfiguration.buttonSize = .large
         pausedOverlay.configuration = resumeConfiguration
+        pausedOverlay.accessibilityLabel = "Resume Game"
         pausedOverlay.translatesAutoresizingMaskIntoConstraints = false
         pausedOverlay.isHidden = true
         pausedOverlay.addAction(UIAction { [weak self] _ in self?.resumeTapped() }, for: .touchUpInside)
@@ -177,12 +180,13 @@ final class GameplayViewController: UIViewController {
     private func makeGameMenu() -> UIMenu {
         UIMenu(children: [
             UIDeferredMenuElement.uncached { [weak self] completion in
-                MainActor.assumeIsolated { completion(self?.menuElements() ?? []) }
+                MainActor.assumeIsolated { completion(self?.prepareGameMenu() ?? []) }
             },
         ])
     }
 
-    private func menuElements() -> [UIMenuElement] {
+    func prepareGameMenu() -> [UIMenuElement] {
+        pauseGameplay()
         var elements: [UIMenuElement] = []
         if pausedOverlay.isHidden {
             elements.append(UIAction(title: "Pause", image: UIImage(systemName: "pause.fill")) { [weak self] _ in
@@ -424,6 +428,14 @@ final class GameplayViewController: UIViewController {
             // The first area is the logo; VoiceOver finds the menu there, once.
             button.isAccessibilityElement = index == 0
         }
+        updateMenuButtonAppearance()
+    }
+
+    private func updateMenuButtonAppearance() {
+        let palette = ControllerPalette.resolve(controllerTheme, for: traitCollection)
+        for (index, button) in menuButtons.enumerated() {
+            button.configureWordmark(palette: index == 0 ? palette : nil)
+        }
     }
 
     private func toggleFastForward() {
@@ -553,6 +565,7 @@ final class GameplayViewController: UIViewController {
     private func pauseGameplay() {
         touchControls.cancelInput()
         input.resetTouch()
+        input.resetController()
         pauseReasons.byPlayer = true
         applyPauseReasons()
         try? runtime.pause()
@@ -668,8 +681,10 @@ final class GameplayViewController: UIViewController {
     }
 }
 
-/// A clear button over a menu area that opens the game menu where the finger landed.
+/// The logo has a raised face; an optional game-picture target remains clear.
 private final class GameMenuButton: UIButton {
+    private let face = CAGradientLayer()
+    private var palette: ControllerPalette?
     /// Whether a point in the superview belongs to something under the button instead.
     var yieldsTouch: ((CGPoint) -> Bool)?
 
@@ -678,10 +693,60 @@ private final class GameMenuButton: UIButton {
         self.menu = menu
         showsMenuAsPrimaryAction = true
         accessibilityLabel = "Game Menu"
+        accessibilityHint = "Pauses the game and opens the menu"
+        layer.insertSublayer(face, at: 0)
+        titleLabel?.adjustsFontSizeToFitWidth = true
+        titleLabel?.minimumScaleFactor = 0.8
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowRadius = 2
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func configureWordmark(palette: ControllerPalette?) {
+        self.palette = palette
+        face.isHidden = palette == nil
+        if let palette {
+            setAttributedTitle(AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent), for: .normal)
+            face.borderColor = palette.logo.withAlphaComponent(0.35).cgColor
+            face.borderWidth = 1
+        } else {
+            setAttributedTitle(nil, for: .normal)
+        }
+        updatePressedAppearance()
+        setNeedsLayout()
+    }
+
+    override var isHighlighted: Bool {
+        didSet { updatePressedAppearance() }
+    }
+
+    private func updatePressedAppearance() {
+        guard let palette else {
+            layer.shadowOpacity = 0
+            return
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        face.colors = isHighlighted
+            ? [palette.bodyBottom.cgColor, palette.bodyBottom.cgColor]
+            : [palette.bodyTop.cgColor, palette.bodyBottom.cgColor]
+        layer.shadowOpacity = isHighlighted ? 0.15 : 0.4
+        layer.shadowOffset = CGSize(width: 0, height: isHighlighted ? 1 : 3)
+        CATransaction.commit()
+        titleLabel?.transform = CGAffineTransform(translationX: 0, y: isHighlighted ? 1 : 0)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        face.frame = bounds
+        face.cornerRadius = bounds.height / 2
+        layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: bounds.height / 2).cgPath
+        CATransaction.commit()
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

@@ -89,7 +89,6 @@ final class TouchControllerView: UIView {
         let palette = self.palette
         drawBody(around: layout.screen, palette: palette, in: context)
         if let bezel = layout.bezel { drawBezel(bezel, around: layout.screen, palette: palette, in: context) }
-        if let logo = layout.logo { drawLogo(in: cgRect(logo), palette: palette) }
         guard showsControls else { return }
 
         switch style {
@@ -189,14 +188,6 @@ final class TouchControllerView: UIView {
         path.addClip()
         fillVerticalGradient(bounds, from: palette.bodyTop, to: palette.bodyBottom, in: context)
         context.restoreGState()
-    }
-
-    /// The app's wordmark, printed at the bottom of the body. It stands a few points taller than
-    /// its box, still inside the box's tap area.
-    private func drawLogo(in rect: CGRect, palette: ControllerPalette) {
-        let string = AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent)
-        let textSize = string.size()
-        string.draw(at: CGPoint(x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2))
     }
 
     /// The glass around the game picture, rounded more at the bottom right, as on a Game Boy. That

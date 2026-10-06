@@ -38,6 +38,12 @@ final class SharedFileUITests: XCTestCase {
         app.buttons["Quick Play"].tap()
         expect(app.buttons["Game Menu"])
 
+        app.buttons["Game Menu"].tap()
+        expect(app.buttons["Resume"], message: "opening the game menu pauses the game")
+        XCTAssertFalse(app.buttons["Pause"].exists)
+        app.buttons["Resume"].tap()
+        expect(app.buttons["Game Menu"])
+
         share(baseROM)
         expect(app.buttons["Game Menu"])
         XCTAssertFalse(app.navigationBars["Open ROM"].exists, "sharing must not replace active gameplay")

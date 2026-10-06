@@ -3,6 +3,17 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: The gameplay logo is a button, and opening its menu pauses the game
+
+Render the bottom wordmark as a raised, rounded button in both controller layouts
+and themes, including when a physical controller hides the touch controls. Keep
+the existing tap area and optional Tap Game for Menu target.
+
+Opening the game menu stops frames and audio and releases held touch/controller
+input before building its actions. The menu offers Resume. Dismissing the menu,
+changing Fast Forward or returning from another app keeps gameplay paused until
+the player chooses Resume. Reuse the existing explicit-player pause reason.
+
 ## 2026-10-06: No-Intro and ROM-hack naming belongs in the MVP
 
 Move automatic No-Intro and ROM-hack filename parsing and naming suggestions into

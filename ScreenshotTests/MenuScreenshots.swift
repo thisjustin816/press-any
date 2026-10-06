@@ -83,6 +83,7 @@ final class MenuScreenshots: XCTestCase {
         // Past the boot logo, so the menu opens over the game's own picture.
         sleep(4)
         menu.tap()
+        XCTAssertTrue(app.buttons["Resume"].waitForExistence(timeout: 10), "opening the game menu pauses the game")
         try expect(app.buttons[item], then: name)
     }
 

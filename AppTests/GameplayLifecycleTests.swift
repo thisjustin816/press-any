@@ -1,5 +1,6 @@
 import EmulationCore
 import EmulatorDomain
+import UIKit
 import XCTest
 @testable import PressAny
 
@@ -96,6 +97,54 @@ final class GameplayLifecycleTests: XCTestCase {
         gameplay.sceneWillDeactivate()
         XCTAssertEqual(gameplay.heldInput, EmulatorInputState())
     }
+
+    func testOpeningGameMenuStopsFramesAndReleasesHeldButtons() {
+        let (gameplay, runtime, monitor) = makeGameplay()
+        let deadline = Date().addingTimeInterval(2)
+        while runtime.frames == 0, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        }
+        XCTAssertGreaterThan(runtime.frames, 0, "the test starts with a running game")
+        monitor.onInputChanged?(EmulatorInputState(a: true, start: true))
+
+        let items = gameplay.prepareGameMenu()
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertTrue(gameplay.isShowingPaused)
+        XCTAssertEqual(gameplay.heldInput, EmulatorInputState())
+        XCTAssertTrue(items.contains { ($0 as? UIAction)?.title == "Resume" })
+        XCTAssertFalse(items.contains { ($0 as? UIAction)?.title == "Pause" })
+        let frozen = runtime.frames
+        RunLoop.current.run(until: Date().addingTimeInterval(0.06))
+        XCTAssertEqual(runtime.frames, frozen, "the game does not advance behind its menu")
+        XCTAssertFalse(runtime.failedFrame)
+    }
+
+    func testMenuPauseSurvivesSceneChangesUntilResume() throws {
+        let (gameplay, runtime, _) = makeGameplay(policy: .always)
+        let items = gameplay.prepareGameMenu()
+        gameplay.sceneWillDeactivate()
+        gameplay.sceneDidActivate()
+        gameplay.sceneWillDeactivate()
+        gameplay.sceneDidEnterBackground()
+        gameplay.sceneDidActivate()
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertTrue(gameplay.isShowingPaused)
+        XCTAssertEqual(runtime.foregrounds, 0)
+
+        let resume = try XCTUnwrap(items.compactMap { $0 as? UIAction }.first { $0.title == "Resume" })
+        let button = UIButton(type: .system)
+        button.addAction(resume, for: .touchUpInside)
+        let frozen = runtime.frames
+        button.sendActions(for: .touchUpInside)
+        XCTAssertTrue(gameplay.isRunningFrames)
+        XCTAssertFalse(gameplay.isShowingPaused)
+        let deadline = Date().addingTimeInterval(2)
+        while runtime.frames == frozen, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        }
+        XCTAssertGreaterThan(runtime.frames, frozen, "Resume advances frames again")
+        XCTAssertFalse(runtime.failedFrame)
+    }
 }
 
 final class GameplayPauseReasonsTests: XCTestCase {
@@ -129,11 +178,13 @@ private final class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     private var backgroundCount = 0
     private var foregroundCount = 0
     private var failed = false
+    private var frameCount = 0
     struct NotRunning: Error {}
 
     var backgrounds: Int { lock.withLock { backgroundCount } }
     var foregrounds: Int { lock.withLock { foregroundCount } }
     var failedFrame: Bool { lock.withLock { failed } }
+    var frames: Int { lock.withLock { frameCount } }
     var currentFrame: EmulatorVideoFrame? { nil }
     var playtimeSeconds: Double { 0 }
 
@@ -143,6 +194,7 @@ private final class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
                 failed = true
                 throw NotRunning()
             }
+            frameCount += 1
         }
         return EmulatorVideoFrame(width: 160, height: 144, bgra8888: Data(count: 160 * 144 * 4), emulatedNanoseconds: 16_742_706)
     }

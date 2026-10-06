@@ -218,6 +218,7 @@ For risky Build switches, prefer copying/forking a Save Profile over mutating th
 - Sliding D-pad and A/B behavior.
 - Light on-screen haptics by default; suppress when physical controller is active unless overridden.
 - Bluetooth controller input; unexpected disconnect pauses and reveals touch controls.
+- The bottom wordmark is a visible button in both layouts and themes, available with a physical controller. Opening its game menu freezes gameplay until explicit Resume; Tap Game for Menu shares that behavior when enabled.
 - Cartridge rumble: controller preferred, iPhone fallback.
 - Basic manual save/load state.
 - Basic fast-forward sufficient to validate session architecture; final v1 presets are 1.5x/2x/3x/4x/8x/Unlimited.
