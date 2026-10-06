@@ -23,6 +23,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Foreground autoresume honors Always / Ask / Never behavior.
 - [ ] Add a modified ROM as a second Build; Game identity remains stable.
 - [ ] Import a ROM with metadata tags, such as `Example (Europe) (En,Fr) (Rev A) [v1.10].gb`. Correct or clear Build Details in review. Reopen the app and confirm Technical Info shows the chosen values.
+- [ ] Import No-Intro and ROM-hack filename examples. Review clean Game titles, concise Build names, hack/base title, author, translation/status metadata and normalized filename suggestions. Correct guesses, reopen the app and confirm corrections and original ROM/patch filenames are preserved.
 - [ ] Quick Play that ROM, then Add to Library. Build Details uses the picked filename's metadata.
 - [ ] Share a compatible Save Profile between Builds, then fork it and confirm divergence.
 - [ ] State created on Build A is never loadable on Build B.

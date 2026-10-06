@@ -105,7 +105,7 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Game aliases/alternate titles (indexed) | v1 | Q162 | no field |
-| missing | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; mvp "Game" (provenance records) | none |
+| missing | Metadata source/confidence/provenance + user overrides, Metadata Details UI | MVP filename guesses / v1 full | Q163/Q164; mvp "Automatic naming MVP"; mvp "Game" (provenance records) | reviewable filename guesses and preserved corrections are MVP; the full Metadata Details UI remains v1 |
 | missing | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | no edit UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1 | prod "Documents"; Q169 |  |
