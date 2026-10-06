@@ -22,10 +22,8 @@ Library backend first: everything that decides how the library is stored, identi
 safe lands before more play features, so a library built while testing never needs regrouping or
 migrating later (D "Library backend first").
 
-1. Keep the test library safe: Library Backup export and import (versioned archive, ROMs left out
-   unless asked, merge restore by stable IDs), exports of a save, a ROM and a whole Game, the Files
-   folder they land in, dependency-aware deletion, Recently Deleted for 30 days, and tombstones,
-   which iCloud needs later.
+1. Safe deletion: dependency-aware deletion, Recently Deleted for 30 days, and tombstones, which
+   iCloud needs later.
 2. Identity: No-Intro categorization (confirm the data's license, the `no-intro-update.yml`
    pipeline and bundled baseline, hash matching, Verified/Modified/Unknown, parent/clone grouping
    and merging existing Games that are one family), the regional rows, Match Game for unknown
@@ -42,12 +40,16 @@ migrating later (D "Library backend first").
    and title-screen artwork, the signed catalog file, and the storage screen with cleanup,
    in-flight protection and verification on read.
 6. iCloud sync, once tombstones and the schema have settled.
-7. Display and play feel: GBC color correction, DMG palettes, Fast Forward hold or toggle, slow
+7. Exports, last of the library work because their format follows the settled schema: Library
+   Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
+   stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
+   Files folder they land in come first, as they don't depend on the schema.
+8. Display and play feel: GBC color correction, DMG palettes, Fast Forward hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
-8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
+9. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
    profiles and remapping, landscape and the layout editor, cheats and memory tools, external
    display, and the curated shader library.
-9. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
+10. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
 
 ## Known bugs
 

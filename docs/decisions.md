@@ -19,9 +19,10 @@ with the memory or save the player chose to include.
 
 ## 2026-10-06: Library backend first
 
-The backlog's order puts library backend work ahead of further play features: backup and safe
-deletion, No-Intro identity and regional grouping, the remaining data model, the import pipeline,
-then the library features built on them, with iCloud after the schema settles. The player-facing
+The backlog's order puts library backend work ahead of further play features: safe deletion,
+No-Intro identity and regional grouping, the remaining data model, the import pipeline, the
+library features built on them, and iCloud once the schema settles. The Library Backup and Game
+export come last, because their archive format follows that schema. The player-facing
 features needed for testing are in place, and a library built during testing should not need
 regrouping or migrating when this work lands. Display and play feel and the rest of the core gate
 follow.
