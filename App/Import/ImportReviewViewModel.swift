@@ -49,13 +49,15 @@ final class ImportReviewViewModel: ObservableObject {
         translation = metadata.translation ?? ""
         status = metadata.status ?? ""
 
+        let initialDestination: Destination
         if let suggested = analysis.suggestedGameID {
-            destination = .existing(suggested)
+            initialDestination = .existing(suggested)
         } else {
-            destination = .newGame
+            initialDestination = .newGame
         }
-        markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: destination)
-        markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: destination)
+        destination = initialDestination
+        markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: initialDestination)
+        markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: initialDestination)
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
             ? analysis.header.title
             : analysis.filenameMetadata.suggestedTitle
