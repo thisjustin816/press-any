@@ -1300,7 +1300,7 @@ Locked: multi-signal matching suggests likely existing Game and may preselect it
 Locked: parse recognizable semantic versions/build numbers/dates into a structured sort key while preserving original version text; ambiguous cases fall back to import/creation date and are manually correctable.
 
 ## Q153: Build display names
-Locked: concise Build names such as Original, v0.95, Debug 43; title/author/version remain structured metadata rather than repeated in a long display name.
+Locked: concise Build names such as v0.95, Debug 43 or the added date, 2026-10-06 (see `docs/decisions.md`); title/author/version remain structured metadata rather than repeated in a long display name.
 
 ## Q154: Base Build presentation
 Locked: clean/original ROM is explicitly marked Base Build, remains playable, and anchors patch lineage.

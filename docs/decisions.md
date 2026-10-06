@@ -3,6 +3,14 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Untagged Builds are named for the day they were added
+
+A file with no version tags no longer gets the Build name "Original". Base already marks the
+primary Build, so the name only needs to tell Builds apart. An untagged Build is named for the day
+it is added, "2026-10-06", then the time for one added the same day, as with the repeated names
+below. That includes the first Build of a new Game. Suggest Build Names offers the dated name for
+every Build still called "Original". A hack with nothing else to name it is still "Hack".
+
 ## 2026-10-06: Date-stamped filenames name their Builds
 
 A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version, shown

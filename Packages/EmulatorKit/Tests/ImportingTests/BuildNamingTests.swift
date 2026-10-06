@@ -11,14 +11,15 @@ final class BuildNamingTests: XCTestCase {
     private let october6 = Date(timeIntervalSince1970: 1_791_288_000)
 
     func testAFreeNameIsKept() {
-        XCTAssertEqual(name("Original", existing: ["Rev 1"]), "Original")
+        XCTAssertEqual(name("Rev 1", existing: ["v1.0"]), "Rev 1")
     }
 
     func testADuplicateNameGainsTheDayItWasAdded() {
         XCTAssertEqual(name("v1.0", existing: ["V1.0"]), "v1.0 · Oct 6")
     }
 
-    func testOnlyOneBuildIsEverOriginal() {
+    func testAnUntaggedBuildIsNamedForTheDayItWasAdded() {
+        XCTAssertEqual(name("Original", existing: []), "2026-10-06")
         XCTAssertEqual(name("Original", existing: ["original"]), "2026-10-06")
         let timed = name("Original", existing: ["Original", "2026-10-06"])
         XCTAssertTrue(timed.hasPrefix("2026-10-06 ") && timed.contains("12:00"), timed)
@@ -31,7 +32,7 @@ final class BuildNamingTests: XCTestCase {
         XCTAssertEqual(name("v1.0", existing: ["v1.0", "v1.0 · Oct 6", timed]), "\(timed) (2)")
     }
 
-    func testSuggestionsCoverEscapedFilenameAndDuplicateNamesOnly() throws {
+    func testSuggestionsCoverEscapedUntaggedAndDuplicateNamesOnly() throws {
         let games = InMemoryGameRepository()
         let builds = InMemoryBuildRepository()
         let assets = InMemoryAssetRepository()
@@ -58,16 +59,16 @@ final class BuildNamingTests: XCTestCase {
             filename: "Match%20Land%20%28World%29%20%28Rev%200.2.0%29.gb",
             daysAfter: 0
         )
-        _ = try add("Original", filename: "match-land.gb", daysAfter: 1)
+        let untagged = try add("Original", filename: "match-land.gb", daysAfter: 1)
         let duplicate = try add("Original", filename: "match_land_final.gb", daysAfter: 2)
         _ = try add("My favorite", filename: "match-land-v2.gb", daysAfter: 3)
 
         let suggestions = try BuildNameSuggester(games: games, builds: builds, assets: assets)
             .suggestions(locale: locale, timeZone: utc)
 
-        XCTAssertEqual(suggestions.map(\.buildID), [escaped.id, duplicate.id])
+        XCTAssertEqual(suggestions.map(\.buildID), [escaped.id, untagged.id, duplicate.id])
         // A dotted "Rev" is the homebrew version.
-        XCTAssertEqual(suggestions.map(\.suggestedName), ["v0.2.0", "2026-10-08"])
+        XCTAssertEqual(suggestions.map(\.suggestedName), ["v0.2.0", "2026-10-07", "2026-10-08"])
         XCTAssertEqual(suggestions.first?.currentName, escaped.displayName)
     }
 

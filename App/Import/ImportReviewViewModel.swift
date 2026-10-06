@@ -82,9 +82,13 @@ final class ImportReviewViewModel: ObservableObject {
         destination: Destination,
         existingBuildNames: (UUID) -> [String]
     ) -> String {
-        let name = analysis.filenameMetadata.suggestedBuildName
-        guard case .existing(let gameID) = destination else { return name }
-        return BuildNaming.distinctName(name, existing: existingBuildNames(gameID), addedAt: .now)
+        let existing: [String]
+        if case .existing(let gameID) = destination {
+            existing = existingBuildNames(gameID)
+        } else {
+            existing = []
+        }
+        return BuildNaming.distinctName(analysis.filenameMetadata.suggestedBuildName, existing: existing, addedAt: .now)
     }
 
     var isExactDuplicate: Bool { analysis.exactExistingBuildID != nil }

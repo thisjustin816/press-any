@@ -7,6 +7,8 @@ final class SharedFileUITests: XCTestCase {
     private let baseROM = "gbdk450-rev-v1.0.gb"
     private let colorROM = "gbdk450-dual.gbc"
     private let gameTitle = "Shared Test Game"
+    /// An untagged file's Build is named for the day it's added.
+    private let baseBuildName = Date.now.formatted(Date.ISO8601FormatStyle(timeZone: .current).year().month().day())
 
     private func start() {
         continueAfterFailure = false
@@ -28,7 +30,7 @@ final class SharedFileUITests: XCTestCase {
 
         importBaseROM()
         openGameDetails()
-        expect(app.staticTexts["Original"])
+        expect(app.staticTexts[baseBuildName])
     }
 
     func testSharedROMOpensOverQuickPlayAndPausesIt() {
@@ -69,8 +71,8 @@ final class SharedFileUITests: XCTestCase {
         sharePatchAndApply("ips", name: "Shared IPS Build")
         expect(app.navigationBars[gameTitle])
         expect(app.staticTexts["Shared IPS Build"], message: "the new Build appears without leaving Game Details")
-        expect(app.staticTexts["Original"])
-        expect(app.staticTexts["Patched from Original"])
+        expect(app.staticTexts[baseBuildName])
+        expect(app.staticTexts["Patched from \(baseBuildName)"])
     }
 
     func testSharedBPSRefreshesOpenGameDetails() {
@@ -80,7 +82,7 @@ final class SharedFileUITests: XCTestCase {
         sharePatchAndApply("bps", name: "Shared BPS Build")
         expect(app.navigationBars[gameTitle])
         expect(app.staticTexts["Shared BPS Build"], message: "the new Build appears without leaving Game Details")
-        expect(app.staticTexts["Original"])
+        expect(app.staticTexts[baseBuildName])
     }
 
     func testSharedPatchOpensOverLibraryGameplay() {
@@ -98,7 +100,7 @@ final class SharedFileUITests: XCTestCase {
         expect(app.staticTexts["Mid-Game Patch Build"])
     }
 
-    func testSharedPatchCancellationKeepsOriginalBuild() {
+    func testSharedPatchCancellationKeepsTheBaseBuild() {
         start()
         importBaseROM()
         openGameDetails()
@@ -107,7 +109,7 @@ final class SharedFileUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Apply Patch"].isEnabled, "a base must be selected explicitly")
         app.buttons["Cancel"].tap()
         expect(app.navigationBars[gameTitle])
-        expect(app.staticTexts["Original"])
+        expect(app.staticTexts[baseBuildName])
         XCTAssertFalse(app.staticTexts["gbdk450-rev-v1.0-to-v1.1"].exists)
     }
 
@@ -121,7 +123,7 @@ final class SharedFileUITests: XCTestCase {
         app.buttons["sharedPatch.gamePicker"].tap()
         app.buttons[gameTitle].firstMatch.tap()
         app.buttons["sharedPatch.baseBuildPicker"].tap()
-        app.buttons["Original"].firstMatch.tap()
+        app.buttons[baseBuildName].firstMatch.tap()
         replace(app.textFields["New Build name"], with: name)
         app.buttons["Apply Patch"].tap()
         expect(app.alerts["Build Created"])
@@ -141,7 +143,7 @@ final class SharedFileUITests: XCTestCase {
     private func openGameDetails() {
         gameTile.tap()
         expect(app.navigationBars[gameTitle])
-        expect(app.staticTexts["Original"])
+        expect(app.staticTexts[baseBuildName])
     }
 
     private func closeGameplay() {
