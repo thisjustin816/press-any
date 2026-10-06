@@ -63,6 +63,7 @@ final class AppContainer {
             root = root.appendingPathComponent("UITests/\(id.uuidString)", isDirectory: true)
         }
         #endif
+        removeEmptyInbox()
         return try AppContainer(rootURL: root)
     }
 
@@ -209,11 +210,11 @@ final class AppContainer {
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
         try? fileStore.removeStagedFiles()
-        Self.removeEmptyInbox()
     }
 
     /// iOS leaves Documents/Inbox behind after handing over a shared file, and Files would show it
-    /// in the Press Any folder. Each receipt removes its own copy, so an empty one can go.
+    /// in the Press Any folder. Each receipt removes its own copy, so an empty one can go. Only
+    /// launch sweeps it: Documents isn't under a container's root, and tests share it.
     private static func removeEmptyInbox() {
         let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
         guard let contents = try? FileManager.default.contentsOfDirectory(atPath: inbox.path), contents.isEmpty else { return }
