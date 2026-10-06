@@ -109,9 +109,12 @@ unset TESTFLIGHT_KEYCHAIN_PASSWORD
 
 archive="$RUNNER_TEMP/PressAny.xcarchive"
 export_dir="$RUNNER_TEMP/PressAny-export"
-# The first component allows four digits, the other two allow two. Retries must upload a new
-# version because Apple will not accept a second binary with the same build number.
-version="$((1 + GITHUB_RUN_NUMBER / 100)).$((GITHUB_RUN_NUMBER % 100)).$GITHUB_RUN_ATTEMPT"
+# The build number is the workflow run, so TestFlight reads "0.1 (57)". Apple refuses a second
+# binary with the same build number, so a retried run adds its attempt: 57.2, 57.3.
+version="$GITHUB_RUN_NUMBER"
+if ((GITHUB_RUN_ATTEMPT > 1)); then
+  version="$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT"
+fi
 # Signing belongs to the app target's xcconfig: command-line profile settings would also
 # reach package resource bundles, which do not support provisioning profiles.
 local_signing_created=true
