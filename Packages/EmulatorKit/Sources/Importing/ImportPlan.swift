@@ -23,9 +23,11 @@ public struct ROMImportAnalysis: Equatable, Sendable {
     public let toolchainReports: [ToolchainDetectionReport]
     /// Nil only for analyses made before SHA-1 was computed, such as in tests.
     public let imageSHA1: String?
-    /// The No-Intro dump the image is, when it is one. `filenameMetadata` then reads its canonical
-    /// name instead of the file's name, which stays in `originalFilename`.
+    /// The No-Intro game the image is a copy of, when it is one. `filenameMetadata` then comes from
+    /// No-Intro's fields instead of the file's name, which stays in `originalFilename`.
     public let knownDump: KnownDump?
+    /// The image as No-Intro lists it, which says whether it is a bad copy.
+    public let knownFile: KnownDumpFile?
     /// The Games already holding a Build from the dump's family. With exactly one, it is the
     /// suggested Game; with several, the player chooses (Q157).
     public let familyGameIDs: [UUID]
@@ -43,6 +45,7 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         toolchainReports: [ToolchainDetectionReport] = [],
         imageSHA1: String? = nil,
         knownDump: KnownDump? = nil,
+        knownFile: KnownDumpFile? = nil,
         familyGameIDs: [UUID] = []
     ) {
         self.transactionID = transactionID
@@ -57,6 +60,7 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         self.toolchainReports = toolchainReports
         self.imageSHA1 = imageSHA1
         self.knownDump = knownDump
+        self.knownFile = knownFile
         self.familyGameIDs = familyGameIDs
     }
 }

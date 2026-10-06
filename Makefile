@@ -30,7 +30,7 @@ test-core:
 test-sameboy-bridge:
 	./Scripts/test-sameboy-bridge-linux.sh
 
-# Refresh the bundled No-Intro data from P/C XML files downloaded in a browser:
+# Refresh the bundled No-Intro data from DB exports downloaded in a browser:
 #   make known-dumps GB=<Game Boy .zip or .xml> GBC=<Game Boy Color .zip or .xml>
 known-dumps:
 	./Scripts/generate-known-dumps.py "$(GB)" "$(GBC)" Packages/EmulatorKit/Sources/GameIdentity/Resources/KnownDumps.json

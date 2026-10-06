@@ -44,7 +44,7 @@ struct AcknowledgementsView: View {
     /// The data's source and date, read from the bundled file so a refresh updates it.
     private static var noIntroCredit: String {
         let systems = (try? KnownDumpIndex.bundled())?.catalog.systems ?? []
-        let versions = systems.map { "\($0.dat) \($0.version) (\($0.dumps) dumps)" }.joined(separator: "\n")
+        let versions = systems.map { "\($0.dat) \($0.version) (\($0.games) games)" }.joined(separator: "\n")
         return """
         Game identification data from No-Intro’s DAT-o-MATIC (https://datomatic.no-intro.org):
 

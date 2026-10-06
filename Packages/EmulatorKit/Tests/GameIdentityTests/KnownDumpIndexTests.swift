@@ -4,46 +4,69 @@ import GameIdentity
 import XCTest
 
 final class KnownDumpIndexTests: XCTestCase {
-    private let red = KnownDump(sha1: "AA01", name: "Pocket Critters - Red Version (USA, Europe)", size: 1, system: .gameBoy, regions: ["USA", "EUR"])
-    private let aka = KnownDump(sha1: "bb02", name: "Pocket Critters - Aka (Japan)", size: 1, system: .gameBoy, parent: "Pocket Critters - Red Version (USA, Europe)", regions: ["JPN"])
-    private let akaRev = KnownDump(sha1: "bb03", name: "Pocket Critters - Aka (Japan) (Rev 1)", size: 1, system: .gameBoy, parent: "Pocket Critters - Red Version (USA, Europe)")
-    private let moon = KnownDump(sha1: "dd04", name: "Moon Garden (World) (Aftermarket) (Unl)", size: 1, system: .gameBoy)
-    private let badCopy = KnownDump(sha1: "cc06", name: "Moon Garden (World) (Aftermarket) (Unl) [b]", size: 1, system: .gameBoy, bad: true)
+    private let red = KnownDump(
+        name: "Pocket Critters - Red Version (USA, Europe)", system: .gameBoy, title: "Pocket Critters - Red Version",
+        region: "USA, Europe", languages: "En", files: [KnownDumpFile(sha1: "AA01", size: 1)]
+    )
+    // A good copy and a bad one of the same game.
+    private let aka = KnownDump(
+        name: "Pocket Critters - Aka (Japan)", system: .gameBoy, title: "Pocket Critters - Aka",
+        parent: "Pocket Critters - Red Version (USA, Europe)",
+        files: [KnownDumpFile(sha1: "bb02", size: 1), KnownDumpFile(sha1: "cc06", size: 1, bad: true)]
+    )
+    private let akaRev = KnownDump(
+        name: "Pocket Critters - Aka (Japan) (Rev 1)", system: .gameBoy, title: "Pocket Critters - Aka",
+        version: "Rev 1", parent: "Pocket Critters - Red Version (USA, Europe)", files: [KnownDumpFile(sha1: "bb03", size: 1)]
+    )
+    private let moon = KnownDump(
+        name: "Moon Garden (World) (Aftermarket) (Unl)", system: .gameBoy, title: "Moon Garden",
+        aftermarket: true, unlicensed: true, files: [KnownDumpFile(sha1: "dd04", size: 1)]
+    )
     // The same name in the other system is another game.
-    private let colorRed = KnownDump(sha1: "ee05", name: "Pocket Critters - Red Version (USA, Europe)", size: 1, system: .gameBoyColor)
+    private let colorRed = KnownDump(
+        name: "Pocket Critters - Red Version (USA, Europe)", system: .gameBoyColor, title: "Pocket Critters - Red Version",
+        files: [KnownDumpFile(sha1: "ee05", size: 1)]
+    )
 
-    private func catalog(_ dumps: [KnownDump], gb: Int? = nil, gbc: Int? = nil) -> KnownDumpCatalog {
-        KnownDumpCatalog(
+    private func catalog(_ games: [KnownDump], gb: Int? = nil) -> KnownDumpCatalog {
+        func count(_ system: GameSystem) -> (games: Int, files: Int) {
+            let found = games.filter { $0.system == system }
+            return (found.count, found.reduce(0) { $0 + $1.files.count })
+        }
+        return KnownDumpCatalog(
             source: "test",
             generated: "2026-10-06",
             systems: [
-                .init(system: .gameBoy, dat: "Nintendo - Game Boy", version: "1", dumps: gb ?? dumps.filter { $0.system == .gameBoy }.count),
-                .init(system: .gameBoyColor, dat: "Nintendo - Game Boy Color", version: "1", dumps: gbc ?? dumps.filter { $0.system == .gameBoyColor }.count),
+                .init(system: .gameBoy, dat: "Nintendo - Game Boy", version: "1", games: gb ?? count(.gameBoy).games, files: count(.gameBoy).files),
+                .init(system: .gameBoyColor, dat: "Nintendo - Game Boy Color", version: "1", games: count(.gameBoyColor).games, files: count(.gameBoyColor).files),
             ],
-            dumps: dumps
+            games: games
         )
     }
 
     private func index() throws -> KnownDumpIndex {
-        try KnownDumpIndex(catalog: catalog([akaRev, colorRed, red, moon, aka, badCopy]))
+        try KnownDumpIndex(catalog: catalog([akaRev, colorRed, red, moon, aka]))
     }
 
     func testTheBundledFileLoads() throws {
         let bundled = try KnownDumpIndex.bundled()
         XCTAssertEqual(bundled.catalog.systems.map(\.system), [.gameBoy, .gameBoyColor])
         XCTAssertTrue(bundled.catalog.source.hasPrefix("No-Intro"))
-        XCTAssertFalse(bundled.catalog.dumps.isEmpty)
-        XCTAssertTrue(bundled.catalog.dumps.allSatisfy { $0.sha1.count == 40 }, "every key is a SHA-1")
+        XCTAssertFalse(bundled.catalog.games.isEmpty)
+        XCTAssertTrue(bundled.catalog.games.allSatisfy { !$0.files.isEmpty && $0.files.allSatisfy { $0.sha1.count == 40 } }, "every key is a SHA-1")
     }
 
-    func testLookupIgnoresTheCaseOfTheHash() throws {
+    func testEveryFileOfAGameLeadsToItIgnoringTheCaseOfTheHash() throws {
         let index = try index()
         XCTAssertEqual(index.dump(sha1: "aa01"), red)
         XCTAssertEqual(index.dump(sha1: "BB02"), aka)
+        XCTAssertEqual(index.dump(sha1: "cc06"), aka, "a bad copy is still a copy of the game")
+        XCTAssertEqual(index.file(sha1: "cc06")?.bad, true)
+        XCTAssertEqual(index.file(sha1: "bb02")?.bad, false)
         XCTAssertNil(index.dump(sha1: "ff"))
     }
 
-    func testAFamilyIsItsParentThenItsClonesFromAnyMember() throws {
+    func testAFamilyIsItsRootThenItsClonesFromAnyMember() throws {
         let index = try index()
         XCTAssertEqual(index.family(of: aka), [red, aka, akaRev])
         XCTAssertEqual(index.family(of: red), [red, aka, akaRev])
@@ -51,14 +74,7 @@ final class KnownDumpIndexTests: XCTestCase {
         XCTAssertEqual(index.family(of: colorRed), [colorRed], "a family stays within its system")
     }
 
-    func testTheTitleIsTheNameBeforeItsTags() {
-        XCTAssertEqual(aka.title, "Pocket Critters - Aka")
-        XCTAssertEqual(moon.title, "Moon Garden")
-        XCTAssertEqual(KnownDump(sha1: "1", name: "Plain", size: 1, system: .gameBoy).title, "Plain")
-        XCTAssertEqual(KnownDump(sha1: "2", name: "Bracketed [b]", size: 1, system: .gameBoy).title, "Bracketed")
-    }
-
-    func testVerificationFollowsPatchesBackToTheirDump() throws {
+    func testVerificationFollowsPatchesBackToTheirGame() throws {
         let index = try index()
         let created = Date(timeIntervalSince1970: 0)
         func build(_ hash: String, parent: Build? = nil) -> Build {
@@ -86,8 +102,8 @@ final class KnownDumpIndexTests: XCTestCase {
         XCTAssertEqual(check(patchedTwice), .modified(from: red))
         XCTAssertEqual(check(officialRevision), .verified(akaRev))
         XCTAssertEqual(check(homebrew), .unknown)
-        XCTAssertEqual(check(bad), .badDump(badCopy))
-        XCTAssertEqual(check(patchedFromBad), .unknown, "a patch on a bad dump isn't a modified known dump")
+        XCTAssertEqual(check(bad), .badDump(aka))
+        XCTAssertEqual(check(patchedFromBad), .unknown, "a patch on a bad copy isn't a modified known game")
         XCTAssertEqual(
             index.verification(of: build("0404", parent: homebrew), sha1: { $0.imageSHA256 }, lookup: { _ in nil }),
             .unknown,
@@ -97,11 +113,12 @@ final class KnownDumpIndexTests: XCTestCase {
     }
 
     func testAFileThatBreaksItsPromisesIsRefused() {
-        XCTAssertThrowsError(try KnownDumpIndex(catalog: catalog([red, KnownDump(sha1: "aa01", name: "Copy", size: 1, system: .gameBoy)]))) {
+        let copy = KnownDump(name: "Copy", system: .gameBoy, title: "Copy", files: [KnownDumpFile(sha1: "aa01", size: 1)])
+        XCTAssertThrowsError(try KnownDumpIndex(catalog: catalog([red, copy]))) {
             XCTAssertEqual($0 as? KnownDumpError, .repeatedHash("aa01"))
         }
         XCTAssertThrowsError(try KnownDumpIndex(catalog: catalog([aka]))) {
-            XCTAssertEqual($0 as? KnownDumpError, .unknownParent(dump: aka.name, parent: red.name))
+            XCTAssertEqual($0 as? KnownDumpError, .unknownParent(game: aka.name, parent: red.name))
         }
         XCTAssertThrowsError(try KnownDumpIndex(catalog: catalog([red], gb: 2))) {
             XCTAssertEqual($0 as? KnownDumpError, .countMismatch(system: .gameBoy, stated: 2, found: 1))
@@ -110,18 +127,25 @@ final class KnownDumpIndexTests: XCTestCase {
 
     func testTheGeneratorsOutputDecodes() throws {
         let json = #"""
-        {"source": "No-Intro, DAT-o-MATIC Parent/Clone XML", "generated": "2026-10-06",
-         "systems": [{"system": "gb", "dat": "Nintendo - Game Boy", "version": "20261006-105659", "dumps": 2},
-                     {"system": "gbc", "dat": "Nintendo - Game Boy Color", "version": "20261006-110346", "dumps": 0}],
-         "dumps": [{"sha1": "aa01", "name": "Pocket Critters - Red Version (USA, Europe)", "size": 1048576, "system": "gb", "regions": ["USA", "EUR"], "bad": true},
-                   {"sha1": "bb02", "name": "Pocket Critters - Aka (Japan)", "size": 524288, "system": "gb", "parent": "Pocket Critters - Red Version (USA, Europe)", "regions": ["JPN"]}]}
+        {"source": "No-Intro, DAT-o-MATIC DB Export", "generated": "2026-10-06",
+         "systems": [{"system": "gb", "dat": "Nintendo - Game Boy", "version": "20261006-105659", "games": 2, "files": 3},
+                     {"system": "gbc", "dat": "Nintendo - Game Boy Color", "version": "20261006-110346", "games": 0, "files": 0}],
+         "games": [
+          {"name":"Moon Garden (World) (v1.1) (Aftermarket) (Unl)","system":"gb","title":"Moon Garden","region":"World","version":"v1.1","aftermarket":true,"unlicensed":true,"files":[{"sha1":"dd04","size":65536}]},
+          {"name":"Pocket Critters - Aka (Japan)","system":"gb","title":"Pocket Critters - Aka","region":"Japan","languages":"Ja","status":"Beta 2","parent":"Moon Garden (World) (v1.1) (Aftermarket) (Unl)","files":[{"sha1":"bb02","size":524288},{"sha1":"cc06","size":524288,"bad":true}]}
+         ]}
         """#
         let index = try KnownDumpIndex(data: Data(json.utf8))
-        XCTAssertEqual(index.dump(sha1: "bb02")?.parent, red.name)
-        XCTAssertEqual(index.dump(sha1: "aa01")?.size, 1_048_576)
-        XCTAssertEqual(index.dump(sha1: "aa01")?.bad, true)
-        XCTAssertEqual(index.dump(sha1: "bb02")?.bad, false)
-        XCTAssertEqual(index.catalog.systems.first?.version, "20261006-105659")
+        let aka = try XCTUnwrap(index.dump(sha1: "bb02"))
+        XCTAssertEqual(aka.parent, "Moon Garden (World) (v1.1) (Aftermarket) (Unl)")
+        XCTAssertEqual(aka.status, "Beta 2")
+        XCTAssertEqual(aka.languages, "Ja")
+        XCTAssertFalse(aka.aftermarket)
+        XCTAssertEqual(index.file(sha1: "cc06")?.bad, true)
+        let moon = try XCTUnwrap(index.dump(sha1: "dd04"))
+        XCTAssertEqual(moon.version, "v1.1")
+        XCTAssertTrue(moon.aftermarket && moon.unlicensed)
+        XCTAssertEqual(index.catalog.systems.first?.files, 3)
     }
 }
 

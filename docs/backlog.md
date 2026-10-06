@@ -189,9 +189,9 @@ Done: Search by primary title.
 | missing | Quiet provider metadata refresh never overwriting user overrides | v1 | Q165 |  |
 
 Done: SHA-256 identity for every ROM; Original imported filename preserved permanently; the bundled
-No-Intro data (both systems, aftermarket releases included) with its generator, manual refresh and
-90-day CI reminder; Verified / Bad Dump / Modified / Unknown in Technical Info, never altering a
-ROM.
+No-Intro data (both systems' DB exports, aftermarket releases included) with its generator, manual
+refresh and 90-day CI reminder; Verified / Bad Dump / Modified / Unknown in Technical Info, never
+altering a ROM.
 
 ### Import
 

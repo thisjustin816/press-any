@@ -121,7 +121,7 @@ final class ImportReviewViewModel: ObservableObject {
         guard let dump = analysis.knownDump else {
             return "Filename suggestion · \(analysis.filenameMetadata.confidence.displayName) confidence"
         }
-        var evidence = dump.bad
+        var evidence = analysis.knownFile?.bad == true
             ? "No-Intro lists this file as a bad dump of \(dump.name)"
             : "Verified No-Intro dump: \(dump.name)"
         if analysis.familyGameIDs.count > 1 {

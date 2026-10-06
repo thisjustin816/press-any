@@ -11,19 +11,20 @@ combined, published, distributed, and otherwise reused by anyone for any lawful 
 commercial projects included, with no attribution required. The app credits No-Intro in
 Acknowledgements anyway, with the date of the data it carries.
 
-The source is the Parent/Clone XML for "Nintendo - Game Boy" and "Nintendo - Game Boy Color", with
-Aftermarket included, since homebrew sold on cartridges is part of this app's library. A generator
-turns the two files into one compact file the app bundles: for each dump its canonical name, SHA-1,
-size, system, parent, release regions and whether No-Intro marks it a bad dump. The key is SHA-1
-because the P/C XML carries no SHA-256 and the standard DATs lack it for most Game Boy Color dumps;
-every entry has a SHA-1. Everything else the app needs, title, region, language, revision and
-status flags, comes from the same filename parser that reads the player's own files, applied to the
-canonical name, so there is one naming parser.
+The source is DAT-o-MATIC's DB export for "Nintendo - Game Boy" and "Nintendo - Game Boy Color". It
+lists every file No-Intro knows for each game, its own trusted dumps and scene releases it hasn't
+dumped itself, so it holds every image the Parent/Clone XML does and about 450 more, half of them
+known bad copies, homebrew included. It also records each game's title, region, languages,
+development status, version, and whether it is aftermarket or unlicensed apart from the name, and
+marks bad copies file by file. A generator turns the two exports into one compact file the app
+bundles: per game, its canonical name, those fields, its family's root, and each file's SHA-1, size
+and bad flag. The key is SHA-1 because the export lacks SHA-256 for many Game Boy Color files;
+every file has a SHA-1. Where the two formats both record a family, they agree.
 
 Refreshing is a human step. DAT-o-MATIC bans clients it takes for bots, lifts bans only by email,
 and its download is a browser form, so no workflow or build fetches from it; a scheduled job could
 get shared runner addresses banned for everyone. Every three months or so, a maintainer downloads
-the two P/C XML files in a browser, runs the generator, and opens a pull request that shows what
+the two DB exports in a browser, runs the generator, and opens a pull request that shows what
 changed. The data rides app releases; TestFlight carries it the same day. The signed downloadable
 updates in `dec 18` wait until the app has a host for them and a signing key; the file already
 carries its date and counts. CI warns when the file is more than 90 days old. Downloading the data
