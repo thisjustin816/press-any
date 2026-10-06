@@ -21,8 +21,84 @@ extension AppDatabase {
         migrator.registerMigration("v1-v6-release-sort-marker") { db in
             try db.execute(sql: V1V6ReleaseSortMarkerSchema.sql)
         }
+        // Rebuilds `builds`, so it relies on the migrator's default of checking foreign keys only
+        // once the migration is done.
+        migrator.registerMigration("v1-v7-recently-deleted") { db in
+            try db.execute(sql: V1V7RecentlyDeletedSchema.sql)
+        }
         return migrator
     }
+}
+
+/// Recently Deleted. A deleted Game, Build, Save Profile or state keeps its row, marked with the
+/// deletion that hid it, until it is purged; a purged record leaves a tombstone for good.
+///
+/// A deleted Build keeps its ROM hash, so `builds` is rebuilt to let the one-ROM-per-Game rule and
+/// the one-Base rule count only live Builds; SQLite can't drop a table constraint in place.
+enum V1V7RecentlyDeletedSchema {
+    private static let buildColumns = """
+    id, game_id, system, display_name, rom_asset_id, rom_sha256, source_kind, parent_build_id,
+    is_base, region, language, revision, version_string, version_sort_key,
+    preferred_save_profile_id, pinned_core_id, pinned_core_version, core_pinned_at,
+    created_at, modified_at, base_title, hack_title, author, translation, status
+    """
+
+    static let sql = #"""
+    CREATE TABLE builds_new (
+        id TEXT PRIMARY KEY NOT NULL,
+        game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+        system TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        rom_asset_id TEXT NOT NULL REFERENCES managed_assets(id),
+        rom_sha256 TEXT NOT NULL,
+        source_kind TEXT NOT NULL,
+        parent_build_id TEXT REFERENCES builds(id) ON DELETE SET NULL,
+        is_base INTEGER NOT NULL DEFAULT 0 CHECK (is_base IN (0, 1)),
+        region TEXT,
+        language TEXT,
+        revision TEXT,
+        version_string TEXT,
+        version_sort_key TEXT,
+        preferred_save_profile_id TEXT,
+        pinned_core_id TEXT,
+        pinned_core_version TEXT,
+        core_pinned_at TEXT,
+        created_at TEXT NOT NULL,
+        modified_at TEXT NOT NULL,
+        base_title TEXT,
+        hack_title TEXT,
+        author TEXT,
+        translation TEXT,
+        status TEXT,
+        deletion_id TEXT
+    );
+    INSERT INTO builds_new (\#(buildColumns)) SELECT \#(buildColumns) FROM builds;
+    DROP TABLE builds;
+    ALTER TABLE builds_new RENAME TO builds;
+    CREATE INDEX builds_game_id ON builds(game_id);
+    CREATE INDEX builds_rom_sha256 ON builds(rom_sha256);
+    CREATE UNIQUE INDEX builds_live_rom ON builds(game_id, rom_sha256) WHERE deletion_id IS NULL;
+    CREATE UNIQUE INDEX builds_single_base ON builds(game_id) WHERE is_base = 1 AND deletion_id IS NULL;
+
+    ALTER TABLE games ADD COLUMN deletion_id TEXT;
+    ALTER TABLE save_profiles ADD COLUMN deletion_id TEXT;
+    ALTER TABLE save_states ADD COLUMN deletion_id TEXT;
+
+    CREATE TABLE library_deletions (
+        id TEXT PRIMARY KEY NOT NULL,
+        kind TEXT NOT NULL,
+        title TEXT NOT NULL,
+        game_id TEXT NOT NULL,
+        deleted_at TEXT NOT NULL
+    );
+
+    CREATE TABLE tombstones (
+        record_id TEXT PRIMARY KEY NOT NULL,
+        record_kind TEXT NOT NULL,
+        deleted_at TEXT NOT NULL,
+        purged_at TEXT NOT NULL
+    );
+    """#
 }
 
 /// Version sort keys gained a suffix so a prerelease sorts before its release: "~" ends a release's
