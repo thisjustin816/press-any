@@ -24,10 +24,11 @@ migrating later (D "Library backend first").
 
 1. Safe deletion: deleting a single save state is what remains. Dependency-aware deletion,
    Recently Deleted and local tombstones are done.
-2. Identity: No-Intro categorization (confirm the data's license, the `no-intro-update.yml`
-   pipeline and bundled baseline, hash matching, Verified/Modified/Unknown, parent/clone grouping
-   and merging existing Games that are one family), the regional rows, Match Game for unknown
-   ROMs and lineage without owning the base, and the ROM-hack naming that remains.
+2. Identity: No-Intro categorization (the bundled data and its generator, hash matching,
+   Verified/Modified/Unknown, parent/clone grouping and merging existing Games that are one
+   family), the regional rows, Match Game for unknown ROMs and lineage without owning the base,
+   and the ROM-hack naming that remains. The license is confirmed and the design is in
+   `docs/superpowers/plans/2026-10-06-no-intro-identity.md`.
 3. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
    metadata provenance with Metadata Details, Build notes, per-Build playtime and the Build
    timeline, typed multi-artwork, documents, tags, collections and favorites, declared save
@@ -179,8 +180,9 @@ Done: Search by primary title.
 | partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |
 | missing | Verification status Verified/Modified/Unknown; never auto-repair | v1 | dec 18 |  |
-| missing | No-Intro GB/GBC data pipeline (`no-intro-update.yml`): hash, canonical name, region, language, revision, status flags (Beta, Proto, Demo, Sample, Unl, Aftermarket, Virtual Console, Pirate) and parent/clone family, normalized into a compact offline file and reviewed per update | v1 | later 11; prod "ROM identity" | the data's license must allow bundling first |
-| missing | Bundled No-Intro baseline + signed/validated downloadable updates; matching works offline | v1 | dec 18; prod "ROM identity" |  |
+| missing | No-Intro GB/GBC data: the P/C XML for both systems turned into one compact bundled file by `Scripts/generate-known-dumps.py`, refreshed by hand from a browser download and reviewed per update | v1 | later 11; prod "ROM identity"; D "The game database is No-Intro's" | the license allows bundling; DAT-o-MATIC bans automated clients, so `no-intro-update.yml` is not built |
+| missing | Bundled No-Intro baseline; matching works offline | v1 | dec 18; prod "ROM identity" | ships in the app, refreshed with app releases |
+| missing | Signed/validated downloadable database updates | v1.1 | dec 18 | needs a host and a signing key; the bundled file already carries its date |
 | missing | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | dec 18; Q156; D "Regional releases and No-Intro families" | today they come only from filename tags |
 | missing | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | Q156/Q157; prod "ROM identity" | today only a matching title after tags are stripped joins an existing Game |
 | missing | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Build Names | v1 | Q157; D "Regional releases and No-Intro families" |  |
