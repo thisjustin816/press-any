@@ -1,8 +1,9 @@
 # TestFlight and App Store screenshots with GitHub Actions
 
-No Mac is needed. GitHub's `macos-26` runner builds the app with Xcode. The manual
-**TestFlight** workflow signs a Release archive and uploads it to App Store Connect;
-the separate **Screenshots** workflow captures simulator PNGs for download.
+No Mac is needed. GitHub's `macos-26` runner builds the app with Xcode. The
+**TestFlight** workflow, automatic for `main` and manual for other branches, signs a
+Release archive and uploads it to App Store Connect; the separate **Screenshots**
+workflow captures simulator PNGs for download.
 
 ## 1. Create the Apple app record
 
@@ -84,9 +85,11 @@ then choose **New repository secret** for each row:
 
 Keep the two private keys out of chat, commits, workflow logs and downloadable
 Actions artifacts. Add these as repository secrets, not environment secrets.
-The workflow has `contents: read` and is manually dispatched from a branch in this
-repository, including feature branches. Review the selected branch's workflow and
-`Scripts/upload-testflight.sh` before running them with signing secrets.
+The upload job has `contents: read` and `actions: read`, and runs for pushes to
+`main` or when started by hand from a branch in this repository, including feature
+branches. A separate job without the secrets has `contents: write` to tag `main`
+uploads. Review the selected branch's workflow and `Scripts/upload-testflight.sh`
+before running them with signing secrets.
 
 To convert a downloaded binary file without a Mac, run this in PowerShell and
 paste the clipboard value into the matching GitHub secret:
@@ -102,13 +105,18 @@ before running the next command. A helper can also convert the `.cer` and
 
 ## 6. Upload a build
 
-Open **Actions → TestFlight → Run workflow**, select the branch to test, and run
-it. Feature branches can upload before merging; `main` remains available for
-release builds. The workflow must exist on the default branch for GitHub to offer
-manual dispatch, and the selected branch supplies the workflow and app source.
-Start from app changes whose **CI** and
-**iOS build** checks passed. No signing secret is needed for those checks or for
-screenshots.
+Every commit on `main` uploads on its own. When the **iOS build** workflow passes
+on a push to `main`, the TestFlight workflow waits for **CI** on the same commit,
+then archives and uploads it. A push that changes only `docs/`, `.github/` or
+Markdown files since the previous upload is skipped. A failed or cancelled iOS
+build or CI run uploads nothing. Because GitHub runs a `workflow_run` workflow from
+`main`'s copy, and the job accepts only pushes to this repository's `main`, pull
+requests never reach the signing secrets.
+
+To upload a feature branch before merging, open **Actions → TestFlight → Run
+workflow**, select the branch and run it. The selected branch supplies the
+workflow and app source. Start from changes whose **CI** and **iOS build** checks
+passed. No signing secret is needed for those checks or for screenshots.
 
 To queue a feature branch from the GitHub CLI:
 
@@ -116,18 +124,31 @@ To queue a feature branch from the GitHub CLI:
 gh workflow run testflight.yml --repo thisjustin816/press-any --ref fix/shared-files-playtiles
 ```
 
-The Actions run name includes the selected branch. Tags and automatic events do
-not run the upload job. Uploads share one queue across branches.
+The Actions run name includes the branch. Tags do not run the upload job. Uploads
+share one queue across branches.
+
+Each upload sets the build's **What to Test** text from the commits since the
+previous upload: a merged pull request appears as its title and number. A `main`
+build lists what changed since the last `main` upload; a feature branch build
+lists the branch's own commits. The workflow tags each `main` upload
+`testflight/<build>` at the commit it built, which is where the next build's list
+starts and which maps a TestFlight build back to its commit. The text is posted
+through the App Store Connect API once Apple has the build, which can take some
+minutes. If that fails, the upload still counts and the run shows the warning;
+add the text in App Store Connect if it matters for that build.
 
 The upload workflow bootstraps the generated project and SameBoy boot ROMs,
 imports the certificate into a temporary keychain, installs the provisioning
 profile, archives the app, verifies its bundled privacy manifest, exports an IPA
 using `Config/ExportOptions-TestFlight.plist` and uploads it with Apple's `altool`.
 It deletes its temporary signing files and keychain when the script exits. It
-does not publish an App Store release or automatically invite testers.
+does not publish an App Store release or add builds to tester groups. An internal
+group with **automatic distribution** turned on receives each processed build; other
+groups get a build when you add it to them in App Store Connect.
 
-The marketing version comes from `project.yml` (currently `0.1.0`). The build
-number encodes the workflow run and retry as three numeric components: run 1,
+The marketing version comes from `MARKETING_VERSION` in `project.yml` (currently
+`0.1.0`), and TestFlight shows it with the build number beside it. It changes only
+when that value is edited. The build number encodes the workflow run and retry as three numeric components: run 1,
 attempt 1 is `1.1.1`; run 100, attempt 1 is `2.0.1`. Retrying a run uploads a
 different build number. Keep this workflow as the build-number source for this
 marketing version; other upload paths must avoid collisions.
@@ -179,7 +200,9 @@ need an iPad screenshot set. Capturing screenshots does not upload them to Apple
 
 | Symptom | What to check |
 |---|---|
-| TestFlight job is skipped | Manually dispatch it from a repository branch, not a tag |
+| TestFlight job is skipped | For `main`, the iOS build run on that push failed or was cancelled by a newer push; otherwise dispatch it from a repository branch, not a tag |
+| Run succeeds but uploads nothing | The push changed only docs, workflows or Markdown since the previous upload; the run summary says so |
+| What to Test is empty | The Set What to Test step's log; Apple may not have finished processing within its wait |
 | `Missing ...` | The matching repository secret is present with the exact name |
 | OpenSSL rejects the certificate or key | `.cer` is Apple's original DER file; the private key matches the CSR used for it |
 | No matching provisioning profile / signing identity | Profile includes this certificate, is for `com.thisjustin816.PressAny`, and is App Store distribution; regenerate expired credentials |

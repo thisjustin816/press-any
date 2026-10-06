@@ -1,10 +1,12 @@
 # Release
 
-TestFlight builds come from the manual `TestFlight` workflow
-(`.github/workflows/testflight.yml`). GitHub's macOS runner builds a Release
-archive, signs it with an Apple Distribution certificate and App Store
-provisioning profile, checks its privacy manifest, and uploads it with an App
-Store Connect team API key. No Mac or local Xcode is needed.
+TestFlight builds come from the `TestFlight` workflow
+(`.github/workflows/testflight.yml`), which uploads each commit on `main` once its
+checks pass and any branch when started by hand. GitHub's macOS runner builds a
+Release archive, signs it with an Apple Distribution certificate and App Store
+provisioning profile, checks its privacy manifest, uploads it with an App Store
+Connect team API key and fills in What to Test from the commits since the previous
+upload. No Mac or local Xcode is needed.
 
 Follow [TestFlight and App Store screenshots](testflight.md) for the app record,
 certificate request, provisioning profile, all six repository secrets, build
