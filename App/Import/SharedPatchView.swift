@@ -27,12 +27,14 @@ struct SharedPatchView: View {
                             Text(game.primaryTitle).tag(Optional(game.id))
                         }
                     }
+                    .accessibilityIdentifier("sharedPatch.gamePicker")
                     Picker("Base Build", selection: $buildID) {
                         Text("Choose a Build").tag(nil as UUID?)
                         ForEach(builds) { build in
                             Text(build.displayName).tag(Optional(build.id))
                         }
                     }
+                    .accessibilityIdentifier("sharedPatch.baseBuildPicker")
                     .disabled(gameID == nil)
                     TextField("New Build name", text: $displayName)
                         .accessibilityLabel("New Build name")

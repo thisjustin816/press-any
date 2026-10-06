@@ -32,6 +32,14 @@ jobs:
         run: make bootstrap
       - name: Share-sheet UI tests and refresh regression control
         run: make test-share-ui
+      - name: Export UI attachments
+        if: always()
+        run: |
+          for result in build/share-ui/*.xcresult; do
+            [ -d "$result" ] || continue
+            name="$(basename "$result" .xcresult)"
+            xcrun xcresulttool export attachments --path "$result" --output-path "build/share-ui/attachments/$name"
+          done
       - name: Upload UI results and failure screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -40,6 +48,7 @@ jobs:
           path: |
             build/share-ui/*.log
             build/share-ui/*.xcresult
+            build/share-ui/attachments/
           if-no-files-found: ignore
           retention-days: 7
 

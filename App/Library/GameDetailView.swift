@@ -136,6 +136,7 @@ struct GameDetailView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("game.play")
             .disabled(model.preferredBuild == nil)
         }
     }

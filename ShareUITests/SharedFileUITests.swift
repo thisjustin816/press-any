@@ -76,7 +76,7 @@ final class SharedFileUITests: XCTestCase {
         start()
         importBaseROM()
         openGameDetails()
-        app.buttons["Play"].firstMatch.tap()
+        app.buttons["game.play"].tap()
         expect(app.buttons["Game Menu"])
         share("gbdk450-rev-v1.0-to-v1.1.ips")
         expect(app.buttons["Game Menu"])
@@ -108,9 +108,9 @@ final class SharedFileUITests: XCTestCase {
     }
 
     private func applyPatch(name: String) {
-        app.buttons["Game"].tap()
+        app.buttons["sharedPatch.gamePicker"].tap()
         app.buttons[gameTitle].firstMatch.tap()
-        app.buttons["Base Build"].tap()
+        app.buttons["sharedPatch.baseBuildPicker"].tap()
         app.buttons["Original"].firstMatch.tap()
         replace(app.textFields["New Build name"], with: name)
         app.buttons["Apply Patch"].tap()
@@ -125,11 +125,11 @@ final class SharedFileUITests: XCTestCase {
         expect(app.navigationBars["Import Review"])
         replace(app.textFields["Game Title"], with: gameTitle)
         app.navigationBars.buttons["Import"].tap()
-        expect(app.buttons[gameTitle])
+        expect(gameTile)
     }
 
     private func openGameDetails() {
-        app.buttons[gameTitle].tap()
+        gameTile.tap()
         expect(app.navigationBars[gameTitle])
         expect(app.staticTexts["Original"])
     }
@@ -138,6 +138,10 @@ final class SharedFileUITests: XCTestCase {
         app.buttons["Game Menu"].tap()
         expect(app.buttons["Close Game"])
         app.buttons["Close Game"].tap()
+    }
+
+    private var gameTile: XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", gameTitle)).firstMatch
     }
 
     private func share(_ filename: String) {
@@ -168,6 +172,7 @@ final class SharedFileUITests: XCTestCase {
     private func expect(_ element: XCUIElement, message: String = "", file: StaticString = #filePath, line: UInt = #line) {
         let exists = element.waitForExistence(timeout: 10)
         if !exists {
+            print(app.debugDescription)
             let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             attachment.lifetime = .keepAlways
             add(attachment)
