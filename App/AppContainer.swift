@@ -4,6 +4,7 @@ import EmulationSession
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameIdentity
 import GameplayInput
 import Importing
 import Patching
@@ -19,6 +20,9 @@ final class AppContainer {
     let integrityChecker: ManagedAssetIntegrityChecker
     let database: AppDatabase
     let repositories: GRDBRepositorySet
+    /// No-Intro's known dumps, bundled with the app. Nil only if the bundled file is unreadable,
+    /// which its tests rule out; imports then go unmatched.
+    let knownDumps: KnownDumpIndex?
 
     let importAnalyzer: ROMImportAnalyzer
     let importCommitter: ImportCommitter
@@ -71,7 +75,8 @@ final class AppContainer {
         repositories = database.makeRepositories()
 
         integrityChecker = ManagedAssetIntegrityChecker(assets: repositories.assets, assetStore: fileStore)
-        importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, assetStore: fileStore)
+        knownDumps = try? KnownDumpIndex.bundled()
+        importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, assetStore: fileStore, knownDumps: knownDumps)
         importCommitter = ImportCommitter(
             games: repositories.games,
             builds: repositories.builds,
@@ -196,6 +201,10 @@ final class AppContainer {
         settingsResolver = SettingsResolver(store: repositories.settings)
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
+        // Builds imported before SHA-1 was kept get it once, off the main thread, so matching
+        // against No-Intro's data never reads ROMs. A large library takes a few seconds.
+        let fillSHA1 = FillImageSHA1(builds: repositories.builds, assetStore: fileStore)
+        Task.detached(priority: .utility) { _ = try? fillSHA1.execute() }
         try? fileStore.removeStagedFiles()
     }
 

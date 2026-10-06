@@ -2,6 +2,7 @@ import Combine
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameIdentity
 import Importing
 
 @MainActor
@@ -46,8 +47,11 @@ final class ImportReviewViewModel: ObservableObject {
         existingBuilds: @escaping (UUID) -> [Build] = { _ in [] }
     ) {
         self.analysis = analysis
+        // Games holding the release's No-Intro family come first, so a choice among them is at hand.
+        let family = Set(analysis.familyGameIDs)
         self.games = games.sorted {
-            $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
+            if family.contains($0.id) != family.contains($1.id) { return family.contains($0.id) }
+            return $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
         }
         self.coordinator = coordinator
         self.existingBuilds = existingBuilds
@@ -63,8 +67,11 @@ final class ImportReviewViewModel: ObservableObject {
         status = metadata.status ?? ""
 
         let initialDestination: Destination
-        if let suggested = analysis.suggestedGameID
-            ?? GameMatcher.matchingGameID(for: analysis.filenameMetadata, headerTitle: analysis.header.title, in: games) {
+        // A family split across Games is the player's choice; a title match mustn't make it for them.
+        let titleMatch = analysis.familyGameIDs.count > 1
+            ? nil
+            : GameMatcher.matchingGameID(for: analysis.filenameMetadata, headerTitle: analysis.header.title, in: games)
+        if let suggested = analysis.suggestedGameID ?? titleMatch {
             initialDestination = .existing(suggested)
         } else {
             initialDestination = .newGame
@@ -98,7 +105,12 @@ final class ImportReviewViewModel: ObservableObject {
     var isExactDuplicate: Bool { analysis.exactExistingBuildID != nil }
     var shortHash: String { String(analysis.sha256.prefix(12)) }
     var normalizedFilename: String {
-        FilenameMetadataParser.canonicalFilename(
+        // A known dump's canonical name is No-Intro's.
+        if let dump = analysis.knownDump {
+            let fileExtension = URL(fileURLWithPath: analysis.originalFilename).pathExtension.lowercased()
+            return fileExtension.isEmpty ? dump.name : "\(dump.name).\(fileExtension)"
+        }
+        return FilenameMetadataParser.canonicalFilename(
             fileExtension: URL(fileURLWithPath: analysis.originalFilename).pathExtension.lowercased(),
             title: gameTitle.trimmingCharacters(in: .whitespacesAndNewlines),
             metadata: reviewedMetadata,
@@ -106,7 +118,16 @@ final class ImportReviewViewModel: ObservableObject {
         )
     }
     var namingEvidence: String {
-        "Filename suggestion · \(analysis.filenameMetadata.confidence.displayName) confidence"
+        guard let dump = analysis.knownDump else {
+            return "Filename suggestion · \(analysis.filenameMetadata.confidence.displayName) confidence"
+        }
+        var evidence = dump.bad
+            ? "No-Intro lists this file as a bad dump of \(dump.name)"
+            : "Verified No-Intro dump: \(dump.name)"
+        if analysis.familyGameIDs.count > 1 {
+            evidence += ". Releases of this game are in \(analysis.familyGameIDs.count) Games, listed first; choose one"
+        }
+        return evidence
     }
 
     func destinationChanged() {

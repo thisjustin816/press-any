@@ -150,6 +150,37 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
         }
     }
 
+    public func fetchBuilds(imageSHA1s: [String]) throws -> [Build] {
+        guard !imageSHA1s.isEmpty else { return [] }
+        let list = "(" + Array(repeating: "?", count: imageSHA1s.count).joined(separator: ", ") + ")"
+        return try read { db in
+            try BuildRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM builds WHERE rom_sha1 IN \(list) AND deletion_id IS NULL ORDER BY created_at",
+                arguments: StatementArguments(imageSHA1s.map { $0.lowercased() })
+            ).map { try $0.domain() }
+        }
+    }
+
+    public func fetchImportedBuildsMissingImageSHA1() throws -> [Build] {
+        try read { db in
+            try BuildRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM builds WHERE rom_sha1 IS NULL AND source_kind = ? AND deletion_id IS NULL ORDER BY created_at",
+                arguments: [BuildSourceKind.importedImage.rawValue]
+            ).map { try $0.domain() }
+        }
+    }
+
+    public func setImageSHA1(buildID: UUID, sha1: String) throws {
+        try write { db in
+            try db.execute(
+                sql: "UPDATE builds SET rom_sha1 = ? WHERE id = ?",
+                arguments: [sha1.lowercased(), PersistenceCodec.uuid(buildID)]
+            )
+        }
+    }
+
     public func insertBuild(_ build: Build) throws {
         try write { db in try BuildRecord(build).insert(db) }
     }

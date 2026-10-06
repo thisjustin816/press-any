@@ -1,12 +1,15 @@
+import GameIdentity
 import SwiftUI
 
-/// The open-source code that ships in the app. Licenses whose terms ask to be shown are bundled
-/// verbatim from `App/Acknowledgements/`; public-domain code gets a credit instead.
+/// The open-source code and data that ship in the app. Licenses whose terms ask to be shown are
+/// bundled verbatim from `App/Acknowledgements/`; public-domain code and freely licensed data get
+/// a credit instead.
 struct AcknowledgementsView: View {
     fileprivate struct Component: Identifiable {
         enum License {
             case bundled(file: String)
             case publicDomain(credit: String)
+            case freeData(credit: String)
         }
 
         let name: String
@@ -15,7 +18,7 @@ struct AcknowledgementsView: View {
         var id: String { name }
     }
 
-    private let components = [
+    private let components: [Component] = [
         Component(
             name: "SameBoy",
             use: "Game Boy and Game Boy Color emulation, and the boot ROMs",
@@ -31,7 +34,27 @@ struct AcknowledgementsView: View {
             Swift port of its detection logic and signature tables.
             """)
         ),
+        Component(
+            name: "No-Intro",
+            use: "Recognizing known Game Boy and Game Boy Color releases",
+            license: .freeData(credit: AcknowledgementsView.noIntroCredit)
+        ),
     ]
+
+    /// The data's source and date, read from the bundled file so a refresh updates it.
+    private static var noIntroCredit: String {
+        let systems = (try? KnownDumpIndex.bundled())?.catalog.systems ?? []
+        let versions = systems.map { "\($0.dat) \($0.version) (\($0.dumps) dumps)" }.joined(separator: "\n")
+        return """
+        Game identification data from No-Intro’s DAT-o-MATIC (https://datomatic.no-intro.org):
+
+        \(versions)
+
+        DAT-o-MATIC’s Data Usage License lets the data be used, copied, modified and \
+        distributed by anyone for any lawful purpose, without attribution. \(AppBrand.displayName) \
+        credits it anyway. No-Intro is not affiliated with \(AppBrand.displayName).
+        """
+    }
 
     var body: some View {
         List(components) { component in
@@ -67,7 +90,7 @@ private struct LicenseTextView: View {
 
     private var text: String {
         switch component.license {
-        case .publicDomain(let credit):
+        case .publicDomain(let credit), .freeData(let credit):
             return credit
         case .bundled(let file):
             guard let url = Bundle.main.url(forResource: file, withExtension: "txt"),

@@ -66,6 +66,8 @@ targets:
       - package: EmulatorKit
         product: Importing
       - package: EmulatorKit
+        product: GameIdentity
+      - package: EmulatorKit
         product: Patching
       - package: EmulatorKit
         product: EmulationCore

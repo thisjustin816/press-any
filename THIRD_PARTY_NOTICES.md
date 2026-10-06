@@ -45,6 +45,21 @@ this repository.
   synthetic ROMs. The test ROMs are fetched at run time and never committed here.
 - License: public domain, under the Unlicense (https://unlicense.org).
 
+## No-Intro data
+
+- Project: No-Intro's DAT-o-MATIC (https://datomatic.no-intro.org)
+- Data: the Parent/Clone XML DATs for "Nintendo - Game Boy" and "Nintendo - Game Boy Color",
+  with Aftermarket included. The versions in use are in the header of
+  `Packages/EmulatorKit/Sources/GameIdentity/Resources/KnownDumps.json`.
+- Usage: `Scripts/generate-known-dumps.py` reduces them to each dump's canonical name, SHA-1,
+  size, system, parent, release regions and bad-dump flag. The app bundles that file and matches
+  imported ROMs against it. No ROM, image or other No-Intro content ships.
+- License: DAT-o-MATIC's Data Usage License (updated 2026-09-11) permits the data to be "freely
+  used, copied, reproduced, modified, adapted, combined, published, distributed, and otherwise
+  reused by anyone for any lawful purpose", commercially or not, with no attribution required.
+  The app credits No-Intro in Acknowledgements anyway.
+- Refreshing: `docs/release.md`, "Refreshing the No-Intro data".
+
 ## Test ROMs
 
 - Location: `TestROMs/`. Not part of the app or its tests' build.

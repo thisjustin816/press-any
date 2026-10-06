@@ -175,6 +175,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
     var displayName: String
     var imageAssetID: String
     var imageSHA256: String
+    var imageSHA1: String?
     var sourceKind: String
     var parentBuildID: String?
     var isBase: Bool
@@ -201,6 +202,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         case displayName = "display_name"
         case imageAssetID = "rom_asset_id"
         case imageSHA256 = "rom_sha256"
+        case imageSHA1 = "rom_sha1"
         case sourceKind = "source_kind"
         case parentBuildID = "parent_build_id"
         case isBase = "is_base"
@@ -216,6 +218,37 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         case modifiedAt = "modified_at"
     }
 
+    /// Every column, except `rom_sha1` while it is nil: the SHA-1 is filled once by its own update,
+    /// and a metadata edit made from a Build read before then must not clear it.
+    func encode(to container: inout PersistenceContainer) throws {
+        container[CodingKeys.id.rawValue] = id
+        container[CodingKeys.gameID.rawValue] = gameID
+        container[CodingKeys.system.rawValue] = system
+        container[CodingKeys.displayName.rawValue] = displayName
+        container[CodingKeys.imageAssetID.rawValue] = imageAssetID
+        container[CodingKeys.imageSHA256.rawValue] = imageSHA256
+        if let imageSHA1 { container[CodingKeys.imageSHA1.rawValue] = imageSHA1 }
+        container[CodingKeys.sourceKind.rawValue] = sourceKind
+        container[CodingKeys.parentBuildID.rawValue] = parentBuildID
+        container[CodingKeys.isBase.rawValue] = isBase
+        container[CodingKeys.region.rawValue] = region
+        container[CodingKeys.language.rawValue] = language
+        container[CodingKeys.revision.rawValue] = revision
+        container[CodingKeys.versionString.rawValue] = versionString
+        container[CodingKeys.versionSortKey.rawValue] = versionSortKey
+        container[CodingKeys.baseTitle.rawValue] = baseTitle
+        container[CodingKeys.hackTitle.rawValue] = hackTitle
+        container[CodingKeys.author.rawValue] = author
+        container[CodingKeys.translation.rawValue] = translation
+        container[CodingKeys.status.rawValue] = status
+        container[CodingKeys.preferredSaveProfileID.rawValue] = preferredSaveProfileID
+        container[CodingKeys.pinnedCoreID.rawValue] = pinnedCoreID
+        container[CodingKeys.pinnedCoreVersion.rawValue] = pinnedCoreVersion
+        container[CodingKeys.corePinnedAt.rawValue] = corePinnedAt
+        container[CodingKeys.createdAt.rawValue] = createdAt
+        container[CodingKeys.modifiedAt.rawValue] = modifiedAt
+    }
+
     init(_ value: Build) {
         id = PersistenceCodec.uuid(value.id)
         gameID = PersistenceCodec.uuid(value.gameID)
@@ -223,6 +256,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         displayName = value.displayName
         imageAssetID = PersistenceCodec.uuid(value.imageAssetID)
         imageSHA256 = value.imageSHA256.lowercased()
+        imageSHA1 = value.imageSHA1
         sourceKind = value.sourceKind.rawValue
         parentBuildID = value.parentBuildID.map(PersistenceCodec.uuid)
         isBase = value.isBase
@@ -270,6 +304,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
             displayName: displayName,
             imageAssetID: try PersistenceCodec.uuid(imageAssetID),
             imageSHA256: imageSHA256,
+            imageSHA1: imageSHA1,
             sourceKind: source,
             parentBuildID: try PersistenceCodec.optionalUUID(parentBuildID),
             isBase: isBase,

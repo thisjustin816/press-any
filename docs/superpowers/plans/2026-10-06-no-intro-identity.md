@@ -1,5 +1,8 @@
 # No-Intro Identity Plan
 
+Status: sections 1, 2 and 5 are done (#31 and the import-matching pull request), as is section 3
+apart from the title proposal, which waits on section 4. The parser's No-Intro flags remain.
+
 **Goal:** Recognize known Game Boy and Game Boy Color dumps by hash, take their canonical names, and group a family's regional releases under one Game, from data bundled with the app.
 
 The decision behind this plan is "The game database is No-Intro's, bundled, and refreshed by hand" in `docs/decisions.md`. The specs it serves are `dec 17` and `dec 18`, Q156 and Q157, and "Regional releases and No-Intro families".

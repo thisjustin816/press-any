@@ -1,22 +1,26 @@
 import EmulatorApplication
 import Foundation
+import GameIdentity
 import ToolchainDetection
 
 public struct ROMImportAnalyzer: Sendable {
     private let builds: any BuildRepository
     private let assetStore: any AssetStore
     private let detectors: ToolchainDetectorRegistry
+    private let knownDumps: KnownDumpIndex?
     private let makeTransactionID: @Sendable () -> UUID
 
     public init(
         builds: any BuildRepository,
         assetStore: any AssetStore,
         detectors: ToolchainDetectorRegistry = .standard,
+        knownDumps: KnownDumpIndex? = nil,
         makeTransactionID: @escaping @Sendable () -> UUID = UUID.init
     ) {
         self.builds = builds
         self.assetStore = assetStore
         self.detectors = detectors
+        self.knownDumps = knownDumps
         self.makeTransactionID = makeTransactionID
     }
 
@@ -27,10 +31,16 @@ public struct ROMImportAnalyzer: Sendable {
         do {
             let data = try Data(contentsOf: stagedURL, options: .mappedIfSafe)
             let sha256 = try assetStore.hashFile(at: stagedURL)
+            let sha1 = SHA1Digest.data(data)
             let header = try GBROMHeaderParser.parse(data)
             let existing = try builds.fetchBuild(imageSHA256: sha256)
             let suppliedFilename = originalFilename ?? sourceURL.lastPathComponent
             let visibleFilename = suppliedFilename.removingPercentEncoding ?? suppliedFilename
+            let knownDump = knownDumps?.dump(sha1: sha1)
+            // A known dump is named by its canonical name, which the parser reads like a filename.
+            let naming = knownDump.map { FilenameMetadataParser.parse(filename: "\($0.name).\($0.system.rawValue)") }
+                ?? FilenameMetadataParser.parse(filename: visibleFilename)
+            let familyGameIDs = try knownDump.map(familyGameIDs(of:)) ?? []
             return ROMImportAnalysis(
                 transactionID: transactionID,
                 stagedURL: stagedURL,
@@ -38,14 +48,27 @@ public struct ROMImportAnalyzer: Sendable {
                 sha256: sha256,
                 byteLength: Int64(data.count),
                 header: header,
-                filenameMetadata: FilenameMetadataParser.parse(filename: visibleFilename),
+                filenameMetadata: naming,
                 exactExistingBuildID: existing?.id,
-                suggestedGameID: targetGameID ?? existing?.gameID,
-                toolchainReports: detectors.detect(image: data, system: header.system)
+                suggestedGameID: targetGameID ?? existing?.gameID ?? (familyGameIDs.count == 1 ? familyGameIDs[0] : nil),
+                toolchainReports: detectors.detect(image: data, system: header.system),
+                imageSHA1: sha1,
+                knownDump: knownDump,
+                familyGameIDs: familyGameIDs
             )
         } catch {
             try? assetStore.removeIfExists(stagedURL.deletingLastPathComponent())
             throw error
         }
+    }
+
+    /// The Games already holding a Build from the dump's No-Intro family, in the order their
+    /// first such Build arrived.
+    private func familyGameIDs(of dump: KnownDump) throws -> [UUID] {
+        guard let knownDumps else { return [] }
+        var seen = Set<UUID>()
+        return try builds.fetchBuilds(imageSHA1s: knownDumps.family(of: dump).map(\.sha1))
+            .map(\.gameID)
+            .filter { seen.insert($0).inserted }
     }
 }
