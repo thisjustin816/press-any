@@ -425,6 +425,7 @@ Spec: all v1 unless noted.
 | missing | Automatic fetch on import + setting to disable | v1 | prod "Artwork" |  |
 | missing | Provider chain: local/imported, Community Catalog, OpenVGDB (experimental), Libretro thumbnails, SteamGridDB (user key), title-screen fallback | v1 | Q79; later 8 |  |
 | missing | Priority manual -> hack-specific -> inherited base (recorded as inherited) -> generated | v1 | dec 20 |  |
+| missing | Artwork generated from the Game's title screen | v1 | Q79; later 8; D "Artwork from the title screen" | open: capturing after import by running the game unseen (detecting the title screen past the boot logo, for example once the picture settles) or from the current frame chosen in the game menu, or both; framing the 10:9 picture in a square tile (whole-pixel scale on a border color sampled from the frame, or on the placeholder cartridge's label) |
 | missing | Build-level artwork override | v1 | Q168 |  |
 | missing | Regional artwork: lookups use the Build's region, and a Game's primary artwork follows the preferred region | v1 | D "Regional releases and No-Intro families" | box art differs by region |
 | missing | Multiple typed assets (box front/back, cart, title, screenshots, logo, fan) | v1 | dec 20 |  |
