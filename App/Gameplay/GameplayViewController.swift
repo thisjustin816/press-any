@@ -30,9 +30,10 @@ final class GameplayViewController: UIViewController {
     private var backgrounded = false
     /// Set once an emulation error has stopped the game for good.
     private var halted = false
-    private let controlStyle: TouchControlStyle
-    private let lcdFilter: LCDFilter
-    private let screenScaling: ScreenScaling
+    private var controlStyle: TouchControlStyle
+    private var lcdFilter: LCDFilter
+    private var frameBlending: FrameBlending
+    private var screenScaling: ScreenScaling
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
     private let soundMode: SoundMode
@@ -52,6 +53,9 @@ final class GameplayViewController: UIViewController {
     var onClose: (() -> Void)?
     /// Set for Quick Play: the menu then offers Add to Library, which closes the game and calls this.
     var onAddToLibrary: (() -> Void)?
+    /// When set, the menu offers Settings, which calls this. The game stays paused under the
+    /// settings, which arrive through `applyDisplaySettings` as they change.
+    var onOpenSettings: (() -> Void)?
 
     init(
         runtime: any GameplayRuntime,
@@ -61,6 +65,7 @@ final class GameplayViewController: UIViewController {
         controlStyle: TouchControlStyle = .gameBoy,
         screenScaling: ScreenScaling = .integer,
         lcdFilter: LCDFilter = .off,
+        frameBlending: FrameBlending = .off,
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch,
@@ -72,6 +77,7 @@ final class GameplayViewController: UIViewController {
         self.controllerMonitor = controllerMonitor
         self.controlStyle = controlStyle
         self.lcdFilter = lcdFilter
+        self.frameBlending = frameBlending
         self.screenScaling = screenScaling
         self.controllerTheme = controllerTheme
         self.tapGameForMenu = tapGameForMenu
@@ -103,6 +109,7 @@ final class GameplayViewController: UIViewController {
         renderer = MetalRenderer(view: metalView)
         renderer?.scaling = screenScaling
         renderer?.lcdFilter = lcdFilter
+        renderer?.frameBlending = frameBlending
         applyLayout(touchControls.layout)
         // Audio can be unavailable, during a call for example. The game still runs, silently,
         // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
@@ -133,6 +140,8 @@ final class GameplayViewController: UIViewController {
     var isRunningFrames: Bool { driver.isRunning }
     /// The buttons the game sees held, for tests.
     var heldInput: EmulatorInputState { input.current() }
+    /// The controller layout drawn, for tests.
+    var touchControlStyle: TouchControlStyle { touchControls.style }
 
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
@@ -244,6 +253,11 @@ final class GameplayViewController: UIViewController {
                 image: UIImage(systemName: "square.and.arrow.down"),
                 attributes: .disabled
             ) { _ in })
+        }
+        if onOpenSettings != nil {
+            elements.append(UIAction(title: "Settings…", image: UIImage(systemName: "gearshape")) { [weak self] _ in
+                self?.onOpenSettings?()
+            })
         }
         if onAddToLibrary != nil {
             elements.append(UIAction(title: "Add to Library…", image: UIImage(systemName: "square.and.arrow.down.on.square")) { [weak self] _ in
@@ -410,6 +424,8 @@ final class GameplayViewController: UIViewController {
             ? CGRect(x: screen.x, y: screen.y, width: screen.width, height: screen.height)
             : nil
         placeMenuButtons(over: layout.menuAreas)
+        // A paused game draws only when asked, so a new layout redraws the held picture in place.
+        metalView.setNeedsDisplay()
     }
 
     /// The menu buttons sit under the paused overlay and above the touch controls, which pass
@@ -444,6 +460,29 @@ final class GameplayViewController: UIViewController {
         for (index, button) in menuButtons.enumerated() {
             button.configureWordmark(palette: index == 0 ? palette : nil)
         }
+    }
+
+    /// Settings changed while the game is open, from its settings sheet. The paused picture redraws
+    /// with them, so the player sees each change behind the sheet.
+    func applyDisplaySettings(
+        controlStyle: TouchControlStyle,
+        screenScaling: ScreenScaling,
+        lcdFilter: LCDFilter,
+        frameBlending: FrameBlending
+    ) {
+        guard controlStyle != self.controlStyle || screenScaling != self.screenScaling
+            || lcdFilter != self.lcdFilter || frameBlending != self.frameBlending else { return }
+        self.controlStyle = controlStyle
+        self.screenScaling = screenScaling
+        self.lcdFilter = lcdFilter
+        self.frameBlending = frameBlending
+        // The touch controls lay out again and report the new layout, which moves the picture.
+        touchControls.style = controlStyle
+        touchControls.scaling = screenScaling
+        renderer?.scaling = screenScaling
+        renderer?.lcdFilter = lcdFilter
+        renderer?.frameBlending = frameBlending
+        metalView.setNeedsDisplay()
     }
 
     private func toggleFastForward() {

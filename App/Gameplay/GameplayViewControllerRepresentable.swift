@@ -7,9 +7,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let autoResumePolicy: AutoResumePolicy
     let launchMessage: String?
     let firstFrameClock: UInt64?
-    let controlStyle: TouchControlStyle
-    let screenScaling: ScreenScaling
-    let lcdFilter: LCDFilter
+    let display: GameplayDisplaySettings
     let controllerTheme: ControllerTheme
     let tapGameForMenu: Bool
     let soundMode: SoundMode
@@ -21,6 +19,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     var closeRequested = false
     let onClose: () -> Void
     var onAddToLibrary: (() -> Void)?
+    var onOpenSettings: (() -> Void)?
 
     func makeUIViewController(context: Context) -> GameplayViewController {
         let controller = GameplayViewController(
@@ -28,9 +27,10 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             autoResumePolicy: autoResumePolicy,
             launchMessage: launchMessage,
             firstFrameClock: firstFrameClock,
-            controlStyle: controlStyle,
-            screenScaling: screenScaling,
-            lcdFilter: lcdFilter,
+            controlStyle: display.controlStyle,
+            screenScaling: display.screenScaling,
+            lcdFilter: display.lcdFilter,
+            frameBlending: display.frameBlending,
             controllerTheme: controllerTheme,
             tapGameForMenu: tapGameForMenu,
             soundMode: soundMode,
@@ -39,11 +39,18 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
         )
         controller.onClose = onClose
         controller.onAddToLibrary = onAddToLibrary
+        controller.onOpenSettings = onOpenSettings
         return controller
     }
 
     func updateUIViewController(_ uiViewController: GameplayViewController, context: Context) {
         uiViewController.setCoveredBySheet(isCoveredBySheet)
+        uiViewController.applyDisplaySettings(
+            controlStyle: display.controlStyle,
+            screenScaling: display.screenScaling,
+            lcdFilter: display.lcdFilter,
+            frameBlending: display.frameBlending
+        )
         // Updates repeat, and a close that fails to save waits on the player, so ask only once.
         if closeRequested, !context.coordinator.closeSent {
             context.coordinator.closeSent = true

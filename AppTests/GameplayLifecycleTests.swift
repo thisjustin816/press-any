@@ -1,5 +1,6 @@
 import EmulationCore
 import EmulatorDomain
+import GameplayInput
 import UIKit
 import XCTest
 @testable import PressAny
@@ -117,6 +118,31 @@ final class GameplayLifecycleTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(0.06))
         XCTAssertEqual(runtime.frames, frozen, "the game does not advance behind its menu")
         XCTAssertFalse(runtime.failedFrame)
+    }
+
+    func testMenuSettingsOpenOverThePausedGameAndApplyLive() throws {
+        let (gameplay, runtime, _) = makeGameplay()
+        XCTAssertFalse(
+            gameplay.prepareGameMenu().contains { ($0 as? UIAction)?.title == "Settings…" },
+            "without a place to save settings the menu leaves them out"
+        )
+        var opened = 0
+        gameplay.onOpenSettings = { opened += 1 }
+        let settings = try XCTUnwrap(gameplay.prepareGameMenu().compactMap { $0 as? UIAction }.first { $0.title == "Settings…" })
+        let button = UIButton(type: .system)
+        button.addAction(settings, for: .touchUpInside)
+        button.sendActions(for: .touchUpInside)
+        XCTAssertEqual(opened, 1)
+
+        gameplay.setCoveredBySheet(true)
+        gameplay.applyDisplaySettings(controlStyle: .playtiles, screenScaling: .fill, lcdFilter: .lcd1x, frameBlending: .blend)
+        XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
+        let frozen = runtime.frames
+        RunLoop.current.run(until: Date().addingTimeInterval(0.06))
+        XCTAssertEqual(runtime.frames, frozen, "changing settings leaves the game paused")
+        gameplay.setCoveredBySheet(false)
+        XCTAssertFalse(gameplay.isRunningFrames, "the player resumes when ready")
+        XCTAssertTrue(gameplay.isShowingPaused)
     }
 
     func testMenuPauseSurvivesSceneChangesUntilResume() throws {

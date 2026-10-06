@@ -272,6 +272,47 @@ final class AppContainer {
         ScreenshotScene.lcdFilterOverride ?? launchSetting(LCDFilter.self, .lcdFilter, for: context) ?? .off
     }
 
+    func frameBlending(for context: LaunchContext) -> FrameBlending {
+        launchSetting(FrameBlending.self, .frameBlending, for: context) ?? .off
+    }
+
+    func frameBlending(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> FrameBlending {
+        launchSetting(FrameBlending.self, .frameBlending, system: system, gameID: gameID, buildID: buildID) ?? .off
+    }
+
+    /// The scope an open game's settings sheet edits: the Game for a library game, the system for
+    /// Quick Play, which has no Game yet. Display settings still resolve through the Build.
+    func gameplaySettingsTarget(for context: LaunchContext) -> GameplaySettingsTarget? {
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return nil }
+        return GameplaySettingsTarget(
+            title: "Game Settings",
+            scope: .game(build.gameID),
+            system: build.system,
+            gameID: build.gameID,
+            buildID: build.id
+        )
+    }
+
+    func gameplaySettingsTarget(system: GameSystem) -> GameplaySettingsTarget {
+        GameplaySettingsTarget(
+            title: "\(system.displayName) Settings",
+            scope: .system(system),
+            system: system,
+            gameID: nil,
+            buildID: nil
+        )
+    }
+
+    /// The display settings for an open game, resolved down to its Build.
+    func gameplayDisplay(for target: GameplaySettingsTarget) -> GameplayDisplaySettings {
+        GameplayDisplaySettings(
+            controlStyle: controllerStyle(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            screenScaling: screenScaling(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            lcdFilter: lcdFilter(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID)
+        )
+    }
+
     /// App-wide. Unset or unreadable means following the silent switch.
     func soundMode() -> SoundMode {
         appSetting(SoundMode.self, .soundMode) ?? .followSilentSwitch
@@ -339,6 +380,23 @@ final class AppContainer {
 extension Notification.Name {
     /// Posted when Games or Builds change outside the screen showing them.
     static let libraryDidChange = Notification.Name("libraryDidChange")
+}
+
+/// Where an open game's settings sheet saves, and the Game and Build its settings resolve for.
+struct GameplaySettingsTarget {
+    let title: String
+    let scope: SettingsScope
+    let system: GameSystem
+    let gameID: UUID?
+    let buildID: UUID?
+}
+
+/// The settings an open game applies as they change.
+struct GameplayDisplaySettings: Equatable {
+    var controlStyle: TouchControlStyle
+    var screenScaling: ScreenScaling
+    var lcdFilter: LCDFilter
+    var frameBlending: FrameBlending
 }
 
 struct PreparedLaunch {

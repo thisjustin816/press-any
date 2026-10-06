@@ -19,8 +19,8 @@ Nothing below is in progress.
 The MVP is complete and working. Its device checklist remains a regression record.
 
 1. Complete No-Intro and ROM-hack naming suggestions and review metadata for v1.
-2. Display and play feel, small changes that make games look and play right on day one: frame
-   blending, GBC color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
+2. Display and play feel, small changes that make games look and play right on day one: GBC
+   color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
 3. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
    profiles and remapping, landscape and the layout editor, cheats and memory tools, external
@@ -315,18 +315,18 @@ Done: Pause / Resume from menu with paused overlay.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Adaptive presentation on high-refresh displays | v1 | Q95 | MTKView redraws per submitted frame; no display-link pacing or ProMotion handling |
+| partial | Adaptive presentation on high-refresh displays | v1 | Q95 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; thermal or Low Power Mode rate changes not handled |
 | missing | GB/GBC color correction | v1 | dec 23 |  |
 | missing | DMG palettes / system-authentic default look; raw pixels available | v1 | Q108 | SameBoy default output only |
-| missing | Frame blending, LCD ghosting | v1 | dec 23 |  |
 | partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1 | prod "Rendering and shaders"; later 9 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
-| partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1 | Q105/Q106/Q107 | LCD effect inherits App → System → Game → Build independently of scaling; named presets and live Quick Actions switching missing |
+| partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1 | Q105/Q106/Q107 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v1 | dec 23 |  |
 | missing | Thermal-aware degradation of optional work | v1 | Q97 |  |
 | missing | Arbitrary .slang/.slangp import; shader preset file import/export | later | Q106 |  |
 
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
-Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable.
+Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable; Frame
+Blending Off (default) / Blend / LCD Ghosting, inheritable.
 
 ### Layouts, skins, touch
 

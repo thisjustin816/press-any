@@ -3,6 +3,23 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Settings open from the game menu, and frame blending joins them
+
+The game menu gains Settings, which opens over the paused game at half height so each change shows
+in the picture above it. A library game edits its Game's settings, as Game Settings in Game Details
+does. Quick Play has no Game yet, so it edits its system's settings. Controller layout, scaling,
+the LCD filter and frame blending apply to the open game at once; the rest apply at the next launch.
+The game stays paused when the sheet closes, as after a shared file.
+
+Frame Blending is a new inheritable display setting. Blend averages each frame with the one before,
+as the Game Boy's slow LCD does, so a sprite a game draws on alternate frames to look see-through
+stays steady instead of flickering. LCD Ghosting weights the newest frame 0.5 and the two before it
+0.3 and 0.2, for a short trail behind moving things. Both mix emulated frames, not screen
+refreshes, so the result is the same at 60 Hz and 120 Hz. Off stays the default.
+
+The Playtiles alignment guide is pressed deeper into the body, with a shadow under its top edge
+and light along its bottom edge, so it stands out in Dark as well as Classic.
+
 ## 2026-10-06: Untagged Builds are named for the day they were added
 
 A file with no version tags no longer gets the Build name "Original". Base already marks the

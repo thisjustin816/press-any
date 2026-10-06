@@ -49,23 +49,41 @@ float4 lcdColor(float4 color, float2 texel, uint mode) {
     return float4(color.rgb * mask, color.a);
 }
 
+// Frame blending: the newest frame and the two before it, weighted. The weights sum to 1, and a
+// frame with no weight isn't sampled.
+float4 blendedSample(texture2d<float> newest, texture2d<float> previous, texture2d<float> oldest,
+                     sampler s, float2 coord, float3 weights) {
+    float4 color = newest.sample(s, coord) * weights.x;
+    if (weights.y > 0.0) color += previous.sample(s, coord) * weights.y;
+    if (weights.z > 0.0) color += oldest.sample(s, coord) * weights.z;
+    return color;
+}
+
 fragment float4 gameplayTextureFragment(VertexOut in [[stage_in]], texture2d<float> source [[texture(0)]],
-                                       constant uint &lcdMode [[buffer(0)]]) {
+                                       texture2d<float> previous [[texture(1)]],
+                                       texture2d<float> oldest [[texture(2)]],
+                                       constant uint &lcdMode [[buffer(0)]],
+                                       constant float4 &blendWeights [[buffer(1)]]) {
     constexpr sampler nearestSampler(coord::normalized, address::clamp_to_edge, filter::nearest);
     float2 size = float2(source.get_width(), source.get_height());
-    return lcdColor(source.sample(nearestSampler, in.texCoord), in.texCoord * size, lcdMode);
+    float4 color = blendedSample(source, previous, oldest, nearestSampler, in.texCoord, blendWeights.xyz);
+    return lcdColor(color, in.texCoord * size, lcdMode);
 }
 
 /// Fill scaling. At a scale that isn't a whole number, nearest sampling makes some Game Boy pixels
 /// a screen pixel wider than others. This samples each Game Boy pixel flat and blends only across
 /// its edges, over about one screen pixel, so the pixels look even and stay sharp.
 fragment float4 gameplaySharpFragment(VertexOut in [[stage_in]], texture2d<float> source [[texture(0)]],
-                                     constant uint &lcdMode [[buffer(0)]]) {
+                                     texture2d<float> previous [[texture(1)]],
+                                     texture2d<float> oldest [[texture(2)]],
+                                     constant uint &lcdMode [[buffer(0)]],
+                                     constant float4 &blendWeights [[buffer(1)]]) {
     constexpr sampler linearSampler(coord::normalized, address::clamp_to_edge, filter::linear);
     float2 size = float2(source.get_width(), source.get_height());
     float2 texel = in.texCoord * size;
     float2 edge = floor(texel + 0.5);
     float2 texelsPerScreenPixel = max(fwidth(texel), float2(1e-5));
     texel = edge + clamp((texel - edge) / texelsPerScreenPixel, -0.5, 0.5);
-    return lcdColor(source.sample(linearSampler, texel / size), in.texCoord * size, lcdMode);
+    float4 color = blendedSample(source, previous, oldest, linearSampler, texel / size, blendWeights.xyz);
+    return lcdColor(color, in.texCoord * size, lcdMode);
 }

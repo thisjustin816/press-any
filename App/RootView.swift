@@ -50,6 +50,8 @@ struct RootView: View {
     @State private var sharedFileError: String?
     /// Set while a queued shared file waits for another sheet to close.
     @State private var sharedFileRetryScheduled = false
+    /// The open game's settings, from its menu.
+    @State private var showsGameplaySettings = false
 
     var body: some View {
         Group {
@@ -87,15 +89,13 @@ struct RootView: View {
                 autoResumePolicy: presentation.autoResumePolicy,
                 launchMessage: presentation.launchMessage,
                 firstFrameClock: presentation.firstFrameClock,
-                controlStyle: presentation.controlStyle,
-                screenScaling: presentation.screenScaling,
-                lcdFilter: presentation.lcdFilter,
+                display: presentation.display,
                 controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
                 tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
                 hidesTouchControlsWithController: bootstrap.container?.hidesTouchControlsWithController() ?? true,
                 touchHaptics: bootstrap.container?.touchHaptics() ?? .light,
-                isCoveredBySheet: sharedFile != nil,
+                isCoveredBySheet: sharedFile != nil || showsGameplaySettings,
                 closeRequested: closesGameForSharedQuickPlay,
                 onClose: { endGameplay(presentation) },
                 onAddToLibrary: presentation.isQuickPlay
@@ -103,11 +103,15 @@ struct RootView: View {
                         closingQuickPlayAddsToLibrary = true
                         endGameplay(presentation)
                     }
-                    : nil
+                    : nil,
+                onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true }
             )
             .ignoresSafeArea()
             // The status bar sits on the controller's body: dark text on Classic, light on Dark.
             .preferredColorScheme(bootstrap.container?.controllerTheme().colorScheme)
+            .sheet(isPresented: $showsGameplaySettings, onDismiss: presentNextSharedFile) {
+                gameplaySettingsView(presentation)
+            }
             // The library's sheet can't show over this cover, so a file shared mid-game opens here.
             .sheet(item: sharedFileBinding(overGameplay: true), onDismiss: finishSharedFile) { file in
                 sharedFileView(file)
@@ -203,6 +207,26 @@ struct RootView: View {
             get: { (gameplay != nil) == overGameplay ? sharedFile : nil },
             set: { sharedFile = $0 }
         )
+    }
+
+    /// The open game's settings, at half height so the paused game shows each change above it.
+    @ViewBuilder
+    private func gameplaySettingsView(_ presentation: GameplayPresentation) -> some View {
+        if let container = bootstrap.container, let target = presentation.settings {
+            ScopedSettingsView(
+                title: target.title,
+                scope: target.scope,
+                system: target.system,
+                gameID: target.gameID,
+                buildID: target.buildID,
+                store: container.repositories.settings,
+                onChange: {
+                    // The cover's item keeps its identity, so the game updates in place.
+                    gameplay?.display = container.gameplayDisplay(for: target)
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
     }
 
     @ViewBuilder
@@ -353,9 +377,13 @@ struct RootView: View {
                 autoResumePolicy: launch.policy,
                 launchMessage: message,
                 firstFrameClock: nil,
-                controlStyle: container.controllerStyle(for: launch.context),
-                screenScaling: container.screenScaling(for: launch.context),
-                lcdFilter: container.lcdFilter(for: launch.context)
+                settings: container.gameplaySettingsTarget(for: launch.context),
+                display: GameplayDisplaySettings(
+                    controlStyle: container.controllerStyle(for: launch.context),
+                    screenScaling: container.screenScaling(for: launch.context),
+                    lcdFilter: container.lcdFilter(for: launch.context),
+                    frameBlending: container.frameBlending(for: launch.context)
+                )
             )
         } catch {
             errorMessage = "Could not start the game: \(error)"
@@ -402,9 +430,8 @@ struct RootView: View {
                 ? "Couldn’t resume where you left off, so the game started over from its save."
                 : nil,
             firstFrameClock: firstFrameClock,
-            controlStyle: container.controllerStyle(system: session.system),
-            screenScaling: container.screenScaling(system: session.system),
-            lcdFilter: container.lcdFilter(system: session.system)
+            settings: container.gameplaySettingsTarget(system: session.system),
+            display: container.gameplayDisplay(for: container.gameplaySettingsTarget(system: session.system))
         )
     }
 
@@ -446,6 +473,7 @@ struct RootView: View {
 
     private func endGameplay(_ presentation: GameplayPresentation) {
         closesGameForSharedQuickPlay = false
+        showsGameplaySettings = false
         switch presentation.kind {
         case .library:
             bootstrap.container?.stopActiveSession(createAutoState: false)
@@ -469,9 +497,10 @@ private struct GameplayPresentation: Identifiable {
     let launchMessage: String?
     /// `DispatchTime` uptime when the file was chosen, for Quick Play's time-to-first-frame report.
     let firstFrameClock: UInt64?
-    let controlStyle: TouchControlStyle
-    let screenScaling: ScreenScaling
-    let lcdFilter: LCDFilter
+    /// Where the game menu's Settings saves, or nil when the game's Build couldn't be read.
+    let settings: GameplaySettingsTarget?
+    /// Updated as the settings sheet changes them.
+    var display: GameplayDisplaySettings
 
     var isQuickPlay: Bool {
         if case .quickPlay = kind { return true }

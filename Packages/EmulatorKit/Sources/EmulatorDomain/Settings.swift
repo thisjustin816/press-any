@@ -54,6 +54,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case screenScaling
     /// `LCDFilter`, unset means `.off`. Independent of the picture’s scaling.
     case lcdFilter
+    /// `FrameBlending`, unset means `.off`.
+    case frameBlending
     /// `SoundMode`, unset means `.followSilentSwitch`.
     case soundMode
     /// Bool, unset means false. When true, tapping the game picture opens the game menu, as tapping
@@ -101,5 +103,36 @@ public enum LCDFilter: String, Codable, Sendable, CaseIterable {
         case .lcd1x: "LCD 1×"
         case .lcd3x: "LCD 3×"
         }
+    }
+}
+
+/// How each shown picture mixes in the frames before it. Raw values are stored in settings.
+public enum FrameBlending: String, Codable, Sendable, CaseIterable {
+    case off
+    /// Each frame averaged with the one before. Games that draw a sprite on alternate frames to
+    /// make it look see-through rely on the screen doing this.
+    case blend
+    /// A fading trail of the two frames before, like a slow LCD.
+    case ghosting
+
+    public var displayName: String {
+        switch self {
+        case .off: "Off"
+        case .blend: "Blend"
+        case .ghosting: "LCD Ghosting"
+        }
+    }
+
+    /// The weights of the newest frame and the two before it, summing to 1. With fewer earlier
+    /// frames held, as just after a game starts, the missing frames' share goes to the rest.
+    public func weights(heldFrames: Int) -> [Double] {
+        let full: [Double] = switch self {
+        case .off: [1, 0, 0]
+        case .blend: [0.5, 0.5, 0]
+        case .ghosting: [0.5, 0.3, 0.2]
+        }
+        let available = min(max(heldFrames, 1), full.count)
+        let total = full.prefix(available).reduce(0, +)
+        return full.indices.map { $0 < available ? full[$0] / total : 0 }
     }
 }
