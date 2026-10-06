@@ -1,4 +1,5 @@
 import EmulationCore
+import EmulatorDomain
 import GameplayInput
 import MetalKit
 
@@ -16,6 +17,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     /// Where the controller layout puts the game picture, in the view's points. Nil fills the view.
     var screenRect: CGRect?
     var scaling: ScreenScaling = .integer
+    var lcdFilter: LCDFilter = .off
 
     init?(view: MTKView) {
         guard let device = MTLCreateSystemDefaultDevice(),
@@ -105,6 +107,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         ))
         encoder.setRenderPipelineState(scaling == .integer ? nearestPipeline : sharpPipeline)
         encoder.setFragmentTexture(texture, index: 0)
+        var filter = lcdFilter.shaderMode
+        encoder.setFragmentBytes(&filter, length: MemoryLayout<UInt32>.size, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
         commandBuffer.present(drawable)
@@ -123,5 +127,15 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         descriptor.usage = [.shaderRead]
         texture = device.makeTexture(descriptor: descriptor)
         textureSize = (width, height)
+    }
+}
+
+extension LCDFilter {
+    var shaderMode: UInt32 {
+        switch self {
+        case .off: 0
+        case .lcd1x: 1
+        case .lcd3x: 3
+        }
     }
 }

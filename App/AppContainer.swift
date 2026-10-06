@@ -262,6 +262,16 @@ final class AppContainer {
         launchSetting(ScreenScaling.self, .screenScaling, for: context) ?? .integer
     }
 
+    func lcdFilter(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> LCDFilter {
+        ScreenshotScene.lcdFilterOverride
+            ?? launchSetting(LCDFilter.self, .lcdFilter, system: system, gameID: gameID, buildID: buildID)
+            ?? .off
+    }
+
+    func lcdFilter(for context: LaunchContext) -> LCDFilter {
+        ScreenshotScene.lcdFilterOverride ?? launchSetting(LCDFilter.self, .lcdFilter, for: context) ?? .off
+    }
+
     /// App-wide. Unset or unreadable means following the silent switch.
     func soundMode() -> SoundMode {
         appSetting(SoundMode.self, .soundMode) ?? .followSilentSwitch

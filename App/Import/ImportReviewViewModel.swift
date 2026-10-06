@@ -15,10 +15,16 @@ final class ImportReviewViewModel: ObservableObject {
     @Published var gameTitle: String
     @Published var buildDisplayName: String
     @Published var markAsBase: Bool
+    @Published var markAsPreferred: Bool
     @Published var region: String
     @Published var language: String
     @Published var revision: String
     @Published var version: String
+    @Published var baseTitle: String
+    @Published var hackTitle: String
+    @Published var author: String
+    @Published var translation: String
+    @Published var status: String
     @Published private(set) var errorMessage: String?
 
     let analysis: ROMImportAnalysis
@@ -37,22 +43,45 @@ final class ImportReviewViewModel: ObservableObject {
         language = metadata.language ?? ""
         revision = metadata.revision ?? ""
         version = metadata.versionString ?? ""
+        baseTitle = metadata.baseTitle ?? ""
+        hackTitle = metadata.hackTitle ?? ""
+        author = metadata.author ?? ""
+        translation = metadata.translation ?? ""
+        status = metadata.status ?? ""
 
         if let suggested = analysis.suggestedGameID {
             destination = .existing(suggested)
-            markAsBase = false
         } else {
             destination = .newGame
-            markAsBase = true
         }
+        markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: destination)
+        markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: destination)
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
             ? analysis.header.title
             : analysis.filenameMetadata.suggestedTitle
-        buildDisplayName = analysis.exactExistingBuildID == nil ? "Original" : "Existing"
+        buildDisplayName = analysis.exactExistingBuildID == nil
+            ? analysis.filenameMetadata.suggestedBuildName
+            : "Existing"
     }
 
     var isExactDuplicate: Bool { analysis.exactExistingBuildID != nil }
     var shortHash: String { String(analysis.sha256.prefix(12)) }
+    var normalizedFilename: String {
+        FilenameMetadataParser.canonicalFilename(
+            fileExtension: URL(fileURLWithPath: analysis.originalFilename).pathExtension.lowercased(),
+            title: gameTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+            metadata: reviewedMetadata,
+            unknownGroups: analysis.filenameMetadata.unknownGroups
+        )
+    }
+    var namingEvidence: String {
+        "Filename suggestion · \(analysis.filenameMetadata.confidence.displayName) confidence"
+    }
+
+    func destinationChanged() {
+        markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: destination)
+        markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: destination)
+    }
 
     var plan: ROMImportPlan {
         let disposition: ROMImportDisposition
@@ -71,7 +100,8 @@ final class ImportReviewViewModel: ObservableObject {
             disposition: disposition,
             buildDisplayName: buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines),
             markAsBase: markAsBase,
-            metadata: BuildImportMetadata(region: region, language: language, revision: revision, versionString: version)
+            markAsPreferred: markAsPreferred,
+            metadata: reviewedMetadata
         )
     }
 
@@ -96,5 +126,32 @@ final class ImportReviewViewModel: ObservableObject {
 
     func cancel() {
         coordinator.discard(analysis)
+    }
+
+    private static func suggestedBase(for kind: FilenameReleaseKind, destination: Destination) -> Bool {
+        return switch kind {
+        case .romHack: false
+        case .development: true
+        case .standard: destination == .newGame
+        }
+    }
+
+    private static func suggestedPreferred(for kind: FilenameReleaseKind, destination: Destination) -> Bool {
+        if destination == .newGame { return true }
+        return kind == .development || kind == .romHack
+    }
+
+    private var reviewedMetadata: BuildImportMetadata {
+        BuildImportMetadata(
+            region: region,
+            language: language,
+            revision: revision,
+            versionString: version,
+            baseTitle: baseTitle,
+            hackTitle: hackTitle,
+            author: author,
+            translation: translation,
+            status: status
+        )
     }
 }

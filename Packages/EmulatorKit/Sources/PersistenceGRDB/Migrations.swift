@@ -12,8 +12,21 @@ extension AppDatabase {
         migrator.registerMigration("mvp-v3") { db in
             try db.execute(sql: MVPV3Schema.sql)
         }
+        migrator.registerMigration("v1-v4-naming") { db in
+            try db.execute(sql: V1V4NamingSchema.sql)
+        }
         return migrator
     }
+}
+
+enum V1V4NamingSchema {
+    static let sql = #"""
+    ALTER TABLE builds ADD COLUMN base_title TEXT;
+    ALTER TABLE builds ADD COLUMN hack_title TEXT;
+    ALTER TABLE builds ADD COLUMN author TEXT;
+    ALTER TABLE builds ADD COLUMN translation TEXT;
+    ALTER TABLE builds ADD COLUMN status TEXT;
+    """#
 }
 
 enum MVPV1Schema {

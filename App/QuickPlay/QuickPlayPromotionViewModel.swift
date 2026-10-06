@@ -54,8 +54,6 @@ final class QuickPlayPromotionViewModel: ObservableObject {
                 assetStore: container.fileStore
             )
         )
-        let name = URL(fileURLWithPath: session.originalFilename).deletingPathExtension().lastPathComponent
-        review.buildDisplayName = name
     }
 
     /// Replacing is offered only for the profile the session copied, and only when the Build

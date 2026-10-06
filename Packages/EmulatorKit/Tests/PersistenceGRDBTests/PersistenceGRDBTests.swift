@@ -508,6 +508,11 @@ private struct Fixture {
             isBase: true,
             region: "USA",
             revision: "Rev 0",
+            baseTitle: "Fixture Game",
+            hackTitle: "Fixture Plus",
+            author: "Fixture Author",
+            translation: "Spanish",
+            status: "Beta",
             corePin: CorePin(
                 descriptor: CoreDescriptor(identifier: "sameboy", version: "1.0.3"),
                 pinnedAt: now

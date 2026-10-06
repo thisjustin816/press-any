@@ -128,29 +128,34 @@ struct QuickPlayPromotionView: View {
 
             Section {
                 if model.hasProgress {
-                    Picker("Save", selection: $model.saveChoice) {
-                        Text("New Save Profile").tag(QuickPlayPromotionViewModel.SaveChoice.newProfile)
+                    Picker("Keep Progress", selection: $model.saveChoice) {
+                        Text("Create New Save Profile").tag(QuickPlayPromotionViewModel.SaveChoice.newProfile)
                         if model.canReplaceSource, let source = model.sourceProfile {
                             Text("Replace \(source.displayName)").tag(QuickPlayPromotionViewModel.SaveChoice.replaceSource)
                         }
-                        Text("Don’t Keep It").tag(QuickPlayPromotionViewModel.SaveChoice.discard)
+                        Text("Don’t Keep Quick Play Progress").tag(QuickPlayPromotionViewModel.SaveChoice.discard)
                     }
                     .pickerStyle(.inline)
                     .labelsHidden()
                     if model.effectiveSaveChoice == .newProfile {
-                        TextField("Profile name", text: $model.newProfileName)
+                        LabeledContent("Profile Name") {
+                            TextField("Profile Name", text: $model.newProfileName)
+                                .multilineTextAlignment(.trailing)
+                        }
                     }
                 } else {
                     Text("This session has no save and nowhere to resume.")
                         .foregroundStyle(.secondary)
                 }
             } header: {
-                Text("Save")
+                Text("Save Progress")
             } footer: {
                 if model.effectiveSaveChoice == .replaceSource, let source = model.sourceProfile {
                     Text("\(source.displayName) is copied to “\(source.displayName) before Quick Play” first.")
                 } else if model.hasResumePoint, !model.hasBattery, model.effectiveSaveChoice == .newProfile {
                     Text("This game doesn’t save on its own. The new profile keeps where you left off.")
+                } else if model.effectiveSaveChoice == .newProfile {
+                    Text("Quick Play progress will be saved in a new profile with this name.")
                 }
             }
 

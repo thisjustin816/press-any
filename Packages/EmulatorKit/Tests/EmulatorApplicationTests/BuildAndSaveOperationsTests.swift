@@ -124,7 +124,13 @@ final class BuildAndSaveOperationsTests: XCTestCase {
 
     func testPromoteBuildCopyReusesImmutableROMAsset() throws {
         let harness = try Harness.make(twoBuilds: true)
-        let second = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        var second = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        second.baseTitle = "Base Game"
+        second.hackTitle = "Standalone Hack"
+        second.author = "Hacker"
+        second.translation = "Spanish"
+        second.status = "Beta"
+        try harness.builds.updateBuildMetadata(second)
         let newGame = try harness.buildOperations().promoteBuild(
             buildID: second.id,
             title: "Standalone Copy",
@@ -135,6 +141,11 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertNotEqual(copied.id, second.id)
         XCTAssertEqual(copied.imageAssetID, second.imageAssetID)
         XCTAssertEqual(copied.imageSHA256, second.imageSHA256)
+        XCTAssertEqual(copied.baseTitle, second.baseTitle)
+        XCTAssertEqual(copied.hackTitle, second.hackTitle)
+        XCTAssertEqual(copied.author, second.author)
+        XCTAssertEqual(copied.translation, second.translation)
+        XCTAssertEqual(copied.status, second.status)
         XCTAssertNotNil(try harness.builds.fetchBuild(id: second.id))
     }
 

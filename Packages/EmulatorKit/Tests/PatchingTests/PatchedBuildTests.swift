@@ -16,12 +16,19 @@ final class PatchedBuildTests: XCTestCase {
                 gameID: harness.gameID,
                 baseBuildID: harness.baseBuild.id,
                 patches: [.init(url: patchURL)],
-                displayName: "Patched"
+                displayName: "Patched",
+                metadata: .init(baseTitle: "Test", hackTitle: "Test Plus", author: "Hacker", status: "Beta")
             )
         )
 
         XCTAssertEqual(build.sourceKind, .patchRecipe)
         XCTAssertEqual(build.parentBuildID, harness.baseBuild.id)
+        XCTAssertFalse(build.isBase)
+        XCTAssertEqual(build.baseTitle, "Test")
+        XCTAssertEqual(build.hackTitle, "Test Plus")
+        XCTAssertEqual(build.author, "Hacker")
+        XCTAssertEqual(build.status, "Beta")
+        XCTAssertEqual(try harness.games.fetchGame(id: harness.gameID)?.preferredBuildID, build.id)
         XCTAssertEqual(try harness.outputData(for: build), harness.base(changing: [1: 0x58]))
         let recipe = try XCTUnwrap(harness.recipes.fetchPatchRecipe(resultBuildID: build.id))
         XCTAssertEqual(recipe.baseBuildID, harness.baseBuild.id)

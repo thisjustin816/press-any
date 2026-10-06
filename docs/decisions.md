@@ -3,6 +3,27 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: New Build roles are reviewable suggestions
+
+Import Review suggests both Base and Preferred roles instead of silently deciding them. A
+recognized development release added to an existing Game defaults to Base and Preferred. A
+recognized ROM hack defaults to Preferred but not Base. An ordinary additional retail or unknown
+ROM keeps the conservative defaults: neither role is changed automatically. The first Build in a
+new Game is necessarily Preferred, while a hack-only Game may have no Base Build.
+
+Patch-created Builds follow the ROM-hack default: Preferred and not Base. These are starting
+points in review, not permanent classifications; manual choices continue to win.
+
+## 2026-10-06: The working MVP is complete; naming and LCD effects are v1 work
+
+The owner accepted the MVP as done and working. The physical-iPhone checklist remains a
+regression record rather than a gate that blocks v1 development.
+
+Automatic No-Intro and ROM-hack naming moves to v1. Keep its reviewable suggestions,
+structured metadata, original-file preservation and shared behavior across import, Quick Play
+promotion and patch-created Builds. The first lightweight LCD 1× and LCD 3× effects also begin
+the v1 display work; they do not expand the scope of the completed MVP.
+
 ## 2026-10-06: The gameplay logo is a button, and opening its menu pauses the game
 
 Render the bottom wordmark as a raised, rounded button in both controller layouts

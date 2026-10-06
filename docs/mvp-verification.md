@@ -1,6 +1,7 @@
-# MVP device checklist
+# MVP device regression checklist
 
-The MVP is done when these checks pass on a physical iPhone. Broader v1 work waits for them.
+The owner accepted the working MVP on 2026-10-06. Keep these physical-iPhone checks as the
+regression record; they no longer block v1 work.
 Do not commit commercial ROMs, saves, or other copyrighted test content.
 
 ## On a physical iPhone
@@ -23,7 +24,6 @@ Verify with a user-supplied legal ROM:
 - [ ] Foreground autoresume honors Always / Ask / Never behavior.
 - [ ] Add a modified ROM as a second Build; Game identity remains stable.
 - [ ] Import a ROM with metadata tags, such as `Example (Europe) (En,Fr) (Rev A) [v1.10].gb`. Correct or clear Build Details in review. Reopen the app and confirm Technical Info shows the chosen values.
-- [ ] Import No-Intro and ROM-hack filename examples. Review clean Game titles, concise Build names, hack/base title, author, translation/status metadata and normalized filename suggestions. Correct guesses, reopen the app and confirm corrections and original ROM/patch filenames are preserved.
 - [ ] Quick Play that ROM, then Add to Library. Build Details uses the picked filename's metadata.
 - [ ] Share a compatible Save Profile between Builds, then fork it and confirm divergence.
 - [ ] State created on Build A is never loadable on Build B.
@@ -34,7 +34,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Quick Play a new test build using a copy of Main; mutate the temporary save; Main remains unchanged.
 - [ ] Promote the Quick Play session and choose whether its save becomes a new/default profile.
 - [ ] Quick Play an 8 MB image on device and record the time from choosing the file to the first frame, which the game screen shows as "First frame in N ms"; it opens on the game, not the boot logo, and nothing optional (shaders, skins, custom layouts, detection) loads before it. Then play for a minute and confirm normal speed and audio.
-- [ ] On both controller layouts and in both themes, the Press Any wordmark looks like a raised button. Tapping it freezes the game and opens the menu with Resume; dismissing the menu leaves the game frozen until Resume. The button remains available with a physical controller, and tapping the game picture doesn't until Settings > Tap Game for Menu is on. Dragging a thumb across either doesn't open it. The first game played shows "Tap Press Any for the menu." once, and never again.
+- [ ] On both controller layouts and in both themes, the Press Any wordmark looks like a raised button. Tapping it freezes the game and opens the menu with Resume; dismissing the menu leaves the game frozen until Resume. The button remains available with a physical controller. Game-picture taps open the same paused menu only when Settings > Tap Game for Menu is on. Dragging a thumb across either doesn't open it. The first game played shows "Tap Press Any for the menu." once, and never again.
 - [ ] Screen Scaling: Integer shows every Game Boy pixel the same size on both layouts; Fill makes the picture larger, most visibly on Playtiles and on Pro Max phones, with even, sharp pixels and no shimmer while scrolling.
 - [ ] Settings > Acknowledgements lists SameBoy, GRDB.swift and gbtoolsid, and each opens its license text or credit.
 - [ ] Controller Theme: Classic shows dark status bar text and Dark light text, and Match System follows Light and Dark Mode. The library behind the game keeps its own appearance.

@@ -135,6 +135,11 @@ public struct ImportCommitter: Sendable {
                     revision: plan.metadata.revision,
                     versionString: plan.metadata.versionString,
                     versionSortKey: plan.metadata.versionSortKey,
+                    baseTitle: plan.metadata.baseTitle,
+                    hackTitle: plan.metadata.hackTitle,
+                    author: plan.metadata.author,
+                    translation: plan.metadata.translation,
+                    status: plan.metadata.status,
                     createdAt: timestamp,
                     modifiedAt: timestamp
                 )
@@ -144,7 +149,7 @@ public struct ImportCommitter: Sendable {
                 }
 
                 var returnedGame = game
-                if createdNewGame {
+                if createdNewGame || plan.markAsPreferred {
                     returnedGame.preferredBuildID = build.id
                     returnedGame.modifiedAt = timestamp
                     try games.updateGame(returnedGame)

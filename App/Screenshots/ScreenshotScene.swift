@@ -41,6 +41,16 @@ enum ScreenshotScene: Equatable {
         #endif
     }()
 
+    /// `-ScreenshotLCDFilter lcd1x|lcd3x|off` changes a capture without changing saved settings.
+    static let lcdFilterOverride: LCDFilter? = {
+        #if DEBUG
+        guard current != nil else { return nil }
+        return UserDefaults.standard.string(forKey: "ScreenshotLCDFilter").flatMap(LCDFilter.init(rawValue:))
+        #else
+        return nil
+        #endif
+    }()
+
     private static func flag(_ key: String) -> Bool {
         #if DEBUG
         return current != nil && UserDefaults.standard.bool(forKey: key)

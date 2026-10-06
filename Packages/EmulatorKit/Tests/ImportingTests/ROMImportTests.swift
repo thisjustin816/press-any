@@ -28,14 +28,30 @@ final class ROMImportTests: XCTestCase {
         let next = try harness.committer.commit(ROMImportPlan(
             analysis: try harness.analyzer.analyzeROM(at: nextFile, targetGameID: result.game.id),
             disposition: .addBuild(gameID: result.game.id), buildDisplayName: "Custom", markAsBase: false,
-            metadata: BuildImportMetadata(region: "World", versionString: "beta")
+            markAsPreferred: true,
+            metadata: BuildImportMetadata(
+                region: "World",
+                versionString: "beta",
+                baseTitle: "Example",
+                hackTitle: "Example Plus",
+                author: "Tester",
+                translation: "Spanish",
+                status: "Beta"
+            )
         ))
         XCTAssertEqual(next.build.region, "World")
         XCTAssertNil(next.build.language)
         XCTAssertNil(next.build.revision)
         XCTAssertEqual(next.build.versionString, "beta")
         XCTAssertNil(next.build.versionSortKey)
+        XCTAssertEqual(next.build.baseTitle, "Example")
+        XCTAssertEqual(next.build.hackTitle, "Example Plus")
+        XCTAssertEqual(next.build.author, "Tester")
+        XCTAssertEqual(next.build.translation, "Spanish")
+        XCTAssertEqual(next.build.status, "Beta")
         XCTAssertEqual(next.game.id, result.game.id)
+        XCTAssertEqual(next.game.preferredBuildID, next.build.id)
+        XCTAssertEqual(try harness.games.fetchGame(id: result.game.id)?.preferredBuildID, next.build.id)
         XCTAssertEqual(try harness.builds.fetchBuild(id: result.build.id), result.build)
     }
 

@@ -3,6 +3,7 @@ import EmulationSession
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import Importing
 import Patching
 
 @MainActor
@@ -227,11 +228,25 @@ final class GameDetailViewModel: ObservableObject {
             }
         }
         do {
+            let naming = urls.map { FilenameMetadataParser.parse(filename: $0.lastPathComponent) }
+            let displayName: String
+            let metadata: BuildImportMetadata
+            if let first = naming.first, naming.count == 1 {
+                displayName = first.suggestedBuildName == "Original" ? first.suggestedTitle : first.suggestedBuildName
+                var parsed = first.buildMetadata
+                parsed.hackTitle = parsed.hackTitle ?? first.suggestedTitle
+                metadata = parsed
+            } else {
+                displayName = urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + ")
+                metadata = BuildImportMetadata()
+            }
             let patched = try patchCreator.execute(.init(
                 gameID: gameID,
                 baseBuildID: build.id,
                 patches: urls.map { .init(url: $0, ignoreBaseMismatch: ignoringBaseMismatch) },
-                displayName: urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + ")
+                displayName: displayName,
+                makePreferred: true,
+                metadata: metadata
             ))
             reload()
             infoMessage = "Created \(patched.displayName) from \(build.displayName)."

@@ -27,6 +27,7 @@ final class GameplayViewController: UIViewController {
     /// Set once an emulation error has stopped the game for good.
     private var halted = false
     private let controlStyle: TouchControlStyle
+    private let lcdFilter: LCDFilter
     private let screenScaling: ScreenScaling
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
@@ -55,6 +56,7 @@ final class GameplayViewController: UIViewController {
         firstFrameClock: UInt64? = nil,
         controlStyle: TouchControlStyle = .gameBoy,
         screenScaling: ScreenScaling = .integer,
+        lcdFilter: LCDFilter = .off,
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch,
@@ -65,6 +67,7 @@ final class GameplayViewController: UIViewController {
         self.runtime = runtime
         self.controllerMonitor = controllerMonitor
         self.controlStyle = controlStyle
+        self.lcdFilter = lcdFilter
         self.screenScaling = screenScaling
         self.controllerTheme = controllerTheme
         self.tapGameForMenu = tapGameForMenu
@@ -95,6 +98,7 @@ final class GameplayViewController: UIViewController {
 
         renderer = MetalRenderer(view: metalView)
         renderer?.scaling = screenScaling
+        renderer?.lcdFilter = lcdFilter
         applyLayout(touchControls.layout)
         // Audio can be unavailable, during a call for example. The game still runs, silently,
         // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.

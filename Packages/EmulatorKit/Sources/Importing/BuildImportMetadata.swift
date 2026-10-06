@@ -6,8 +6,23 @@ public struct BuildImportMetadata: Equatable, Sendable {
     public var language: String?
     public var revision: String?
     public var versionString: String?
+    public var baseTitle: String?
+    public var hackTitle: String?
+    public var author: String?
+    public var translation: String?
+    public var status: String?
 
-    public init(region: String? = nil, language: String? = nil, revision: String? = nil, versionString: String? = nil) {
+    public init(
+        region: String? = nil,
+        language: String? = nil,
+        revision: String? = nil,
+        versionString: String? = nil,
+        baseTitle: String? = nil,
+        hackTitle: String? = nil,
+        author: String? = nil,
+        translation: String? = nil,
+        status: String? = nil
+    ) {
         func cleaned(_ value: String?) -> String? {
             guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return nil }
             return value
@@ -16,6 +31,11 @@ public struct BuildImportMetadata: Equatable, Sendable {
         self.language = cleaned(language)
         self.revision = cleaned(revision)
         self.versionString = cleaned(versionString)
+        self.baseTitle = cleaned(baseTitle)
+        self.hackTitle = cleaned(hackTitle)
+        self.author = cleaned(author)
+        self.translation = cleaned(translation)
+        self.status = cleaned(status)
     }
 
     public init(analysis: ROMImportAnalysis) {
@@ -24,7 +44,12 @@ public struct BuildImportMetadata: Equatable, Sendable {
             region: filename.region,
             language: filename.language,
             revision: filename.revision ?? (analysis.header.revisionNumber > 0 ? String(analysis.header.revisionNumber) : nil),
-            versionString: filename.versionString
+            versionString: filename.versionString,
+            baseTitle: filename.baseTitle,
+            hackTitle: filename.hackTitle,
+            author: filename.author,
+            translation: filename.translation,
+            status: filename.status
         )
     }
 

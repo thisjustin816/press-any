@@ -83,7 +83,7 @@ Multiple typed assets: front/back box, cartridge/label, title screen, screenshot
 - Use No-Intro parent/clone/family relationships as high-confidence grouping evidence, not as an inflexible definition of Game.
 - Unambiguous family relationships may be pre-grouped in Import Review; user can change before commit.
 - Revisions/regions/languages normally become Builds of same Game; user may separate.
-- Parse No-Intro naming and ROM-hack bracket conventions best-effort (MVP, per `docs/decisions.md`, 2026-10-06), with clean title/Build and normalized filename suggestions in import, Quick Play promotion and patching.
+- Parse No-Intro naming and ROM-hack bracket conventions best-effort in v1, with clean title/Build and normalized filename suggestions in import, Quick Play promotion and patching.
 - Extract hack title/author/version into structured metadata instead of cluttering display title.
 - Preserve original imported filename permanently.
 - Normalize internally; physical Rename to Canonical Name is explicit.
@@ -117,6 +117,7 @@ Imports may analyze while gameplay continues. If a likely new Build of current G
 - Merge into Game: move/copy Builds with asset/save review.
 - Lightweight Build timeline: versions, hashes, parent relationships, notes, import/activation history.
 - v1 Build comparison: metadata + changed byte/range counts, ROM size/bank differences, header changes. Symbol-aware diff/patch generation later.
+- Import suggests Build roles for review: development releases default Base + Preferred; ROM hacks and patch-created Builds default Preferred but not Base; ordinary additional images remain conservative.
 
 ## Patching
 - v1 formats: IPS + BPS.

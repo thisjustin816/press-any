@@ -52,6 +52,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case controllerTheme
     /// The game picture's scaling (GameplayInput's `ScreenScaling`), unset means `integer`.
     case screenScaling
+    /// `LCDFilter`, unset means `.off`. Independent of the picture’s scaling.
+    case lcdFilter
     /// `SoundMode`, unset means `.followSilentSwitch`.
     case soundMode
     /// Bool, unset means false. When true, tapping the game picture opens the game menu, as tapping
@@ -85,4 +87,19 @@ public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {
     case always
     case ask
     case never
+}
+
+/// Built-in display effects. Raw values are stored in settings.
+public enum LCDFilter: String, Codable, Sendable, CaseIterable {
+    case off
+    case lcd1x
+    case lcd3x
+
+    public var displayName: String {
+        switch self {
+        case .off: "Off"
+        case .lcd1x: "LCD 1×"
+        case .lcd3x: "LCD 3×"
+        }
+    }
 }

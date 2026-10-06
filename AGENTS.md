@@ -67,7 +67,7 @@ Do not permanently vendor third-party source snapshots into normal Git history.
 
 ## MVP gate
 
-Do not expand into cloud/catalog/skin/shader breadth until the real-device MVP proof passes. The architecture proof must demonstrate:
+The owner accepted the working MVP on 2026-10-06, so v1 work may proceed. Keep the architecture proof and device regression checks covering:
 
 - one Game surviving multiple ROM Builds;
 - safe Save Profile sharing/forking;

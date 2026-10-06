@@ -42,6 +42,13 @@ struct ScopedSettingsView: View {
                     context: context
                 )
                 InheritableSettingRow(
+                    title: "LCD Filter",
+                    key: .lcdFilter,
+                    defaultValue: LCDFilter.off,
+                    options: LCDFilter.allCases.map { ($0, $0.displayName) },
+                    context: context
+                )
+                InheritableSettingRow(
                     title: "Resume Games",
                     key: .autoResumePolicy,
                     defaultValue: AutoResumePolicy.always,

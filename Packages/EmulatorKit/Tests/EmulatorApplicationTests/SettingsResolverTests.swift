@@ -79,6 +79,36 @@ final class SettingsResolverTests: XCTestCase {
         XCTAssertEqual(try resolved.decode(String.self), "lcd-authentic")
     }
 
+    func testLCDFilterInheritsAndCanBeExplicitlyDisabledWithoutChangingScaling() throws {
+        let store = InMemorySettingsStore()
+        let resolver = SettingsResolver(store: store)
+        let gameID = UUID(), buildID = UUID()
+        let key = SettingKey.lcdFilter.rawValue
+        try store.set(LCDFilter.lcd1x, key: key, scope: .app)
+        try store.set(LCDFilter.lcd3x, key: key, scope: .system(.gameBoyColor))
+        try store.set("fill", key: SettingKey.screenScaling.rawValue, scope: .build(buildID))
+        XCTAssertEqual(try resolver.decode(LCDFilter.self, key: key, system: .gameBoy), .lcd1x)
+        XCTAssertEqual(try resolver.decode(LCDFilter.self, key: key, system: .gameBoyColor), .lcd3x)
+
+        try store.set(LCDFilter.off, key: key, scope: .game(gameID))
+        try store.set(LCDFilter.lcd1x, key: key, scope: .build(buildID))
+        XCTAssertEqual(try resolver.decode(
+            LCDFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
+        ), .lcd1x)
+        try store.removeValue(key: key, scope: .build(buildID))
+        XCTAssertEqual(try resolver.decode(
+            LCDFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
+        ), .off)
+        XCTAssertEqual(try resolver.decode(
+            String.self, key: SettingKey.screenScaling.rawValue,
+            system: .gameBoyColor, gameID: gameID, buildID: buildID
+        ), "fill")
+        try store.removeValue(key: key, scope: .game(gameID))
+        XCTAssertEqual(try resolver.decode(
+            LCDFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
+        ), .lcd3x)
+    }
+
     func testRemovingAllOverridesReturnsNil() throws {
         let store = InMemorySettingsStore()
         let resolver = SettingsResolver(store: store)

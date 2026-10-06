@@ -87,6 +87,7 @@ struct RootView: View {
                 firstFrameClock: presentation.firstFrameClock,
                 controlStyle: presentation.controlStyle,
                 screenScaling: presentation.screenScaling,
+                lcdFilter: presentation.lcdFilter,
                 controllerTheme: bootstrap.container?.controllerTheme() ?? .matchSystem,
                 tapGameForMenu: bootstrap.container?.tapGameForMenu() ?? false,
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
@@ -272,7 +273,8 @@ struct RootView: View {
                 launchMessage: message,
                 firstFrameClock: nil,
                 controlStyle: container.controllerStyle(for: launch.context),
-                screenScaling: container.screenScaling(for: launch.context)
+                screenScaling: container.screenScaling(for: launch.context),
+                lcdFilter: container.lcdFilter(for: launch.context)
             )
         } catch {
             errorMessage = "Could not start the game: \(error)"
@@ -320,7 +322,8 @@ struct RootView: View {
                 : nil,
             firstFrameClock: firstFrameClock,
             controlStyle: container.controllerStyle(system: session.system),
-            screenScaling: container.screenScaling(system: session.system)
+            screenScaling: container.screenScaling(system: session.system),
+            lcdFilter: container.lcdFilter(system: session.system)
         )
     }
 
@@ -377,6 +380,7 @@ private struct GameplayPresentation: Identifiable {
     let firstFrameClock: UInt64?
     let controlStyle: TouchControlStyle
     let screenScaling: ScreenScaling
+    let lcdFilter: LCDFilter
 
     var isQuickPlay: Bool {
         if case .quickPlay = kind { return true }

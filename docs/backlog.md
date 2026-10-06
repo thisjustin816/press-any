@@ -16,14 +16,15 @@ later.
 
 Nothing below is in progress.
 
-1. Finish the MVP. The real-device check in `docs/mvp-verification.md` still has to pass on a
-   phone. Complete No-Intro and ROM-hack naming suggestions and review metadata.
+The MVP is complete and working. Its device checklist remains a regression record.
+
+1. Complete No-Intro and ROM-hack naming suggestions and review metadata for v1.
 2. Display and play feel, small changes that make games look and play right on day one: frame
    blending, GBC color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
 3. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
    profiles and remapping, landscape and the layout editor, cheats and memory tools, external
-   display, and the curated shader library, which `AGENTS.md` holds until the MVP check passes.
+   display, and the curated shader library.
 4. Library and services: Share Sheet and archive import, search and collections, automatic
    artwork, manuals, screenshots and notes, deletion and undo, backups, iCloud and the Community
    Catalog.
@@ -105,7 +106,7 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Game aliases/alternate titles (indexed) | v1 | Q162 | no field |
-| missing | Metadata source/confidence/provenance + user overrides, Metadata Details UI | MVP filename guesses / v1 full | Q163/Q164; mvp "Automatic naming MVP"; mvp "Game" (provenance records) | reviewable filename guesses and preserved corrections are MVP; the full Metadata Details UI remains v1 |
+| partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; prod "ROM identity" | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
 | missing | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | no edit UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1 | prod "Documents"; Q169 |  |
@@ -149,9 +150,9 @@ Done: Search by primary title.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Automatic No-Intro / ROM-hack naming and structured fields | MVP | mvp "Automatic naming MVP"; dec 17; D 2026-10-06 | region/language/revision/version tags and clean title suggestions exist; hack/base titles, authors, translation/status metadata, source/confidence and concise Build suggestions remain; ROM import, Quick Play promotion and patching must share the rules |
+| partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; broader real-world corpus tuning remains |
 | partial | Header read/validate/display, no editing | v1 | dec 18 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
-| missing | Normalized No-Intro / ROM-hack filename suggestion | MVP | mvp "Automatic naming MVP"; dec 17; D 2026-10-06 | generated from recognized metadata; original filename preserved |
+| partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |
 | missing | Verification status Verified/Modified/Unknown; never auto-repair | v1 | dec 18 |  |
 | missing | Bundled No-Intro baseline + signed/validated updates; parent/clone family grouping shown in review | v1 | prod "ROM identity"; Q157; later 11 no-intro-update.yml |  |
@@ -175,7 +176,8 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 
 Done: Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
-re-import repairs damaged file; New Game vs Add Build choice, Base Build toggle; Toolchain
+re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Preferred suggestions
+(development releases default to both; ROM hacks default Preferred only); Toolchain
 findings in Import Review and Quick Play promotion; Files over a size limit for their kind
 (ROM, patch, save, artwork, variable map) refused before they are read or staged; only regular
 files staged.
@@ -316,8 +318,8 @@ Done: Pause / Resume from menu with paused overlay.
 | missing | GB/GBC color correction | v1 | dec 23 |  |
 | missing | DMG palettes / system-authentic default look; raw pixels available | v1 | Q108 | SameBoy default output only |
 | missing | Frame blending, LCD ghosting | v1 | dec 23 |  |
-| missing | Curated RetroArch-compatible shader set (lcd1x, lcd3x, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1 | prod "Rendering and shaders"; later 9 |  |
-| missing | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1 | Q105/Q106/Q107 |  |
+| partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1 | prod "Rendering and shaders"; later 9 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
+| partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1 | Q105/Q106/Q107 | LCD effect inherits App → System → Game → Build independently of scaling; named presets and live Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v1 | dec 23 |  |
 | missing | Thermal-aware degradation of optional work | v1 | Q97 |  |
 | missing | Arbitrary .slang/.slangp import; shader preset file import/export | later | Q106 |  |

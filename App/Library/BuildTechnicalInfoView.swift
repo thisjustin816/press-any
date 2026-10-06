@@ -23,6 +23,11 @@ struct BuildTechnicalInfoView: View {
                     if let language = build.language { LabeledContent("Language", value: language) }
                     if let revision = build.revision { LabeledContent("Revision", value: revision) }
                     if let version = build.versionString { LabeledContent("Version", value: version) }
+                    if let baseTitle = build.baseTitle { LabeledContent("Base Title", value: baseTitle) }
+                    if let hackTitle = build.hackTitle { LabeledContent("Hack Title", value: hackTitle) }
+                    if let author = build.author { LabeledContent("Author", value: author) }
+                    if let translation = build.translation { LabeledContent("Translation", value: translation) }
+                    if let status = build.status { LabeledContent("Status", value: status) }
                     if let pin = build.corePin {
                         LabeledContent("Core", value: "\(pin.descriptor.identifier) \(pin.descriptor.version)")
                     }

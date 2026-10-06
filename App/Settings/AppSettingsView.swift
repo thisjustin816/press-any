@@ -15,6 +15,7 @@ struct AppSettingsView: View {
     @State private var autoResumePolicy: AutoResumePolicy
     @State private var controllerLayout: TouchControlStyle
     @State private var controllerTheme: ControllerTheme
+    @State private var lcdFilter: LCDFilter
     @State private var screenScaling: ScreenScaling
     @State private var tapGameForMenu: Bool
     @State private var soundMode: SoundMode
@@ -31,6 +32,7 @@ struct AppSettingsView: View {
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
         _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
         _controllerTheme = State(initialValue: Self.stored(ControllerTheme.self, .controllerTheme, in: store) ?? .matchSystem)
+        _lcdFilter = State(initialValue: Self.stored(LCDFilter.self, .lcdFilter, in: store) ?? .off)
         _screenScaling = State(initialValue: Self.stored(ScreenScaling.self, .screenScaling, in: store) ?? .integer)
         _tapGameForMenu = State(initialValue: Self.stored(Bool.self, .tapGameForMenu, in: store) ?? false)
         _soundMode = State(initialValue: Self.stored(SoundMode.self, .soundMode, in: store) ?? .followSilentSwitch)
@@ -95,6 +97,16 @@ struct AppSettingsView: View {
                     Text("Display")
                 } footer: {
                     Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
+                }
+
+                Section {
+                    Picker("LCD Filter", selection: $lcdFilter) {
+                        ForEach(LCDFilter.allCases, id: \.self) { filter in
+                            Text(filter.displayName).tag(filter)
+                        }
+                    }
+                } footer: {
+                    Text("LCD 1× adds a subtle pixel grid. LCD 3× adds red, green and blue subpixels. Screen size stays the same.")
                 }
 
                 Section {
@@ -185,6 +197,7 @@ struct AppSettingsView: View {
             .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
             .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
             .onChange(of: controllerTheme) { _, newValue in save(newValue, .controllerTheme) }
+            .onChange(of: lcdFilter) { _, newValue in save(newValue, .lcdFilter) }
             .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
             .onChange(of: tapGameForMenu) { _, newValue in save(newValue, .tapGameForMenu) }
             .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }

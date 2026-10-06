@@ -145,23 +145,6 @@ For ROM import:
 
 Exact duplicate ROM must not create a second blob or Build accidentally.
 
-### Automatic naming MVP
-
-- Parse No-Intro filenames and recognized ROM-hack bracket conventions best-effort.
-- Suggest clean Game titles and concise Build names, with base/hack title, author,
-  version, region, language/translation, revision and beta/prototype/status metadata
-  stored separately where recognized.
-- Generate a normalized filename suggestion from the recognized fields.
-- Show filename-derived guesses for review with source/confidence; manual correction
-  wins. Keep unknown groups rather than inferring unsupported metadata.
-- Use the same naming rules in ROM Import Review, Quick Play promotion and patch-created
-  Builds. A hack can use its own Game title while keeping its base title as lineage.
-- Preserve original ROM/patch filenames and immutable ROM bytes and identities.
-  Physical renaming stays explicit; database/catalog lookup and bulk rename keep their
-  later targets (`docs/decisions.md`, 2026-10-06).
-- Verify with a naming corpus covering ordinary No-Intro names, ROM-hack names,
-  translations, versions/revisions, status tags, unknown groups and user corrections.
-
 ## Build operations MVP
 - Add imported ROM as Build of existing Game.
 - Set Preferred Build.
