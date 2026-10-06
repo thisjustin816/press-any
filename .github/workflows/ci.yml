@@ -116,3 +116,5 @@ jobs:
         run: shellcheck -x --severity=error Scripts/*.sh Scripts/lib/*.sh
       - name: Test the No-Intro data generator
         run: python3 Scripts/tests/test_generate_known_dumps.py
+      - name: Remind when the No-Intro data is due for a refresh
+        run: python3 Scripts/check-known-dumps-age.py

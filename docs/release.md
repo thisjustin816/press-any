@@ -25,8 +25,10 @@ Privacy answers for the shipped app, and the rights and disclosures in
 ## Refreshing the No-Intro data
 
 The app carries No-Intro's list of known Game Boy and Game Boy Color dumps in
-`Packages/EmulatorKit/Sources/GameIdentity/Resources/KnownDumps.json`. Refresh it about once a
-month, and before an App Store release:
+`Packages/EmulatorKit/Sources/GameIdentity/Resources/KnownDumps.json`. Refresh it every three
+months or so, and before an App Store release. No-Intro edits these DATs continually; mirrors that
+refresh by hand have picked up changes every two to four months. CI's hygiene job warns when the
+file is more than 90 days old or still empty.
 
 1. On DAT-o-MATIC (datomatic.no-intro.org), open Download, then P/C XML. Choose
    "Nintendo - Game Boy", select Prepare, then Download. Do the same for

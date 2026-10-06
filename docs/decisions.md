@@ -18,14 +18,14 @@ name, SHA-256, size, system, parent and release regions. Everything else the app
 region, language, revision and status flags, comes from the same filename parser that reads the
 player's own files, applied to the canonical name, so there is one naming parser.
 
-Refreshing is a human step. DAT-o-MATIC bans clients it takes for bots, lifts bans only by
-email, and its download is a browser form, so no workflow or build fetches from it; a scheduled
-job could get shared runner addresses banned for everyone. Once a month or so, a maintainer
-downloads the two P/C XML files in a browser, runs the generator, and opens a pull request that
-shows what changed. The data rides app releases; TestFlight carries it the same day. The
-signed downloadable updates in `dec 18` wait until the app has a host for them and a signing
-key; the file already carries its date and counts. Downloading the data during a build, or from
-devices, is ruled out for the same reasons.
+Refreshing is a human step. DAT-o-MATIC bans clients it takes for bots, lifts bans only by email,
+and its download is a browser form, so no workflow or build fetches from it; a scheduled job could
+get shared runner addresses banned for everyone. Every three months or so, a maintainer downloads
+the two P/C XML files in a browser, runs the generator, and opens a pull request that shows what
+changed. The data rides app releases; TestFlight carries it the same day. The signed downloadable
+updates in `dec 18` wait until the app has a host for them and a signing key; the file already
+carries its date and counts. CI warns when the file is more than 90 days old. Downloading the data
+during a build, or from devices, is ruled out for the same reasons.
 
 Matching and grouping persist nothing new. A Build's hash is its identity, so whether it is a
 known dump, which family it belongs to, and the regional titles of that family are looked up in
