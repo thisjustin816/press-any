@@ -57,8 +57,8 @@ final class GameplayDriver: @unchecked Sendable {
             guard !running else { return (false, nil) }
             running = true
             pendingRefresh = nil
-            defer { refreshes = nil }
-            return (true, refreshes)
+            defer { self.refreshes = nil }
+            return (true, self.refreshes)
         }
         // However the loop last stopped, its display link goes before a new one starts.
         stale?.cancel()

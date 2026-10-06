@@ -69,7 +69,7 @@ final class LCDFilterTests: XCTestCase {
         let frames: [UInt8] = [255, 0, 0]
         for fragment in ["gameplayTextureFragment", "gameplaySharpFragment"] {
             for (blending, expected) in [(FrameBlending.off, 255), (.blend, 128), (.ghosting, 128)] {
-                let weights = blending.weights(heldFrames: 3).map(Float.init)
+                let weights = blending.weights(heldFrames: 3).map { Float($0) }
                 let pixels = try render(
                     .off, fragment: fragment, device: device, library: library,
                     frames: frames, weights: SIMD4(weights[0], weights[1], weights[2], 0)
