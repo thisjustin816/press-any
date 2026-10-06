@@ -3,9 +3,10 @@
 Workflows live in `.github/workflows/`. Every action is pinned to a commit SHA, every
 workflow runs with `contents: read`, and a fork pull request gets the same read-only token.
 The one exception is TestFlight's tag job, which has `contents: write` and no secrets.
-Pull-request checks use no secrets. The TestFlight workflow, which runs for pushes to `main`
-and when started by hand, uses repository secrets for Apple signing and upload, as described
-in `docs/testflight.md`.
+CI and iOS build skip a pull request or push that changes only `docs/` or Markdown files, so docs
+merge without waiting on runners. Pull-request checks use no secrets. The TestFlight workflow,
+which runs for pushes to `main` and when started by hand, uses repository secrets for Apple
+signing and upload, as described in `docs/testflight.md`.
 
 ## Implemented
 
