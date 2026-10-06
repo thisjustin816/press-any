@@ -108,7 +108,7 @@ before running the next command. A helper can also convert the `.cer` and
 Every commit on `main` uploads on its own. When the **iOS build** workflow passes
 on a push to `main`, the TestFlight workflow waits for **CI** on the same commit,
 then archives and uploads it. A push that changes only `docs/`, `.github/` or
-Markdown files since the previous upload is skipped. A failed or cancelled iOS
+Markdown files since the previous upload is skipped. A failed or canceled iOS
 build or CI run uploads nothing. Because GitHub runs a `workflow_run` workflow from
 `main`'s copy, and the job accepts only pushes to this repository's `main`, pull
 requests never reach the signing secrets.
@@ -131,8 +131,8 @@ Each upload sets the build's **What to Test** text from the commits since the
 previous upload: a merged pull request appears as its title and number. A `main`
 build lists what changed since the last `main` upload; a feature branch build
 lists the branch's own commits. The workflow tags each `main` upload
-`testflight/<build>` at the commit it built, which is where the next build's list
-starts and which maps a TestFlight build back to its commit. The text is posted
+`testflight/<build>` at the commit it built. The next build's list starts at that
+tag, and the tag maps a TestFlight build back to its commit. The text is posted
 through the App Store Connect API once Apple has the build, which can take some
 minutes. If that fails, the upload still counts and the run shows the warning;
 add the text in App Store Connect if it matters for that build.
@@ -144,11 +144,12 @@ using `Config/ExportOptions-TestFlight.plist` and uploads it with Apple's `altoo
 It deletes its temporary signing files and keychain when the script exits. It
 does not publish an App Store release or add builds to tester groups. An internal
 group with **automatic distribution** turned on receives each processed build; other
-groups get a build when you add it to them in App Store Connect.
+groups get a build once it is added to them in App Store Connect.
 
 The marketing version comes from `MARKETING_VERSION` in `project.yml` (currently
 `0.1.0`), and TestFlight shows it with the build number beside it. It changes only
-when that value is edited. The build number encodes the workflow run and retry as three numeric components: run 1,
+when that value is edited. The build number encodes the workflow run and retry as
+three numeric components: run 1,
 attempt 1 is `1.1.1`; run 100, attempt 1 is `2.0.1`. Retrying a run uploads a
 different build number. Keep this workflow as the build-number source for this
 marketing version; other upload paths must avoid collisions.
@@ -200,7 +201,7 @@ need an iPad screenshot set. Capturing screenshots does not upload them to Apple
 
 | Symptom | What to check |
 |---|---|
-| TestFlight job is skipped | For `main`, the iOS build run on that push failed or was cancelled by a newer push; otherwise dispatch it from a repository branch, not a tag |
+| TestFlight job is skipped | For `main`, the iOS build run on that push failed or was canceled by a newer push; otherwise dispatch it from a repository branch, not a tag |
 | Run succeeds but uploads nothing | The push changed only docs, workflows or Markdown since the previous upload; the run summary says so |
 | What to Test is empty | The Set What to Test step's log; Apple may not have finished processing within its wait |
 | `Missing ...` | The matching repository secret is present with the exact name |

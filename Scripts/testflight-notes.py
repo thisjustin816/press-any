@@ -62,7 +62,7 @@ def change_titles(revisions):
 def fit(header, titles):
     lines = [header]
     for index, title in enumerate(titles):
-        more = f"- …and {len(titles) - index} more"
+        more = f"- ...and {len(titles) - index} more"
         if len("\n".join(lines + [f"- {title}", more])) > MAX_NOTES:
             lines.append(more)
             break
