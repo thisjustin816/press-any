@@ -3,6 +3,35 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Scope and safety changes from the market review
+
+A review of comparable emulators, library managers and ROM-hack sites found that "one game, many
+versions" alone is no longer new, and that what sets Press Any apart is keeping saves and Builds
+safe across versions. These decisions follow from it.
+
+GBA, through mGBA, ships in 1.2 or 2.0, once the GB/GBC app is feature complete through v1 and
+v1.1. It replaces "later" in the specs.
+
+The Community Catalog starts as a format, not a service. v1 defines a signed catalog file the app
+reads offline: Game and Build metadata, expected hashes, lineage and where to download patches,
+never ROMs. The hosted service, with accounts, submissions and moderation, follows v1. Playing,
+importing and patching never depend on a catalog.
+
+An off-by-default setting sends anonymous usage counts, so the project can tell whether people use
+several Builds per Game: how many Games, Builds per Game, Save Profiles used by more than one
+Build, and Quick Play sessions added to the library. It never sends titles, hashes, filenames or
+any library contents, and nothing is sent until the player turns it on. Where the counts go, and
+the privacy copy for the setting, are still to be chosen.
+
+Two safety additions: a Build can carry declared save compatibility, so the launch check knows
+when Builds are known to share or known not to share a save instead of only guessing; and each
+step of a patch stack records the input hash it expects, so a stacked IPS patch, which carries no
+checksum of its own, can't apply to the wrong input unnoticed. When the input differs, review
+shows the expected and selected hashes side by side.
+
+App Store screenshots and previews show homebrew and the original test ROMs only, never
+third-party game art or logos.
+
 ## 2026-10-06: Fast Forward speed is a setting
 
 Fast Forward in the game menu runs at the Fast Forward Speed setting: 1.5×, 2×, 3×, 4×, 8× or

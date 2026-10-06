@@ -52,6 +52,7 @@ Open items in each area are in the table, finished ones on the line under it.
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | Q184, dec 12 | none |
 | missing | Landscape gameplay | v1 | prod "Layouts, skins, touch"; dec 22 | TouchControlLayout is portrait-only |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | later 12 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
+| missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | D "Scope and safety changes from the market review" | the Screenshots workflow already seeds from `TestROMs/` |
 
 Done: iOS 17 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
 Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (heavy
@@ -80,7 +81,7 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 | missing | Model override DMG/GBC/SGB at App->System->Game->Build | v1 | Q87; later 7 ("no claim CGB-only works in DMG") | no setting key |
 | missing | SGB mode: palettes, borders, game enhancements (custom border editing deferred) | v1 | Q86 | no SGB model/boot ROM in bridge |
 | missing | User-chosen alternate core per Build | later | dec 2 |  |
-| missing | mGBA/GBA adapter | later | prod "post-v1" |  |
+| missing | mGBA/GBA adapter | 1.2 or 2.0 | prod "post-v1"; D "Scope and safety changes from the market review" | after GB/GBC is feature complete |
 
 Done: SameBoy 1.0.3 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest compatible core on
 first launch, then pinned per Build; Open SameBoy boot ROMs incl. cgb_boot_fast; Skip Boot Logo:
@@ -206,6 +207,7 @@ automatically replacing the previous one; rename a Build from its long-press men
 | missing | Patch metadata with confidence/provenance (catalog > README > filename) | v1 | Q135 |  |
 | missing | BPS generation from base vs modified Build | v1.1 | prod "v1.1 targets" |  |
 | missing | Quick Play a patch against a base without creating a Build | future | dec 14 |  |
+| missing | Expected input hash on every step of a patch stack; review shows expected and selected hashes when they differ | v1 | D "Scope and safety changes from the market review" | PatchRecipe checks only the base and the result; IPS carries no checksum of its own |
 
 Done: IPS (RLE, truncate) and BPS (CRC checks) engines; Preserve base ROM, original patch, recipe,
 result hash; Base validation; explicit Apply Anyway persisted for rebuilds; Patch result is a new
@@ -220,6 +222,7 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | GB Studio save migration (version-gated, needs maps) | v1.1 | prod "v1.1 targets" |  |
 | missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later | dec 9/33 |  |
+| missing | Declared save compatibility between Builds (known to share, known not to), used by the launch check | v1 | D "Scope and safety changes from the market review" | the launch check only infers today (GB Studio, tools, header save hardware) |
 
 Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play
 once changed, at most every five seconds of play and off the frame-pacing queue; Compatible Builds
@@ -426,17 +429,18 @@ Spec: target v1, may move to v1.1.
 
 ### Community Catalog
 
-Spec: target v1, may move to v1.1.
+Spec: the file format is v1 and the hosted service follows v1 (D "Scope and safety changes from the market review").
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Opt-in anonymous read; lightweight identity to contribute; optional attribution | v1 | prod "Community Catalog" |  |
-| missing | Moderated submissions, trust layers, structured evidence, rejection reasons | v1 | dec 19; later 13 |  |
-| missing | Field-level corrections; "Suggest This Correction" after local edit, never auto-submit | v1 | dec 19 |  |
-| missing | Metadata, artwork, legal patch references/uploads; no ROM hosting | v1 | Q178/Q179 |  |
-| missing | Update discovery: quiet badge, optional verified pre-download, per-Game override, details | v1 | dec 19 |  |
-| missing | Update import as new Build via normal review, old kept for rollback | v1 | dec 19 |  |
-| missing | Backend (PostgreSQL/Supabase-shaped), CC0 factual metadata policy | v1 | later 13 |  |
+| missing | Signed catalog file read offline: Game and Build metadata, expected hashes, lineage, patch download locations, no ROMs; nothing else depends on it | v1 | D "Scope and safety changes from the market review" |  |
+| missing | Opt-in anonymous read; lightweight identity to contribute; optional attribution | after v1 | prod "Community Catalog" | hosted service |
+| missing | Moderated submissions, trust layers, structured evidence, rejection reasons | after v1 | dec 19; later 13 | hosted service |
+| missing | Field-level corrections; "Suggest This Correction" after local edit, never auto-submit | after v1 | dec 19 | hosted service |
+| missing | Metadata, artwork, legal patch references/uploads; no ROM hosting | after v1 | Q178/Q179 | hosted service; the v1 file carries references |
+| missing | Update discovery: quiet badge, optional verified pre-download, per-Game override, details | after v1 | dec 19 |  |
+| missing | Update import as new Build via normal review, old kept for rollback | after v1 | dec 19 |  |
+| missing | Backend (PostgreSQL/Supabase-shaped), CC0 factual metadata policy | after v1 | later 13 |  |
 
 ### Metadata databases
 
@@ -489,6 +493,7 @@ after shortfalls); frames run on the display refresh at native speed, up to 120 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Opt-in crash reporting limited to non-content diagnostics | v1 | Q177 | no crash reporting at all |
+| missing | Opt-in anonymous usage counts (Games, Builds per Game, Save Profiles used by several Builds, Quick Play sessions added to the library), never titles, hashes, filenames or contents | v1 | D "Scope and safety changes from the market review" | endpoint or provider and privacy copy not chosen; PRIVACY.md and the App Store privacy answers change with it |
 | missing | Explicit bug-report export with checklist/preview | v1 | Q176 (see Screenshots) |  |
 | missing | Accurate privacy/consent copy for provider queries and catalog; keys server-side/secure storage | v1 | later 13 |  |
 
@@ -578,4 +583,4 @@ Spec: all missing.
 |---|---|---|---|---|
 | missing | Developer tools: a watched Files or iCloud Drive folder whose new ROMs import as new Builds; GitHub releases or CI builds as Builds; a tester bug report bundle (save, state, screenshot, Build hash, toolchain) | later | D 2026-10-05 |  |
 | missing | iOS integration: Continue Playing widget, Siri and Shortcuts ("Resume <game>"), Spotlight | later | D 2026-10-05 |  |
-| missing | mGBA/GBA; network/internet link; RetroAchievements; full debugger/disassembler/VRAM; deterministic replay/movies; arbitrary .slang/.slangp; Apple TV/macOS/iPad-first polish; creator-controlled homebrew publishing; document annotations/OCR/bookmarks; community layout gallery; battery-saver mode; per-Build alternate core choice; bulk canonical rename | later |  |  |
+| missing | Network/internet link; RetroAchievements; full debugger/disassembler/VRAM; deterministic replay/movies; arbitrary .slang/.slangp; Apple TV/macOS/iPad-first polish; creator-controlled homebrew publishing; document annotations/OCR/bookmarks; community layout gallery; battery-saver mode; per-Build alternate core choice; bulk canonical rename | later |  |  |

@@ -13,13 +13,15 @@ here is not a claim that the code already implements it.
   (`LICENSE`); that does not relicense third-party assets.
 - iOS 17 is the minimum.
 - iPhone-first. iPad-specific polish, split-screen manuals and other devices are
-  later. SameBoy for GB/GBC; mGBA for GBA later. Chromecast remains out of scope.
+  later. SameBoy for GB/GBC; mGBA for GBA in 1.2 or 2.0, once GB/GBC is feature
+  complete. Chromecast remains out of scope.
 - Other retro systems are not planned product work, but must not be precluded by
   fundamental library/storage/input/core abstractions.
 - The MVP is an architecture proof before the full-featured v1, and it includes
   SDK/toolchain detection.
-- iCloud and the Community Catalog target v1, with an explicit review that can
-  move them to v1.1 if they alone hold up the emulator. Neither is MVP.
+- iCloud targets v1, with an explicit review that can move it to v1.1 if it alone
+  holds up the emulator. The Community Catalog's signed file format is v1 and its
+  hosted service follows v1. Neither is MVP.
 - Progressive disclosure is mandatory: normal UI -> Customize/context menu ->
   Advanced -> Developer Mode. Preserve powerful options without settings clutter.
 
@@ -331,7 +333,8 @@ system. App Store payment/privacy rules need final current-market review.
 
 ## 13. Community Catalog, privacy and updates
 
-The backend is post-MVP and PostgreSQL/Supabase-shaped; no service exists yet. Anonymous read, identity for contribution, optional
+The backend follows v1, after a signed catalog file format that v1 reads offline, and is
+PostgreSQL/Supabase-shaped; no service exists yet. Anonymous read, identity for contribution, optional
 public attribution, moderation before canonical updates, field-level suggested
 corrections with source/evidence and rejection reasons. No social comments/rating
 system required. Local overrides are never overwritten by provider refresh.
@@ -377,7 +380,7 @@ report unsupported state formats rather than treating snapshots as portable.
 
 AirPlay/external display: independent game render target and phone controller/
 Quick Actions/manual companion. One frame's game state, not UI mirroring only.
-Link/camera/printer v1.1, GBA later; potential proximity initiation is research
+Link/camera/printer v1.1, GBA in 1.2 or 2.0; potential proximity initiation is research
 and platform/version gated, not a shipping transport guarantee.
 
 ## 15. Scope and acceptance
