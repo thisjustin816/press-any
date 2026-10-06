@@ -18,19 +18,35 @@ Nothing below is in progress.
 
 The MVP is complete and working. Its device checklist remains a regression record.
 
-1. No-Intro categorization and regional releases: confirm the data's license, build the
-   `no-intro-update.yml` pipeline and bundled baseline, match imports by hash, group parent/clone
-   families under one Game, then the regional rows below. ROM-hack naming suggestions and review
-   metadata finish alongside.
-2. Display and play feel, small changes that make games look and play right on day one: GBC
-   color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
+Library backend first: everything that decides how the library is stored, identified and kept
+safe lands before more play features, so a library built while testing never needs regrouping or
+migrating later (D "Library backend first").
+
+1. Keep the test library safe: Library Backup export and import (versioned archive, ROMs left out
+   unless asked, merge restore by stable IDs), dependency-aware deletion, Recently Deleted for 30
+   days, and tombstones, which iCloud needs later.
+2. Identity: No-Intro categorization (confirm the data's license, the `no-intro-update.yml`
+   pipeline and bundled baseline, hash matching, Verified/Modified/Unknown, parent/clone grouping
+   and merging existing Games that are one family), the regional rows, Match Game for unknown
+   ROMs and lineage without owning the base, and the ROM-hack naming that remains.
+3. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
+   metadata provenance with Metadata Details, Build notes, per-Build playtime and the Build
+   timeline, typed multi-artwork, documents, tags, collections and favorites, declared save
+   compatibility, per-step patch input hashes, and the cross-region save check.
+4. Import pipeline: ZIP and 7z, multi-asset grouping, several ROMs into one Game in one flow,
+   duplicate imports still inspecting new assets, visual artwork comparison, and multi-signal
+   development-build matching.
+5. Library features on that data: FTS5 search, sorting, smart and manual collections, play
+   statistics, the Developer view, the artwork provider chain with priority, provenance, regional
+   and title-screen artwork, the signed catalog file, and the storage screen with cleanup,
+   in-flight protection and verification on read.
+6. iCloud sync, once tombstones and the schema have settled.
+7. Display and play feel: GBC color correction, DMG palettes, Fast Forward hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
-3. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
+8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
    profiles and remapping, landscape and the layout editor, cheats and memory tools, external
    display, and the curated shader library.
-4. Library and services: Share Sheet and archive import, search and collections, automatic
-   artwork, manuals, screenshots and notes, deletion and undo, backups, iCloud and the Community
-   Catalog.
+9. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
 
 ## Known bugs
 
@@ -175,7 +191,6 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Share Sheet / Open In (and Quick Play vs Import choice on open) | v1 | prod "Sources"; dec 14 | no document types/onOpenURL |
 | missing | ZIP + 7z (libarchive) with Q92 safety (depth/ratio limits, traversal, password detect) | v1 | Q92; later 6 |  |
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1 | prod "Multi-asset review" |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1 | prod "Duplicate handling" | duplicate path only repairs the blob |
@@ -183,7 +198,8 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 | missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1 | Q149/Q150 |  |
 | missing | Multiple ROMs attached to one Game in one flow | v1 | dec 16 |  |
 
-Done: Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
+Done: Share Sheet / Open In for ROMs and patches, with the Quick Play or Import choice on open;
+Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
 re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Preferred suggestions
 (development releases default to both; ROM hacks default Preferred only); Toolchain

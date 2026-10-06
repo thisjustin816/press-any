@@ -3,6 +3,15 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Library backend first
+
+The backlog's order puts library backend work ahead of further play features: backup and safe
+deletion, No-Intro identity and regional grouping, the remaining data model, the import pipeline,
+then the library features built on them, with iCloud after the schema settles. The player-facing
+features needed for testing are in place, and a library built during testing should not need
+regrouping or migrating when this work lands. Display and play feel and the rest of the core gate
+follow.
+
 ## 2026-10-06: Regional releases and No-Intro families
 
 No-Intro's GB/GBC data, normalized by the `no-intro-update.yml` pipeline (`later 11`), gives each
