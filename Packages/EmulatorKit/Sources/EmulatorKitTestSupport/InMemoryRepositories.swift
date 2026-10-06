@@ -27,6 +27,8 @@ public final class InMemoryGameRepository: GameRepository, @unchecked Sendable {
     public func insertGame(_ game: Game) throws { lock.withLock { values[game.id] = game } }
     public func updateGame(_ game: Game) throws { lock.withLock { values[game.id] = game } }
     public func deleteGame(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+
+    var all: [Game] { lock.withLock { Array(values.values) } }
 }
 
 public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable {
@@ -66,6 +68,9 @@ public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable
     public func moveBuild(id: UUID, toGameID: UUID) throws {
         lock.withLock { values[id]?.gameID = toGameID }
     }
+
+    var all: [Build] { lock.withLock { Array(values.values) } }
+    func removeBuild(id: UUID) { _ = lock.withLock { values.removeValue(forKey: id) } }
 }
 
 public final class InMemorySaveProfileRepository: SaveProfileRepository, @unchecked Sendable {
@@ -90,6 +95,8 @@ public final class InMemorySaveProfileRepository: SaveProfileRepository, @unchec
     public func insertSaveProfile(_ profile: SaveProfile) throws { lock.withLock { values[profile.id] = profile } }
     public func updateSaveProfile(_ profile: SaveProfile) throws { lock.withLock { values[profile.id] = profile } }
     public func deleteSaveProfile(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+
+    var all: [SaveProfile] { lock.withLock { Array(values.values) } }
 }
 
 public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked Sendable {
@@ -135,6 +142,8 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
     }
 
     public func deleteSaveState(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+
+    var all: [SaveState] { lock.withLock { Array(values.values) } }
 }
 
 public final class InMemoryToolchainReportRepository: ToolchainReportRepository, @unchecked Sendable {
@@ -163,6 +172,9 @@ public final class InMemoryBuildVariableMapRepository: BuildVariableMapRepositor
     public func fetchVariableMaps(buildID: UUID) throws -> [BuildVariableMap] {
         lock.withLock { values.values.filter { $0.buildID == buildID }.sorted { $0.attachedAt < $1.attachedAt } }
     }
+
+    var all: [BuildVariableMap] { lock.withLock { Array(values.values) } }
+    func removeMaps(buildID: UUID) { lock.withLock { values = values.filter { $0.value.buildID != buildID } } }
 }
 
 public final class InMemoryPatchRecipeRepository: PatchRecipeRepository, @unchecked Sendable {
@@ -176,6 +188,13 @@ public final class InMemoryPatchRecipeRepository: PatchRecipeRepository, @unchec
     public func fetchPatchRecipe(resultBuildID: UUID) throws -> PatchRecipe? {
         lock.withLock { values.values.first { $0.resultBuildID == resultBuildID } }
     }
+
+    public func fetchPatchRecipes(baseBuildID: UUID) throws -> [PatchRecipe] {
+        lock.withLock { values.values.filter { $0.baseBuildID == baseBuildID }.sorted { $0.createdAt < $1.createdAt } }
+    }
+
+    var all: [PatchRecipe] { lock.withLock { Array(values.values) } }
+    func removeRecipe(resultBuildID: UUID) { lock.withLock { values = values.filter { $0.value.resultBuildID != resultBuildID } } }
 }
 
 public final class InMemoryAssetRepository: ManagedAssetInventoryRepository, @unchecked Sendable {
