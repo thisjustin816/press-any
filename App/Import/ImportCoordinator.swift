@@ -32,4 +32,18 @@ extension UTType {
     static let gameBoySave = UTType(filenameExtension: "sav") ?? .data
     static let ipsPatch = UTType(importedAs: "com.thisjustin816.emulator.patch.ips", conformingTo: .data)
     static let bpsPatch = UTType(importedAs: "com.thisjustin816.emulator.patch.bps", conformingTo: .data)
+
+    /// What the file picker accepts. Another installed app can export its own type for an
+    /// extension, and Files then labels the file with that type instead, so the type the system
+    /// resolves for each extension is accepted too.
+    static let romFileTypes = withResolvedTypes([.gameBoyROM, .gameBoyColorROM], extensions: ["gb", "gbc"])
+    static let patchFileTypes = withResolvedTypes([.ipsPatch, .bpsPatch], extensions: ["ips", "bps"])
+
+    private static func withResolvedTypes(_ own: [UTType], extensions: [String]) -> [UTType] {
+        var types = own
+        for type in extensions.compactMap({ UTType(filenameExtension: $0) }) where !types.contains(type) {
+            types.append(type)
+        }
+        return types
+    }
 }

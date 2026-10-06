@@ -248,9 +248,7 @@ final class GameDetailViewModel: ObservableObject {
                     existing: builds.map(\.displayName),
                     addedAt: .now
                 )
-                var parsed = first.buildMetadata
-                parsed.hackTitle = parsed.hackTitle ?? first.suggestedTitle
-                metadata = parsed
+                metadata = BuildNaming.patchMetadata(for: first)
             } else {
                 displayName = BuildNaming.distinctName(
                     urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + "),

@@ -90,13 +90,13 @@ struct SharedPatchView: View {
             }
             .task {
                 let naming = FilenameMetadataParser.parse(filename: file.originalFilename)
-                let metadata = naming.buildMetadata
+                let metadata = BuildNaming.patchMetadata(for: naming)
                 region = metadata.region ?? ""
                 language = metadata.language ?? ""
                 revision = metadata.revision ?? ""
                 version = metadata.versionString ?? ""
                 baseTitle = metadata.baseTitle ?? ""
-                hackTitle = metadata.hackTitle ?? naming.suggestedTitle
+                hackTitle = metadata.hackTitle ?? ""
                 author = metadata.author ?? ""
                 translation = metadata.translation ?? ""
                 status = metadata.status ?? ""

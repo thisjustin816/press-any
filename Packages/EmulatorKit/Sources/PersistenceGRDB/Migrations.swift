@@ -18,8 +18,20 @@ extension AppDatabase {
         migrator.registerMigration("v1-v5-single-base") { db in
             try db.execute(sql: V1V5SingleBaseSchema.sql)
         }
+        migrator.registerMigration("v1-v6-release-sort-marker") { db in
+            try db.execute(sql: V1V6ReleaseSortMarkerSchema.sql)
+        }
         return migrator
     }
+}
+
+/// Version sort keys gained a suffix so a prerelease sorts before its release: "~" ends a release's
+/// key. Keys stored before then were only ever a release's numbers, so each gains the "~".
+enum V1V6ReleaseSortMarkerSchema {
+    static let sql = #"""
+    UPDATE builds SET version_sort_key = version_sort_key || '~'
+    WHERE version_sort_key IS NOT NULL AND version_sort_key NOT GLOB '*[^0-9.]*';
+    """#
 }
 
 enum V1V5SingleBaseSchema {

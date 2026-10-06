@@ -23,9 +23,6 @@ final class GameplayViewController: UIViewController {
     private var firstFrameClock: UInt64?
     private var pauseReasons = GameplayPauseReasons()
     private var coveredBySheet = false
-    /// The Resume Game? prompt, the one alert a sheet over the game may close: it holds nothing, and
-    /// the game stays paused behind it either way.
-    private weak var resumePrompt: UIAlertController?
     /// Set when the scene went to the background, so returning applies Resume Games.
     private var backgrounded = false
     /// Set once an emulation error has stopped the game for good.
@@ -571,7 +568,6 @@ final class GameplayViewController: UIViewController {
             alert.addAction(UIAlertAction(title: "Resume", style: .default) { [weak self] _ in
                 self?.resumeTapped()
             })
-            resumePrompt = alert
             present(alert, animated: true)
         }
     }
@@ -645,13 +641,12 @@ final class GameplayViewController: UIViewController {
     }
 
     /// A sheet over the game, such as a file shared mid-game, pauses it as the game menu does, so
-    /// the player resumes when the sheet closes. Only the Resume Game? prompt gives way to the sheet;
-    /// other alerts hold frames or offer the only way out, so they stay.
+    /// the player resumes when the sheet closes. A sheet never opens over this screen's own alerts,
+    /// the Resume Game? prompt included: a shared file waits until the player answers it.
     func setCoveredBySheet(_ covered: Bool) {
         guard covered != coveredBySheet else { return }
         coveredBySheet = covered
         guard covered else { return }
-        if let resumePrompt, presentedViewController === resumePrompt { dismiss(animated: false) }
         pauseGameplay()
     }
 

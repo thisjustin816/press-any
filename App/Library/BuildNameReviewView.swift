@@ -92,18 +92,27 @@ struct BuildNameReviewView: View {
         loaded = true
     }
 
+    /// Renames are saved one at a time. If one fails, those already saved leave the list and the
+    /// library shows them, so trying again repeats only the rest.
     private func apply() {
+        var renamed: Set<UUID> = []
+        defer {
+            if !renamed.isEmpty {
+                items.removeAll { renamed.contains($0.id) }
+                NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+            }
+        }
         for item in items where item.accepted {
             let name = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !name.isEmpty, name != item.suggestion.currentName else { continue }
             do {
                 try container.buildOperations.renameBuild(buildID: item.suggestion.buildID, displayName: name)
+                renamed.insert(item.id)
             } catch {
                 errorMessage = "Couldn’t rename “\(item.suggestion.currentName)”: \(error.localizedDescription)"
                 return
             }
         }
-        NotificationCenter.default.post(name: .libraryDidChange, object: nil)
         dismiss()
     }
 }

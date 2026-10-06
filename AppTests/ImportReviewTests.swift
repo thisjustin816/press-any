@@ -121,4 +121,26 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertTrue(result.build.isBase)
         XCTAssertEqual(try container.repositories.builds.fetchBuild(id: first.build.id)?.isBase, false)
     }
+
+    func testRolesThePlayerSetSurviveChangingTheDestination() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let coordinator = ImportCoordinator(
+            analyzer: container.importAnalyzer,
+            committer: container.importCommitter,
+            assetStore: container.fileStore
+        )
+        let file = root.appendingPathComponent("Example v1.0.gb")
+        try Data(repeating: 0, count: 0x8000).write(to: file)
+        let review = ImportReviewViewModel(analysis: try coordinator.analyzeROM(at: file), games: [], coordinator: coordinator)
+        XCTAssertTrue(review.markAsBase)
+        review.markAsBase = false
+        review.destination = .existing(UUID())
+        review.destinationChanged()
+        review.destination = .newGame
+        review.destinationChanged()
+        XCTAssertFalse(review.markAsBase, "the player turned Base off")
+        XCTAssertTrue(review.markAsPreferred)
+    }
 }

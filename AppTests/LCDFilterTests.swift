@@ -60,10 +60,37 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
+    /// Frame blending mixes the newest frame with the frames before it by the renderer's weights,
+    /// in both sampling modes, and Off leaves the newest frame as it is.
+    func testFrameBlendingMixesEarlierFramesByTheirWeights() throws {
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice(), "Frame blending requires Metal")
+        let library = try device.makeDefaultLibrary(bundle: Bundle(for: GameplayViewController.self))
+        // A white frame after two black ones.
+        let frames: [UInt8] = [255, 0, 0]
+        for fragment in ["gameplayTextureFragment", "gameplaySharpFragment"] {
+            for (blending, expected) in [(FrameBlending.off, 255), (.blend, 128), (.ghosting, 128)] {
+                let weights = blending.weights(heldFrames: 3).map(Float.init)
+                let pixels = try render(
+                    .off, fragment: fragment, device: device, library: library,
+                    frames: frames, weights: SIMD4(weights[0], weights[1], weights[2], 0)
+                )
+                let center = pixels[pixel(12, 12)]
+                XCTAssertEqual(Int(center), expected, accuracy: 1, "\(blending) in \(fragment)")
+            }
+            let fading = try render(
+                .off, fragment: fragment, device: device, library: library,
+                frames: [0, 255, 255], weights: SIMD4(0.5, 0.3, 0.2, 0)
+            )
+            XCTAssertEqual(Int(fading[pixel(12, 12)]), 128, accuracy: 1, "a light that just went out leaves a trail")
+        }
+    }
+
     private func pixel(_ x: Int, _ y: Int) -> Int { (y * 24 + x) * 4 }
 
+    /// Renders 1×1 gray `frames`, newest first, scaled to 24×24 by `fragment`.
     private func render(
-        _ filter: LCDFilter, fragment: String, device: any MTLDevice, library: any MTLLibrary
+        _ filter: LCDFilter, fragment: String, device: any MTLDevice, library: any MTLLibrary,
+        frames: [UInt8] = [255], weights: SIMD4<Float> = SIMD4(1, 0, 0, 0)
     ) throws -> [UInt8] {
         let descriptor = MTLRenderPipelineDescriptor()
         descriptor.vertexFunction = try XCTUnwrap(library.makeFunction(name: "gameplayFullscreenVertex"))
@@ -75,10 +102,13 @@ final class LCDFilterTests: XCTestCase {
         )
         sourceDescriptor.storageMode = .shared
         sourceDescriptor.usage = .shaderRead
-        let source = try XCTUnwrap(device.makeTexture(descriptor: sourceDescriptor))
-        let white: [UInt8] = [255, 255, 255, 255]
-        white.withUnsafeBytes {
-            source.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: $0.baseAddress!, bytesPerRow: 4)
+        let sources = try frames.map { gray in
+            let source = try XCTUnwrap(device.makeTexture(descriptor: sourceDescriptor))
+            let color: [UInt8] = [gray, gray, gray, 255]
+            color.withUnsafeBytes {
+                source.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: $0.baseAddress!, bytesPerRow: 4)
+            }
+            return source
         }
         let targetDescriptor = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: .bgra8Unorm, width: 24, height: 24, mipmapped: false
@@ -94,9 +124,13 @@ final class LCDFilterTests: XCTestCase {
         let commands = try XCTUnwrap(queue.makeCommandBuffer())
         let encoder = try XCTUnwrap(commands.makeRenderCommandEncoder(descriptor: pass))
         encoder.setRenderPipelineState(pipeline)
-        encoder.setFragmentTexture(source, index: 0)
+        for slot in 0..<3 {
+            encoder.setFragmentTexture(sources[slot < sources.count ? slot : 0], index: slot)
+        }
         var mode = filter.shaderMode
         encoder.setFragmentBytes(&mode, length: MemoryLayout<UInt32>.size, index: 0)
+        var blendWeights = weights
+        encoder.setFragmentBytes(&blendWeights, length: MemoryLayout<SIMD4<Float>>.size, index: 1)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
         commands.commit()

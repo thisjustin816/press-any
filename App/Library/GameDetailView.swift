@@ -14,7 +14,7 @@ struct GameDetailView: View {
 
         var contentTypes: [UTType] {
             switch self {
-            case .patch: [.ipsPatch, .bpsPatch]
+            case .patch: UTType.patchFileTypes
             // `.i`, `.sym` and `.noi` files have no system type; the import checks the contents.
             case .variableMap: [.data]
             case .batterySave, .replacementSave: [.gameBoySave]

@@ -62,6 +62,48 @@ struct MigrationTests {
         }
     }
 
+    @Test("release sort keys stored before prereleases sorted gain the release marker")
+    func releaseSortMarkerUpgrade() throws {
+        let database = try AppDatabase.inMemory()
+        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v5-single-base")
+        let date = PersistenceCodec.date(Date(timeIntervalSince1970: 1_700_000_000))
+        let assetID = PersistenceCodec.uuid(UUID()), gameID = PersistenceCodec.uuid(UUID())
+        let release = UUID(), unversioned = UUID()
+        let key = "0000000001.0000000000.0000000000.0000000000"
+        try database.writer.write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO managed_assets
+                (id, kind, storage_class, content_sha256, byte_length, relative_path, integrity_status, created_at)
+                VALUES (?, 'sourceROM', 'source', ?, 1, 'Source/ROM/example.rom', 'verified', ?)
+                """,
+                arguments: [assetID, String(repeating: "a", count: 64), date]
+            )
+            try db.execute(
+                sql: "INSERT INTO games (id, primary_title, system_family, created_at, modified_at) VALUES (?, 'Example', 'gameboy', ?, ?)",
+                arguments: [gameID, date, date]
+            )
+            for (id, hash, sortKey) in [(release, "a", key as String?), (unversioned, "b", nil)] {
+                try db.execute(
+                    sql: """
+                    INSERT INTO builds
+                    (id, game_id, system, display_name, rom_asset_id, rom_sha256, source_kind, is_base,
+                     version_sort_key, created_at, modified_at)
+                    VALUES (?, ?, 'gb', 'Example', ?, ?, 'importedROM', 0, ?, ?, ?)
+                    """,
+                    arguments: [PersistenceCodec.uuid(id), gameID, assetID, String(repeating: hash, count: 64), sortKey, date, date]
+                )
+            }
+        }
+
+        try database.migrate()
+        let builds = database.makeRepositories().builds
+        #expect(try builds.fetchBuild(id: release)?.versionSortKey == key + "~")
+        #expect(try builds.fetchBuild(id: unversioned)?.versionSortKey == nil)
+        // A beta of the same version now sorts before the release imported earlier.
+        #expect(key + "-beta" < key + "~")
+    }
+
     @Test("a populated first-version library migrates with its rows intact")
     func populatedV1Upgrade() throws {
         let database = try AppDatabase.inMemory()

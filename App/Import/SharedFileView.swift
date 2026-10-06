@@ -68,7 +68,7 @@ struct SharedFileView: View {
                 analysis: analysis,
                 games: games,
                 coordinator: coordinator,
-                existingBuildNames: { (try? container.repositories.builds.fetchBuilds(gameID: $0))?.map(\.displayName) ?? [] }
+                existingBuildNames: { container.buildNames(in: $0) }
             )
         } catch {
             errorMessage = error.localizedDescription

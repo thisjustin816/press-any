@@ -272,6 +272,11 @@ final class AppContainer {
         ScreenshotScene.lcdFilterOverride ?? launchSetting(LCDFilter.self, .lcdFilter, for: context) ?? .off
     }
 
+    /// The names of a Game's Builds, for naming a new one apart from them. Unreadable means none.
+    func buildNames(in gameID: UUID) -> [String] {
+        (try? repositories.builds.fetchBuilds(gameID: gameID))?.map(\.displayName) ?? []
+    }
+
     func frameBlending(for context: LaunchContext) -> FrameBlending {
         launchSetting(FrameBlending.self, .frameBlending, for: context) ?? .off
     }

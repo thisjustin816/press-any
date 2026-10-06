@@ -39,7 +39,8 @@ struct RootView: View {
     @State private var endedQuickPlayAddsToLibrary = false
     @State private var endedQuickPlay: QuickPlaySession?
     @State private var quickPlayToResume: QuickPlaySession?
-    @State private var queuedSharedFiles: [SharedFile] = []
+    /// Shared files in arrival order, with any that couldn't be received, each shown in turn.
+    @State private var queuedSharedFiles: [SharedArrival] = []
     @State private var sharedFile: SharedFile?
     /// Retained until dismissal, so Quick Play can copy the ROM before receipt cleanup.
     @State private var closingSharedFile: SharedFile?
@@ -183,11 +184,12 @@ struct RootView: View {
     private func receiveSharedFile(_ url: URL) {
         guard let container = bootstrap.container else { return }
         do {
-            queuedSharedFiles.append(try container.sharedFileInbox.receive(url))
-            presentNextSharedFile()
+            queuedSharedFiles.append(.file(try container.sharedFileInbox.receive(url)))
         } catch {
-            sharedFileError = error.localizedDescription
+            // Reported when nothing else is on screen, as a file would be shown.
+            queuedSharedFiles.append(.failure(error.localizedDescription))
         }
+        presentNextSharedFile()
     }
 
     private func sharedFileErrorBinding(overGameplay: Bool) -> Binding<Bool> {
@@ -261,9 +263,13 @@ struct RootView: View {
             }
             return
         }
-        let next = queuedSharedFiles.removeFirst()
-        closingSharedFile = next
-        sharedFile = next
+        switch queuedSharedFiles.removeFirst() {
+        case .file(let next):
+            closingSharedFile = next
+            sharedFile = next
+        case .failure(let message):
+            sharedFileError = message
+        }
     }
 
     /// Whether something other than RootView's own presentations is on screen: anything above the
@@ -482,6 +488,11 @@ struct RootView: View {
         }
         gameplay = nil
     }
+}
+
+private enum SharedArrival {
+    case file(SharedFile)
+    case failure(String)
 }
 
 private struct GameplayPresentation: Identifiable {

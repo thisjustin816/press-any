@@ -2,6 +2,7 @@ import EmulatorDomain
 import Importing
 import QuickPlay
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct LibraryView: View {
     enum DisplayMode: String, CaseIterable {
@@ -166,7 +167,7 @@ struct LibraryView: View {
             .refreshable { model.reload() }
             .fileImporter(
                 isPresented: $showROMImporter,
-                allowedContentTypes: [.gameBoyROM, .gameBoyColorROM],
+                allowedContentTypes: UTType.romFileTypes,
                 allowsMultipleSelection: false
             ) { result in
                 handleImportSelection(result)
@@ -306,7 +307,7 @@ struct LibraryView: View {
                     analysis: analysis,
                     games: model.games,
                     coordinator: importCoordinator,
-                    existingBuildNames: { (try? container.repositories.builds.fetchBuilds(gameID: $0))?.map(\.displayName) ?? [] }
+                    existingBuildNames: { container.buildNames(in: $0) }
                 )
                 importReview = ImportReviewPresentation(model: reviewModel)
             } catch {

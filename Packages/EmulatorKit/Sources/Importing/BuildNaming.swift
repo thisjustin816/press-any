@@ -43,6 +43,14 @@ public enum BuildNaming {
         return naming.buildMetadata.hackTitle ?? naming.suggestedTitle
     }
 
+    /// The metadata a patch's filename gives the Build it makes. A patch with no hack title in its
+    /// name is titled by its filename, since the patch is what tells the Build apart.
+    public static func patchMetadata(for naming: FilenameMetadata) -> BuildImportMetadata {
+        var metadata = naming.buildMetadata
+        metadata.hackTitle = metadata.hackTitle ?? naming.suggestedTitle
+        return metadata
+    }
+
     /// Whether a name still carries URL escapes such as `%20`, as names taken from shared files did
     /// before filenames were decoded.
     static func hasPercentEscapes(_ name: String) -> Bool {

@@ -35,6 +35,8 @@ final class ImportReviewViewModel: ObservableObject {
     private let existingBuildNames: (UUID) -> [String]
     /// The last name suggested, so changing the destination replaces it unless the player edited it.
     private var suggestedBuildName: String
+    /// The destination the roles were last suggested for.
+    private var previousDestination: Destination
 
     init(
         analysis: ROMImportAnalysis,
@@ -67,6 +69,7 @@ final class ImportReviewViewModel: ObservableObject {
             initialDestination = .newGame
         }
         destination = initialDestination
+        previousDestination = initialDestination
         markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: initialDestination)
         markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: initialDestination)
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
@@ -110,8 +113,16 @@ final class ImportReviewViewModel: ObservableObject {
             suggestedBuildName = Self.buildName(for: analysis, destination: destination, existingBuildNames: existingBuildNames)
             buildDisplayName = suggestedBuildName
         }
-        markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: destination)
-        markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: destination)
+        // Like the name, a role the player set stays; only an untouched suggestion follows the Game.
+        let previousBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: previousDestination)
+        let previousPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: previousDestination)
+        if markAsBase == previousBase {
+            markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: destination)
+        }
+        if markAsPreferred == previousPreferred {
+            markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: destination)
+        }
+        previousDestination = destination
     }
 
     var plan: ROMImportPlan {

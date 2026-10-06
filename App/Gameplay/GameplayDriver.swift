@@ -42,7 +42,7 @@ final class GameplayDriver: @unchecked Sendable {
     init(
         runtime: any GameplayRuntime,
         input: GameplayInputAccumulator,
-        savePollNanoseconds: UInt64 = 1_000_000_000
+        savePollNanoseconds: UInt64 = 250_000_000
     ) {
         self.runtime = runtime
         self.input = input
@@ -53,12 +53,15 @@ final class GameplayDriver: @unchecked Sendable {
     var isRunning: Bool { stateLock.withLock { running } }
 
     func start() {
-        let shouldStart = stateLock.withLock { () -> Bool in
-            guard !running else { return false }
+        let (shouldStart, stale) = stateLock.withLock { () -> (Bool, DisplayRefreshThread?) in
+            guard !running else { return (false, nil) }
             running = true
             pendingRefresh = nil
-            return true
+            defer { refreshes = nil }
+            return (true, refreshes)
         }
+        // However the loop last stopped, its display link goes before a new one starts.
+        stale?.cancel()
         guard shouldStart else { return }
         queue.async { [weak self] in
             self?.scheduler = FrameScheduler()
@@ -135,7 +138,12 @@ final class GameplayDriver: @unchecked Sendable {
                 }
             }
         } catch {
-            stateLock.withLock { running = false }
+            let refreshes = stateLock.withLock { () -> DisplayRefreshThread? in
+                running = false
+                defer { self.refreshes = nil }
+                return self.refreshes
+            }
+            refreshes?.cancel()
             onError?(error)
         }
         if let latest { onFrame?(latest) }
@@ -265,8 +273,12 @@ final class DisplayRefreshThread: NSObject, @unchecked Sendable {
         }
     }
 
+    /// Reports under the lock, so `cancel()` waits out a report in progress. The handler must not
+    /// call `cancel()`.
     @objc private func refreshed(_ link: CADisplayLink) {
-        guard !lock.withLock({ cancelled }) else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        guard !cancelled else { return }
         let elapsed = lastTimestamp.map { max(0, link.timestamp - $0) } ?? 0
         lastTimestamp = link.timestamp
         let interval = max(0, link.targetTimestamp - link.timestamp)
