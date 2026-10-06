@@ -3,6 +3,18 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Frames follow the display refresh
+
+Gameplay frames run on the display's refresh instead of a sleep timer. Each refresh adds the time
+since the last one to what the game is owed, measured on the display's clock, and the game runs
+whole frames while it is owed one, then shows the newest. The game keeps its native 59.73 Hz rate
+(Q95): on a 60 Hz screen each frame shows for one refresh and one repeats about every four
+seconds. A sleep timer woke at slightly different times each frame, so frames landing near a
+refresh were repeated or skipped in clusters, which felt jerky. ProMotion iPhones refresh at up to
+120 Hz, where a repeat lasts 8 ms. After a stall, a refresh longer than four frames counts as
+one frame, so the game doesn't race to catch up. This replaces the fixed-deadline schedule in
+"2026-10-05: Adaptive audio, and registries wait for v1".
+
 ## 2026-10-06: Shared files open over a running game
 
 A ROM or patch shared to the app mid-game opens over the game. The game pauses as it does for the

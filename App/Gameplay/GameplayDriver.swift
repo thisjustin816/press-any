@@ -1,5 +1,6 @@
 import EmulationCore
 import Foundation
+import QuartzCore
 
 /// Owns the emulation frame loop. Core work never runs on the main/UI thread.
 final class GameplayDriver: @unchecked Sendable {
@@ -18,6 +19,10 @@ final class GameplayDriver: @unchecked Sendable {
 
     private var running = false
     private var requestedSpeed: EmulationSpeed = .normal
+    private var refreshes: DisplayRefreshThread?
+    /// Read and written only on the driver queue.
+    private var scheduler = FrameScheduler()
+    private var emulatedNanosecondsSinceSavePoll: UInt64 = 0
     /// Read and written only on the save queue.
     private var lastSaveFailed = false
     private var saveCheckInFlight = false
@@ -50,14 +55,27 @@ final class GameplayDriver: @unchecked Sendable {
             return true
         }
         guard shouldStart else { return }
-        queue.async { [weak self] in self?.runLoop() }
+        queue.async { [weak self] in
+            self?.scheduler = FrameScheduler()
+        }
+        let refreshes = DisplayRefreshThread { [weak self] elapsed, interval in
+            guard let self else { return }
+            self.queue.async { self.refresh(elapsed: elapsed, interval: interval) }
+        }
+        stateLock.withLock { self.refreshes = refreshes }
+        refreshes.start()
     }
 
     /// Returns once the loop has exited, so the caller can pause or stop the runtime without a
     /// frame still in flight. A frame stepped after the pause would fail and end the game.
     /// Never call this from the driver's own queue.
     func stop() {
-        stateLock.withLock { running = false }
+        let refreshes = stateLock.withLock { () -> DisplayRefreshThread? in
+            running = false
+            defer { self.refreshes = nil }
+            return self.refreshes
+        }
+        refreshes?.cancel()
         queue.sync {}
         saveQueue.sync {}
     }
@@ -71,30 +89,53 @@ final class GameplayDriver: @unchecked Sendable {
         }
     }
 
-    private func runLoop() {
-        var pacer = FramePacer(start: DispatchTime.now().uptimeNanoseconds)
-        var emulatedNanosecondsSinceSavePoll: UInt64 = 0
-        while stateLock.withLock({ running }) {
-            do {
-                let frame = try runtime.stepFrame(input: input.current())
-                emulatedNanosecondsSinceSavePoll &+= frame.emulatedNanoseconds
-                if emulatedNanosecondsSinceSavePoll >= savePollNanoseconds {
-                    emulatedNanosecondsSinceSavePoll = 0
-                    scheduleGameSave()
-                }
-                let samples = try runtime.drainAudio(maxFrames: 4096)
-                let rumble = try runtime.consumeRumbleAmplitude()
-
-                onFrame?(frame)
-                if !samples.isEmpty { onAudio?(samples) }
-                if rumble > 0 { onRumble?(rumble) }
-
-                pace(frameDuration: frame.emulatedNanoseconds, with: &pacer)
-            } catch {
-                stateLock.withLock { running = false }
-                onError?(error)
+    /// Runs the frames due since the last display refresh, then shows the newest, so every frame is
+    /// presented on a refresh.
+    private func refresh(elapsed: UInt64, interval: UInt64) {
+        guard stateLock.withLock({ running }) else { return }
+        let speed = stateLock.withLock { requestedSpeed }
+        var latest: EmulatorVideoFrame?
+        do {
+            switch speed {
+            case .normal:
+                scheduler.addRefresh(lasting: elapsed)
+            case .multiplier(let value):
+                scheduler.addRefresh(lasting: elapsed, speed: max(0, value))
+            case .unlimited:
+                break
             }
+            if case .unlimited = speed {
+                // As many frames as fit in most of a refresh, leaving time to present.
+                let deadline = DispatchTime.now().uptimeNanoseconds &+ interval * 3 / 4
+                repeat {
+                    latest = try runFrame()
+                } while DispatchTime.now().uptimeNanoseconds < deadline && stateLock.withLock({ running })
+            } else {
+                while scheduler.isFrameDue, stateLock.withLock({ running }) {
+                    let frame = try runFrame()
+                    scheduler.ranFrame(lasting: frame.emulatedNanoseconds)
+                    latest = frame
+                }
+            }
+        } catch {
+            stateLock.withLock { running = false }
+            onError?(error)
         }
+        if let latest { onFrame?(latest) }
+    }
+
+    private func runFrame() throws -> EmulatorVideoFrame {
+        let frame = try runtime.stepFrame(input: input.current())
+        emulatedNanosecondsSinceSavePoll &+= frame.emulatedNanoseconds
+        if emulatedNanosecondsSinceSavePoll >= savePollNanoseconds {
+            emulatedNanosecondsSinceSavePoll = 0
+            scheduleGameSave()
+        }
+        let samples = try runtime.drainAudio(maxFrames: 4096)
+        let rumble = try runtime.consumeRumbleAmplitude()
+        if !samples.isEmpty { onAudio?(samples) }
+        if rumble > 0 { onRumble?(rumble) }
+        return frame
     }
 
     /// Persistence can touch the filesystem and database. Keep it off the frame-pacing queue so a
@@ -118,51 +159,100 @@ final class GameplayDriver: @unchecked Sendable {
         }
     }
 
-    private func pace(frameDuration: UInt64, with pacer: inout FramePacer) {
-        let speed = stateLock.withLock { requestedSpeed }
-        let targetNanoseconds: UInt64
-        switch speed {
-        case .normal:
-            targetNanoseconds = frameDuration
-        case .multiplier(let value):
-            targetNanoseconds = value > 0 ? UInt64(Double(frameDuration) / value) : 0
-        case .unlimited:
-            targetNanoseconds = 0
-        }
+}
 
-        let delay = pacer.delay(afterFrameLasting: targetNanoseconds, now: DispatchTime.now().uptimeNanoseconds)
-        if delay > 0 { Thread.sleep(forTimeInterval: Double(delay) / 1_000_000_000) }
+/// Turns display refreshes into emulated frames at the game's own rate. Each refresh adds the real
+/// time since the last one to what the game is owed, and frames run while at least one is owed. On a
+/// 60 Hz screen a 59.73 Hz Game Boy shows each frame for one refresh and repeats one about every
+/// four seconds.
+struct FrameScheduler {
+    /// After a stall, a refresh longer than this many frames counts as one frame, so the game
+    /// doesn't race to catch up.
+    static let maximumLagFrames: UInt64 = 4
+
+    private(set) var owedNanoseconds: UInt64 = 0
+    /// The last frame's length. Until a frame has run, its length is unknown and one frame is due.
+    private var frameNanoseconds: UInt64?
+
+    var isFrameDue: Bool {
+        guard let frameNanoseconds else { return true }
+        return owedNanoseconds >= frameNanoseconds
+    }
+
+    /// Adds a refresh's real time, scaled by the play speed.
+    mutating func addRefresh(lasting elapsed: UInt64, speed: Double = 1) {
+        guard let frameNanoseconds else { return }
+        let wall = elapsed > frameNanoseconds * Self.maximumLagFrames ? frameNanoseconds : elapsed
+        owedNanoseconds &+= UInt64(Double(wall) * speed)
+    }
+
+    mutating func ranFrame(lasting duration: UInt64) {
+        let duration = max(duration, 1)
+        if frameNanoseconds == nil {
+            frameNanoseconds = duration
+            return
+        }
+        frameNanoseconds = duration
+        owedNanoseconds -= min(owedNanoseconds, duration)
     }
 }
 
-/// Schedules frames against fixed deadlines, so time lost oversleeping one frame is made up on the
-/// next. Sleeping a frame's full length after each frame instead would run the game slightly slow,
-/// and its sound would fall behind the audio output.
-struct FramePacer {
-    /// Frames this far behind, after a stall, are dropped from the schedule rather than run back to
-    /// back to catch up.
-    static let maximumLagFrames: UInt64 = 4
+/// Reports each display refresh from its own thread, with the time since the previous refresh and
+/// the length of the next one, both from the display's clock. A busy main thread can't delay it.
+/// Allows up to 120 Hz on ProMotion screens, where a repeated frame lasts half as long.
+final class DisplayRefreshThread: NSObject, @unchecked Sendable {
+    typealias Handler = @Sendable (_ elapsed: UInt64, _ interval: UInt64) -> Void
 
-    private var deadline: UInt64
+    private let handler: Handler
+    private let lock = NSLock()
+    private var cancelled = false
+    private var link: CADisplayLink?
+    private var runLoop: CFRunLoop?
+    private var lastTimestamp: CFTimeInterval?
 
-    /// `start` is when the first frame began.
-    init(start: UInt64) {
-        deadline = start
+    init(handler: @escaping Handler) {
+        self.handler = handler
     }
 
-    /// Returns how long to wait before the next frame, given how long the frame just run should
-    /// last. A length of 0, for unlimited speed, never waits.
-    mutating func delay(afterFrameLasting duration: UInt64, now: UInt64) -> UInt64 {
-        guard duration > 0 else {
-            deadline = now
-            return 0
+    func start() {
+        let thread = Thread { [self] in run() }
+        thread.name = "Gameplay.DisplayRefresh"
+        thread.qualityOfService = .userInteractive
+        thread.start()
+    }
+
+    /// Safe from any thread. No refresh is reported after it returns.
+    func cancel() {
+        let (link, runLoop) = lock.withLock { () -> (CADisplayLink?, CFRunLoop?) in
+            cancelled = true
+            return (self.link, self.runLoop)
         }
-        let next = deadline &+ duration
-        if next > now {
-            deadline = next
-            return next - now
+        link?.invalidate()
+        // Removing the link doesn't wake a run loop waiting on another thread, so stop it too.
+        if let runLoop { CFRunLoopStop(runLoop) }
+    }
+
+    private func run() {
+        let link = CADisplayLink(target: self, selector: #selector(refreshed(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        let started = lock.withLock { () -> Bool in
+            guard !cancelled else { return false }
+            self.link = link
+            runLoop = CFRunLoopGetCurrent()
+            return true
         }
-        deadline = now - next > duration * Self.maximumLagFrames ? now : next
-        return 0
+        guard started else { return }
+        link.add(to: .current, forMode: .common)
+        while !lock.withLock({ cancelled }) {
+            RunLoop.current.run(mode: .default, before: .distantFuture)
+        }
+    }
+
+    @objc private func refreshed(_ link: CADisplayLink) {
+        guard !lock.withLock({ cancelled }) else { return }
+        let elapsed = lastTimestamp.map { max(0, link.timestamp - $0) } ?? 0
+        lastTimestamp = link.timestamp
+        let interval = max(0, link.targetTimestamp - link.timestamp)
+        handler(UInt64(elapsed * 1_000_000_000), UInt64(interval * 1_000_000_000))
     }
 }

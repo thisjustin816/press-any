@@ -482,7 +482,7 @@ Spec: v1.
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
-after shortfalls, frames paced against fixed deadlines).
+after shortfalls); frames run on the display refresh at native speed, up to 120 Hz.
 
 ### Privacy and telemetry
 
