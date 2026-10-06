@@ -382,7 +382,7 @@ struct GameDetailView: View {
                 if model.builds.contains(where: {
                     $0.id != build.id && $0.displayName.caseInsensitiveCompare(build.displayName) == .orderedSame
                 }) {
-                    Text("Added \(build.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                    Text("Added \(build.createdAt.formatted(date: .abbreviated, time: .shortened))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

@@ -3,8 +3,9 @@ import EmulatorDomain
 import Foundation
 
 public enum BuildNaming {
-    /// Returns `name`, or `name` with the date the Build was added when another Build in the Game
-    /// already has that name: "Original · Oct 6", then with the year, then numbered.
+    /// Returns `name`, or `name` with when the Build was added if another Build in the Game already
+    /// has that name: "Original · Oct 6", then with the time for Builds added the same day, then
+    /// numbered.
     public static func distinctName(
         _ name: String,
         existing: [String],
@@ -16,11 +17,10 @@ public enum BuildNaming {
         func isFree(_ candidate: String) -> Bool { !taken.contains(candidate.lowercased()) }
         guard !isFree(name) else { return name }
 
-        var style = Date.FormatStyle(locale: locale, timeZone: timeZone).month(.abbreviated).day()
+        let style = Date.FormatStyle(locale: locale, timeZone: timeZone).month(.abbreviated).day()
         let day = "\(name) · \(date.formatted(style))"
         if isFree(day) { return day }
-        style = style.year()
-        let dated = "\(name) · \(date.formatted(style))"
+        let dated = "\(name) · \(date.formatted(style.hour().minute()))"
         if isFree(dated) { return dated }
         var number = 2
         while !isFree("\(dated) (\(number))") { number += 1 }

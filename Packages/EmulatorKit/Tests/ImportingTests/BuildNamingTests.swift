@@ -18,12 +18,11 @@ final class BuildNamingTests: XCTestCase {
         XCTAssertEqual(name("Original", existing: ["original"]), "Original · Oct 6")
     }
 
-    func testTheYearAndThenANumberSeparateFurtherDuplicates() {
-        XCTAssertEqual(name("Original", existing: ["Original", "Original · Oct 6"]), "Original · Oct 6, 2026")
-        XCTAssertEqual(
-            name("Original", existing: ["Original", "Original · Oct 6", "Original · Oct 6, 2026"]),
-            "Original · Oct 6, 2026 (2)"
-        )
+    func testTheTimeAndThenANumberSeparateBuildsAddedTheSameDay() {
+        let timed = name("Original", existing: ["Original", "Original · Oct 6"])
+        // The locale words the date and time; both are there.
+        XCTAssertTrue(timed.hasPrefix("Original · Oct 6") && timed.contains("12:00"), timed)
+        XCTAssertEqual(name("Original", existing: ["Original", "Original · Oct 6", timed]), "\(timed) (2)")
     }
 
     func testSuggestionsCoverEscapedFilenameAndDuplicateNamesOnly() throws {
