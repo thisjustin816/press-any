@@ -161,4 +161,24 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertLessThan(try key("1.0-alpha"), try key("1.0-beta"))
         XCTAssertLessThan(try key("1.0"), try key("1.0.1-rc.1"))
     }
+
+    func testADateStampBecomesTheVersionAndTheWordsAfterItTheVariant() {
+        let classic = FilenameMetadataParser.parse(filename: "AeonMetalFighters_20261006_classic.gbc")
+        XCTAssertEqual(classic.suggestedTitle, "AeonMetalFighters")
+        XCTAssertEqual(classic.buildMetadata.versionString, "2026.10.06")
+        XCTAssertEqual(classic.buildMetadata.status, "classic")
+        XCTAssertEqual(classic.suggestedBuildName, "2026-10-06 · classic")
+
+        let plain = FilenameMetadataParser.parse(filename: "AeonMetalFighters_20261004.gbc")
+        XCTAssertEqual(plain.suggestedBuildName, "2026-10-04")
+        XCTAssertLessThan(plain.buildMetadata.versionSortKey!, classic.buildMetadata.versionSortKey!)
+
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Game Jam Entry 2026-10-04.gb").suggestedBuildName, "2026-10-04")
+    }
+
+    func testNumbersThatAreNotDatesStayInTheTitle() {
+        for filename in ["20261006.gb", "Tetris 19891399.gb", "Score_12345678.gb"] {
+            XCTAssertNil(FilenameMetadataParser.parse(filename: filename).buildMetadata.versionString, filename)
+        }
+    }
 }

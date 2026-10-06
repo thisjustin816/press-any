@@ -56,7 +56,8 @@ public struct BuildNameSuggestion: Identifiable, Equatable, Sendable {
 
 /// Applies the import naming rules to Builds already in the library. It suggests a name only where
 /// the current one looks generated: one still carrying URL escapes, one that is just the source
-/// filename, or one an earlier Build in the same Game already has.
+/// filename, the parser's generic "Original" or "Hack" with or without a date added, or one an
+/// earlier Build in the same Game already has.
 public struct BuildNameSuggester: Sendable {
     private let games: any GameRepository
     private let builds: any BuildRepository
@@ -83,15 +84,22 @@ public struct BuildNameSuggester: Sendable {
                 let others = settled + gameBuilds[(index + 1)...].map(\.displayName)
                 let filename = try sourceFilename(of: build)
                 let current = build.displayName
+                let repeatsEarlier = settled.contains { $0.caseInsensitiveCompare(current) == .orderedSame }
                 let looksGenerated = BuildNaming.hasPercentEscapes(current)
+                    || Self.isGeneric(current)
                     || filename.map { Self.isFilename(current, of: $0) } == true
-                    || settled.contains { $0.caseInsensitiveCompare(current) == .orderedSame }
+                    || repeatsEarlier
                 guard looksGenerated else {
                     settled.append(current)
                     continue
                 }
                 let base = filename.map { FilenameMetadataParser.parse(filename: $0).suggestedBuildName }
                     ?? (current.removingPercentEncoding ?? current)
+                // A generic name the filename can't improve on stays, unless an earlier Build has it.
+                guard base != current || repeatsEarlier else {
+                    settled.append(current)
+                    continue
+                }
                 let suggested = BuildNaming.distinctName(
                     base,
                     existing: others,
@@ -118,6 +126,10 @@ public struct BuildNameSuggester: Sendable {
     private func sourceFilename(of build: Build) throws -> String? {
         guard build.sourceKind != .patchRecipe else { return nil }
         return try assets.fetchAsset(id: build.imageAssetID)?.originalFilename
+    }
+
+    private static func isGeneric(_ name: String) -> Bool {
+        ["Original", "Hack"].contains { name == $0 || name.hasPrefix("\($0) · ") }
     }
 
     private static func isFilename(_ name: String, of filename: String) -> Bool {

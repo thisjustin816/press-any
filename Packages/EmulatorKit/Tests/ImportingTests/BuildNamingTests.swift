@@ -65,6 +65,32 @@ final class BuildNamingTests: XCTestCase {
         XCTAssertEqual(suggestions.first?.currentName, escaped.displayName)
     }
 
+    func testGenericNamesAreRenamedFromDateStampedFilenames() throws {
+        let games = InMemoryGameRepository()
+        let builds = InMemoryBuildRepository()
+        let assets = InMemoryAssetRepository()
+        let game = Game(id: UUID(), primaryTitle: "Aeon Metal Fighters", systemFamily: "gbc", createdAt: october6, modifiedAt: october6)
+        try games.insertGame(game)
+        for (name, filename, hours) in [
+            ("Original", "AeonMetalFighters_20261004.gbc", 0.0),
+            ("Original · Oct 6", "AeonMetalFighters_20261006_classic.gbc", 1.0),
+        ] {
+            let asset = ManagedAsset(
+                id: UUID(), kind: .sourceImage, storageClass: .source, contentSHA256: UUID().uuidString,
+                byteLength: 1, relativePath: UUID().uuidString, originalFilename: filename, createdAt: october6
+            )
+            try assets.insertAsset(asset)
+            let added = october6.addingTimeInterval(hours * 3_600)
+            try builds.insertBuild(Build(
+                id: UUID(), gameID: game.id, system: .gameBoyColor, displayName: name, imageAssetID: asset.id,
+                imageSHA256: asset.contentSHA256, sourceKind: .importedImage, createdAt: added, modifiedAt: added
+            ))
+        }
+        let suggestions = try BuildNameSuggester(games: games, builds: builds, assets: assets)
+            .suggestions(locale: locale, timeZone: utc)
+        XCTAssertEqual(suggestions.map(\.suggestedName), ["2026-10-04", "2026-10-06 · classic"])
+    }
+
     func testPatchNamesUseThePatchTitleInsteadOfGenericNames() {
         let hack = FilenameMetadataParser.parse(filename: "Super Mario Land 2 - DX (Hack by Foo).ips")
         XCTAssertEqual(hack.suggestedBuildName, "Hack")

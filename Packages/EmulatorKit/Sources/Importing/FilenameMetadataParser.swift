@@ -162,13 +162,21 @@ public enum FilenameMetadataParser {
             }
         }
         // Homebrew releases commonly put an explicit numeric version at the end of the title.
-        let cleanTitle: String
+        var cleanTitle: String
         if let suffixRange = title.range(of: #"(?i)\s+v"# + versionPattern + #"$"#, options: .regularExpression) {
             let suffix = title[suffixRange].trimmingCharacters(in: .whitespacesAndNewlines)
             version = version ?? String(suffix.dropFirst())
             cleanTitle = String(title[..<suffixRange.lowerBound])
         } else {
             cleanTitle = title
+        }
+        // Builds from game jams and nightlies are often stamped with a date, as in
+        // "AeonMetalFighters_20261006_classic". The date becomes the version and the words after
+        // it describe the variant.
+        if version == nil, let stamp = dateStamp(in: cleanTitle) {
+            version = stamp.version
+            status = status ?? stamp.variant
+            cleanTitle = stamp.title
         }
 
         if isHack, baseTitle == nil, hackTitle == nil,
@@ -229,13 +237,38 @@ public enum FilenameMetadataParser {
 
     private static func buildName(for kind: FilenameReleaseKind, metadata: BuildImportMetadata) -> String {
         var parts: [String] = []
-        if let version = metadata.versionString { parts.append("v\(version)") }
+        if let version = metadata.versionString {
+            parts.append(isDateVersion(version) ? version.replacingOccurrences(of: ".", with: "-") : "v\(version)")
+        }
         if let revision = metadata.revision { parts.append("Rev \(revision)") }
         if let status = metadata.status { parts.append(status) }
         if let translation = metadata.translation { parts.append("\(translation) Translation") }
         if parts.isEmpty, let region = metadata.region { parts.append(region) }
         if parts.isEmpty { return kind == .romHack ? "Hack" : "Original" }
         return parts.joined(separator: " · ")
+    }
+
+    /// A date version, "2026.10.06", reads as a date in a Build name: "2026-10-06".
+    static func isDateVersion(_ version: String) -> Bool {
+        version.range(of: #"^(?:19|20)[0-9]{2}\.(?:0[1-9]|1[0-2])\.(?:0[1-9]|[12][0-9]|3[01])$"#, options: .regularExpression) != nil
+    }
+
+    /// A date stamp after at least one title word, as "20261006" or "2026-10-06", separated by
+    /// spaces or underscores. Words after it are the variant.
+    private static func dateStamp(in title: String) -> (title: String, version: String, variant: String?)? {
+        let words = title.split(whereSeparator: { $0 == "_" || $0 == " " }).map(String.init)
+        guard words.count >= 2 else { return nil }
+        for index in stride(from: words.count - 1, through: 1, by: -1) {
+            let digits = words[index].replacingOccurrences(of: "-", with: "")
+            guard digits.count == 8, digits.allSatisfy(\.isNumber),
+                  words[index].count == 8 || words[index].range(of: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"#, options: .regularExpression) != nil
+            else { continue }
+            let version = "\(digits.prefix(4)).\(digits.dropFirst(4).prefix(2)).\(digits.suffix(2))"
+            guard isDateVersion(version) else { continue }
+            let variant = words[(index + 1)...].joined(separator: " ")
+            return (words[..<index].joined(separator: " "), version, variant.isEmpty ? nil : variant)
+        }
+        return nil
     }
 
     public static func canonicalFilename(

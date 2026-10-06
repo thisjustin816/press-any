@@ -3,6 +3,14 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Date-stamped filenames name their Builds
+
+A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version, shown
+as "2026-10-06" in the Build name and sorted by date. Words after it, "classic" here, become the
+status and stay in the name. Only a valid date of eight digits, or written with hyphens, counts, and
+never as the whole title. Suggest Build Names treats the generic "Original" and "Hack", with or
+without a date added, as generated, so Builds named before this can take the dated name.
+
 ## 2026-10-06: New Builds default to Preferred and Base, and match existing Games
 
 Import Review now defaults every new Build to Preferred, and to Base unless it is a ROM hack. A new
