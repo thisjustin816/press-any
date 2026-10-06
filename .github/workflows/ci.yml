@@ -8,9 +8,12 @@ name: CI
 #   L3 headless SameBoy.
 
 on:
+  # A change to docs alone can't break a build or a test, so it starts no run.
   pull_request:
+    paths-ignore: ['docs/**', '**/*.md']
   push:
     branches: [main]
+    paths-ignore: ['docs/**', '**/*.md']
   workflow_dispatch:
 
 permissions:

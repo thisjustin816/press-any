@@ -232,8 +232,8 @@ def main():
     notes.set_defaults(run=notes_command)
 
     publish = commands.add_parser("publish", help="set the notes on an uploaded build")
-    publish.add_argument("--version", required=True, help="marketing version, such as 0.1.0")
-    publish.add_argument("--build", required=True, help="build number, such as 1.3.1")
+    publish.add_argument("--version", required=True, help="marketing version, such as 0.1")
+    publish.add_argument("--build", required=True, help="build number, such as 57")
     publish.add_argument("--notes", required=True)
     publish.add_argument("--wait-minutes", type=int, default=25)
     publish.set_defaults(run=publish_command)

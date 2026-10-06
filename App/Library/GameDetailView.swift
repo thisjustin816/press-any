@@ -72,7 +72,9 @@ struct GameDetailView: View {
             evictImage: container.evictGeneratedImage,
             artwork: container.gameArtwork,
             variableMaps: container.attachVariableMap,
-            replaceSave: container.replaceBatterySave
+            replaceSave: container.replaceBatterySave,
+            exporter: container.exportFiles,
+            exportsDirectory: container.exportsDirectory
         ))
     }
 
@@ -441,6 +443,7 @@ struct GameDetailView: View {
             renamingBuild = build
         }
         Button("Technical Info…") { technicalInfo = build }
+        Button("Export ROM") { model.exportROM(of: build) }
         Button("Build Settings…") {
             settingsTarget = SettingsTarget(
                 title: "\(build.displayName) Settings",
@@ -488,6 +491,9 @@ struct GameDetailView: View {
                 model.duplicate(profile, name: profile.displayName + " Copy")
             }
             Button("Replace Save from File…") { request(.replacementSave(profile)) }
+            if profile.persistentSaveAssetID != nil {
+                Button("Export Save") { model.exportSave(of: profile) }
+            }
             Button("Badge…") {
                 badgeText = profile.badge ?? ""
                 badgeTarget = profile
