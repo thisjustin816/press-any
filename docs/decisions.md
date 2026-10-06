@@ -3,6 +3,19 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Repeated Build names gain the date they were added
+
+When a suggested Build name repeats one already in the Game, as "Original" does for files without
+version tags, the suggestion adds the day the Build is added: "Original · Oct 6", then the year,
+then a number. Import Review, Quick Play promotion and Open Patch suggest names this way, and a
+name the player typed is left alone. Technical Info shows when a Build was added, and a Build whose
+name another Build shares shows its date in the list.
+
+Suggest Build Names, in the library's view menu, applies the same rules to Builds already in the
+library. It lists only names that look generated: ones still carrying URL escapes, ones that are
+just the source filename, and repeats of an earlier Build's name. Each suggestion can be edited or
+turned off, and nothing is renamed until the player chooses Rename.
+
 ## 2026-10-06: Frames follow the display refresh
 
 Gameplay frames run on the display's refresh instead of a sleep timer. Each refresh adds the time

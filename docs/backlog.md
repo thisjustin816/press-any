@@ -107,7 +107,7 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 |---|---|---|---|---|
 | missing | Game aliases/alternate titles (indexed) | v1 | Q162 | no field |
 | partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; prod "ROM identity" | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
-| missing | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | no edit UI |
+| partial | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | Rename Build and Suggest Build Names; no Game rename UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1 | prod "Documents"; Q169 |  |
 | missing | Typed multi-artwork model with primary selection | v1 | prod "Artwork"; dec 20 | Game.artworkAssetID is a single image |
@@ -150,7 +150,7 @@ Done: Search by primary title.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; broader real-world corpus tuning remains |
+| partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; a repeated name gains the date the Build was added; Suggest Build Names reviews existing Builds; broader real-world corpus tuning remains |
 | partial | Header read/validate/display, no editing | v1 | dec 18 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
 | partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |

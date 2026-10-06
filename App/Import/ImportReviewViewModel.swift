@@ -31,13 +31,23 @@ final class ImportReviewViewModel: ObservableObject {
     let games: [Game]
 
     private let coordinator: ImportCoordinator
+    /// A Game's Build names, so a suggested name that repeats one gains the date it was added.
+    private let existingBuildNames: (UUID) -> [String]
+    /// The last name suggested, so changing the destination replaces it unless the player edited it.
+    private var suggestedBuildName: String
 
-    init(analysis: ROMImportAnalysis, games: [Game], coordinator: ImportCoordinator) {
+    init(
+        analysis: ROMImportAnalysis,
+        games: [Game],
+        coordinator: ImportCoordinator,
+        existingBuildNames: @escaping (UUID) -> [String] = { _ in [] }
+    ) {
         self.analysis = analysis
         self.games = games.sorted {
             $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
         }
         self.coordinator = coordinator
+        self.existingBuildNames = existingBuildNames
         let metadata = BuildImportMetadata(analysis: analysis)
         region = metadata.region ?? ""
         language = metadata.language ?? ""
@@ -61,9 +71,19 @@ final class ImportReviewViewModel: ObservableObject {
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
             ? analysis.header.title
             : analysis.filenameMetadata.suggestedTitle
-        buildDisplayName = analysis.exactExistingBuildID == nil
-            ? analysis.filenameMetadata.suggestedBuildName
-            : "Existing"
+        let suggestion = Self.buildName(for: analysis, destination: initialDestination, existingBuildNames: existingBuildNames)
+        suggestedBuildName = suggestion
+        buildDisplayName = analysis.exactExistingBuildID == nil ? suggestion : "Existing"
+    }
+
+    private static func buildName(
+        for analysis: ROMImportAnalysis,
+        destination: Destination,
+        existingBuildNames: (UUID) -> [String]
+    ) -> String {
+        let name = analysis.filenameMetadata.suggestedBuildName
+        guard case .existing(let gameID) = destination else { return name }
+        return BuildNaming.distinctName(name, existing: existingBuildNames(gameID), addedAt: .now)
     }
 
     var isExactDuplicate: Bool { analysis.exactExistingBuildID != nil }
@@ -81,6 +101,10 @@ final class ImportReviewViewModel: ObservableObject {
     }
 
     func destinationChanged() {
+        if !isExactDuplicate, buildDisplayName == suggestedBuildName {
+            suggestedBuildName = Self.buildName(for: analysis, destination: destination, existingBuildNames: existingBuildNames)
+            buildDisplayName = suggestedBuildName
+        }
         markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: destination)
         markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: destination)
     }

@@ -52,7 +52,8 @@ final class QuickPlayPromotionViewModel: ObservableObject {
                 analyzer: container.importAnalyzer,
                 committer: container.importCommitter,
                 assetStore: container.fileStore
-            )
+            ),
+            existingBuildNames: { (try? container.repositories.builds.fetchBuilds(gameID: $0))?.map(\.displayName) ?? [] }
         )
     }
 

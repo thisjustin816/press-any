@@ -378,6 +378,14 @@ struct GameDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                // Names alone can't tell these Builds apart.
+                if model.builds.contains(where: {
+                    $0.id != build.id && $0.displayName.caseInsensitiveCompare(build.displayName) == .orderedSame
+                }) {
+                    Text("Added \(build.createdAt.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if let save = model.profileName(id: build.preferredSaveProfileID) {
                     Text("Plays \(save)")
                         .font(.caption)

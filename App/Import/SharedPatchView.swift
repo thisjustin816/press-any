@@ -13,6 +13,10 @@ struct SharedPatchView: View {
     @State private var gameID: UUID?
     @State private var buildID: UUID?
     @State private var displayName = ""
+    /// The name suggested from the patch filename, and the last suggestion shown, so choosing a Game
+    /// can add a date to a clashing name without overwriting one the player typed.
+    @State private var filenameBuildName = ""
+    @State private var suggestedBuildName = ""
     @State private var region = ""
     @State private var language = ""
     @State private var revision = ""
@@ -97,9 +101,11 @@ struct SharedPatchView: View {
                 translation = metadata.translation ?? ""
                 status = metadata.status ?? ""
                 unknownGroups = naming.unknownGroups
-                displayName = naming.suggestedBuildName == "Original"
+                filenameBuildName = naming.suggestedBuildName == "Original"
                     ? naming.suggestedTitle
                     : naming.suggestedBuildName
+                displayName = filenameBuildName
+                suggestedBuildName = filenameBuildName
                 do {
                     games = try container.repositories.games.fetchGames().sorted {
                         $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
@@ -111,6 +117,16 @@ struct SharedPatchView: View {
             .onChange(of: gameID) { _, selected in
                 buildID = nil
                 builds = []
+                defer {
+                    if displayName == suggestedBuildName {
+                        suggestedBuildName = BuildNaming.distinctName(
+                            filenameBuildName,
+                            existing: builds.map(\.displayName),
+                            addedAt: .now
+                        )
+                        displayName = suggestedBuildName
+                    }
+                }
                 guard let selected else { return }
                 do {
                     builds = try container.repositories.builds.fetchBuilds(gameID: selected).sorted {

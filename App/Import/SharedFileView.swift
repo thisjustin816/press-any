@@ -67,7 +67,8 @@ struct SharedFileView: View {
             review = ImportReviewViewModel(
                 analysis: analysis,
                 games: games,
-                coordinator: coordinator
+                coordinator: coordinator,
+                existingBuildNames: { (try? container.repositories.builds.fetchBuilds(gameID: $0))?.map(\.displayName) ?? [] }
             )
         } catch {
             errorMessage = error.localizedDescription
