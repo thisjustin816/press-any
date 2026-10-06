@@ -3,6 +3,24 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Regional releases and No-Intro families
+
+No-Intro's GB/GBC data, normalized by the `no-intro-update.yml` pipeline (`later 11`), gives each
+known dump a canonical name, region, language, revision, status
+flags and a parent/clone family. Imports matched by hash take those values from the dump ahead of
+the filename, and a family's releases group under one Game even when their titles differ by
+region, as Q156 and Q157 already require. Bundling the data waits on confirming its license.
+
+Regional releases also need:
+- a preferred region and language order, USA, Europe, Japan by default, that picks a Game's
+  display title and which regional Build defaults to Preferred;
+- regional titles kept as searchable aliases;
+- a warning when a Build of another region or language launches a profile, since many games'
+  saves don't carry across languages;
+- artwork chosen by region;
+- patch review offering the Game's other regional Build when a patch expects it;
+- a reviewed suggestion to merge Games already in the library that are one family.
+
 ## 2026-10-06: Scope and safety changes from the market review
 
 A review of comparable emulators, library managers and ROM-hack sites found that grouping a game's

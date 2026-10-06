@@ -18,7 +18,10 @@ Nothing below is in progress.
 
 The MVP is complete and working. Its device checklist remains a regression record.
 
-1. Complete No-Intro and ROM-hack naming suggestions and review metadata for v1.
+1. No-Intro categorization and regional releases: confirm the data's license, build the
+   `no-intro-update.yml` pipeline and bundled baseline, match imports by hash, group parent/clone
+   families under one Game, then the regional rows below. ROM-hack naming suggestions and review
+   metadata finish alongside.
 2. Display and play feel, small changes that make games look and play right on day one: GBC
    color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
@@ -106,7 +109,7 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Game aliases/alternate titles (indexed) | v1 | Q162 | no field |
+| missing | Game aliases/alternate titles (indexed) | v1 | Q162; D "Regional releases and No-Intro families" | no field; a No-Intro family's regional titles become aliases, so "Pocket Monsters Crystal" finds Pokémon Crystal |
 | partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; prod "ROM identity" | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
 | partial | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | Rename Build and Suggest Build Names; no Game rename UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
@@ -156,7 +159,12 @@ Done: Search by primary title.
 | partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |
 | missing | Verification status Verified/Modified/Unknown; never auto-repair | v1 | dec 18 |  |
-| missing | Bundled No-Intro baseline + signed/validated updates; parent/clone family grouping shown in review | v1 | prod "ROM identity"; Q157; later 11 no-intro-update.yml |  |
+| missing | No-Intro GB/GBC data pipeline (`no-intro-update.yml`): hash, canonical name, region, language, revision, status flags (Beta, Proto, Demo, Sample, Unl, Aftermarket, Virtual Console, Pirate) and parent/clone family, normalized into a compact offline file and reviewed per update | v1 | later 11; prod "ROM identity" | the data's license must allow bundling first |
+| missing | Bundled No-Intro baseline + signed/validated downloadable updates; matching works offline | v1 | dec 18; prod "ROM identity" |  |
+| missing | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | dec 18; Q156; D "Regional releases and No-Intro families" | today they come only from filename tags |
+| missing | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | Q156/Q157; prod "ROM identity" | today only a matching title after tags are stripped joins an existing Game |
+| missing | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Build Names | v1 | Q157; D "Regional releases and No-Intro families" |  |
+| missing | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 | D "Regional releases and No-Intro families" |  |
 | partial | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | dec 17 | user can pick an existing Game as destination; no lineage-without-base metadata |
 | partial | Multi-signal development-build matching, never silently attach | v1 | Q151; mvp "Import MVP" step 5 | only exact hash or explicit target; no heuristics |
 | missing | Quiet provider metadata refresh never overwriting user overrides | v1 | Q165 |  |
@@ -203,6 +211,7 @@ automatically replacing the previous one; rename a Build from its long-press men
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Editable stacks UI: reorder/enable/disable/add/remove -> new Build | v1 | Q133 |  |
+| missing | Patch base by region: when a patch expects another regional release already in the Game, such as USA when Europe was chosen, review offers that Build | v1 | D "Regional releases and No-Intro families" | a fan translation of a Japanese release joins the family's Game through its base |
 | partial | Pluggable patch-format architecture | v1 | prod "Patching" | switch on extension, no registry |
 | missing | Patch metadata with confidence/provenance (catalog > README > filename) | v1 | Q135 |  |
 | missing | BPS generation from base vs modified Build | v1.1 | prod "v1.1 targets" |  |
@@ -222,6 +231,7 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | GB Studio save migration (version-gated, needs maps) | v1.1 | prod "v1.1 targets" |  |
 | missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later | dec 9/33 |  |
+| missing | Cross-region save check: launching a Build whose region or language differs from the Build that last wrote the profile warns, since many games' saves don't carry across languages | v1 | D "Regional releases and No-Intro families" | joins the existing launch check; declared save compatibility can clear it |
 | missing | Declared save compatibility between Builds (known to share, known not to), used by the launch check | v1 | D "Scope and safety changes from the market review" | the launch check only infers today (GB Studio, tools, header save hardware) |
 
 Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play
@@ -398,6 +408,7 @@ Spec: all v1 unless noted.
 | missing | Provider chain: local/imported, Community Catalog, OpenVGDB (experimental), Libretro thumbnails, SteamGridDB (user key), title-screen fallback | v1 | Q79; later 8 |  |
 | missing | Priority manual -> hack-specific -> inherited base (recorded as inherited) -> generated | v1 | dec 20 |  |
 | missing | Build-level artwork override | v1 | Q168 |  |
+| missing | Regional artwork: lookups use the Build's region, and a Game's primary artwork follows the preferred region | v1 | D "Regional releases and No-Intro families" | box art differs by region |
 | missing | Multiple typed assets (box front/back, cart, title, screenshots, logo, fan) | v1 | dec 20 |  |
 | missing | Non-destructive crop/reposition | v1 | Q167 |  |
 | missing | Manual "Check for New Artwork"; cache only selected primary | v1 | Q166/Q98 |  |
