@@ -14,6 +14,9 @@ already promised; a Build's ROM, the original or the rebuilt patched ROM, under 
 and one Game as a package in the Library Backup format, with ROMs only when asked. A Game package
 imports by merging, as a restore does.
 
+Later captures land in the same folder: screen recordings, and debug captures such as bug reports
+with the memory or save the player chose to include.
+
 ## 2026-10-06: Library backend first
 
 The backlog's order puts library backend work ahead of further play features: backup and safe

@@ -329,7 +329,7 @@ Spec: all v1.
 | missing | Export presets Clean / Build Info / Bug Report with rendered info strip and metadata fields | v1 | dec 13 |  |
 | missing | Optional atomic Capture Context (watches, named vars, memory ranges, registers, frame/time, Build/hash/patches, RTC, cheats, profile, core/settings) | v1 | dec 13 |  |
 | missing | Full-RAM snapshot (opt-in, Developer Mode) | v1 | dec 13 |  |
-| missing | Bug-report export (Markdown/JSON) with privacy checklist/preview | v1 | Q176 |  |
+| missing | Bug-report export (Markdown/JSON) with privacy checklist/preview | v1 | Q176; D "Exports and a Files folder" | lands in the Files folder, with any memory or save captures the player includes |
 | missing | Game notes, Build notes, timestamped gameplay notes with attachments | v1 | dec 13 |  |
 
 ### Rewind and speed
@@ -600,7 +600,7 @@ Spec: all missing.
 | missing | Game Boy Printer with preview/save/share | v1.1 |  | no PrinterCapability |
 | missing | RAR import (tentative) | v1.1 |  |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v1.1 |  |  |
-| missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | D 2026-10-05 |  |
+| missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | D 2026-10-05; D "Exports and a Files folder" | saved recordings also land in the Files folder |
 | missing | Browse and download games: itch.io's Game Boy tag in an in-app browser and Homebrew Hub (hh.gbdev.io) by its API, from the library's + menu; downloads go straight to Import Review, with Quick Play | v1.1 | D 2026-10-05 | needs zip import; the app's first network use, so revisit the privacy manifest and label; confirm App Store guideline 4.7 wording |
 | missing | Share an itch.io game page or GitHub page to download and import a ROM | v1.1 | D 2026-10-06 "Shared game pages" | web-URL share extension; resolve supported ROM downloads, choose when several exist, then Import Review or Quick Play; safe ZIP extraction; preserve itch.io's normal purchase/login flow |
 | missing | `.gbproject`-style project import/export | v1.1 |  |  |
