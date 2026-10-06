@@ -18,7 +18,8 @@ stays steady instead of flickering. LCD Ghosting weights the newest frame 0.5 an
 refreshes, so the result is the same at 60 Hz and 120 Hz. Off stays the default.
 
 The Playtiles alignment guide is pressed deeper into the body, with a shadow under its top edge
-and light along its bottom edge, so it stands out in Dark as well as Classic.
+and light along its bottom edge, so it stands out in Dark as well as Classic. The wordmark on the
+menu button is pressed into the button the same way, where it was printed flat on a raised face.
 
 ## 2026-10-06: Untagged Builds are named for the day they were added
 

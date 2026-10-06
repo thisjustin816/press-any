@@ -745,10 +745,15 @@ final class GameplayViewController: UIViewController {
     }
 }
 
-/// The logo has a raised face; an optional game-picture target remains clear.
+/// The logo has a raised face with the wordmark pressed into it; an optional game-picture target
+/// remains clear.
 private final class GameMenuButton: UIButton {
     private let face = CAGradientLayer()
+    private let wordmark = UIImageView()
     private var palette: ControllerPalette?
+    /// The width the wordmark image was drawn for, so layout redraws it only when that changes. A
+    /// new palette clears it.
+    private var drawnWordmarkWidth: CGFloat?
     /// Whether a point in the superview belongs to something under the button instead.
     var yieldsTouch: ((CGPoint) -> Bool)?
 
@@ -759,8 +764,9 @@ private final class GameMenuButton: UIButton {
         accessibilityLabel = "Game Menu"
         accessibilityHint = "Pauses the game and opens the menu"
         layer.insertSublayer(face, at: 0)
-        titleLabel?.adjustsFontSizeToFitWidth = true
-        titleLabel?.minimumScaleFactor = 0.8
+        wordmark.isUserInteractionEnabled = false
+        wordmark.contentMode = .center
+        addSubview(wordmark)
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowRadius = 2
     }
@@ -772,13 +778,12 @@ private final class GameMenuButton: UIButton {
     func configureWordmark(palette: ControllerPalette?) {
         self.palette = palette
         face.isHidden = palette == nil
+        wordmark.isHidden = palette == nil
         if let palette {
-            setAttributedTitle(AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent), for: .normal)
             face.borderColor = palette.logo.withAlphaComponent(0.35).cgColor
             face.borderWidth = 1
-        } else {
-            setAttributedTitle(nil, for: .normal)
         }
+        drawnWordmarkWidth = nil
         updatePressedAppearance()
         setNeedsLayout()
     }
@@ -800,7 +805,7 @@ private final class GameMenuButton: UIButton {
         layer.shadowOpacity = isHighlighted ? 0.15 : 0.4
         layer.shadowOffset = CGSize(width: 0, height: isHighlighted ? 1 : 3)
         CATransaction.commit()
-        titleLabel?.transform = CGAffineTransform(translationX: 0, y: isHighlighted ? 1 : 0)
+        wordmark.transform = CGAffineTransform(translationX: 0, y: isHighlighted ? 1 : 0)
     }
 
     override func layoutSubviews() {
@@ -811,6 +816,43 @@ private final class GameMenuButton: UIButton {
         face.cornerRadius = bounds.height / 2
         layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: bounds.height / 2).cgPath
         CATransaction.commit()
+        wordmark.bounds = bounds
+        wordmark.center = CGPoint(x: bounds.midX, y: bounds.midY)
+        if let palette, drawnWordmarkWidth != bounds.width {
+            wordmark.image = Self.debossedWordmark(fitting: bounds.width - 16, palette: palette)
+            drawnWordmarkWidth = bounds.width
+        }
+    }
+
+    /// The wordmark at 28 points, or down to 80% of that to fit `width`, pressed into the face. Lit
+    /// from above, each letter's top edge shades the floor of its recess, which shows as a band
+    /// in the recess colors, and its bottom edge catches the light, which shows as a line below.
+    private static func debossedWordmark(fitting width: CGFloat, palette: ControllerPalette) -> UIImage {
+        let natural = AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent).size()
+        let size = 28 * min(1, max(0.8, width / max(natural.width, 1)))
+        let fill = AppBrand.Wordmark.attributedString(size: size, ink: palette.logo, accent: palette.logoAccent)
+        let recess = AppBrand.Wordmark.attributedString(size: size, ink: palette.logoRecess, accent: palette.logoAccentRecess)
+        let highlight = AppBrand.Wordmark.attributedString(size: size, ink: palette.logoHighlight, accent: palette.logoHighlight)
+        let textSize = fill.size()
+        let canvas = CGSize(width: ceil(textSize.width) + 2, height: ceil(textSize.height) + 2)
+        let origin = CGPoint(x: 1, y: 0)
+        // One point deep, so the edges land on whole pixels.
+        let depth: CGFloat = 1
+        func image(_ draw: () -> Void) -> UIImage {
+            UIGraphicsImageRenderer(size: canvas).image { _ in draw() }
+        }
+        let shaded = image { recess.draw(at: origin) }
+        let lit = image { fill.draw(at: CGPoint(x: origin.x, y: origin.y + depth)) }
+        // Source-atop keeps the lit letters inside the shaded ones, so the shade stays only along
+        // the top edges.
+        let letters = image {
+            shaded.draw(at: .zero)
+            lit.draw(at: .zero, blendMode: .sourceAtop, alpha: 1)
+        }
+        return image {
+            highlight.draw(at: CGPoint(x: origin.x, y: origin.y + 1))
+            letters.draw(at: .zero)
+        }
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
