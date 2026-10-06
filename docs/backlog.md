@@ -17,7 +17,7 @@ later.
 Nothing below is in progress.
 
 1. Finish the MVP. The real-device check in `docs/mvp-verification.md` still has to pass on a
-   phone.
+   phone. Complete No-Intro and ROM-hack naming suggestions and review metadata.
 2. Display and play feel, small changes that make games look and play right on day one: frame
    blending, GBC color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
@@ -149,9 +149,10 @@ Done: Search by primary title.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | No-Intro / ROM-hack bracket parsing into structured fields | v1 | prod "ROM identity"; dec 17 | recognized region/language/revision/numeric-version tags and trailing v1.2-style versions populate reviewable Build fields; raw groups preserved; hack title/author/status flags and richer conventions remain |
+| partial | Automatic No-Intro / ROM-hack naming and structured fields | MVP | mvp "Automatic naming MVP"; dec 17; D 2026-10-06 | region/language/revision/version tags and clean title suggestions exist; hack/base titles, authors, translation/status metadata, source/confidence and concise Build suggestions remain; ROM import, Quick Play promotion and patching must share the rules |
 | partial | Header read/validate/display, no editing | v1 | dec 18 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
-| missing | Canonical normalized filename + explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 |  |
+| missing | Normalized No-Intro / ROM-hack filename suggestion | MVP | mvp "Automatic naming MVP"; dec 17; D 2026-10-06 | generated from recognized metadata; original filename preserved |
+| missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |
 | missing | Verification status Verified/Modified/Unknown; never auto-repair | v1 | dec 18 |  |
 | missing | Bundled No-Intro baseline + signed/validated updates; parent/clone family grouping shown in review | v1 | prod "ROM identity"; Q157; later 11 no-intro-update.yml |  |
 | partial | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | dec 17 | user can pick an existing Game as destination; no lineage-without-base metadata |

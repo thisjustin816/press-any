@@ -83,7 +83,7 @@ Multiple typed assets: front/back box, cartridge/label, title screen, screenshot
 - Use No-Intro parent/clone/family relationships as high-confidence grouping evidence, not as an inflexible definition of Game.
 - Unambiguous family relationships may be pre-grouped in Import Review; user can change before commit.
 - Revisions/regions/languages normally become Builds of same Game; user may separate.
-- Parse No-Intro naming and ROM-hack bracket conventions best-effort.
+- Parse No-Intro naming and ROM-hack bracket conventions best-effort (MVP, per `docs/decisions.md`, 2026-10-06), with clean title/Build and normalized filename suggestions in import, Quick Play promotion and patching.
 - Extract hack title/author/version into structured metadata instead of cluttering display title.
 - Preserve original imported filename permanently.
 - Normalize internally; physical Rename to Canonical Name is explicit.

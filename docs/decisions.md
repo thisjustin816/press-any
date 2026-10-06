@@ -3,6 +3,25 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: No-Intro and ROM-hack naming belongs in the MVP
+
+Move automatic No-Intro and ROM-hack filename parsing and naming suggestions into
+the MVP. Suggest clean Game titles and concise Build names, and extract recognized
+base/hack titles, authors, versions, regions, languages, revisions and status tags
+into reviewable metadata. Generate a normalized filename suggestion from the
+recognized fields. Unknown tags stay available rather than being guessed away.
+
+Filename guesses retain their source and confidence; manual corrections win.
+Preserve the original imported ROM and patch filenames, and keep Game/Build identity
+and ROM bytes unchanged. Apply naming suggestions in ROM Import Review, Quick Play
+promotion and patch-created Builds. A hack's title may be the Game title while its
+base title remains lineage metadata.
+
+The current implementation is partial: region/language/revision/version parsing
+exists, but richer hack metadata and normalized filename suggestions are still
+missing. Physical "Rename File to Canonical Name", database/catalog lookup and bulk
+rename retain their existing later targets.
+
 ## 2026-10-06: Shared game pages
 
 Add shared-page imports to the v1.1 backlog alongside in-app game browsing. Sharing
