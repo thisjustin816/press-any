@@ -67,8 +67,10 @@ workflow is not the MVP device gate.
 None exists, because each needs a generator, a data source or a rights decision that does not
 exist yet, and a workflow that only prints success would be misleading:
 
-- `no-intro-update.yml`, `shader-catalog-update.yml`, `openvgdb-update.yml`: need their generators
-  and approved upstream sources. OpenVGDB stays disabled until its data license is established.
+- `no-intro-update.yml` is not going to be built: DAT-o-MATIC bans clients it takes for bots, so
+  the No-Intro data is refreshed by hand (`docs/superpowers/plans/2026-10-06-no-intro-identity.md`).
+- `shader-catalog-update.yml`, `openvgdb-update.yml`: need their generators and approved upstream
+  sources. OpenVGDB stays disabled until its data license is established.
 - `toolchain-fingerprints-update.yml`: `ci.yml` already checks the port against its pinned
   gbtoolsid revision. A workflow that moves the pin to a new release and opens a pull request is
   not built.
