@@ -12,26 +12,18 @@ signing and upload, as described in `docs/testflight.md`.
 
 | Workflow | Job | What it runs |
 |---|---|---|
-| `ci.yml` | L1 domain and application | `swift test` filtered to `EmulatorDomainTests`, `EmulatorApplicationTests`, `EmulationCoreTests`, `EmulationSessionTests`, `GameplayInputTests`, `GameplayAudioTests`, `ImportingTests`, `PatchingTests`, `QuickPlayTests`, `ToolchainDetectionTests` |
-| `ci.yml` | L2 storage and persistence | `AssetStorageTests`, `PersistenceGRDBTests`, `ArchitectureProofTests` |
-| `ci.yml` | L3 headless SameBoy | `SameBoyAdapterTests` and `Scripts/test-sameboy-bridge-linux.sh` |
+| `ci.yml` | Package tests and headless SameBoy | `swift test` on the whole EmulatorKit package, which covers layers L1 to L3 of `docs/acceptance-matrix.md`, then `Scripts/test-sameboy-bridge-linux.sh`. A new test target runs without any change to the workflow |
 | `ci.yml` | Toolchain detection matches gbtoolsid | `Scripts/test-toolchain-detection-differential.sh`: builds gbtoolsid at the ported revision, checks `GBToolsIDData.swift` regenerates unchanged, and requires the Swift port to match it on gbtoolsid's test ROMs and on generated ROMs |
-| `ci.yml` | All test targets are covered | `Scripts/verify-ci-test-coverage.sh` fails when a directory under `Packages/EmulatorKit/Tests/` is not named in `ci.yml` |
-| `ci.yml` | Repository hygiene | `Scripts/verify-repo-hygiene.sh` (no tracked game images, saves or generated Xcode projects; the ROMs in `TestROMs/roms/` are allowed only when `TestROMs/manifest.json` lists them with a matching SHA-256) and `shellcheck` at error severity |
-| `ios-build.yml` | Xcode simulator build and tests | `make bootstrap`, `make build`, `Scripts/verify-privacy-manifest.sh` (lints the privacy manifest and checks the built app carries it unchanged), `make test` on the `macos-26` runner; on failure, a last step repeats only the Xcode error lines in the job summary |
-| `ios-build.yml` | Shared ROM and patch UI flows | `make test-share-ui`: installs a test-only sender, selects Press Any from the system share sheet, and checks GB import/cancellation, GBC Quick Play, IPS/BPS application, queued delivery and open Game Details refresh. Controls remove the refresh listener and game-menu pause hook separately and require the new-Build and menu-Resume assertions to fail. Logs, screenshots and xcresults are uploaded as `shared-file-ui-results` |
+| `ci.yml` | Repository hygiene | `Scripts/verify-repo-hygiene.sh` (no tracked game images, saves or generated Xcode projects; the ROMs in `TestROMs/roms/` are allowed only when `TestROMs/manifest.json` lists them with a matching SHA-256), `shellcheck` at error severity, the No-Intro generator's tests, and a warning when the bundled No-Intro data is more than 90 days old |
+| `ios-build.yml` | Xcode build, tests and Release archive | On one `macos-26` runner: `make bootstrap`, `make build`, `Scripts/verify-privacy-manifest.sh` (lints the privacy manifest and checks the built app carries it unchanged) and `make test`; `make test-package-ios`, the `EmulatorKit-Package` scheme's tests against Apple's Foundation; and, on pull requests and runs started by hand, a Release archive for a device with signing off, with the privacy check on the archived app, so a Release-only failure shows before a TestFlight upload. The package tests and the archive run even when the app's build or tests failed. On failure, a last step repeats only the Xcode error lines in the job summary |
+| `ios-build.yml` | Shared ROM and patch UI flows | Pull requests and runs started by hand. `make test-share-ui`: installs a test-only sender, selects Press Any from the system share sheet, and checks GB import/cancellation, GBC Quick Play, IPS/BPS application, queued delivery and open Game Details refresh. Started by hand with `share_ui_controls`, it also runs the regression controls, which remove the refresh listener and game-menu pause hook separately and require the new-Build and menu-Resume assertions to fail. Logs, screenshots and xcresults are uploaded as `shared-file-ui-results` |
 | `screenshots.yml` | Simulator screenshots (manual only) | Selects iPhone 14 Plus (default, verified 1284 × 2778 PNGs for Apple's 6.5-inch slot), iPhone 17 Pro Max (6.9-inch slot) or iPhone 17 Pro. Creates the simulator if needed, seeds the library from `TestROMs/`, captures the app, menu, and GB/GBC LCD 1×/3× effects, and uploads PNGs and logs as light/dark artifacts. See `docs/testflight.md` for downloading and uploading selected PNGs |
-| `ios-build.yml` | Package tests on the iOS simulator | `make test-package-ios`: the `EmulatorKit-Package` scheme's tests against Apple's Foundation, with the same failure summary |
-| `ios-build.yml` | Unsigned Release archive | `make bootstrap`, a Release archive for a device with signing off, and `Scripts/verify-privacy-manifest.sh` on the archived app, so a Release-only failure shows before a TestFlight upload |
 | `testflight.yml` | Archive and upload to TestFlight | Automatic for each push to `main` once iOS build and CI pass on it, skipping docs- and workflow-only pushes; manual from any repository branch. Sets What to Test from the commits since the previous upload and tags `main` uploads `testflight/<build>`. `make bootstrap`, then `Scripts/upload-testflight.sh`: validates the distribution certificate and App Store profile, signs a Release archive in a temporary keychain, verifies its privacy manifest, exports an IPA and uploads it with an App Store Connect team API key. Needs the six secrets in `docs/testflight.md`; uploads share one queue across branches |
 
 The Linux Swift jobs run in the `swift:6.1.2-noble` image, whose tag is not pinned by digest.
 The image has no SQLite headers, so each Swift job installs `libsqlite3-dev` first; GRDB needs
 `sqlite3.h` on Linux.
 Every job that builds the package checks out submodules, because SameBoy is one.
-
-Add each new test target to one of the layer filters in `ci.yml`; the coverage job fails until it
-is listed.
 
 ## Simulator coverage and device checks
 
@@ -44,7 +36,10 @@ The manual screenshot workflow also launches seeded gameplay and taps menus thro
 
 The shared-file UI suite uses the existing original fixtures in `TestROMs/`, with a separate
 Debug library for each test. Run `make bootstrap && make test-share-ui` on macOS; `DEVICE` can
-select another simulator. The sender is a separate test app and is excluded from the Release
+select another simulator, and `SHARE_UI_CONTROLS=1` adds the regression controls. Each control
+rebuilds the app, so they run only when asked: after changing the refresh listener, the game-menu
+pause hook or the assertions that guard them. A push to `main` skips the suite, since its pull
+request ran it. The sender is a separate test app and is excluded from the Release
 app's scheme. These simulator flows still leave Files/browser variants and physical-iPhone
 handoff in the device checklist.
 

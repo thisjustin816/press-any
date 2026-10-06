@@ -3,9 +3,8 @@ name: CI
 # Host-level checks that run on Linux without Xcode. Apple SDK, simulator and device
 # gates live in ios-build.yml and docs/mvp-verification.md.
 #
-# Layers follow docs/acceptance-matrix.md:
-#   L1 domain and application logic, L2 real storage and persistence,
-#   L3 headless SameBoy.
+# The package tests cover layers L1 to L3 of docs/acceptance-matrix.md: domain and application
+# logic, real storage and persistence, and headless SameBoy.
 
 on:
   # A change to docs alone can't break a build or a test, so it starts no run.
@@ -24,8 +23,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  l1-domain:
-    name: L1 domain and application
+  # Every test target runs here, so a new one needs no change to this file.
+  package-tests:
+    name: Package tests and headless SameBoy
     runs-on: ubuntu-24.04
     container: swift:6.1.2-noble
     timeout-minutes: 20
@@ -36,46 +36,12 @@ jobs:
           submodules: true
       - name: Install SQLite headers for GRDB
         run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev
-      - name: Run L1 tests
-        run: >-
-          swift test --package-path Packages/EmulatorKit --filter
-          '^(EmulatorDomainTests|EmulatorApplicationTests|EmulationCoreTests|EmulationSessionTests|GameplayInputTests|GameplayAudioTests|ImportingTests|PatchingTests|QuickPlayTests|ToolchainDetectionTests|GameIdentityTests)\.'
-
-  l2-storage:
-    name: L2 storage and persistence
-    runs-on: ubuntu-24.04
-    container: swift:6.1.2-noble
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-          submodules: true
-      - name: Install SQLite headers for GRDB
-        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev
-      - name: Run L2 tests
-        run: >-
-          swift test --package-path Packages/EmulatorKit --filter
-          '^(AssetStorageTests|PersistenceGRDBTests|ArchitectureProofTests)\.'
-
-  l3-sameboy-headless:
-    name: L3 headless SameBoy
-    runs-on: ubuntu-24.04
-    container: swift:6.1.2-noble
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-          submodules: true
-      - name: Install SQLite headers for GRDB
-        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev
-      - name: Run adapter tests
-        run: swift test --package-path Packages/EmulatorKit --filter '^SameBoyAdapterTests\.'
+      - name: Run the package tests
+        run: swift test --package-path Packages/EmulatorKit
       - name: Run C bridge smoke test
         run: ./Scripts/test-sameboy-bridge-linux.sh
 
-  # The gbtoolsid port must match the C tool at the pinned revision. The L1 job runs the
+  # The gbtoolsid port must match the C tool at the pinned revision. The package tests run the
   # synthetic detector tests; this job adds the comparison, which needs the C tool built.
   toolchain-detection:
     name: Toolchain detection matches gbtoolsid
@@ -91,19 +57,6 @@ jobs:
         run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev make python3
       - name: Compare with gbtoolsid
         run: CC=clang ./Scripts/test-toolchain-detection-differential.sh
-
-  # Every test target must belong to a layer above. A new target that no job runs would
-  # otherwise pass CI without ever executing.
-  test-target-coverage:
-    name: All test targets are covered
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: Compare test directories with the layer filters
-        run: ./Scripts/verify-ci-test-coverage.sh
 
   repo-hygiene:
     name: Repository hygiene
