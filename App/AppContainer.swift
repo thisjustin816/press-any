@@ -285,6 +285,14 @@ final class AppContainer {
         launchSetting(FrameBlending.self, .frameBlending, system: system, gameID: gameID, buildID: buildID) ?? .off
     }
 
+    func fastForwardSpeed(for context: LaunchContext) -> FastForwardSpeed {
+        launchSetting(FastForwardSpeed.self, .fastForwardSpeed, for: context) ?? .x2
+    }
+
+    func fastForwardSpeed(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> FastForwardSpeed {
+        launchSetting(FastForwardSpeed.self, .fastForwardSpeed, system: system, gameID: gameID, buildID: buildID) ?? .x2
+    }
+
     /// The scope an open game's settings sheet edits: the Game for a library game, the system for
     /// Quick Play, which has no Game yet. Display settings still resolve through the Build.
     func gameplaySettingsTarget(for context: LaunchContext) -> GameplaySettingsTarget? {
@@ -314,7 +322,8 @@ final class AppContainer {
             controlStyle: controllerStyle(system: target.system, gameID: target.gameID, buildID: target.buildID),
             screenScaling: screenScaling(system: target.system, gameID: target.gameID, buildID: target.buildID),
             lcdFilter: lcdFilter(system: target.system, gameID: target.gameID, buildID: target.buildID),
-            frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID)
+            frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            fastForwardSpeed: fastForwardSpeed(system: target.system, gameID: target.gameID, buildID: target.buildID)
         )
     }
 
@@ -402,6 +411,7 @@ struct GameplayDisplaySettings: Equatable {
     var screenScaling: ScreenScaling
     var lcdFilter: LCDFilter
     var frameBlending: FrameBlending
+    var fastForwardSpeed: FastForwardSpeed
 }
 
 struct PreparedLaunch {

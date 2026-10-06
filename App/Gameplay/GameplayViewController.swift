@@ -30,6 +30,7 @@ final class GameplayViewController: UIViewController {
     private var controlStyle: TouchControlStyle
     private var lcdFilter: LCDFilter
     private var frameBlending: FrameBlending
+    private var fastForwardSpeed: FastForwardSpeed
     private var screenScaling: ScreenScaling
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
@@ -63,6 +64,7 @@ final class GameplayViewController: UIViewController {
         screenScaling: ScreenScaling = .integer,
         lcdFilter: LCDFilter = .off,
         frameBlending: FrameBlending = .off,
+        fastForwardSpeed: FastForwardSpeed = .x2,
         controllerTheme: ControllerTheme = .matchSystem,
         tapGameForMenu: Bool = false,
         soundMode: SoundMode = .followSilentSwitch,
@@ -75,6 +77,7 @@ final class GameplayViewController: UIViewController {
         self.controlStyle = controlStyle
         self.lcdFilter = lcdFilter
         self.frameBlending = frameBlending
+        self.fastForwardSpeed = fastForwardSpeed
         self.screenScaling = screenScaling
         self.controllerTheme = controllerTheme
         self.tapGameForMenu = tapGameForMenu
@@ -465,8 +468,13 @@ final class GameplayViewController: UIViewController {
         controlStyle: TouchControlStyle,
         screenScaling: ScreenScaling,
         lcdFilter: LCDFilter,
-        frameBlending: FrameBlending
+        frameBlending: FrameBlending,
+        fastForwardSpeed: FastForwardSpeed = .x2
     ) {
+        if fastForwardSpeed != self.fastForwardSpeed {
+            self.fastForwardSpeed = fastForwardSpeed
+            if fastForward { driver.setSpeed(Self.emulationSpeed(for: fastForwardSpeed)) }
+        }
         guard controlStyle != self.controlStyle || screenScaling != self.screenScaling
             || lcdFilter != self.lcdFilter || frameBlending != self.frameBlending else { return }
         self.controlStyle = controlStyle
@@ -484,7 +492,11 @@ final class GameplayViewController: UIViewController {
 
     private func toggleFastForward() {
         fastForward.toggle()
-        driver.setSpeed(fastForward ? .multiplier(2) : .normal)
+        driver.setSpeed(fastForward ? Self.emulationSpeed(for: fastForwardSpeed) : .normal)
+    }
+
+    private static func emulationSpeed(for speed: FastForwardSpeed) -> EmulationSpeed {
+        speed.multiplier.map { .multiplier($0) } ?? .unlimited
     }
 
     /// Follows this game's own scene, so another window's changes don't pause or resume it.

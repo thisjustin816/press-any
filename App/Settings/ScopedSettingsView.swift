@@ -58,6 +58,13 @@ struct ScopedSettingsView: View {
                     context: context
                 )
                 InheritableSettingRow(
+                    title: "Fast Forward Speed",
+                    key: .fastForwardSpeed,
+                    defaultValue: FastForwardSpeed.x2,
+                    options: FastForwardSpeed.allCases.map { ($0, $0.displayName) },
+                    context: context
+                )
+                InheritableSettingRow(
                     title: "Resume Games",
                     key: .autoResumePolicy,
                     defaultValue: AutoResumePolicy.always,

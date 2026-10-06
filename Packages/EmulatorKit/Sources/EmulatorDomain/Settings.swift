@@ -56,6 +56,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case lcdFilter
     /// `FrameBlending`, unset means `.off`.
     case frameBlending
+    /// `FastForwardSpeed`, unset means `.x2`.
+    case fastForwardSpeed
     /// `SoundMode`, unset means `.followSilentSwitch`.
     case soundMode
     /// Bool, unset means false. When true, tapping the game picture opens the game menu, as tapping
@@ -102,6 +104,39 @@ public enum LCDFilter: String, Codable, Sendable, CaseIterable {
         case .off: "Off"
         case .lcd1x: "LCD 1×"
         case .lcd3x: "LCD 3×"
+        }
+    }
+}
+
+/// How fast the game menu's Fast Forward runs the game. Raw values are stored in settings.
+public enum FastForwardSpeed: String, Codable, Sendable, CaseIterable {
+    case x1_5
+    case x2
+    case x3
+    case x4
+    case x8
+    case unlimited
+
+    public var displayName: String {
+        switch self {
+        case .x1_5: "1.5×"
+        case .x2: "2×"
+        case .x3: "3×"
+        case .x4: "4×"
+        case .x8: "8×"
+        case .unlimited: "Unlimited"
+        }
+    }
+
+    /// The speed as a multiple of normal, or nil for as fast as the device can run.
+    public var multiplier: Double? {
+        switch self {
+        case .x1_5: 1.5
+        case .x2: 2
+        case .x3: 3
+        case .x4: 4
+        case .x8: 8
+        case .unlimited: nil
         }
     }
 }
