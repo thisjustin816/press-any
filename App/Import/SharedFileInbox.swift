@@ -38,8 +38,9 @@ final class SharedFileInbox {
 
     func receive(_ url: URL) throws -> SharedFile {
         guard url.isFileURL else { throw SharedFileError.notAFile }
-        // Opening in place is off, so iOS hands over a copy in Documents/Inbox. The receipt keeps
-        // its own copy, so that one goes whether or not the file is accepted.
+        // A file from Files opens in place and is never touched here. Other apps hand over a copy in
+        // Documents/Inbox; the receipt keeps its own copy, so that one goes whether or not the file
+        // is accepted.
         defer { Self.removeIfInInbox(url) }
         let kind: SharedFile.Kind
         let limit: ImportSizeLimit

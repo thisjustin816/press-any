@@ -41,6 +41,8 @@ final class GameDetailViewModel: ObservableObject {
     private let artwork: GameArtwork
     private let variableMaps: AttachVariableMap
     private let saveReplacer: ReplaceBatterySave
+    private let exporter: ExportLibraryFiles
+    private let exportsDirectory: URL
 
     init(
         gameID: UUID,
@@ -57,7 +59,9 @@ final class GameDetailViewModel: ObservableObject {
         evictImage: EvictGeneratedImage,
         artwork: GameArtwork,
         variableMaps: AttachVariableMap,
-        replaceSave: ReplaceBatterySave
+        replaceSave: ReplaceBatterySave,
+        exporter: ExportLibraryFiles,
+        exportsDirectory: URL
     ) {
         self.gameID = gameID
         self.games = games
@@ -74,6 +78,8 @@ final class GameDetailViewModel: ObservableObject {
         self.artwork = artwork
         self.variableMaps = variableMaps
         self.saveReplacer = replaceSave
+        self.exporter = exporter
+        self.exportsDirectory = exportsDirectory
     }
 
     var preferredBuild: Build? {
@@ -215,6 +221,24 @@ final class GameDetailViewModel: ObservableObject {
                 "Imported \(url.lastPathComponent) into \(profile.displayName)."
             }
         }
+    }
+
+    func exportROM(of build: Build) {
+        perform {
+            let url = try exporter.exportROM(buildID: build.id, to: exportsDirectory)
+            infoMessage = Self.exportedMessage(url)
+        }
+    }
+
+    func exportSave(of profile: SaveProfile) {
+        perform {
+            let url = try exporter.exportSave(profileID: profile.id, to: exportsDirectory)
+            infoMessage = Self.exportedMessage(url)
+        }
+    }
+
+    private static func exportedMessage(_ url: URL) -> String {
+        "Saved \(url.lastPathComponent) to Files, in \(AppBrand.displayName) › Exports."
     }
 
     func attachVariableMap(from url: URL, to build: Build) {

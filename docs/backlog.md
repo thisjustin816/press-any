@@ -71,14 +71,14 @@ Open items in each area are in the table, finished ones on the line under it.
 |---|---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | prod "Platform", acceptance-matrix "Release" | manual TestFlight upload workflow and setup (docs/release.md); App Store listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | later 12 | none |
-| missing | A Press Any folder in the Files app (`UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace`) holding Exports and Backups; the library stays in Application Support | v1 | D "Exports and a Files folder" | Documents also holds the share Inbox, which is emptied after each copy; remove the empty folder so only Exports and Backups show |
 | missing | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | Q183 | only the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | Q184, dec 12 | none |
 | missing | Landscape gameplay | v1 | prod "Layouts, skins, touch"; dec 22 | TouchControlLayout is portrait-only |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | later 12 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
 | missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | D "Scope and safety changes from the market review" | the Screenshots workflow already seeds from `TestROMs/` |
 
-Done: iOS 17 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
+Done: A Press Any folder in Files holding Exports, with the library kept in Application Support and
+an empty share Inbox removed at launch; iOS 17 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
 Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (heavy
 italic, magenta "A") in library toolbar and controller body; App icon (A button; light/dark/tinted);
 Acknowledgements screen listing SameBoy + GRDB with full licenses.
@@ -491,8 +491,6 @@ Spec: all v1 unless noted.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Export/import Library Backup | v1 | Q140 |  |
-| missing | Export a Save Profile's battery save as a .sav named for the Game, Build and profile | v1 | dec 2 "battery save import/export"; D "Exports and a Files folder" | import exists; export was never listed |
-| missing | Export a Build's ROM, the original or the rebuilt patched ROM, under its canonical name | v1 | D "Exports and a Files folder" | a patched ROM is rebuilt and its hash checked before export |
 | missing | Export one Game as a package in the Library Backup format: its Builds' patches and recipes, Save Profiles, states, artwork, documents and notes, ROMs only when asked; importing it merges like a restore | v1 | D "Exports and a Files folder" |  |
 | missing | Documented versioned archive: manifest, ordinary files, checksums, schema version | v1 | Q141 |  |
 | missing | ROMs excluded by default, explicit personal full-backup option | v1 | Q140 |  |
@@ -500,6 +498,10 @@ Spec: all v1 unless noted.
 | missing | Merge restore by stable IDs/hashes with conflict review; Replace Entire Library | v1 | Q143 |  |
 | missing | Migration Report before commit + retained summary | v1 | Q144 |  |
 | missing | Delta/Manic/Afterplay/Playtiles import adapters | future | Q140 |  |
+
+Done: Export Save writes a Save Profile's battery save as a .sav named for the Game and profile;
+Export ROM writes a Build's ROM, rebuilt first when patched, under its canonical name; both land in
+Files without replacing an earlier export.
 
 ### Deletion and undo
 
