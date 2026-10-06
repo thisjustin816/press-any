@@ -18,16 +18,36 @@ Nothing below is in progress.
 
 The MVP is complete and working. Its device checklist remains a regression record.
 
-1. Complete No-Intro and ROM-hack naming suggestions and review metadata for v1.
-2. Display and play feel, small changes that make games look and play right on day one: GBC
-   color correction, DMG palettes, Fast Forward presets with hold or toggle, slow
+Library backend first: everything that decides how the library is stored, identified and kept
+safe lands before more play features, so a library built while testing never needs regrouping or
+migrating later (D "Library backend first").
+
+1. Keep the test library safe: Library Backup export and import (versioned archive, ROMs left out
+   unless asked, merge restore by stable IDs), exports of a save, a ROM and a whole Game, the Files
+   folder they land in, dependency-aware deletion, Recently Deleted for 30 days, and tombstones,
+   which iCloud needs later.
+2. Identity: No-Intro categorization (confirm the data's license, the `no-intro-update.yml`
+   pipeline and bundled baseline, hash matching, Verified/Modified/Unknown, parent/clone grouping
+   and merging existing Games that are one family), the regional rows, Match Game for unknown
+   ROMs and lineage without owning the base, and the ROM-hack naming that remains.
+3. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
+   metadata provenance with Metadata Details, Build notes, per-Build playtime and the Build
+   timeline, typed multi-artwork, documents, tags, collections and favorites, declared save
+   compatibility, per-step patch input hashes, and the cross-region save check.
+4. Import pipeline: ZIP and 7z, multi-asset grouping, several ROMs into one Game in one flow,
+   duplicate imports still inspecting new assets, visual artwork comparison, and multi-signal
+   development-build matching.
+5. Library features on that data: FTS5 search, sorting, smart and manual collections, play
+   statistics, the Developer view, the artwork provider chain with priority, provenance, regional
+   and title-screen artwork, the signed catalog file, and the storage screen with cleanup,
+   in-flight protection and verification on read.
+6. iCloud sync, once tombstones and the schema have settled.
+7. Display and play feel: GBC color correction, DMG palettes, Fast Forward hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
-3. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
+8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
    profiles and remapping, landscape and the layout editor, cheats and memory tools, external
    display, and the curated shader library.
-4. Library and services: Share Sheet and archive import, search and collections, automatic
-   artwork, manuals, screenshots and notes, deletion and undo, backups, iCloud and the Community
-   Catalog.
+9. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
 
 ## Known bugs
 
@@ -48,10 +68,12 @@ Open items in each area are in the table, finished ones on the line under it.
 |---|---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | prod "Platform", acceptance-matrix "Release" | manual TestFlight upload workflow and setup (docs/release.md); App Store listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | later 12 | none |
+| missing | A Press Any folder in the Files app (`UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace`) holding Exports and Backups; the library stays in Application Support | v1 | D "Exports and a Files folder" | Documents also holds the share Inbox, which is emptied after each copy; remove the empty folder so only Exports and Backups show |
 | missing | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | Q183 | only the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | Q184, dec 12 | none |
 | missing | Landscape gameplay | v1 | prod "Layouts, skins, touch"; dec 22 | TouchControlLayout is portrait-only |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | later 12 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
+| missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | D "Scope and safety changes from the market review" | the Screenshots workflow already seeds from `TestROMs/` |
 
 Done: iOS 17 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
 Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (heavy
@@ -80,7 +102,7 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 | missing | Model override DMG/GBC/SGB at App->System->Game->Build | v1 | Q87; later 7 ("no claim CGB-only works in DMG") | no setting key |
 | missing | SGB mode: palettes, borders, game enhancements (custom border editing deferred) | v1 | Q86 | no SGB model/boot ROM in bridge |
 | missing | User-chosen alternate core per Build | later | dec 2 |  |
-| missing | mGBA/GBA adapter | later | prod "post-v1" |  |
+| missing | mGBA/GBA adapter | 1.2 or 2.0 | prod "post-v1"; D "Scope and safety changes from the market review" | after GB/GBC is feature complete |
 
 Done: SameBoy 1.0.3 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest compatible core on
 first launch, then pinned per Build; Open SameBoy boot ROMs incl. cgb_boot_fast; Skip Boot Logo:
@@ -105,7 +127,7 @@ Atomic save/state writes; Transactional commit, no orphaned permanent asset on f
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Game aliases/alternate titles (indexed) | v1 | Q162 | no field |
+| missing | Game aliases/alternate titles (indexed) | v1 | Q162; D "Regional releases and No-Intro families" | no field; a No-Intro family's regional titles become aliases, so "Pocket Monsters Crystal" finds Pokémon Crystal |
 | partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Q163/Q164; prod "ROM identity" | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
 | partial | Presentation-metadata editing (rename Game/Build after creation) | v1 | Q163 | Rename Build and Suggest Build Names; no Game rename UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain/sidecars MVP per later 5) | prod "Build"; dec 3 | toolchain reports and variable maps done; the rest missing |
@@ -155,7 +177,12 @@ Done: Search by primary title.
 | partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |
 | missing | Verification status Verified/Modified/Unknown; never auto-repair | v1 | dec 18 |  |
-| missing | Bundled No-Intro baseline + signed/validated updates; parent/clone family grouping shown in review | v1 | prod "ROM identity"; Q157; later 11 no-intro-update.yml |  |
+| missing | No-Intro GB/GBC data pipeline (`no-intro-update.yml`): hash, canonical name, region, language, revision, status flags (Beta, Proto, Demo, Sample, Unl, Aftermarket, Virtual Console, Pirate) and parent/clone family, normalized into a compact offline file and reviewed per update | v1 | later 11; prod "ROM identity" | the data's license must allow bundling first |
+| missing | Bundled No-Intro baseline + signed/validated downloadable updates; matching works offline | v1 | dec 18; prod "ROM identity" |  |
+| missing | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | dec 18; Q156; D "Regional releases and No-Intro families" | today they come only from filename tags |
+| missing | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | Q156/Q157; prod "ROM identity" | today only a matching title after tags are stripped joins an existing Game |
+| missing | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Build Names | v1 | Q157; D "Regional releases and No-Intro families" |  |
+| missing | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 | D "Regional releases and No-Intro families" |  |
 | partial | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | dec 17 | user can pick an existing Game as destination; no lineage-without-base metadata |
 | partial | Multi-signal development-build matching, never silently attach | v1 | Q151; mvp "Import MVP" step 5 | only exact hash or explicit target; no heuristics |
 | missing | Quiet provider metadata refresh never overwriting user overrides | v1 | Q165 |  |
@@ -166,7 +193,6 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Share Sheet / Open In (and Quick Play vs Import choice on open) | v1 | prod "Sources"; dec 14 | no document types/onOpenURL |
 | missing | ZIP + 7z (libarchive) with Q92 safety (depth/ratio limits, traversal, password detect) | v1 | Q92; later 6 |  |
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1 | prod "Multi-asset review" |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1 | prod "Duplicate handling" | duplicate path only repairs the blob |
@@ -174,7 +200,8 @@ Done: SHA-256 identity for every ROM; Original imported filename preserved perma
 | missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1 | Q149/Q150 |  |
 | missing | Multiple ROMs attached to one Game in one flow | v1 | dec 16 |  |
 
-Done: Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
+Done: Share Sheet / Open In for ROMs and patches, with the Quick Play or Import choice on open;
+Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
 re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Preferred suggestions
 (development releases default to both; ROM hacks default Preferred only); Toolchain
@@ -202,10 +229,12 @@ automatically replacing the previous one; rename a Build from its long-press men
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Editable stacks UI: reorder/enable/disable/add/remove -> new Build | v1 | Q133 |  |
+| missing | Patch base by region: when a patch expects another regional release already in the Game, such as USA when Europe was chosen, review offers that Build | v1 | D "Regional releases and No-Intro families" | a fan translation of a Japanese release joins the family's Game through its base |
 | partial | Pluggable patch-format architecture | v1 | prod "Patching" | switch on extension, no registry |
 | missing | Patch metadata with confidence/provenance (catalog > README > filename) | v1 | Q135 |  |
 | missing | BPS generation from base vs modified Build | v1.1 | prod "v1.1 targets" |  |
 | missing | Quick Play a patch against a base without creating a Build | future | dec 14 |  |
+| missing | Expected input hash on every step of a patch stack; review shows expected and selected hashes when they differ | v1 | D "Scope and safety changes from the market review" | PatchRecipe checks only the base and the result; IPS carries no checksum of its own |
 
 Done: IPS (RLE, truncate) and BPS (CRC checks) engines; Preserve base ROM, original patch, recipe,
 result hash; Base validation; explicit Apply Anyway persisted for rebuilds; Patch result is a new
@@ -220,6 +249,8 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | GB Studio save migration (version-gated, needs maps) | v1.1 | prod "v1.1 targets" |  |
 | missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | dec 11 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later | dec 9/33 |  |
+| missing | Cross-region save check: launching a Build whose region or language differs from the Build that last wrote the profile warns, since many games' saves don't carry across languages | v1 | D "Regional releases and No-Intro families" | joins the existing launch check; declared save compatibility can clear it |
+| missing | Declared save compatibility between Builds (known to share, known not to), used by the launch check | v1 | D "Scope and safety changes from the market review" | the launch check only infers today (GB Studio, tools, header save hardware) |
 
 Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play
 once changed, at most every five seconds of play and off the frame-pacing queue; Compatible Builds
@@ -298,7 +329,7 @@ Spec: all v1.
 | missing | Export presets Clean / Build Info / Bug Report with rendered info strip and metadata fields | v1 | dec 13 |  |
 | missing | Optional atomic Capture Context (watches, named vars, memory ranges, registers, frame/time, Build/hash/patches, RTC, cheats, profile, core/settings) | v1 | dec 13 |  |
 | missing | Full-RAM snapshot (opt-in, Developer Mode) | v1 | dec 13 |  |
-| missing | Bug-report export (Markdown/JSON) with privacy checklist/preview | v1 | Q176 |  |
+| missing | Bug-report export (Markdown/JSON) with privacy checklist/preview | v1 | Q176; D "Exports and a Files folder" | lands in the Files folder, with any memory or save captures the player includes |
 | missing | Game notes, Build notes, timestamped gameplay notes with attachments | v1 | dec 13 |  |
 
 ### Rewind and speed
@@ -396,6 +427,7 @@ Spec: all v1 unless noted.
 | missing | Priority manual -> hack-specific -> inherited base (recorded as inherited) -> generated | v1 | dec 20 |  |
 | missing | Artwork generated from the Game's title screen | v1 | Q79; later 8; D "Artwork from the title screen" | open: capturing after import by running the game unseen (detecting the title screen past the boot logo, for example once the picture settles) or from the current frame chosen in the game menu, or both; framing the 10:9 picture in a square tile (whole-pixel scale on a border color sampled from the frame, or on the placeholder cartridge's label) |
 | missing | Build-level artwork override | v1 | Q168 |  |
+| missing | Regional artwork: lookups use the Build's region, and a Game's primary artwork follows the preferred region | v1 | D "Regional releases and No-Intro families" | box art differs by region |
 | missing | Multiple typed assets (box front/back, cart, title, screenshots, logo, fan) | v1 | dec 20 |  |
 | missing | Non-destructive crop/reposition | v1 | Q167 |  |
 | missing | Manual "Check for New Artwork"; cache only selected primary | v1 | Q166/Q98 |  |
@@ -427,17 +459,18 @@ Spec: target v1, may move to v1.1.
 
 ### Community Catalog
 
-Spec: target v1, may move to v1.1.
+Spec: the file format is v1 and the hosted service follows v1 (D "Scope and safety changes from the market review").
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| missing | Opt-in anonymous read; lightweight identity to contribute; optional attribution | v1 | prod "Community Catalog" |  |
-| missing | Moderated submissions, trust layers, structured evidence, rejection reasons | v1 | dec 19; later 13 |  |
-| missing | Field-level corrections; "Suggest This Correction" after local edit, never auto-submit | v1 | dec 19 |  |
-| missing | Metadata, artwork, legal patch references/uploads; no ROM hosting | v1 | Q178/Q179 |  |
-| missing | Update discovery: quiet badge, optional verified pre-download, per-Game override, details | v1 | dec 19 |  |
-| missing | Update import as new Build via normal review, old kept for rollback | v1 | dec 19 |  |
-| missing | Backend (PostgreSQL/Supabase-shaped), CC0 factual metadata policy | v1 | later 13 |  |
+| missing | Signed catalog file read offline: Game and Build metadata, expected hashes, lineage, patch download locations, no ROMs; nothing else depends on it | v1 | D "Scope and safety changes from the market review" |  |
+| missing | Opt-in anonymous read; lightweight identity to contribute; optional attribution | after v1 | prod "Community Catalog" | hosted service |
+| missing | Moderated submissions, trust layers, structured evidence, rejection reasons | after v1 | dec 19; later 13 | hosted service |
+| missing | Field-level corrections; "Suggest This Correction" after local edit, never auto-submit | after v1 | dec 19 | hosted service |
+| missing | Metadata, artwork, legal patch references/uploads; no ROM hosting | after v1 | Q178/Q179 | hosted service; the v1 file carries references |
+| missing | Update discovery: quiet badge, optional verified pre-download, per-Game override, details | after v1 | dec 19 |  |
+| missing | Update import as new Build via normal review, old kept for rollback | after v1 | dec 19 |  |
+| missing | Backend (PostgreSQL/Supabase-shaped), CC0 factual metadata policy | after v1 | later 13 |  |
 
 ### Metadata databases
 
@@ -454,6 +487,9 @@ Spec: all v1 unless noted.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Export/import Library Backup | v1 | Q140 |  |
+| missing | Export a Save Profile's battery save as a .sav named for the Game, Build and profile | v1 | dec 2 "battery save import/export"; D "Exports and a Files folder" | import exists; export was never listed |
+| missing | Export a Build's ROM, the original or the rebuilt patched ROM, under its canonical name | v1 | D "Exports and a Files folder" | a patched ROM is rebuilt and its hash checked before export |
+| missing | Export one Game as a package in the Library Backup format: its Builds' patches and recipes, Save Profiles, states, artwork, documents and notes, ROMs only when asked; importing it merges like a restore | v1 | D "Exports and a Files folder" |  |
 | missing | Documented versioned archive: manifest, ordinary files, checksums, schema version | v1 | Q141 |  |
 | missing | ROMs excluded by default, explicit personal full-backup option | v1 | Q140 |  |
 | missing | Optional password encryption | v1 | Q142 |  |
@@ -490,6 +526,7 @@ after shortfalls); frames run on the display refresh at native speed, up to 120 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Opt-in crash reporting limited to non-content diagnostics | v1 | Q177 | no crash reporting at all |
+| missing | Opt-in anonymous usage counts (Games, Builds per Game, Save Profiles used by several Builds, Quick Play sessions added to the library), never titles, hashes, filenames or contents | v1 | D "Scope and safety changes from the market review" | endpoint or provider and privacy copy not chosen; PRIVACY.md and the App Store privacy answers change with it |
 | missing | Explicit bug-report export with checklist/preview | v1 | Q176 (see Screenshots) |  |
 | missing | Accurate privacy/consent copy for provider queries and catalog; keys server-side/secure storage | v1 | later 13 |  |
 
@@ -564,7 +601,7 @@ Spec: all missing.
 | missing | Game Boy Printer with preview/save/share | v1.1 |  | no PrinterCapability |
 | missing | RAR import (tentative) | v1.1 |  |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v1.1 |  |  |
-| missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | D 2026-10-05 |  |
+| missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | D 2026-10-05; D "Exports and a Files folder" | saved recordings also land in the Files folder |
 | missing | Browse and download games: itch.io's Game Boy tag in an in-app browser and Homebrew Hub (hh.gbdev.io) by its API, from the library's + menu; downloads go straight to Import Review, with Quick Play | v1.1 | D 2026-10-05 | needs zip import; the app's first network use, so revisit the privacy manifest and label; confirm App Store guideline 4.7 wording |
 | missing | Share an itch.io game page or GitHub page to download and import a ROM | v1.1 | D 2026-10-06 "Shared game pages" | web-URL share extension; resolve supported ROM downloads, choose when several exist, then Import Review or Quick Play; safe ZIP extraction; preserve itch.io's normal purchase/login flow |
 | missing | `.gbproject`-style project import/export | v1.1 |  |  |
@@ -579,4 +616,4 @@ Spec: all missing.
 |---|---|---|---|---|
 | missing | Developer tools: a watched Files or iCloud Drive folder whose new ROMs import as new Builds; GitHub releases or CI builds as Builds; a tester bug report bundle (save, state, screenshot, Build hash, toolchain) | later | D 2026-10-05 |  |
 | missing | iOS integration: Continue Playing widget, Siri and Shortcuts ("Resume <game>"), Spotlight | later | D 2026-10-05 |  |
-| missing | mGBA/GBA; network/internet link; RetroAchievements; full debugger/disassembler/VRAM; deterministic replay/movies; arbitrary .slang/.slangp; Apple TV/macOS/iPad-first polish; creator-controlled homebrew publishing; document annotations/OCR/bookmarks; community layout gallery; battery-saver mode; per-Build alternate core choice; bulk canonical rename | later |  |  |
+| missing | Network/internet link; RetroAchievements; full debugger/disassembler/VRAM; deterministic replay/movies; arbitrary .slang/.slangp; Apple TV/macOS/iPad-first polish; creator-controlled homebrew publishing; document annotations/OCR/bookmarks; community layout gallery; battery-saver mode; per-Build alternate core choice; bulk canonical rename | later |  |  |

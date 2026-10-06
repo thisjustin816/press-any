@@ -3,6 +3,75 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Exports and a Files folder
+
+Press Any gets a folder in the Files app, holding what it writes out: exported saves, ROMs and
+Games, and Library Backups. The library itself stays in Application Support, out of Files, so its
+content-addressed files can't be renamed or broken there.
+
+Three exports join the Library Backup: a Save Profile's battery save as a .sav, which the specs
+already promised; a Build's ROM, the original or the rebuilt patched ROM, under its canonical name;
+and one Game as a package in the Library Backup format, with ROMs only when asked. A Game package
+imports by merging, as a restore does.
+
+Later captures land in the same folder: screen recordings, and debug captures such as bug reports
+with the memory or save the player chose to include.
+
+## 2026-10-06: Library backend first
+
+The backlog's order puts library backend work ahead of further play features: backup and safe
+deletion, No-Intro identity and regional grouping, the remaining data model, the import pipeline,
+then the library features built on them, with iCloud after the schema settles. The player-facing
+features needed for testing are in place, and a library built during testing should not need
+regrouping or migrating when this work lands. Display and play feel and the rest of the core gate
+follow.
+
+## 2026-10-06: Regional releases and No-Intro families
+
+No-Intro's GB/GBC data, normalized by the `no-intro-update.yml` pipeline (`later 11`), gives each
+known dump a canonical name, region, language, revision, status flags and a parent/clone family.
+Imports matched by hash take those values from the dump ahead of the filename, and a family's
+releases group under one Game even when their titles differ by region, as Q156 and Q157 already
+require. Bundling the data waits on confirming its license.
+
+Regional releases also need:
+- a preferred region and language order, USA, Europe, Japan by default, that picks a Game's
+  display title and which regional Build defaults to Preferred;
+- regional titles kept as searchable aliases;
+- a warning when a Build of another region or language launches a profile, since many games'
+  saves don't carry across languages;
+- artwork chosen by region;
+- patch review offering the Game's other regional Build when a patch expects it;
+- a reviewed suggestion to merge Games already in the library that are one family.
+
+## 2026-10-06: Scope and safety changes from the market review
+
+A review of comparable emulators, library managers and ROM-hack sites found that grouping a game's
+versions is common, and that keeping saves and Builds safe across versions is what the others lack.
+
+GBA, through mGBA, ships in 1.2 or 2.0, once the GB/GBC app is feature complete through v1 and
+v1.1. It replaces "later" in the specs.
+
+The Community Catalog starts as a file format. v1 defines a signed catalog file the app
+reads offline: Game and Build metadata, expected hashes, lineage and where to download patches,
+never ROMs. The hosted service, with accounts, submissions and moderation, follows v1. Playing,
+importing and patching never depend on a catalog.
+
+An off-by-default setting sends anonymous usage counts, so the project can tell whether people use
+several Builds per Game: how many Games, Builds per Game, Save Profiles used by more than one
+Build, and Quick Play sessions added to the library. It never sends titles, hashes, filenames or
+any library contents, and nothing is sent until the player turns it on. Where the counts go, and
+the privacy copy for the setting, are still to be chosen.
+
+A Build can carry declared save compatibility, so the launch check knows when Builds are known to
+share a save, or known not to, where today it can only guess. Each step of a patch stack also
+records the input hash it expects, so a stacked IPS patch, which carries no checksum of its own,
+can't apply to the wrong input unnoticed. When the input differs, review shows the expected and
+selected hashes side by side.
+
+App Store screenshots and previews show homebrew and the original test ROMs only, never
+third-party game art or logos.
+
 ## 2026-10-06: Artwork from the title screen
 
 A Game's artwork can be generated from its own title screen, so a game no provider knows, such
