@@ -153,4 +153,12 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(suffixed, plain.map { $0 + "+deferred6" })
         XCTAssertLessThan(suffixed!, BuildImportMetadata(versionString: "0.3").versionSortKey!)
     }
+
+    func testPrereleasesSortBeforeTheirReleaseAndNumericPartsSortNumerically() throws {
+        let key = { (version: String) in try XCTUnwrap(BuildImportMetadata(versionString: version).versionSortKey) }
+        XCTAssertLessThan(try key("1.0-beta"), try key("1.0"))
+        XCTAssertLessThan(try key("1.0-beta.9"), try key("1.0-beta.10"))
+        XCTAssertLessThan(try key("1.0-alpha"), try key("1.0-beta"))
+        XCTAssertLessThan(try key("1.0"), try key("1.0.1-rc.1"))
+    }
 }

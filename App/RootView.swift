@@ -45,6 +45,8 @@ struct RootView: View {
     @State private var sharedQuickPlay: QuickPlayRequest?
     /// Quick Play was chosen for a file shared mid-game, so that game closes first.
     @State private var closesGameForSharedQuickPlay = false
+    /// A shared file that couldn't be received, reported over the library or over gameplay.
+    @State private var sharedFileError: String?
 
     var body: some View {
         Group {
@@ -70,6 +72,11 @@ struct RootView: View {
         }
         .sheet(item: sharedFileBinding(overGameplay: false), onDismiss: finishSharedFile) { file in
             sharedFileView(file)
+        }
+        .alert("Couldn’t Open the File", isPresented: sharedFileErrorBinding(overGameplay: false)) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(sharedFileError ?? "")
         }
         .fullScreenCover(item: $gameplay, onDismiss: showClosingQuickPlay) { presentation in
             GameplayViewControllerRepresentable(
@@ -101,6 +108,11 @@ struct RootView: View {
             // The library's sheet can't show over this cover, so a file shared mid-game opens here.
             .sheet(item: sharedFileBinding(overGameplay: true), onDismiss: finishSharedFile) { file in
                 sharedFileView(file)
+            }
+            .alert("Couldn’t Open the File", isPresented: sharedFileErrorBinding(overGameplay: true)) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(sharedFileError ?? "")
             }
         }
         .sheet(item: $endedQuickPlay, onDismiss: resumeChosenQuickPlay) { session in
@@ -167,8 +179,19 @@ struct RootView: View {
             queuedSharedFiles.append(try container.sharedFileInbox.receive(url))
             presentNextSharedFile()
         } catch {
-            errorMessage = error.localizedDescription
+            sharedFileError = error.localizedDescription
         }
+    }
+
+    private func sharedFileErrorBinding(overGameplay: Bool) -> Binding<Bool> {
+        Binding(
+            get: { sharedFileError != nil && (gameplay != nil) == overGameplay },
+            set: { shown in
+                guard !shown else { return }
+                sharedFileError = nil
+                presentNextSharedFile()
+            }
+        )
     }
 
     /// One shared file shows at a time: over the library, or over gameplay, which it pauses.
@@ -197,7 +220,7 @@ struct RootView: View {
 
     private func presentNextSharedFile() {
         guard endedQuickPlay == nil, closingQuickPlayID == nil,
-              pendingResume == nil, riskyLaunch == nil, errorMessage == nil,
+              pendingResume == nil, riskyLaunch == nil, errorMessage == nil, sharedFileError == nil,
               closingSharedFile == nil, sharedFile == nil, !queuedSharedFiles.isEmpty else { return }
         let next = queuedSharedFiles.removeFirst()
         closingSharedFile = next
@@ -374,6 +397,9 @@ struct RootView: View {
             endedQuickPlay = try container.quickPlayWorkspace.load(sessionID: id)
         } catch {
             endedQuickPlayAddsToLibrary = false
+            // Its sheet won't show, so a shared ROM waiting on it is dropped and its receipt let go.
+            sharedQuickPlay = nil
+            startSharedQuickPlay()
             errorMessage = "Couldn’t reopen the Quick Play session: \(error.localizedDescription)"
         }
     }

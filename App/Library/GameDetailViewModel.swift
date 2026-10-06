@@ -243,12 +243,20 @@ final class GameDetailViewModel: ObservableObject {
             let displayName: String
             let metadata: BuildImportMetadata
             if let first = naming.first, naming.count == 1 {
-                displayName = first.suggestedBuildName == "Original" ? first.suggestedTitle : first.suggestedBuildName
+                displayName = BuildNaming.distinctName(
+                    BuildNaming.patchBuildName(for: first),
+                    existing: builds.map(\.displayName),
+                    addedAt: .now
+                )
                 var parsed = first.buildMetadata
                 parsed.hackTitle = parsed.hackTitle ?? first.suggestedTitle
                 metadata = parsed
             } else {
-                displayName = urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + ")
+                displayName = BuildNaming.distinctName(
+                    urls.map { $0.deletingPathExtension().lastPathComponent }.joined(separator: " + "),
+                    existing: builds.map(\.displayName),
+                    addedAt: .now
+                )
                 metadata = BuildImportMetadata()
             }
             let patched = try patchCreator.execute(.init(

@@ -25,6 +25,25 @@ final class SharedFileTests: XCTestCase {
         }
     }
 
+    func testTheCopyIOSLeavesInDocumentsInboxIsRemovedWhetherOrNotItIsAccepted() throws {
+        let documents = try XCTUnwrap(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first)
+        let inboxFolder = documents.appendingPathComponent("Inbox", isDirectory: true)
+        try FileManager.default.createDirectory(at: inboxFolder, withIntermediateDirectories: true)
+        try withInbox { inbox, _, _ in
+            let accepted = inboxFolder.appendingPathComponent("Shared \(UUID().uuidString).gb")
+            try Data([1, 2, 3]).write(to: accepted)
+            let received = try inbox.receive(accepted)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: accepted.path))
+            XCTAssertEqual(try Data(contentsOf: received.url), Data([1, 2, 3]))
+            inbox.discard(received)
+
+            let rejected = inboxFolder.appendingPathComponent("Shared \(UUID().uuidString).zip")
+            try Data([1]).write(to: rejected)
+            XCTAssertThrowsError(try inbox.receive(rejected))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: rejected.path))
+        }
+    }
+
     func testDiscardKeepsSenderAndOtherQueuedCopies() throws {
         try withInbox { inbox, root, _ in
             let source = root.appendingPathComponent("Example.gb")

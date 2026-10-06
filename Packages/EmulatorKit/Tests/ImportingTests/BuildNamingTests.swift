@@ -65,6 +65,14 @@ final class BuildNamingTests: XCTestCase {
         XCTAssertEqual(suggestions.first?.currentName, escaped.displayName)
     }
 
+    func testPatchNamesUseThePatchTitleInsteadOfGenericNames() {
+        let hack = FilenameMetadataParser.parse(filename: "Super Mario Land 2 - DX (Hack by Foo).ips")
+        XCTAssertEqual(hack.suggestedBuildName, "Hack")
+        XCTAssertEqual(BuildNaming.patchBuildName(for: hack), "DX")
+        XCTAssertEqual(BuildNaming.patchBuildName(for: FilenameMetadataParser.parse(filename: "Translation.ips")), "Translation")
+        XCTAssertEqual(BuildNaming.patchBuildName(for: FilenameMetadataParser.parse(filename: "Example (Rev 1).bps")), "Rev 1")
+    }
+
     private func name(_ name: String, existing: [String]) -> String {
         BuildNaming.distinctName(name, existing: existing, addedAt: october6, locale: locale, timeZone: utc)
     }

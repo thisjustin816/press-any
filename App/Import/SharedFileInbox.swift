@@ -38,6 +38,9 @@ final class SharedFileInbox {
 
     func receive(_ url: URL) throws -> SharedFile {
         guard url.isFileURL else { throw SharedFileError.notAFile }
+        // Opening in place is off, so iOS hands over a copy in Documents/Inbox. The receipt keeps
+        // its own copy, so that one goes whether or not the file is accepted.
+        defer { Self.removeIfInInbox(url) }
         let kind: SharedFile.Kind
         let limit: ImportSizeLimit
         switch url.pathExtension.lowercased() {
@@ -74,6 +77,13 @@ final class SharedFileInbox {
             try? store.removeIfExists(directory)
             throw error
         }
+    }
+
+    private static func removeIfInInbox(_ url: URL) {
+        guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let inbox = documents.appendingPathComponent("Inbox", isDirectory: true).resolvingSymlinksInPath().path + "/"
+        guard url.resolvingSymlinksInPath().path.hasPrefix(inbox) else { return }
+        try? FileManager.default.removeItem(at: url)
     }
 
     func discard(_ file: SharedFile) {

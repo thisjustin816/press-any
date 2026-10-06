@@ -27,6 +27,13 @@ public enum BuildNaming {
         return "\(dated) (\(number))"
     }
 
+    /// The Build name a patch's filename suggests. A patch makes a variant, so the parser's generic
+    /// names for an untagged file, "Original" and "Hack", give way to the patch's own title.
+    public static func patchBuildName(for naming: FilenameMetadata) -> String {
+        guard ["Original", "Hack"].contains(naming.suggestedBuildName) else { return naming.suggestedBuildName }
+        return naming.buildMetadata.hackTitle ?? naming.suggestedTitle
+    }
+
     /// Whether a name still carries URL escapes such as `%20`, as names taken from shared files did
     /// before filenames were decoded.
     static func hasPercentEscapes(_ name: String) -> Bool {

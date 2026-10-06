@@ -20,6 +20,10 @@ final class GameplayDriver: @unchecked Sendable {
     private var running = false
     private var requestedSpeed: EmulationSpeed = .normal
     private var refreshes: DisplayRefreshThread?
+    /// Refresh time not yet handed to the driver queue. Refreshes that arrive while the queue is
+    /// busy merge into one, so a stall reaches the scheduler as a single long refresh and its lag
+    /// limit applies.
+    private var pendingRefresh: (elapsed: UInt64, interval: UInt64)?
     /// Read and written only on the driver queue.
     private var scheduler = FrameScheduler()
     private var emulatedNanosecondsSinceSavePoll: UInt64 = 0
@@ -52,6 +56,7 @@ final class GameplayDriver: @unchecked Sendable {
         let shouldStart = stateLock.withLock { () -> Bool in
             guard !running else { return false }
             running = true
+            pendingRefresh = nil
             return true
         }
         guard shouldStart else { return }
@@ -60,7 +65,19 @@ final class GameplayDriver: @unchecked Sendable {
         }
         let refreshes = DisplayRefreshThread { [weak self] elapsed, interval in
             guard let self else { return }
-            self.queue.async { self.refresh(elapsed: elapsed, interval: interval) }
+            let isFirst = self.stateLock.withLock { () -> Bool in
+                let pending = self.pendingRefresh
+                self.pendingRefresh = ((pending.map { $0.elapsed } ?? 0) + elapsed, interval)
+                return pending == nil
+            }
+            guard isFirst else { return }
+            self.queue.async {
+                guard let refresh = self.stateLock.withLock({ () -> (elapsed: UInt64, interval: UInt64)? in
+                    defer { self.pendingRefresh = nil }
+                    return self.pendingRefresh
+                }) else { return }
+                self.refresh(elapsed: refresh.elapsed, interval: refresh.interval)
+            }
         }
         stateLock.withLock { self.refreshes = refreshes }
         refreshes.start()

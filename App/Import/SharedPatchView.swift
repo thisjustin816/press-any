@@ -101,9 +101,7 @@ struct SharedPatchView: View {
                 translation = metadata.translation ?? ""
                 status = metadata.status ?? ""
                 unknownGroups = naming.unknownGroups
-                filenameBuildName = naming.suggestedBuildName == "Original"
-                    ? naming.suggestedTitle
-                    : naming.suggestedBuildName
+                filenameBuildName = BuildNaming.patchBuildName(for: naming)
                 displayName = filenameBuildName
                 suggestedBuildName = filenameBuildName
                 do {
