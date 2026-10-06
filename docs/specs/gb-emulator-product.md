@@ -267,7 +267,8 @@ Target v1 but subject to milestone checkpoint after local data model is stable.
 - iCloud is synchronization, not hidden save-version history.
 
 ## Community Catalog
-Target v1 but may move to v1.1 at milestone review.
+v1 defines a signed catalog file format the app reads offline; the hosted service follows v1
+(`docs/decisions.md`, "Scope and safety changes from the market review").
 - Opt-in read/contribute.
 - Reading no account; contribution requires lightweight identity; public attribution optional.
 - Separate trust layers: canonical verified sources, curated catalog, community submissions, local user overrides.
@@ -309,6 +310,7 @@ Target v1 but may move to v1.1 at milestone review.
 
 ## Privacy and telemetry
 - Crash reporting opt-in.
+- Anonymous usage counts opt-in: numbers only, never titles, hashes, filenames or library contents.
 - Automatic reports may include app/device/core/non-content feature diagnostics.
 - Never automatically upload ROM/save/state bytes, screenshots, memory, filenames, notes or library contents.
 - Debug/bug reports are explicit exports with checklist/preview.
@@ -354,4 +356,4 @@ Must pass the workflow and tests in `gb-emulator-mvp.md` before broad v1 feature
 Original hard requirements and product-defining systems must be stable: GB/GBC SameBoy, Build/library model, save system, states/autosave, rewind/FF, rumble, patching, cheats/memory tools, custom layouts/presets + Delta/Manic compatibility, curated shaders, Bluetooth controllers, automatic artwork, AirPlay/external display, safe, bounded imports, Quick Play.
 
 ### v1 Auxiliary checkpoint
-iCloud and Community Catalog target v1. If the local emulator is stable and either backend is the sole blocker, conduct an explicit ship/no-ship review and permit moving that subsystem to v1.1 without weakening the local data model needed to add it safely.
+iCloud targets v1; the Community Catalog's file format is v1 and its hosted service follows v1. If the local emulator is stable and either backend is the sole blocker, conduct an explicit ship/no-ship review and permit moving that subsystem to v1.1 without weakening the local data model needed to add it safely.
