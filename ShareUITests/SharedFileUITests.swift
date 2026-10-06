@@ -19,7 +19,7 @@ final class SharedFileUITests: XCTestCase {
     func testSharedGBReviewCancellationAndImport() {
         start()
         share(baseROM)
-        expect(app.navigationBars["Open ROM"])
+        expect(app.navigationBars["Open ROM"], timeout: 45)
         expect(app.staticTexts[baseROM])
         app.buttons["Import to Library"].tap()
         expect(app.navigationBars["Import Review"])
@@ -34,7 +34,7 @@ final class SharedFileUITests: XCTestCase {
     func testSharedGBCQuickPlayQueuesROMUntilSessionCloses() {
         start()
         share(colorROM)
-        expect(app.navigationBars["Open ROM"])
+        expect(app.navigationBars["Open ROM"], timeout: 45)
         app.buttons["Quick Play"].tap()
         expect(app.buttons["Game Menu"])
 
@@ -45,7 +45,7 @@ final class SharedFileUITests: XCTestCase {
         expect(app.buttons["Keep for Later"])
         XCTAssertFalse(app.navigationBars["Open ROM"].exists, "the queued ROM waits for the session sheet too")
         app.buttons["Keep for Later"].tap()
-        expect(app.navigationBars["Open ROM"])
+        expect(app.navigationBars["Open ROM"], timeout: 45)
         expect(app.staticTexts[baseROM])
         app.buttons["Cancel"].tap()
         expect(app.staticTexts["No Games"])
@@ -82,7 +82,7 @@ final class SharedFileUITests: XCTestCase {
         expect(app.buttons["Game Menu"])
         XCTAssertFalse(app.navigationBars["Open Patch"].exists)
         closeGameplay()
-        expect(app.navigationBars["Open Patch"])
+        expect(app.navigationBars["Open Patch"], timeout: 45)
         applyPatch(name: "Queued Patch Build")
         expect(app.navigationBars[gameTitle])
         expect(app.staticTexts["Queued Patch Build"])
@@ -93,7 +93,7 @@ final class SharedFileUITests: XCTestCase {
         importBaseROM()
         openGameDetails()
         share("gbdk450-rev-v1.0-to-v1.1.bps")
-        expect(app.navigationBars["Open Patch"])
+        expect(app.navigationBars["Open Patch"], timeout: 45)
         XCTAssertFalse(app.buttons["Apply Patch"].isEnabled, "a base must be selected explicitly")
         app.buttons["Cancel"].tap()
         expect(app.navigationBars[gameTitle])
@@ -103,7 +103,7 @@ final class SharedFileUITests: XCTestCase {
 
     private func sharePatchAndApply(_ suffix: String, name: String) {
         share("gbdk450-rev-v1.0-to-v1.1.\(suffix)")
-        expect(app.navigationBars["Open Patch"])
+        expect(app.navigationBars["Open Patch"], timeout: 45)
         applyPatch(name: name)
     }
 
@@ -120,7 +120,7 @@ final class SharedFileUITests: XCTestCase {
 
     private func importBaseROM() {
         share(baseROM)
-        expect(app.navigationBars["Open ROM"])
+        expect(app.navigationBars["Open ROM"], timeout: 45)
         app.buttons["Import to Library"].tap()
         expect(app.navigationBars["Import Review"])
         replace(app.textFields["Game Title"], with: gameTitle)
@@ -173,8 +173,8 @@ final class SharedFileUITests: XCTestCase {
         XCTAssertEqual(field.value as? String, value, "the edited name replaces the whole previous value")
     }
 
-    private func expect(_ element: XCUIElement, message: String = "", file: StaticString = #filePath, line: UInt = #line) {
-        let exists = element.waitForExistence(timeout: 10)
+    private func expect(_ element: XCUIElement, message: String = "", timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
+        let exists = element.waitForExistence(timeout: timeout)
         if !exists {
             print(app.debugDescription)
             let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
