@@ -165,8 +165,12 @@ final class SharedFileUITests: XCTestCase {
     private func replace(_ field: XCUIElement, with value: String) {
         expect(field)
         field.tap()
-        let previous = field.value as? String ?? ""
-        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: previous.count) + value + "\n")
+        field.press(forDuration: 1.2)
+        let selectAll = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Select All'")).firstMatch
+        expect(selectAll, message: "the editing menu offers Select All")
+        selectAll.tap()
+        field.typeText(value + "\n")
+        XCTAssertEqual(field.value as? String, value, "the edited name replaces the whole previous value")
     }
 
     private func expect(_ element: XCUIElement, message: String = "", file: StaticString = #filePath, line: UInt = #line) {
