@@ -144,7 +144,12 @@ xcodebuild -exportArchive -archivePath "$archive" -exportPath "$export_dir" \
 API_PRIVATE_KEYS_DIR="$signing_dir" xcrun altool --upload-app --type ios \
   --file "$export_dir/PressAny.ipa" --apiKey "$APP_STORE_CONNECT_KEY_ID" \
   --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+marketing_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
+  "$archive/Products/Applications/PressAny.app/Info.plist")"
+if [[ -n ${GITHUB_OUTPUT:-} ]]; then
+  printf 'marketing_version=%s\nbuild=%s\n' "$marketing_version" "$version" >>"$GITHUB_OUTPUT"
+fi
 if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
-  printf 'Uploaded Press Any build `%s`. Apple must process it before it appears in TestFlight.\n' \
-    "$version" >>"$GITHUB_STEP_SUMMARY"
+  printf 'Uploaded Press Any %s (%s). Apple must process it before it appears in TestFlight.\n' \
+    "$marketing_version" "$version" >>"$GITHUB_STEP_SUMMARY"
 fi
