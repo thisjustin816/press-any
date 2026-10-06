@@ -3,6 +3,20 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Raised controls, and Resume sits on the picture
+
+The Playtiles alignment guide is raised from the body, where it was pressed in: its top edge
+catches the light and it casts a shadow below, so it reads as a ledge to fit the physical
+controller against. This replaces the pressed-in guide in "Settings open from the game menu".
+
+A paused game's Resume button is centered on the game picture, which stays visible behind it,
+on both layouts. Centered on the whole screen, it sat across the Playtiles guide.
+
+Every on-screen control, the D-pad, A and B, and SELECT and START, is drawn raised like the menu
+button on both layouts: a face lit from above, a thin rim and a shadow below. Pressed, the face
+goes flat, sinks a point and its shadow shrinks. The Game Boy D-pad is one piece that sinks while
+any direction is held, with the held arm darker.
+
 ## 2026-10-06: The game database is No-Intro's, bundled, and refreshed by hand
 
 No-Intro's data can ship in the app. DAT-o-MATIC's Data Usage License (datomatic.no-intro.org,

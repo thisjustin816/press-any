@@ -10,6 +10,8 @@ import SwiftUI
 struct AppSettingsView: View {
     private let store: any SettingsStore
     private let integrityChecker: ManagedAssetIntegrityChecker?
+    private let libraryDeletion: LibraryDeletionOperations?
+    private let games: (any GameRepository)?
 
     @State private var skipBootAnimation: Bool
     @State private var autoResumePolicy: AutoResumePolicy
@@ -28,9 +30,16 @@ struct AppSettingsView: View {
     @State private var systemSettings: SystemSettingsTarget?
     @Environment(\.dismiss) private var dismiss
 
-    init(store: any SettingsStore, integrityChecker: ManagedAssetIntegrityChecker? = nil) {
+    init(
+        store: any SettingsStore,
+        integrityChecker: ManagedAssetIntegrityChecker? = nil,
+        libraryDeletion: LibraryDeletionOperations? = nil,
+        games: (any GameRepository)? = nil
+    ) {
         self.store = store
         self.integrityChecker = integrityChecker
+        self.libraryDeletion = libraryDeletion
+        self.games = games
         _skipBootAnimation = State(initialValue: Self.stored(Bool.self, .skipBootAnimation, in: store) ?? false)
         _autoResumePolicy = State(initialValue: Self.stored(AutoResumePolicy.self, .autoResumePolicy, in: store) ?? .always)
         _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
@@ -192,6 +201,14 @@ struct AppSettingsView: View {
                     Text("Systems")
                 } footer: {
                     Text("Settings for every game on one system. A Game or Build can still set its own.")
+                }
+
+                if let libraryDeletion, let games {
+                    Section {
+                        NavigationLink("Recently Deleted") {
+                            RecentlyDeletedView(operations: libraryDeletion, games: games)
+                        }
+                    }
                 }
 
                 if let integrityChecker {

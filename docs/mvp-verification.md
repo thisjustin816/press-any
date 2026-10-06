@@ -47,6 +47,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Load State shows each state's thumbnail.
 - [ ] A profile's Badge takes one emoji, shows it beside the name in the profile list and the Play with Save and Default Save menus, and refuses text.
 - [ ] Deleting a profile asks first, naming it; a Build that played it plays the Game's default afterwards.
+- [ ] Delete a base Build that has a patched Build: the confirmation names the patched Build, and both leave the Game. Settings > Recently Deleted lists it with the days left; Restore brings both back with their save states. Delete Game from a Game's menu, relaunch, and restore it from Recently Deleted with its Builds and saves. Delete Now removes an item for good.
 - [ ] The library list labels a Game Boy Color game "Game Boy Color".
 - [ ] Settings > Check Library Files reports an intact library.
 - [ ] Play for five minutes with speaker sound, then with Bluetooth headphones: no crackle, the sound keeps up with the picture, and switching between them keeps the sound. With Low Power Mode on, any gap is short and doesn't keep recurring.
@@ -64,5 +65,6 @@ Verify with a user-supplied legal ROM:
 - [ ] At the largest accessibility text size, the library shows one column with full titles, and a Game's Builds, saves and Technical Info hashes stay readable.
 - [ ] In a game, Fast Forward from the game menu runs at the Fast Forward Speed setting: change it between 1.5×, 4× and Unlimited in the game menu's Settings while Fast Forward is on, and the speed follows at once. A Game's own setting overrides App Settings.
 - [ ] Fast Forward Audio Muted is silent while Fast Forward runs, and the sound returns at normal speed with no burst of old sound. Accelerated plays the sound sped up with the game at 2× and 4×, and stays muted at 8× and Unlimited.
+- [ ] On both layouts, in Classic and Dark, the D-pad, A, B, SELECT and START look raised like the menu button and sink when pressed. On Playtiles the alignment guide also looks raised, lit along its top edge with a shadow below. Pausing from the menu shows Resume centered on the game picture on both layouts, clear of the guide and controls.
 - [ ] A game without artwork shows its placeholder cartridge filling most of the library tile and sitting cleanly in the list row's thumbnail, in both themes.
 - [ ] Files shows a Press Any folder under On My iPhone. Export ROM on a Build and Export Save on a profile with a save each add a file to Press Any › Exports, a patched Build's ROM matches its Technical Info hash, and exporting again adds a numbered copy. Opening a ROM from that folder still offers Quick Play or Import.

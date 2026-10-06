@@ -204,7 +204,12 @@ struct LibraryView: View {
                 BuildNameReviewView(container: container)
             }
             .sheet(isPresented: $showSettings) {
-                AppSettingsView(store: container.repositories.settings, integrityChecker: container.integrityChecker)
+                AppSettingsView(
+                    store: container.repositories.settings,
+                    integrityChecker: container.integrityChecker,
+                    libraryDeletion: container.libraryDeletion,
+                    games: container.repositories.games
+                )
             }
             .alert("Library Error", isPresented: Binding(
                 get: { model.errorMessage != nil },

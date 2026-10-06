@@ -22,8 +22,8 @@ Library backend first: everything that decides how the library is stored, identi
 safe lands before more play features, so a library built while testing never needs regrouping or
 migrating later (D "Library backend first").
 
-1. Safe deletion: dependency-aware deletion, Recently Deleted for 30 days, and tombstones, which
-   iCloud needs later.
+1. Safe deletion: deleting a single save state is what remains. Dependency-aware deletion,
+   Recently Deleted and local tombstones are done.
 2. Identity: No-Intro categorization (the bundled data and its generator, hash matching,
    Verified/Modified/Unknown, parent/clone grouping and merging existing Games that are one
    family), the regional rows, Match Game for unknown ROMs and lineage without owning the base,
@@ -457,7 +457,7 @@ Spec: target v1, may move to v1.1.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Sync all library state except ROM blobs | v1 | Q89 | stable UUIDs exist, nothing else |
-| missing | Tombstones; offline devices cannot resurrect | v1 | Q90; later 14 |  |
+| partial | Tombstones; offline devices cannot resurrect | v1 | Q90; later 14 | local tombstones are kept for good; sync must check them |
 | missing | Field-level merge where safe | v1 | Q101 |  |
 | missing | Divergent .sav preserved, explicit resolution, split into new profile | v1 | Q102 |  |
 
@@ -509,11 +509,13 @@ Spec: v1.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Delete Game/Build/Profile/State from the UI | v1 | dec 30 | profile deletion with confirmation is implemented; Game, Build and state deletion UI remain |
-| missing | Dependency-aware deletion showing affected Builds/assets; no broken base/patch links | v1 | dec 30 |  |
-| missing | Recently Deleted, 30 days, restorable | v1 | Q90 |  |
-| missing | Synchronized tombstones | v1 | Q90 |  |
+| partial | Delete Game/Build/Profile/State from the UI | v1 | dec 30 | Games, Builds and Save Profiles go to Recently Deleted; deleting a single save state remains |
+| partial | Synchronized tombstones | v1 | Q90 | purging writes a permanent local tombstone; syncing them waits on iCloud |
 | missing | Lightweight Undo for recent structural operations | v1 | Q145 |  |
+
+Done: Dependency-aware deletion: the confirmation names patched Builds and emptied Games that go
+too, and a Game can't go while another Game's patch is built from it; Recently Deleted for 30
+days in Settings, with Restore and Delete Now, purged at launch.
 
 ### Performance
 

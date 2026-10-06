@@ -19,6 +19,9 @@ final class GameplayViewController: UIViewController {
     private let autoResumePolicy: AutoResumePolicy
     private let launchMessage: String?
     private let pausedOverlay = UIButton(type: .system)
+    /// Center the paused overlay on the game picture, which stays visible behind it.
+    private var pausedOverlayCenterX: NSLayoutConstraint?
+    private var pausedOverlayCenterY: NSLayoutConstraint?
     /// Uptime when Quick Play's file was chosen, cleared once the first frame is reported.
     private var firstFrameClock: UInt64?
     private var pauseReasons = GameplayPauseReasons()
@@ -139,6 +142,13 @@ final class GameplayViewController: UIViewController {
     var showsTouchControls: Bool { touchControls.showsControls }
     /// Whether gameplay is paused behind the paused overlay, for tests.
     var isShowingPaused: Bool { !pausedOverlay.isHidden }
+    /// Where the paused overlay sits, for tests.
+    var pausedOverlayFrame: CGRect { pausedOverlay.frame }
+    /// The game picture's frame in the controller layout, for tests.
+    var gamePictureFrame: CGRect {
+        let screen = touchControls.layout.screen
+        return CGRect(x: screen.x, y: screen.y, width: screen.width, height: screen.height)
+    }
     /// Whether frames are running, for tests.
     var isRunningFrames: Bool { driver.isRunning }
     /// The buttons the game sees held, for tests.
@@ -188,10 +198,11 @@ final class GameplayViewController: UIViewController {
         pausedOverlay.addAction(UIAction { [weak self] _ in self?.resumeTapped() }, for: .touchUpInside)
         view.addSubview(pausedOverlay)
 
-        NSLayoutConstraint.activate([
-            pausedOverlay.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            pausedOverlay.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
-        ])
+        let centerX = pausedOverlay.centerXAnchor.constraint(equalTo: view.leadingAnchor)
+        let centerY = pausedOverlay.centerYAnchor.constraint(equalTo: view.topAnchor)
+        NSLayoutConstraint.activate([centerX, centerY])
+        pausedOverlayCenterX = centerX
+        pausedOverlayCenterY = centerY
     }
 
     private lazy var gameMenu = makeGameMenu()
@@ -426,6 +437,10 @@ final class GameplayViewController: UIViewController {
         renderer?.screenRect = screen.width > 0
             ? CGRect(x: screen.x, y: screen.y, width: screen.width, height: screen.height)
             : nil
+        if screen.width > 0 {
+            pausedOverlayCenterX?.constant = screen.x + screen.width / 2
+            pausedOverlayCenterY?.constant = screen.y + screen.height / 2
+        }
         placeMenuButtons(over: layout.menuAreas)
         // A paused game draws only when asked, so a new layout redraws the held picture in place.
         metalView.setNeedsDisplay()
