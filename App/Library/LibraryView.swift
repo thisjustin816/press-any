@@ -377,7 +377,7 @@ private struct GameArtworkView: View {
             .overlay {
                 GeometryReader { proxy in
                     CartridgeIcon(system: system, title: title)
-                        .frame(width: min(proxy.size.width, proxy.size.height) * 0.42)
+                        .frame(width: min(proxy.size.width, proxy.size.height) * 0.64)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
