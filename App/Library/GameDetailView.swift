@@ -39,7 +39,6 @@ struct GameDetailView: View {
     @State private var pendingReplacement: PendingReplacement?
     @State private var badgeTarget: SaveProfile?
     @State private var badgeText = ""
-    @State private var deletionTarget: SaveProfile?
     @State private var renamingBuild: Build?
     @State private var buildName = ""
 
@@ -66,7 +65,7 @@ struct GameDetailView: View {
             createBlank: container.createBlankSaveProfile,
             duplicateProfile: container.duplicateSaveProfile,
             badges: container.setSaveProfileBadge,
-            deleteProfile: container.deleteSaveProfile,
+            deletion: container.libraryDeletion,
             importSave: container.importBatterySave,
             patchCreator: container.patchCreator,
             evictImage: container.evictGeneratedImage,
@@ -200,6 +199,12 @@ struct GameDetailView: View {
                     Label("Merge Into Another Game…", systemImage: "arrow.triangle.merge")
                 }
                 .disabled(model.otherGames.isEmpty)
+                Divider()
+                Button(role: .destructive) {
+                    model.requestGameDeletion()
+                } label: {
+                    Label("Delete Game…", systemImage: "trash")
+                }
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
@@ -299,14 +304,14 @@ struct GameDetailView: View {
             } message: { profile in
                 Text("One emoji shown beside \(profile.displayName).")
             }
-            .alert("Delete This Save Profile?", isPresented: Binding(
-                get: { deletionTarget != nil },
-                set: { if !$0 { deletionTarget = nil } }
-            ), presenting: deletionTarget) { profile in
-                Button("Delete \(profile.displayName)", role: .destructive) { model.delete(profile) }
+            .alert(deletionTitle, isPresented: Binding(
+                get: { model.pendingDeletion != nil },
+                set: { if !$0 { model.pendingDeletion = nil } }
+            ), presenting: model.pendingDeletion) { plan in
+                Button("Delete \(plan.title)", role: .destructive) { model.confirm(plan) }
                 Button("Cancel", role: .cancel) {}
-            } message: { profile in
-                Text("\(profile.displayName)’s battery save and its save states are deleted. This can’t be undone.")
+            } message: { plan in
+                Text(model.deletionMessage(for: plan))
             }
             .alert("Replace This Save?", isPresented: Binding(
                 get: { pendingReplacement != nil },
@@ -356,6 +361,14 @@ struct GameDetailView: View {
             } message: {
                 Text(model.errorMessage ?? model.infoMessage ?? "")
             }
+    }
+
+    private var deletionTitle: String {
+        switch model.pendingDeletion?.kind {
+        case .game: "Delete This Game?"
+        case .build: "Delete This Build?"
+        case .saveProfile, nil: "Delete This Save Profile?"
+        }
     }
 
     private func buildRow(_ build: Build) -> some View {
@@ -462,6 +475,7 @@ struct GameDetailView: View {
         }
         Divider()
         Button("Make Separate Game…") { promotion = build }
+        Button("Delete Build…", role: .destructive) { model.requestDeletion(of: build) }
     }
 
     private func profileRow(_ profile: SaveProfile) -> some View {
@@ -493,7 +507,7 @@ struct GameDetailView: View {
                 badgeTarget = profile
             }
             Divider()
-            Button("Delete…", role: .destructive) { deletionTarget = profile }
+            Button("Delete…", role: .destructive) { model.requestDeletion(of: profile) }
         }
     }
 

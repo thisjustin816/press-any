@@ -18,6 +18,8 @@ final class GameDetailViewModel: ObservableObject {
     @Published private(set) var gameRemoved = false
     /// Patches refused because they expect a different base, waiting on Apply Anyway.
     @Published var baseMismatch: PendingPatch?
+    /// A deletion waiting on its confirmation, with everything it takes.
+    @Published var pendingDeletion: DeletionPlan?
 
     struct PendingPatch: Identifiable {
         let id = UUID()
@@ -34,7 +36,7 @@ final class GameDetailViewModel: ObservableObject {
     private let createBlank: CreateBlankSaveProfile
     private let duplicateProfile: DuplicateSaveProfile
     private let badges: SetSaveProfileBadge
-    private let profileDeleter: DeleteSaveProfile
+    private let deletion: LibraryDeletionOperations
     private let saveImporter: ImportBatterySave
     private let patchCreator: CreatePatchedBuild
     private let evictImage: EvictGeneratedImage
@@ -51,7 +53,7 @@ final class GameDetailViewModel: ObservableObject {
         createBlank: CreateBlankSaveProfile,
         duplicateProfile: DuplicateSaveProfile,
         badges: SetSaveProfileBadge,
-        deleteProfile: DeleteSaveProfile,
+        deletion: LibraryDeletionOperations,
         importSave: ImportBatterySave,
         patchCreator: CreatePatchedBuild,
         evictImage: EvictGeneratedImage,
@@ -67,7 +69,7 @@ final class GameDetailViewModel: ObservableObject {
         self.createBlank = createBlank
         self.duplicateProfile = duplicateProfile
         self.badges = badges
-        self.profileDeleter = deleteProfile
+        self.deletion = deletion
         self.saveImporter = importSave
         self.patchCreator = patchCreator
         self.evictImage = evictImage
@@ -183,8 +185,55 @@ final class GameDetailViewModel: ObservableObject {
         }
     }
 
-    func delete(_ profile: SaveProfile) {
-        perform { try profileDeleter.execute(profileID: profile.id) }
+    func requestGameDeletion() {
+        requestDeletion { try deletion.planGameDeletion(gameID: gameID) }
+    }
+
+    func requestDeletion(of build: Build) {
+        requestDeletion { try deletion.planBuildDeletion(buildID: build.id) }
+    }
+
+    func requestDeletion(of profile: SaveProfile) {
+        requestDeletion { try deletion.planProfileDeletion(profileID: profile.id) }
+    }
+
+    func confirm(_ plan: DeletionPlan) {
+        perform { _ = try deletion.delete(plan) }
+        NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+    }
+
+    /// What goes along with the deletion, and where it waits.
+    func deletionMessage(for plan: DeletionPlan) -> String {
+        let records = plan.records
+        var counts: [(Int, String)] = []
+        if plan.kind == .game {
+            counts = [(records.buildIDs.count, "Build"), (records.saveProfileIDs.count, "Save Profile")]
+        }
+        counts.append((records.saveStateIDs.count, "save state"))
+        var along = counts.filter { $0.0 > 0 }.map { "\($0.0) \($0.1)\($0.0 == 1 ? "" : "s")" }
+        var total = counts.reduce(0) { $0 + $1.0 }
+        if plan.kind == .saveProfile,
+           saveProfiles.first(where: { $0.id == records.saveProfileIDs.first })?.persistentSaveAssetID != nil {
+            along.insert("the battery save", at: 0)
+            total += 1
+        }
+
+        var sentences: [String] = []
+        if !along.isEmpty {
+            let list = along.formatted(.list(type: .and))
+            let capitalized = list.prefix(1).uppercased() + String(list.dropFirst())
+            sentences.append("\(capitalized) \(total == 1 ? "goes" : "go") with it.")
+        }
+        if !plan.dependentBuilds.isEmpty {
+            let one = plan.dependentBuilds.count == 1
+            let names = plan.dependentBuilds.map(\.displayName).formatted(.list(type: .and))
+            sentences.append("\(names) \(one ? "is" : "are") patched from it, so \(one ? "it goes" : "they go") too.")
+        }
+        for game in plan.emptiedGames {
+            sentences.append("\(game.primaryTitle) has no other Builds, so it goes too, with its Save Profiles.")
+        }
+        sentences.append("Recently Deleted in Settings keeps \(plan.kind == .game ? "everything" : "it") for 30 days.")
+        return sentences.joined(separator: " ")
     }
 
     func duplicate(_ profile: SaveProfile, name: String) {
@@ -339,6 +388,22 @@ final class GameDetailViewModel: ObservableObject {
     func clearMessages() {
         errorMessage = nil
         infoMessage = nil
+    }
+
+    private func requestDeletion(_ plan: () throws -> DeletionPlan) {
+        do {
+            pendingDeletion = try plan()
+        } catch LibraryDeletionError.dependentBuildsInOtherGames(let buildIDs) {
+            let names = buildIDs.compactMap { id -> String? in
+                guard let build = try? buildRepository.fetchBuild(id: id) else { return nil }
+                guard let game = try? games.fetchGame(id: build.gameID) else { return build.displayName }
+                return "\(build.displayName) in \(game.primaryTitle)"
+            }
+            let one = names.count == 1
+            errorMessage = "\(names.formatted(.list(type: .and))) \(one ? "is" : "are") patched from this Game’s Builds and can’t be rebuilt without them. Delete \(one ? "it" : "them") first, or merge the Games."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func perform(_ operation: () throws -> Void) {

@@ -47,6 +47,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Load State shows each state's thumbnail.
 - [ ] A profile's Badge takes one emoji, shows it beside the name in the profile list and the Play with Save and Default Save menus, and refuses text.
 - [ ] Deleting a profile asks first, naming it; a Build that played it plays the Game's default afterwards.
+- [ ] Delete a base Build that has a patched Build: the confirmation names the patched Build, and both leave the Game. Settings > Recently Deleted lists it with the days left; Restore brings both back with their save states. Delete Game from a Game's menu, relaunch, and restore it from Recently Deleted with its Builds and saves. Delete Now removes an item for good.
 - [ ] The library list labels a Game Boy Color game "Game Boy Color".
 - [ ] Settings > Check Library Files reports an intact library.
 - [ ] Play for five minutes with speaker sound, then with Bluetooth headphones: no crackle, the sound keeps up with the picture, and switching between them keeps the sound. With Low Power Mode on, any gap is short and doesn't keep recurring.

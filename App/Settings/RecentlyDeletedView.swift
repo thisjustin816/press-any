@@ -1,0 +1,133 @@
+import EmulatorApplication
+import EmulatorDomain
+import SwiftUI
+
+/// Deleted Games, Builds and Save Profiles, each restorable until 30 days after it was deleted.
+struct RecentlyDeletedView: View {
+    let operations: LibraryDeletionOperations
+    let games: any GameRepository
+
+    @State private var deletions: [LibraryDeletion] = []
+    @State private var purgeTarget: LibraryDeletion?
+    @State private var failure: (title: String, message: String)?
+
+    var body: some View {
+        List {
+            if !deletions.isEmpty {
+                Section {
+                    ForEach(deletions) { deletion in
+                        row(deletion)
+                    }
+                } footer: {
+                    Text("Items are removed for good 30 days after deletion. Swipe for Restore and Delete Now.")
+                }
+            }
+        }
+        .overlay {
+            if deletions.isEmpty {
+                ContentUnavailableView(
+                    "Nothing Recently Deleted",
+                    systemImage: "trash",
+                    description: Text("Deleted Games, Builds and Save Profiles wait here for 30 days.")
+                )
+            }
+        }
+        .navigationTitle("Recently Deleted")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { reload() }
+        .alert("Delete Now?", isPresented: Binding(
+            get: { purgeTarget != nil },
+            set: { if !$0 { purgeTarget = nil } }
+        ), presenting: purgeTarget) { deletion in
+            Button("Delete \(deletion.title)", role: .destructive) { purge(deletion) }
+            Button("Cancel", role: .cancel) {}
+        } message: { deletion in
+            Text("\(deletion.title) and everything that went with it are removed for good. This can’t be undone.")
+        }
+        .alert(failure?.title ?? "", isPresented: Binding(
+            get: { failure != nil },
+            set: { if !$0 { failure = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(failure?.message ?? "")
+        }
+    }
+
+    private func row(_ deletion: LibraryDeletion) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(deletion.title)
+            Text(subtitle(deletion))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .swipeActions(edge: .leading) {
+            Button("Restore") { restore(deletion) }
+                .tint(.blue)
+        }
+        .swipeActions(edge: .trailing) {
+            Button("Delete Now", role: .destructive) { purgeTarget = deletion }
+        }
+        .contextMenu {
+            Button("Restore") { restore(deletion) }
+            Button("Delete Now", role: .destructive) { purgeTarget = deletion }
+        }
+    }
+
+    private func subtitle(_ deletion: LibraryDeletion) -> String {
+        var parts: [String] = []
+        switch deletion.kind {
+        case .game:
+            parts.append("Game")
+        case .build, .saveProfile:
+            let kind = deletion.kind == .build ? "Build" : "Save Profile"
+            if let game = try? games.fetchGame(id: deletion.gameID) {
+                parts.append("\(kind) in \(game.primaryTitle)")
+            } else {
+                parts.append(kind)
+            }
+        }
+        let days = max(1, Int((deletion.purgeDate.timeIntervalSinceNow / 86_400).rounded(.up)))
+        parts.append(days == 1 ? "1 day left" : "\(days) days left")
+        return parts.joined(separator: " · ")
+    }
+
+    private func reload() {
+        deletions = (try? operations.recentlyDeleted()) ?? []
+    }
+
+    private func restore(_ deletion: LibraryDeletion) {
+        let message: String
+        do {
+            try operations.restore(deletionID: deletion.id)
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+            reload()
+            return
+        } catch LibraryDeletionError.gameIsDeleted(let gameID) {
+            let game = holder(of: gameID, in: \.gameIDs)
+            message = "Its Game, \(game), is in Recently Deleted too. Restore that first."
+        } catch LibraryDeletionError.baseBuildIsDeleted(let buildID) {
+            let base = holder(of: buildID, in: \.buildIDs)
+            message = "It’s patched from \(base), which is in Recently Deleted too. Restore that first."
+        } catch LibraryDeletionError.romAlreadyInGame {
+            message = "Its Game has the same ROM again, imported after \(deletion.title) was deleted."
+        } catch {
+            message = error.localizedDescription
+        }
+        failure = ("Couldn’t Restore \(deletion.title)", message)
+    }
+
+    private func purge(_ deletion: LibraryDeletion) {
+        do {
+            try operations.purge(deletionID: deletion.id)
+        } catch {
+            failure = ("Couldn’t Delete \(deletion.title)", error.localizedDescription)
+        }
+        reload()
+    }
+
+    /// The title of the deletion holding a record, which is what this list shows for it.
+    private func holder(of recordID: UUID, in records: KeyPath<LibraryRecordSet, [UUID]>) -> String {
+        deletions.first { $0.records[keyPath: records].contains(recordID) }?.title ?? "another item"
+    }
+}
