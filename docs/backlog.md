@@ -23,8 +23,9 @@ safe lands before more play features, so a library built while testing never nee
 migrating later (D "Library backend first").
 
 1. Keep the test library safe: Library Backup export and import (versioned archive, ROMs left out
-   unless asked, merge restore by stable IDs), dependency-aware deletion, Recently Deleted for 30
-   days, and tombstones, which iCloud needs later.
+   unless asked, merge restore by stable IDs), exports of a save, a ROM and a whole Game, the Files
+   folder they land in, dependency-aware deletion, Recently Deleted for 30 days, and tombstones,
+   which iCloud needs later.
 2. Identity: No-Intro categorization (confirm the data's license, the `no-intro-update.yml`
    pipeline and bundled baseline, hash matching, Verified/Modified/Unknown, parent/clone grouping
    and merging existing Games that are one family), the regional rows, Match Game for unknown
@@ -67,6 +68,7 @@ Open items in each area are in the table, finished ones on the line under it.
 |---|---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | prod "Platform", acceptance-matrix "Release" | manual TestFlight upload workflow and setup (docs/release.md); App Store listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | later 12 | none |
+| missing | A Press Any folder in the Files app (`UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace`) holding Exports and Backups; the library stays in Application Support | v1 | D "Exports and a Files folder" | Documents also holds the share Inbox, which is emptied after each copy; remove the empty folder so only Exports and Backups show |
 | missing | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | Q183 | only the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | Q184, dec 12 | none |
 | missing | Landscape gameplay | v1 | prod "Layouts, skins, touch"; dec 22 | TouchControlLayout is portrait-only |
@@ -484,6 +486,9 @@ Spec: all v1 unless noted.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Export/import Library Backup | v1 | Q140 |  |
+| missing | Export a Save Profile's battery save as a .sav named for the Game, Build and profile | v1 | dec 2 "battery save import/export"; D "Exports and a Files folder" | import exists; export was never listed |
+| missing | Export a Build's ROM, the original or the rebuilt patched ROM, under its canonical name | v1 | D "Exports and a Files folder" | a patched ROM is rebuilt and its hash checked before export |
+| missing | Export one Game as a package in the Library Backup format: its Builds' patches and recipes, Save Profiles, states, artwork, documents and notes, ROMs only when asked; importing it merges like a restore | v1 | D "Exports and a Files folder" |  |
 | missing | Documented versioned archive: manifest, ordinary files, checksums, schema version | v1 | Q141 |  |
 | missing | ROMs excluded by default, explicit personal full-backup option | v1 | Q140 |  |
 | missing | Optional password encryption | v1 | Q142 |  |

@@ -3,6 +3,17 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Exports and a Files folder
+
+Press Any gets a folder in the Files app, holding what it writes out: exported saves, ROMs and
+Games, and Library Backups. The library itself stays in Application Support, out of Files, so its
+content-addressed files can't be renamed or broken there.
+
+Three exports join the Library Backup: a Save Profile's battery save as a .sav, which the specs
+already promised; a Build's ROM, the original or the rebuilt patched ROM, under its canonical name;
+and one Game as a package in the Library Backup format, with ROMs only when asked. A Game package
+imports by merging, as a restore does.
+
 ## 2026-10-06: Library backend first
 
 The backlog's order puts library backend work ahead of further play features: backup and safe
