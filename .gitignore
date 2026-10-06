@@ -9,3 +9,4 @@ xcuserdata/
 
 Config/Signing.local.xcconfig
 Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/*.bin
+__pycache__/

@@ -39,7 +39,7 @@ jobs:
       - name: Run L1 tests
         run: >-
           swift test --package-path Packages/EmulatorKit --filter
-          '^(EmulatorDomainTests|EmulatorApplicationTests|EmulationCoreTests|EmulationSessionTests|GameplayInputTests|GameplayAudioTests|ImportingTests|PatchingTests|QuickPlayTests|ToolchainDetectionTests)\.'
+          '^(EmulatorDomainTests|EmulatorApplicationTests|EmulationCoreTests|EmulationSessionTests|GameplayInputTests|GameplayAudioTests|ImportingTests|PatchingTests|QuickPlayTests|ToolchainDetectionTests|GameIdentityTests)\.'
 
   l2-storage:
     name: L2 storage and persistence
@@ -117,3 +117,7 @@ jobs:
         run: ./Scripts/verify-repo-hygiene.sh
       - name: Lint shell scripts
         run: shellcheck -x --severity=error Scripts/*.sh Scripts/lib/*.sh
+      - name: Test the No-Intro data generator
+        run: python3 Scripts/tests/test_generate_known_dumps.py
+      - name: Remind when the No-Intro data is due for a refresh
+        run: python3 Scripts/check-known-dumps-age.py
