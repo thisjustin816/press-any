@@ -32,6 +32,9 @@ final class AppContainer {
     let preferredLaunchResolver: ResolvePreferredLaunchContext
     let patchCreator: CreatePatchedBuild
     let launchImageResolver: ResolveImageForLaunch
+    let exportFiles: ExportLibraryFiles
+    /// Where exports land: Documents/Exports, which Files shows in the Press Any folder.
+    let exportsDirectory: URL
     let toolchainRefresh: RefreshToolchainReports
     let attachVariableMap: AttachVariableMap
     let saveCompatibility: AssessSaveCompatibility
@@ -140,6 +143,15 @@ final class AppContainer {
             assets: repositories.assets,
             assetStore: fileStore
         )
+        exportFiles = ExportLibraryFiles(
+            games: repositories.games,
+            builds: repositories.builds,
+            profiles: repositories.saveProfiles,
+            assets: repositories.assets,
+            assetStore: fileStore,
+            images: launchImageResolver
+        )
+        exportsDirectory = URL.documentsDirectory.appendingPathComponent("Exports", isDirectory: true)
         toolchainRefresh = RefreshToolchainReports(
             reports: repositories.toolchainReports,
             images: launchImageResolver,
@@ -197,6 +209,15 @@ final class AppContainer {
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
         try? fileStore.removeStagedFiles()
+        Self.removeEmptyInbox()
+    }
+
+    /// iOS leaves Documents/Inbox behind after handing over a shared file, and Files would show it
+    /// in the Press Any folder. Each receipt removes its own copy, so an empty one can go.
+    private static func removeEmptyInbox() {
+        let inbox = URL.documentsDirectory.appendingPathComponent("Inbox", isDirectory: true)
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: inbox.path), contents.isEmpty else { return }
+        try? FileManager.default.removeItem(at: inbox)
     }
 
     /// The file behind a Game's artwork, or nil when it has none or the file is missing.
