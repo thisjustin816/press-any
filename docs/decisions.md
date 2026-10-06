@@ -3,6 +3,15 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Artwork from the title screen
+
+A Game's artwork can be generated from its own title screen, so a game no provider knows, such
+as a homebrew release or a ROM hack, still gets a picture of itself in the library instead of the
+placeholder cartridge. It is a "title screen" artwork asset recorded as generated, so manual,
+hack-specific and inherited artwork still win over it, as `dec 20` orders them. This is the
+title-screen fallback in the provider chain (Q79, `later 8`); how the title screen is captured
+and framed is still open (`docs/backlog.md`, Artwork).
+
 ## 2026-10-06: Fast Forward speed is a setting
 
 Fast Forward in the game menu runs at the Fast Forward Speed setting: 1.5×, 2×, 3×, 4×, 8× or
