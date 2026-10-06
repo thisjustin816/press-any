@@ -209,8 +209,9 @@ final class TouchControllerView: UIView {
         context.restoreGState()
     }
 
-    /// Where the physical controller lines up: a band with a U-shaped tab, pressed into the body.
-    /// Lit from above, its top edge shades the floor and its bottom edge catches the light.
+    /// Where the physical controller lines up: a band with a U-shaped tab, raised from the body as a
+    /// ledge the controller fits against. Lit from above, its top edge catches the light and it
+    /// casts a shadow below.
     private func drawAlignmentGuide(_ guide: TouchAlignmentGuide, palette: ControllerPalette, in context: CGContext) {
         let tab = cgRect(guide.tab)
         let path = UIBezierPath(rect: cgRect(guide.bar))
@@ -227,12 +228,12 @@ final class TouchControllerView: UIView {
             context.fillPath()
             context.restoreGState()
         }
-        fill(palette.guideRim, offsetBy: 1)
+        fill(palette.guideShadow, offsetBy: 1.5)
         context.saveGState()
         context.addPath(path.cgPath)
         context.clip()
-        fill(palette.guideShadow, offsetBy: 0)
-        fill(palette.guide, offsetBy: 1.5)
+        fill(palette.guideHighlight, offsetBy: 0)
+        fill(palette.guide, offsetBy: 1)
         context.restoreGState()
     }
 

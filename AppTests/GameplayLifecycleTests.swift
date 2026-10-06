@@ -145,6 +145,24 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertTrue(gameplay.isShowingPaused)
     }
 
+    func testResumeSitsOnTheGamePictureOnBothLayouts() {
+        for style in [TouchControlStyle.gameBoy, .playtiles] {
+            let (gameplay, _, _) = makeGameplay(policy: .never)
+            gameplay.view.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
+            gameplay.applyDisplaySettings(controlStyle: style, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
+            // The first pass lays out the controls, whose new layout moves the overlay.
+            gameplay.view.layoutIfNeeded()
+            gameplay.view.layoutIfNeeded()
+
+            let picture = gameplay.gamePictureFrame
+            let overlay = gameplay.pausedOverlayFrame
+            XCTAssertGreaterThan(picture.width, 0, "\(style)")
+            XCTAssertEqual(overlay.midX, picture.midX, accuracy: 0.5, "\(style)")
+            XCTAssertEqual(overlay.midY, picture.midY, accuracy: 0.5, "\(style)")
+            XCTAssertTrue(picture.contains(overlay), "\(style): Resume stays clear of the controls")
+        }
+    }
+
     func testMenuPauseSurvivesSceneChangesUntilResume() throws {
         let (gameplay, runtime, _) = makeGameplay(policy: .always)
         let items = gameplay.prepareGameMenu()

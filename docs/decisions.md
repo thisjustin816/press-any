@@ -3,6 +3,15 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: The Playtiles guide is raised, and Resume sits on the picture
+
+The Playtiles alignment guide is raised from the body, where it was pressed in: its top edge
+catches the light and it casts a shadow below, so it reads as a ledge to fit the physical
+controller against. This replaces the pressed-in guide in "Settings open from the game menu".
+
+A paused game's Resume button is centered on the game picture, which stays visible behind it,
+on both layouts. Centered on the whole screen, it sat across the Playtiles guide.
+
 ## 2026-10-06: Fast Forward speed is a setting
 
 Fast Forward in the game menu runs at the Fast Forward Speed setting: 1.5×, 2×, 3×, 4×, 8× or
