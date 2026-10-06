@@ -143,4 +143,43 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertFalse(review.markAsBase, "the player turned Base off")
         XCTAssertTrue(review.markAsPreferred)
     }
+
+    func testAnExistingBaseIsReplacedOnlyByANewerHomebrewRelease() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let coordinator = ImportCoordinator(
+            analyzer: container.importAnalyzer,
+            committer: container.importCommitter,
+            assetStore: container.fileStore
+        )
+        var byte: UInt8 = 0
+        func review(_ filename: String, games: [Game]) throws -> ImportReviewViewModel {
+            byte += 1
+            var bytes = Data(repeating: 0, count: 0x8000)
+            bytes[0x200] = byte
+            let file = root.appendingPathComponent(filename)
+            try bytes.write(to: file)
+            return ImportReviewViewModel(
+                analysis: try coordinator.analyzeROM(at: file),
+                games: games,
+                coordinator: coordinator,
+                existingBuilds: { container.builds(in: $0) }
+            )
+        }
+
+        let retail = try review("Example (USA).gb", games: []).commit()
+        XCTAssertTrue(retail.build.isBase, "a new Game's first Build is its Base")
+        for filename in ["Example (USA) (Rev 1).gb", "Example (USA) (Beta).gb"] {
+            let other = try review(filename, games: [retail.game])
+            XCTAssertEqual(other.destination, .existing(retail.game.id))
+            XCTAssertFalse(other.markAsBase, "\(filename) leaves the clean Base alone")
+            XCTAssertTrue(other.markAsPreferred)
+        }
+
+        let homebrew = try review("Homebrew v1.2.gb", games: []).commit()
+        XCTAssertFalse(try review("Homebrew v1.1.gb", games: [homebrew.game]).markAsBase, "an older release")
+        XCTAssertTrue(try review("Homebrew v1.10.gb", games: [homebrew.game]).markAsBase, "a newer release")
+        XCTAssertTrue(try review("Homebrew 2026-10-06.gb", games: [homebrew.game]).markAsBase, "a dated release sorts after v1")
+    }
 }

@@ -68,7 +68,7 @@ struct SharedFileView: View {
                 analysis: analysis,
                 games: games,
                 coordinator: coordinator,
-                existingBuildNames: { container.buildNames(in: $0) }
+                existingBuilds: { container.builds(in: $0) }
             )
         } catch {
             errorMessage = error.localizedDescription

@@ -307,7 +307,7 @@ struct LibraryView: View {
                     analysis: analysis,
                     games: model.games,
                     coordinator: importCoordinator,
-                    existingBuildNames: { container.buildNames(in: $0) }
+                    existingBuilds: { container.builds(in: $0) }
                 )
                 importReview = ImportReviewPresentation(model: reviewModel)
             } catch {

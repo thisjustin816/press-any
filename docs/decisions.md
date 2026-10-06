@@ -39,10 +39,13 @@ without a date added, as generated, so Builds named before this can take the dat
 
 ## 2026-10-06: New Builds default to Preferred and Base, and match existing Games
 
-Import Review now defaults every new Build to Preferred, and to Base unless it is a ROM hack. A new
-homebrew or retail Build therefore becomes the Game's Base, replacing the previous one; a ROM hack
-or a patch-created Build is Preferred but not Base. The toggles remain in review. This replaces the
-conservative default for ordinary additional ROMs in "New Build roles are reviewable suggestions".
+Import Review now defaults every new Build to Preferred. It defaults to Base when the Game has no
+Base yet, unless the file is a ROM hack. Where the Game has a Base, only a newer homebrew release
+defaults to replacing it: a file whose version or date sorts after the Base's, or any versioned
+file when the Base has none. A retail revision or a beta has no version, so it leaves a clean Base
+alone. A ROM hack or a patch-created Build is Preferred but not Base. The toggles remain in review,
+and a role the player sets stays when the destination changes. This replaces the conservative
+default for ordinary additional ROMs in "New Build roles are reviewable suggestions".
 
 Import Review also suggests an existing Game whose title matches the file's title, header title or,
 for a hack, base title, compared without case, punctuation or spacing. Only a whole-title match

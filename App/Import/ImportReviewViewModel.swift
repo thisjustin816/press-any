@@ -31,8 +31,9 @@ final class ImportReviewViewModel: ObservableObject {
     let games: [Game]
 
     private let coordinator: ImportCoordinator
-    /// A Game's Build names, so a suggested name that repeats one gains the date it was added.
-    private let existingBuildNames: (UUID) -> [String]
+    /// A Game's Builds: a suggested name that repeats one gains the date it was added, and an
+    /// existing Base decides whether the new Build should replace it.
+    private let existingBuilds: (UUID) -> [Build]
     /// The last name suggested, so changing the destination replaces it unless the player edited it.
     private var suggestedBuildName: String
     /// The destination the roles were last suggested for.
@@ -42,14 +43,14 @@ final class ImportReviewViewModel: ObservableObject {
         analysis: ROMImportAnalysis,
         games: [Game],
         coordinator: ImportCoordinator,
-        existingBuildNames: @escaping (UUID) -> [String] = { _ in [] }
+        existingBuilds: @escaping (UUID) -> [Build] = { _ in [] }
     ) {
         self.analysis = analysis
         self.games = games.sorted {
             $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
         }
         self.coordinator = coordinator
-        self.existingBuildNames = existingBuildNames
+        self.existingBuilds = existingBuilds
         let metadata = BuildImportMetadata(analysis: analysis)
         region = metadata.region ?? ""
         language = metadata.language ?? ""
@@ -70,12 +71,12 @@ final class ImportReviewViewModel: ObservableObject {
         }
         destination = initialDestination
         previousDestination = initialDestination
-        markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: initialDestination)
-        markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: initialDestination)
+        markAsBase = Self.suggestedBase(for: analysis, destination: initialDestination, existingBuilds: existingBuilds)
+        markAsPreferred = true
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
             ? analysis.header.title
             : analysis.filenameMetadata.suggestedTitle
-        let suggestion = Self.buildName(for: analysis, destination: initialDestination, existingBuildNames: existingBuildNames)
+        let suggestion = Self.buildName(for: analysis, destination: initialDestination, existingBuilds: existingBuilds)
         suggestedBuildName = suggestion
         buildDisplayName = analysis.exactExistingBuildID == nil ? suggestion : "Existing"
     }
@@ -83,11 +84,11 @@ final class ImportReviewViewModel: ObservableObject {
     private static func buildName(
         for analysis: ROMImportAnalysis,
         destination: Destination,
-        existingBuildNames: (UUID) -> [String]
+        existingBuilds: (UUID) -> [Build]
     ) -> String {
         let existing: [String]
         if case .existing(let gameID) = destination {
-            existing = existingBuildNames(gameID)
+            existing = existingBuilds(gameID).map(\.displayName)
         } else {
             existing = []
         }
@@ -110,17 +111,13 @@ final class ImportReviewViewModel: ObservableObject {
 
     func destinationChanged() {
         if !isExactDuplicate, buildDisplayName == suggestedBuildName {
-            suggestedBuildName = Self.buildName(for: analysis, destination: destination, existingBuildNames: existingBuildNames)
+            suggestedBuildName = Self.buildName(for: analysis, destination: destination, existingBuilds: existingBuilds)
             buildDisplayName = suggestedBuildName
         }
         // Like the name, a role the player set stays; only an untouched suggestion follows the Game.
-        let previousBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: previousDestination)
-        let previousPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: previousDestination)
+        let previousBase = Self.suggestedBase(for: analysis, destination: previousDestination, existingBuilds: existingBuilds)
         if markAsBase == previousBase {
-            markAsBase = Self.suggestedBase(for: analysis.filenameMetadata.releaseKind, destination: destination)
-        }
-        if markAsPreferred == previousPreferred {
-            markAsPreferred = Self.suggestedPreferred(for: analysis.filenameMetadata.releaseKind, destination: destination)
+            markAsBase = Self.suggestedBase(for: analysis, destination: destination, existingBuilds: existingBuilds)
         }
         previousDestination = destination
     }
@@ -170,14 +167,22 @@ final class ImportReviewViewModel: ObservableObject {
         coordinator.discard(analysis)
     }
 
-    /// A new Build is the one to play and, unless it's a hack, the clean ROM patches apply to.
-    /// Marking it Base replaces the Game's previous Base Build.
-    private static func suggestedBase(for kind: FilenameReleaseKind, destination: Destination) -> Bool {
-        kind != .romHack
-    }
-
-    private static func suggestedPreferred(for kind: FilenameReleaseKind, destination: Destination) -> Bool {
-        true
+    /// A new Build is the one to play, so Preferred is always suggested. Base, the clean ROM patches
+    /// apply to, is suggested for a Game that has none yet, unless the file is a hack. Where the Game
+    /// has a Base, only a newer homebrew release replaces it: a file whose version or date sorts after
+    /// the Base's, or any versioned file when the Base has none. A retail revision or a beta has no
+    /// version, so it leaves the Base alone. Marking Base replaces the Game's previous Base Build.
+    private static func suggestedBase(
+        for analysis: ROMImportAnalysis,
+        destination: Destination,
+        existingBuilds: (UUID) -> [Build]
+    ) -> Bool {
+        guard analysis.filenameMetadata.releaseKind != .romHack else { return false }
+        guard case .existing(let gameID) = destination,
+              let base = existingBuilds(gameID).first(where: \.isBase) else { return true }
+        guard let key = BuildImportMetadata(analysis: analysis).versionSortKey else { return false }
+        guard let baseKey = base.versionSortKey else { return true }
+        return key > baseKey
     }
 
     private var reviewedMetadata: BuildImportMetadata {

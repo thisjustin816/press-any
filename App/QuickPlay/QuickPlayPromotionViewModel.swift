@@ -53,7 +53,7 @@ final class QuickPlayPromotionViewModel: ObservableObject {
                 committer: container.importCommitter,
                 assetStore: container.fileStore
             ),
-            existingBuildNames: { container.buildNames(in: $0) }
+            existingBuilds: { container.builds(in: $0) }
         )
     }
 
