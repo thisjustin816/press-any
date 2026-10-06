@@ -13,10 +13,15 @@ final class GameplayDriverTests: XCTestCase {
             savePollNanoseconds: 1
         )
         driver.start()
-        XCTAssertEqual(runtime.saveStarted.wait(timeout: .now() + 1), .success)
+        // A busy simulator can take seconds to deliver the first display refresh, so the waits
+        // allow for that. What the test checks is that frames keep coming while the save is held.
+        XCTAssertEqual(runtime.saveStarted.wait(timeout: .now() + 10), .success)
         let framesBeforeWait = runtime.frameCount
 
-        Thread.sleep(forTimeInterval: 0.03)
+        let deadline = Date().addingTimeInterval(10)
+        while runtime.frameCount <= framesBeforeWait, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.01)
+        }
         XCTAssertGreaterThan(runtime.frameCount, framesBeforeWait)
 
         runtime.allowSaveToFinish.signal()
