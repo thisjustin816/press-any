@@ -1,7 +1,7 @@
 # Backlog
 
 Every feature and requirement in `docs/specs/` and `docs/decisions.md`, checked against the code
-on 2026-10-03 and updated 2026-10-05. The specs stay the
+on 2026-10-03 and updated 2026-10-06. The specs stay the
 source of truth for what each item means; this file tracks what's left and a suggested order.
 Update an item's row when its status changes, and move it to its area's "Done" line when it's
 finished.
@@ -561,6 +561,7 @@ Spec: all missing.
 | missing | Visual skin/layout authoring beyond the lightweight editor | v1.1 |  |  |
 | missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | D 2026-10-05 |  |
 | missing | Browse and download games: itch.io's Game Boy tag in an in-app browser and Homebrew Hub (hh.gbdev.io) by its API, from the library's + menu; downloads go straight to Import Review, with Quick Play | v1.1 | D 2026-10-05 | needs zip import; the app's first network use, so revisit the privacy manifest and label; confirm App Store guideline 4.7 wording |
+| missing | Share an itch.io game page or GitHub page to download and import a ROM | v1.1 | D 2026-10-06 "Shared game pages" | web-URL share extension; resolve supported ROM downloads, choose when several exist, then Import Review or Quick Play; safe ZIP extraction; preserve itch.io's normal purchase/login flow |
 | missing | `.gbproject`-style project import/export | v1.1 |  |  |
 | missing | Better ROM comparison + BPS generation | v1.1 |  |  |
 | missing | iPad side-by-side manual/game | v1.1 |  |  |

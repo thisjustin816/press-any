@@ -3,6 +3,17 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Shared game pages
+
+Add shared-page imports to the v1.1 backlog alongside in-app game browsing. Sharing
+an itch.io game page or a GitHub page with a ROM download offers supported downloads,
+asks the player to choose when there are several, and sends the downloaded ROM to
+Import Review or Quick Play. Public GitHub release assets and direct ROM links are
+initial sources. itch.io purchases, donations and login use the site's normal flow.
+
+This needs a web-URL share extension and downloader; the current document handoff
+handles local files. ZIP downloads depend on safe archive extraction and ROM selection.
+
 ## 2026-10-06: TestFlight can test feature branches before merge
 
 The manual TestFlight workflow accepts repository branches, including feature
