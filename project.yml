@@ -88,6 +88,34 @@ targets:
       - path: AppTests
     dependencies:
       - target: PressAny
+  ShareTestSender:
+    type: application
+    platform: iOS
+    sources:
+      - path: ShareTestSender
+      - path: TestROMs/roms
+        includes: [gbdk450-rev-v1.0.gb, gbdk450-dual.gbc]
+        buildPhase: resources
+      - path: TestROMs/patches
+        includes: [gbdk450-rev-v1.0-to-v1.1.ips, gbdk450-rev-v1.0-to-v1.1.bps]
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.thisjustin816.ShareTestSender
+        INFOPLIST_KEY_CFBundleDisplayName: Share Test Sender
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1"
+  PressAnyShareUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: ShareUITests
+    dependencies:
+      - target: PressAny
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.thisjustin816.PressAnyShareUITests
+        TEST_TARGET_NAME: PressAny
   # Opens the pop-up menus for the screenshot workflow; only the PressAnyScreenshots scheme runs it.
   PressAnyScreenshotTests:
     type: bundle.ui-testing
@@ -101,6 +129,19 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.thisjustin816.PressAnyScreenshotTests
         TEST_TARGET_NAME: PressAny
 schemes:
+  ShareTestSender:
+    build:
+      targets:
+        ShareTestSender: all
+  PressAnyShareTests:
+    build:
+      targets:
+        PressAny: all
+        PressAnyShareUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - PressAnyShareUITests
   PressAny:
     build:
       targets:

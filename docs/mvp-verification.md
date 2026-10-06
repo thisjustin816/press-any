@@ -7,6 +7,9 @@ Do not commit commercial ROMs, saves, or other copyrighted test content.
 
 Automated coverage runs in CI (`docs/ci.md`). These checks need a real device.
 
+The `Shared ROM and patch UI flows` CI job automates the share-sheet, queue and return-to-details
+scenarios on a simulator. Keep these device checks pending until they pass on an iPhone.
+
 Verify with a user-supplied legal ROM:
 
 - [ ] Generate/open the iOS project from a clean checkout.
@@ -25,6 +28,7 @@ Verify with a user-supplied legal ROM:
 - [ ] State created on Build A is never loadable on Build B.
 - [ ] Create an IPS/BPS-derived Build and launch it.
 - [ ] Keep Game Details open, share a patch to the app, apply it to that Game and return to details. The new Build appears without backing out and reopening the Game.
+
 - [ ] Remove its generated-ROM cache, relaunch, and confirm deterministic rebuild.
 - [ ] Quick Play a new test build using a copy of Main; mutate the temporary save; Main remains unchanged.
 - [ ] Promote the Quick Play session and choose whether its save becomes a new/default profile.

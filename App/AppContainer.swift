@@ -52,7 +52,14 @@ final class AppContainer {
             appropriateFor: nil,
             create: true
         )
-        let root = ApplicationDataLocation.root(in: support)
+        var root = ApplicationDataLocation.root(in: support)
+        #if DEBUG
+        // UI tests use separate libraries while file handoff still follows the production path.
+        if let value = UserDefaults.standard.string(forKey: "UITestLibrary"),
+           let id = UUID(uuidString: value) {
+            root = root.appendingPathComponent("UITests/\(id.uuidString)", isDirectory: true)
+        }
+        #endif
         return try AppContainer(rootURL: root)
     }
 
