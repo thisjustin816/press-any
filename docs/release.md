@@ -21,3 +21,20 @@ External testing requires beta information and may require Beta App Review. An
 App Store release also needs the store listing, screenshots, age rating, App
 Privacy answers for the shipped app, and the rights and disclosures in
 `docs/acceptance-matrix.md` under Release.
+
+## Refreshing the No-Intro data
+
+The app carries No-Intro's list of known Game Boy and Game Boy Color dumps in
+`Packages/EmulatorKit/Sources/GameIdentity/Resources/KnownDumps.json`. Refresh it about once a
+month, and before an App Store release:
+
+1. On DAT-o-MATIC (datomatic.no-intro.org), open Download, then P/C XML. Choose
+   "Nintendo - Game Boy", select Prepare, then Download. Do the same for
+   "Nintendo - Game Boy Color". Use a browser: DAT-o-MATIC bans clients it takes for bots, and it
+   has no API.
+2. Run `make known-dumps GB=<Game Boy .zip> GBC=<Game Boy Color .zip>`. The script reads the zips
+   as downloaded.
+3. Open a pull request with the updated file. Its description is the summary the script printed:
+   the dumps added, removed and renamed, and any it left out for lacking a SHA-256.
+
+The data reaches testers with the next TestFlight upload from `main`.

@@ -13,7 +13,7 @@ DAT-o-MATIC's Parent/Clone XML DAT lists each dump as a `game` element with a `d
 - a header: the source, each system's DAT version and dump count, and the day it was generated;
 - one record per dump: `name` (the canonical name without extension), `sha256`, `size`, `system` (`gb` or `gbc`), `parent` (the parent's name, absent on a parent) and `regions` (the release regions, in the DAT's order).
 
-Records sort by `sha256`, so two runs over the same input give the same bytes. The script refuses a dump without a SHA-256, a clone whose parent is missing, and a hash that appears twice. It prints what changed against the file already committed: dumps added, removed and renamed.
+Records sort by `sha256`, so two runs over the same input give the same bytes. The script refuses a clone whose parent is missing, a hash that appears twice, and the two files swapped. A dump without a SHA-256 can't be matched, so it is left out and listed. The script prints what changed against the file already committed: dumps added, removed and renamed.
 
 The file lives at `Packages/EmulatorKit/Sources/GameIdentity/Resources/KnownDumps.json`. `GameIdentity` is a new target that depends only on `EmulatorDomain` and processes its resources, like `SameBoyAdapter`. A test checks that the bundled file loads, that every parent resolves, and that the header's counts match the records.
 

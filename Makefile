@@ -1,7 +1,7 @@
 PROJECT_NAME ?= PressAny
 DESTINATION ?= platform=iOS Simulator,name=iPhone 17 Pro
 
-.PHONY: bootstrap generate build test test-share-ui test-package-ios test-core test-sameboy-bridge bootroms
+.PHONY: bootstrap generate build test test-share-ui test-package-ios test-core test-sameboy-bridge bootroms known-dumps
 
 bootstrap:
 	./Scripts/bootstrap.sh
@@ -29,3 +29,8 @@ test-core:
 
 test-sameboy-bridge:
 	./Scripts/test-sameboy-bridge-linux.sh
+
+# Refresh the bundled No-Intro data from P/C XML files downloaded in a browser:
+#   make known-dumps GB=<Game Boy .zip or .xml> GBC=<Game Boy Color .zip or .xml>
+known-dumps:
+	./Scripts/generate-known-dumps.py "$(GB)" "$(GBC)" Packages/EmulatorKit/Sources/GameIdentity/Resources/KnownDumps.json

@@ -1,0 +1,19 @@
+{
+ "source": "No-Intro, DAT-o-MATIC Parent/Clone XML",
+ "generated": "2026-10-06",
+ "systems": [
+  {
+   "system": "gb",
+   "dat": "Nintendo - Game Boy",
+   "version": "",
+   "dumps": 0
+  },
+  {
+   "system": "gbc",
+   "dat": "Nintendo - Game Boy Color",
+   "version": "",
+   "dumps": 0
+  }
+ ],
+ "dumps": []
+}

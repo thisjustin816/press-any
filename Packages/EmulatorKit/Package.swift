@@ -23,6 +23,7 @@ let package = Package(
         .library(name: "GameplayAudio", targets: ["GameplayAudio"]),
         .library(name: "SameBoyAdapter", targets: ["SameBoyAdapter"]),
         .library(name: "ToolchainDetection", targets: ["ToolchainDetection"]),
+        .library(name: "GameIdentity", targets: ["GameIdentity"]),
         .library(name: "PersistenceGRDB", targets: ["PersistenceGRDB"]),
     ],
     dependencies: [
@@ -43,6 +44,8 @@ let package = Package(
         // Test doubles shared by the test targets; not a product, so the app never links it.
         .target(name: "EmulatorKitTestSupport", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore"]),
         .target(name: "ToolchainDetection", dependencies: ["EmulatorDomain"]),
+        // No-Intro's known dumps, bundled as data; Scripts/generate-known-dumps.py writes the file.
+        .target(name: "GameIdentity", dependencies: ["EmulatorDomain"], resources: [.process("Resources")]),
         // SameBoy's headers are not self-contained (apu.h uses GB_ENUM, which only save_state.h
         // defines), so a clang module over Core/ cannot build in Xcode. Only the C bridge includes
         // them, through the header search path below; Swift sees SameBoyBridge alone. SwiftPM needs
@@ -89,6 +92,7 @@ let package = Package(
         .testTarget(name: "GameplayInputTests", dependencies: ["GameplayInput", "EmulationCore"]),
         .testTarget(name: "GameplayAudioTests", dependencies: ["GameplayAudio", "EmulationCore"]),
         .testTarget(name: "SameBoyAdapterTests", dependencies: ["SameBoyAdapter", "EmulatorKitTestSupport"]),
+        .testTarget(name: "GameIdentityTests", dependencies: ["GameIdentity", "EmulatorDomain"]),
         .testTarget(name: "ToolchainDetectionTests", dependencies: ["ToolchainDetection", "EmulatorDomain", "EmulatorKitTestSupport"]),
         .testTarget(
             name: "ArchitectureProofTests",
