@@ -18,7 +18,7 @@ DATA = pathlib.Path(__file__).resolve().parent.parent / "Packages/EmulatorKit/So
 
 
 def message(data, today):
-    if not data["dumps"]:
+    if not data["games"]:
         return "The bundled No-Intro data is empty. Fill it with `make known-dumps` (docs/release.md)."
     generated = datetime.date.fromisoformat(data["generated"])
     age = (today - generated).days

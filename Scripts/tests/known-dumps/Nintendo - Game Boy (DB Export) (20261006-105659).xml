@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A made-up export in No-Intro's DB Export layout. The titles and hashes are invented. -->
+<header>
+	<version>20261006-105659</version>
+	<author>No-Intro</author>
+</header>
+<datafile>
+	<game name="Pocket Critters - Red Version (USA, Europe)">
+		<archive number="0001" clone="P" regparent="(EUR PARENT) (USA PARENT)" name="Pocket Critters - Red Version" region="USA, Europe" languages="En"/>
+		<source>
+			<details id="1" section="Trusted Dump" region="USA"/>
+			<file id="1" extension="gb" size="1048576" crc32="00000001" sha1="AA00000000000000000000000000000000000001" sha256="aa"/>
+		</source>
+		<release>
+			<details id="2" group="Scene" origin="Scene"/>
+			<file id="1" extension="gb" size="1048576" crc32="00000001" sha1="aa00000000000000000000000000000000000001"/>
+		</release>
+	</game>
+	<game name="Pocket Critters - Aka (Japan)">
+		<archive number="0002" clone="0001" name="Pocket Critters - Aka" region="Japan" languages="Ja"/>
+		<source>
+			<details id="3" section="Trusted Dump" region="Japan"/>
+			<file id="2" extension="gb" size="524288" crc32="00000002" sha1="0b00000000000000000000000000000000000002"/>
+		</source>
+		<source>
+			<details id="4" section="Third Party" comment1="cart seems faulty"/>
+			<file id="3" extension="gb" size="524288" crc32="00000003" sha1="0e00000000000000000000000000000000000003" bad="1"/>
+		</source>
+	</game>
+	<game name="Pocket Critters - Aka (Japan) (Rev 1)">
+		<archive number="0003" clone="0002" name="Pocket Critters - Aka" region="Japan" languages="Ja" version1="Rev 1"/>
+		<source>
+			<details id="5" section="Trusted Dump"/>
+			<file id="4" extension="gb" size="524288" crc32="00000004" sha1="0c00000000000000000000000000000000000004"/>
+		</source>
+	</game>
+	<game name="Moon Garden (World) (v1.1) (Aftermarket) (Unl)">
+		<archive number="0004" clone="P" name="Moon Garden" region="World" languages="nolang" licensed="0" aftermarket="1" version1="v1.1"/>
+		<source>
+			<details id="6" section="Trusted Dump"/>
+			<file id="5" extension="gb" size="65536" crc32="00000005" sha1="dd00000000000000000000000000000000000005"/>
+		</source>
+	</game>
+	<game name="Lost Ledger (USA) (Proto)">
+		<archive number="0005" clone="P" name="Lost Ledger" region="USA" languages="En" devstatus="Proto"/>
+		<source>
+			<details id="7" section="Third Party" nodump="1"/>
+			<serials/>
+		</source>
+	</game>
+	<game name="Star Seed (World) (Demo) (Aftermarket) (Unl)">
+		<archive number="0006" clone="0099" name="Star Seed" region="World" languages="En" devstatus="Demo" licensed="0" aftermarket="1"/>
+		<source>
+			<details id="8" section="Trusted Dump"/>
+			<file id="6" extension="gb" size="65536" crc32="00000006" sha1="ee00000000000000000000000000000000000006"/>
+		</source>
+	</game>
+	<game name="Pocket Critters - Rot (Germany)">
+		<archive number="0007" clone="0001" name="Pocket Critters - Rot" region="Germany" languages="De"/>
+		<release>
+			<details id="9" group="Scene" origin="Scene"/>
+			<file id="7" extension="gb" size="1048576" crc32="00000007" sha1="0f00000000000000000000000000000000000007"/>
+		</release>
+	</game>
+</datafile>

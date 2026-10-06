@@ -30,13 +30,13 @@ months or so, and before an App Store release. No-Intro edits these DATs continu
 refresh by hand have picked up changes every two to four months. CI's hygiene job warns when the
 file is more than 90 days old or still empty.
 
-1. On DAT-o-MATIC (datomatic.no-intro.org), open Download, then P/C XML. Choose
-   "Nintendo - Game Boy", select Prepare, then Download. Do the same for
-   "Nintendo - Game Boy Color". Use a browser: DAT-o-MATIC bans clients it takes for bots, and it
-   has no API.
+1. On DAT-o-MATIC (datomatic.no-intro.org), open Download. In the No-Intro list, select the DB
+   icon, the third, on the "Nintendo - Game Boy" row, then on the "Nintendo - Game Boy Color" row.
+   Use a browser: DAT-o-MATIC bans clients it takes for bots, and it has no API.
 2. Run `make known-dumps GB=<Game Boy .zip> GBC=<Game Boy Color .zip>`. The script reads the zips
    as downloaded.
 3. Open a pull request with the updated file. Its description is the summary the script printed:
-   the dumps added, removed and renamed, and any it left out for lacking a SHA-1.
+   the games added, removed and renamed, any it left out for having no file, and clones whose
+   parent the export doesn't include.
 
 The data reaches testers with the next TestFlight upload from `main`.
