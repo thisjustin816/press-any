@@ -306,7 +306,7 @@ Spec: all v1.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | missing | Rewind, presets 5 s/15 s/30 s/1 m/2 m/5 m, memory-budgeted, effective duration shown, muted by default (optional audio), survives brief background | v1 | Q80/Q103; later 7 | no RewindCapability |
-| partial | Fast-forward | MVP basic / v1 full | Q81 | menu toggle at fixed 2x (GameplayViewController.toggleFastForward, EmulationSpeed supports multiplier/unlimited); presets 1.5x/2x/3x/4x/8x/Unlimited, hold vs toggle, audio Accelerated/Mute setting missing |
+| partial | Fast-forward | MVP basic / v1 full | Q81 | menu toggle at the Fast Forward Speed setting (1.5x/2x/3x/4x/8x/Unlimited, default 2x, inheritable, changes live from the game menu's Settings); Fast Forward Audio setting Muted (default) or Accelerated up to 4x; hold vs toggle waits for Quick Actions |
 | missing | Slow motion 0.25x/0.5x/0.75x | v1 | dec 11 |  |
 
 Done: Pause / Resume from menu with paused overlay.

@@ -11,6 +11,10 @@ final class AudioOutputEngine: @unchecked Sendable {
     private let lock = NSLock()
     private var buffer = AdaptiveAudioBuffer()
     private var sourceNode: AVAudioSourceNode?
+    /// Plays the game's sound faster along with the game, with the pitch rising with it.
+    private let varispeed = AVAudioUnitVarispeed()
+    /// Whether sound is dropped instead of played, as while Fast Forward is muted. Guarded by `lock`.
+    private var discardsSound = false
     /// Whether gameplay wants sound. A route change or an interruption stops the engine on its own,
     /// and this decides whether to start it again. Touched only on the main queue.
     private var wantsRunning = false
@@ -60,7 +64,9 @@ final class AudioOutputEngine: @unchecked Sendable {
 
         sourceNode = source
         engine.attach(source)
-        engine.connect(source, to: engine.mainMixerNode, format: format)
+        engine.attach(varispeed)
+        engine.connect(source, to: varispeed, format: format)
+        engine.connect(varispeed, to: engine.mainMixerNode, format: format)
         engine.prepare()
         try engine.start()
     }
@@ -69,7 +75,34 @@ final class AudioOutputEngine: @unchecked Sendable {
         guard !newSamples.isEmpty else { return }
         lock.lock()
         defer { lock.unlock() }
+        guard !discardsSound else { return }
         buffer.write(newSamples)
+    }
+
+    /// Matches the sound to the game's speed. Accelerated sound plays at the game's speed, which
+    /// the varispeed unit can do from 0.25× to 4×. At other speeds, and when muted, the sound is
+    /// dropped so none builds up to play late.
+    func setSpeed(_ speed: EmulationSpeed, fastForwardAudio: FastForwardAudio) {
+        var rate: Float = 1
+        var discards = false
+        switch speed {
+        case .normal:
+            break
+        case .multiplier(let multiplier):
+            if fastForwardAudio == .accelerated, (0.25...4).contains(multiplier) {
+                rate = Float(multiplier)
+            } else {
+                discards = true
+            }
+        case .unlimited:
+            discards = true
+        }
+        varispeed.rate = rate
+        lock.lock()
+        discardsSound = discards
+        // Sound buffered at the old speed would play late at the new one.
+        buffer.removeAll()
+        lock.unlock()
     }
 
     /// Drops the buffered sound too, so resuming waits for the buffer to fill again rather than

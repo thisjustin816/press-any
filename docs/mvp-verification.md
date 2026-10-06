@@ -62,3 +62,6 @@ Verify with a user-supplied legal ROM:
 - [ ] A patch that turns a Game Boy game into a Game Boy Color one makes a Game Boy Color Build that boots in color, and still does after Remove Generated ROM.
 - [ ] Pull down Control Center and Notification Center mid-game: the game stops, and picks up again when they close. With a button held when they open, nothing stays pressed. Lock and unlock, and switch apps, with Resume Games set to Always, Ask and Never in turn. A game paused from the menu stays paused through all of these.
 - [ ] At the largest accessibility text size, the library shows one column with full titles, and a Game's Builds, saves and Technical Info hashes stay readable.
+- [ ] In a game, Fast Forward from the game menu runs at the Fast Forward Speed setting: change it between 1.5×, 4× and Unlimited in the game menu's Settings while Fast Forward is on, and the speed follows at once. A Game's own setting overrides App Settings.
+- [ ] Fast Forward Audio Muted is silent while Fast Forward runs, and the sound returns at normal speed with no burst of old sound. Accelerated plays the sound sped up with the game at 2× and 4×, and stays muted at 8× and Unlimited.
+- [ ] A game without artwork shows its placeholder cartridge filling most of the library tile and sitting cleanly in the list row's thumbnail, in both themes.

@@ -17,6 +17,8 @@ struct AppSettingsView: View {
     @State private var controllerTheme: ControllerTheme
     @State private var lcdFilter: LCDFilter
     @State private var frameBlending: FrameBlending
+    @State private var fastForwardSpeed: FastForwardSpeed
+    @State private var fastForwardAudio: FastForwardAudio
     @State private var screenScaling: ScreenScaling
     @State private var tapGameForMenu: Bool
     @State private var soundMode: SoundMode
@@ -35,6 +37,8 @@ struct AppSettingsView: View {
         _controllerTheme = State(initialValue: Self.stored(ControllerTheme.self, .controllerTheme, in: store) ?? .matchSystem)
         _lcdFilter = State(initialValue: Self.stored(LCDFilter.self, .lcdFilter, in: store) ?? .off)
         _frameBlending = State(initialValue: Self.stored(FrameBlending.self, .frameBlending, in: store) ?? .off)
+        _fastForwardSpeed = State(initialValue: Self.stored(FastForwardSpeed.self, .fastForwardSpeed, in: store) ?? .x2)
+        _fastForwardAudio = State(initialValue: Self.stored(FastForwardAudio.self, .fastForwardAudio, in: store) ?? .muted)
         _screenScaling = State(initialValue: Self.stored(ScreenScaling.self, .screenScaling, in: store) ?? .integer)
         _tapGameForMenu = State(initialValue: Self.stored(Bool.self, .tapGameForMenu, in: store) ?? false)
         _soundMode = State(initialValue: Self.stored(SoundMode.self, .soundMode, in: store) ?? .followSilentSwitch)
@@ -119,6 +123,26 @@ struct AppSettingsView: View {
                     }
                 } footer: {
                     Text("Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things.")
+                }
+
+                Section {
+                    Picker("Fast Forward Speed", selection: $fastForwardSpeed) {
+                        ForEach(FastForwardSpeed.allCases, id: \.self) { speed in
+                            Text(speed.displayName).tag(speed)
+                        }
+                    }
+                } footer: {
+                    Text("How fast Fast Forward in the game menu runs. Unlimited runs as fast as your phone can.")
+                }
+
+                Section {
+                    Picker("Fast Forward Audio", selection: $fastForwardAudio) {
+                        ForEach(FastForwardAudio.allCases, id: \.self) { audio in
+                            Text(audio.displayName).tag(audio)
+                        }
+                    }
+                } footer: {
+                    Text("Muted is silent while Fast Forward runs. Accelerated plays the sound sped up with the game, up to 4×. Faster speeds stay muted.")
                 }
 
                 Section {
@@ -211,6 +235,8 @@ struct AppSettingsView: View {
             .onChange(of: controllerTheme) { _, newValue in save(newValue, .controllerTheme) }
             .onChange(of: lcdFilter) { _, newValue in save(newValue, .lcdFilter) }
             .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
+            .onChange(of: fastForwardSpeed) { _, newValue in save(newValue, .fastForwardSpeed) }
+            .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
             .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
             .onChange(of: tapGameForMenu) { _, newValue in save(newValue, .tapGameForMenu) }
             .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }

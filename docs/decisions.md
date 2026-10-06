@@ -3,6 +3,17 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Fast Forward speed is a setting
+
+Fast Forward in the game menu runs at the Fast Forward Speed setting: 1.5×, 2×, 3×, 4×, 8× or
+Unlimited. It inherits App, System, Game and Build like the display settings, defaults to 2×, and
+applies at once when changed from the game menu's Settings while Fast Forward is on.
+
+Fast Forward Audio is Muted by default, silent while Fast Forward runs. Accelerated plays the sound
+sped up with the game, its pitch rising with it, up to 4×; faster speeds and Unlimited stay muted.
+It inherits like the speed. Getting at Fast Forward from the touch layouts, controller buttons or
+gestures waits for the shared Quick Actions registry.
+
 ## 2026-10-06: Settings open from the game menu, and frame blending joins them
 
 The game menu gains Settings, which opens over the paused game at half height so each change shows
