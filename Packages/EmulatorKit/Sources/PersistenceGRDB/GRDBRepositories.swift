@@ -3,11 +3,11 @@ import EmulatorDomain
 import Foundation
 import GRDB
 
-private protocol GRDBRepositoryBacking: AnyObject {
+protocol GRDBRepositoryBacking: AnyObject {
     var writer: any DatabaseWriter { get }
 }
 
-private extension GRDBRepositoryBacking {
+extension GRDBRepositoryBacking {
     func read<T>(_ operation: (Database) throws -> T) throws -> T {
         if let database = GRDBTransactionContext.current {
             return try operation(database)
@@ -34,7 +34,7 @@ public final class GRDBGameRepository: GameRepository, GRDBRepositoryBacking, @u
         try read { db in
             try GameRecord.fetchOne(
                 db,
-                sql: "SELECT * FROM games WHERE id = ?",
+                sql: "SELECT * FROM games WHERE id = ? AND deletion_id IS NULL",
                 arguments: [PersistenceCodec.uuid(id)]
             )?.domain()
         }
@@ -42,7 +42,7 @@ public final class GRDBGameRepository: GameRepository, GRDBRepositoryBacking, @u
 
     public func fetchGames() throws -> [Game] {
         try read { db in
-            try GameRecord.fetchAll(db, sql: "SELECT * FROM games ORDER BY primary_title COLLATE NOCASE, created_at")
+            try GameRecord.fetchAll(db, sql: "SELECT * FROM games WHERE deletion_id IS NULL ORDER BY primary_title COLLATE NOCASE, created_at")
                 .map { try $0.domain() }
         }
     }
@@ -114,7 +114,7 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
         try read { db in
             try BuildRecord.fetchOne(
                 db,
-                sql: "SELECT * FROM builds WHERE id = ?",
+                sql: "SELECT * FROM builds WHERE id = ? AND deletion_id IS NULL",
                 arguments: [PersistenceCodec.uuid(id)]
             )?.domain()
         }
@@ -124,7 +124,7 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
         try read { db in
             try BuildRecord.fetchAll(
                 db,
-                sql: "SELECT * FROM builds WHERE game_id = ? ORDER BY is_base DESC, created_at, display_name COLLATE NOCASE",
+                sql: "SELECT * FROM builds WHERE game_id = ? AND deletion_id IS NULL ORDER BY is_base DESC, created_at, display_name COLLATE NOCASE",
                 arguments: [PersistenceCodec.uuid(gameID)]
             ).map { try $0.domain() }
         }
@@ -134,7 +134,7 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
         try read { db in
             try BuildRecord.fetchOne(
                 db,
-                sql: "SELECT * FROM builds WHERE game_id = ? AND rom_sha256 = ? LIMIT 1",
+                sql: "SELECT * FROM builds WHERE game_id = ? AND rom_sha256 = ? AND deletion_id IS NULL LIMIT 1",
                 arguments: [PersistenceCodec.uuid(gameID), imageSHA256.lowercased()]
             )?.domain()
         }
@@ -144,7 +144,7 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
         try read { db in
             try BuildRecord.fetchOne(
                 db,
-                sql: "SELECT * FROM builds WHERE rom_sha256 = ? ORDER BY created_at LIMIT 1",
+                sql: "SELECT * FROM builds WHERE rom_sha256 = ? AND deletion_id IS NULL ORDER BY created_at LIMIT 1",
                 arguments: [imageSHA256.lowercased()]
             )?.domain()
         }
@@ -179,7 +179,7 @@ public final class GRDBSaveProfileRepository: SaveProfileRepository, GRDBReposit
         try read { db in
             try SaveProfileRecord.fetchOne(
                 db,
-                sql: "SELECT * FROM save_profiles WHERE id = ?",
+                sql: "SELECT * FROM save_profiles WHERE id = ? AND deletion_id IS NULL",
                 arguments: [PersistenceCodec.uuid(id)]
             )?.domain()
         }
@@ -189,7 +189,7 @@ public final class GRDBSaveProfileRepository: SaveProfileRepository, GRDBReposit
         try read { db in
             try SaveProfileRecord.fetchAll(
                 db,
-                sql: "SELECT * FROM save_profiles WHERE game_id = ? ORDER BY created_at, display_name COLLATE NOCASE",
+                sql: "SELECT * FROM save_profiles WHERE game_id = ? AND deletion_id IS NULL ORDER BY created_at, display_name COLLATE NOCASE",
                 arguments: [PersistenceCodec.uuid(gameID)]
             ).map { try $0.domain() }
         }
@@ -227,7 +227,7 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
                 db,
                 sql: """
                 SELECT * FROM save_states
-                WHERE build_id = ? AND save_profile_id = ?
+                WHERE build_id = ? AND save_profile_id = ? AND deletion_id IS NULL
                 ORDER BY created_at DESC, id
                 """,
                 arguments: [PersistenceCodec.uuid(buildID), PersistenceCodec.uuid(saveProfileID)]
@@ -239,7 +239,7 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
         try read { db in
             try SaveStateRecord.fetchAll(
                 db,
-                sql: "SELECT * FROM save_states WHERE save_profile_id = ? ORDER BY created_at DESC, id",
+                sql: "SELECT * FROM save_states WHERE save_profile_id = ? AND deletion_id IS NULL ORDER BY created_at DESC, id",
                 arguments: [PersistenceCodec.uuid(saveProfileID)]
             ).map { try $0.domain() }
         }
@@ -295,15 +295,36 @@ public final class GRDBPatchRecipeRepository: PatchRecipeRepository, GRDBReposit
                 sql: "SELECT * FROM patch_recipe_items WHERE recipe_id = ? ORDER BY position",
                 arguments: [record.id]
             ).map { try $0.domain() }
-            return PatchRecipe(
-                id: try PersistenceCodec.uuid(record.id),
-                resultBuildID: try PersistenceCodec.uuid(record.resultBuildID),
-                baseBuildID: try PersistenceCodec.uuid(record.baseBuildID),
-                expectedResultSHA256: record.expectedResultSHA256,
-                items: items,
-                createdAt: try PersistenceCodec.date(record.createdAt)
-            )
+            return try Self.recipe(record, items: items)
         }
+    }
+
+    public func fetchPatchRecipes(baseBuildID: UUID) throws -> [PatchRecipe] {
+        try read { db in
+            try PatchRecipeRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM patch_recipes WHERE base_build_id = ? ORDER BY created_at, id",
+                arguments: [PersistenceCodec.uuid(baseBuildID)]
+            ).map { record in
+                let items = try PatchRecipeItemRecord.fetchAll(
+                    db,
+                    sql: "SELECT * FROM patch_recipe_items WHERE recipe_id = ? ORDER BY position",
+                    arguments: [record.id]
+                ).map { try $0.domain() }
+                return try Self.recipe(record, items: items)
+            }
+        }
+    }
+
+    private static func recipe(_ record: PatchRecipeRecord, items: [PatchRecipeItem]) throws -> PatchRecipe {
+        PatchRecipe(
+            id: try PersistenceCodec.uuid(record.id),
+            resultBuildID: try PersistenceCodec.uuid(record.resultBuildID),
+            baseBuildID: try PersistenceCodec.uuid(record.baseBuildID),
+            expectedResultSHA256: record.expectedResultSHA256,
+            items: items,
+            createdAt: try PersistenceCodec.date(record.createdAt)
+        )
     }
 }
 
@@ -538,6 +559,7 @@ public struct GRDBRepositorySet: Sendable {
     public let assets: GRDBManagedAssetRepository
     public let settings: GRDBSettingsStore
     public let transactions: GRDBLibraryTransactionRunner
+    public let deletions: GRDBLibraryDeletionRepository
 
     init(writer: any DatabaseWriter) {
         games = GRDBGameRepository(writer: writer)
@@ -550,5 +572,6 @@ public struct GRDBRepositorySet: Sendable {
         assets = GRDBManagedAssetRepository(writer: writer)
         settings = GRDBSettingsStore(writer: writer)
         transactions = GRDBLibraryTransactionRunner(writer: writer)
+        deletions = GRDBLibraryDeletionRepository(writer: writer)
     }
 }

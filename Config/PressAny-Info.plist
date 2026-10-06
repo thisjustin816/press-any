@@ -6,6 +6,12 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- A Press Any folder in Files, holding Documents: exports and backups. The library itself
+	     lives in Application Support, which Files never shows. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -128,7 +134,5 @@
 			</dict>
 		</dict>
 	</array>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<false/>
 </dict>
 </plist>
