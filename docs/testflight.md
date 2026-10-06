@@ -84,8 +84,9 @@ then choose **New repository secret** for each row:
 
 Keep the two private keys out of chat, commits, workflow logs and downloadable
 Actions artifacts. Add these as repository secrets, not environment secrets.
-The workflow has `contents: read` and is manually dispatched from `main` only;
-review changes to it and `Scripts/upload-testflight.sh` before merging them.
+The workflow has `contents: read` and is manually dispatched from a branch in this
+repository, including feature branches. Review the selected branch's workflow and
+`Scripts/upload-testflight.sh` before running them with signing secrets.
 
 To convert a downloaded binary file without a Mac, run this in PowerShell and
 paste the clipboard value into the matching GitHub secret:
@@ -101,10 +102,22 @@ before running the next command. A helper can also convert the `.cer` and
 
 ## 6. Upload a build
 
-After the workflow is merged into `main`, open **Actions → TestFlight → Run
-workflow**, select `main`, and run it. Start from a commit whose **CI** and
+Open **Actions → TestFlight → Run workflow**, select the branch to test, and run
+it. Feature branches can upload before merging; `main` remains available for
+release builds. The workflow must exist on the default branch for GitHub to offer
+manual dispatch, and the selected branch supplies the workflow and app source.
+Start from app changes whose **CI** and
 **iOS build** checks passed. No signing secret is needed for those checks or for
 screenshots.
+
+To queue a feature branch from the GitHub CLI:
+
+```bash
+gh workflow run testflight.yml --repo thisjustin816/press-any --ref fix/shared-files-playtiles
+```
+
+The Actions run name includes the selected branch. Tags and automatic events do
+not run the upload job. Uploads share one queue across branches.
 
 The upload workflow bootstraps the generated project and SameBoy boot ROMs,
 imports the certificate into a temporary keychain, installs the provisioning
@@ -166,7 +179,7 @@ need an iPad screenshot set. Capturing screenshots does not upload them to Apple
 
 | Symptom | What to check |
 |---|---|
-| TestFlight job is skipped | Dispatch it from `main` |
+| TestFlight job is skipped | Manually dispatch it from a repository branch, not a tag |
 | `Missing ...` | The matching repository secret is present with the exact name |
 | OpenSSL rejects the certificate or key | `.cer` is Apple's original DER file; the private key matches the CSR used for it |
 | No matching provisioning profile / signing identity | Profile includes this certificate, is for `com.thisjustin816.PressAny`, and is App Store distribution; regenerate expired credentials |

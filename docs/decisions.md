@@ -3,6 +3,14 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: TestFlight can test feature branches before merge
+
+The manual TestFlight workflow accepts repository branches, including feature
+branches, so the owner can verify fixes on an iPhone before merging them. The
+selected branch supplies the app and workflow; review its release scripts before
+dispatch because the upload uses signing secrets. Tags and automatic events skip
+the upload job. All branches share the existing upload queue and build numbering.
+
 ## 2026-10-05: Shared ROMs and patches, and Playtiles direction zones
 
 Incoming `.gb`, `.gbc`, `.ips` and `.bps` files use iOS document handoff into the
