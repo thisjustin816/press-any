@@ -6,10 +6,10 @@ specs where they conflict; update the spec it touches in the same change.
 ## 2026-10-06: Regional releases and No-Intro families
 
 No-Intro's GB/GBC data, normalized by the `no-intro-update.yml` pipeline (`later 11`), gives each
-known dump a canonical name, region, language, revision, status
-flags and a parent/clone family. Imports matched by hash take those values from the dump ahead of
-the filename, and a family's releases group under one Game even when their titles differ by
-region, as Q156 and Q157 already require. Bundling the data waits on confirming its license.
+known dump a canonical name, region, language, revision, status flags and a parent/clone family.
+Imports matched by hash take those values from the dump ahead of the filename, and a family's
+releases group under one Game even when their titles differ by region, as Q156 and Q157 already
+require. Bundling the data waits on confirming its license.
 
 Regional releases also need:
 - a preferred region and language order, USA, Europe, Japan by default, that picks a Game's
