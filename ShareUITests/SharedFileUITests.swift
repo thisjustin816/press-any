@@ -171,12 +171,11 @@ final class SharedFileUITests: XCTestCase {
 
     private func replace(_ field: XCUIElement, with value: String) {
         expect(field)
-        field.tap()
-        field.press(forDuration: 1.2)
-        let selectAll = app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Select All'")).firstMatch
-        expect(selectAll, message: "the editing menu offers Select All")
-        selectAll.tap()
-        field.typeText(value + "\n")
+        // The edit menu doesn't appear for trailing-aligned fields inside LabeledContent, so clear
+        // with the keyboard. Tapping the trailing edge puts the caret after the text in either alignment.
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        let existing = field.value as? String ?? ""
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count) + value + "\n")
         XCTAssertEqual(field.value as? String, value, "the edited name replaces the whole previous value")
     }
 
