@@ -109,9 +109,11 @@ Every commit on `main` uploads on its own. When the **iOS build** workflow passe
 on a push to `main`, the TestFlight workflow waits for **CI** on the same commit,
 then archives and uploads it. A push that changes only `docs/`, `.github/` or
 Markdown files since the previous upload is skipped. A failed or canceled iOS
-build or CI run uploads nothing. Because GitHub runs a `workflow_run` workflow from
-`main`'s copy, and the job accepts only pushes to this repository's `main`, pull
-requests never reach the signing secrets.
+build or CI run uploads nothing. An iOS build of `main` always runs to the end: a
+newer push waits for it rather than canceling it, so a quick series of merges
+still uploads. Only pull-request builds are replaced by a newer push. Because
+GitHub runs a `workflow_run` workflow from `main`'s copy, and the job accepts only
+pushes to this repository's `main`, pull requests never reach the signing secrets.
 
 To upload a feature branch before merging, open **Actions → TestFlight → Run
 workflow**, select the branch and run it. The selected branch supplies the

@@ -15,9 +15,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request replaces its running build. On main every build runs to the end,
+# because the TestFlight workflow uploads only a build that succeeded; cancelling one for the next
+# merge left nothing to upload. A newer main push waits its turn instead.
 concurrency:
   group: ios-build-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   shared-file-ui:
