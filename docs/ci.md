@@ -30,7 +30,7 @@ Every job that builds the package checks out submodules, because SameBoy is one.
 Add each new test target to one of the layer filters in `ci.yml`; the coverage job fails until it
 is listed.
 
-## Not verified
+## Simulator coverage and device checks
 
 `ios-build.yml` builds the app and runs the app and package tests on the iPhone 17 Pro
 simulator. The hosted `PressAnyTests` launch the app and check its display name and bundled

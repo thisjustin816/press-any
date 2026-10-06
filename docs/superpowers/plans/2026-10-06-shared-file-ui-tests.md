@@ -24,10 +24,10 @@
 
 **Interfaces:** Sender buttons are fixture filenames; `UIActivityViewController(activityItems: [url], applicationActivities: nil)` owns delivery. App isolation uses launch arguments `-UITestLibrary <UUID>`. The scheme is `PressAnyShareTests`; the CI command is `make test-share-ui`.
 
-- [ ] Add the sender and UI target, with the existing revision-pair ROM and IPS/BPS fixtures and dual-mode GBC ROM as sender resources.
-- [ ] Add `testSharedGBReviewCancellationAndImport`, `testSharedGBCQuickPlayQueuesROMUntilSessionCloses`, `testSharedIPSRefreshesOpenGameDetails`, `testSharedBPSRefreshesOpenGameDetails`, `testPatchWaitsForLibraryGameplayToClose`, and `testSharedPatchCancellationKeepsOriginalBuild`.
-- [ ] Install the sender on the selected simulator, then run `xcodebuild test -scheme PressAnyShareTests -parallel-testing-enabled NO` and retain the xcresult.
-- [ ] Run syntax parsing, shellcheck, YAML validation and repository hygiene before pushing the tests to PR #18.
+- [x] Add the sender and UI target, with the existing revision-pair ROM and IPS/BPS fixtures and dual-mode GBC ROM as sender resources.
+- [x] Add `testSharedGBReviewCancellationAndImport`, `testSharedGBCQuickPlayQueuesROMUntilSessionCloses`, `testSharedIPSRefreshesOpenGameDetails`, `testSharedBPSRefreshesOpenGameDetails`, `testPatchWaitsForLibraryGameplayToClose`, and `testSharedPatchCancellationKeepsOriginalBuild`.
+- [x] Install the sender on the selected simulator, then run `xcodebuild test -scheme PressAnyShareTests -parallel-testing-enabled NO` and retain the xcresult.
+- [x] Run syntax parsing, shellcheck, YAML validation and repository hygiene before pushing the tests to PR #18.
 
 ### Task 2: Coverage proof and documentation
 

@@ -8,6 +8,8 @@ results="${SHARE_UI_RESULTS:-build/share-ui}"
 mkdir -p "$results"
 results="$(cd "$results" && pwd)"
 derived_data="$results/DerivedData"
+rm -rf "$results/share-ui.xcresult" "$results/refresh-control.xcresult"
+rm -f "$results/refresh-control.log"
 udid="$(xcrun simctl list devices available -j | python3 -c '
 import json, sys
 name = sys.argv[1]

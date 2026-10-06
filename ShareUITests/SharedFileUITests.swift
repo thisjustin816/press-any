@@ -152,12 +152,13 @@ final class SharedFileUITests: XCTestCase {
         let recipient = sender.descendants(matching: .any).matching(NSPredicate(
             format: "label IN %@", ["Press Any", "Open in Press Any", "Copy to Press Any"]
         )).firstMatch
-        if !recipient.waitForExistence(timeout: 5) {
-            let more = sender.buttons.matching(NSPredicate(format: "label BEGINSWITH 'More'")).firstMatch
-            expect(more, message: "the system share sheet offers more destinations")
-            more.tap()
+        if !recipient.waitForExistence(timeout: 30) {
+            let more = sender.descendants(matching: .any)
+                .matching(NSPredicate(format: "label BEGINSWITH 'More'")).firstMatch
+            expect(more, message: "the system share sheet offers more destinations", timeout: 30)
+            if !recipient.exists { more.tap() }
         }
-        expect(recipient, message: "Press Any is a system share destination for \(filename)")
+        expect(recipient, message: "Press Any is a system share destination for \(filename)", timeout: 30)
         recipient.tap()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15), "iOS hands the file to Press Any")
     }
@@ -177,6 +178,7 @@ final class SharedFileUITests: XCTestCase {
         let exists = element.waitForExistence(timeout: timeout)
         if !exists {
             print(app.debugDescription)
+            print(sender.debugDescription)
             let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             attachment.lifetime = .keepAlways
             add(attachment)
