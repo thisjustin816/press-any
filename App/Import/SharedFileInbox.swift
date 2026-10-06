@@ -50,7 +50,7 @@ final class SharedFileInbox {
         default:
             throw SharedFileError.unsupportedFile
         }
-        let filename = url.lastPathComponent
+        let filename = url.lastPathComponent.removingPercentEncoding ?? url.lastPathComponent
         guard !filename.contains("/"), !filename.contains("\\") else { throw SharedFileError.notAFile }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }

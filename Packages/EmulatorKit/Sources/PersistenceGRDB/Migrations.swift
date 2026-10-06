@@ -15,8 +15,31 @@ extension AppDatabase {
         migrator.registerMigration("v1-v4-naming") { db in
             try db.execute(sql: V1V4NamingSchema.sql)
         }
+        migrator.registerMigration("v1-v5-single-base") { db in
+            try db.execute(sql: V1V5SingleBaseSchema.sql)
+        }
         return migrator
     }
+}
+
+enum V1V5SingleBaseSchema {
+    static let sql = #"""
+    UPDATE builds SET is_base = 0
+    WHERE is_base = 1 AND id NOT IN (
+        SELECT id FROM (
+            SELECT builds.id,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY game_id
+                       ORDER BY CASE WHEN builds.id = games.preferred_build_id THEN 0 ELSE 1 END,
+                                builds.created_at DESC, builds.id
+                   ) AS base_rank
+            FROM builds JOIN games ON games.id = builds.game_id
+            WHERE is_base = 1 AND source_kind = 'importedROM'
+        ) WHERE base_rank = 1
+    );
+
+    CREATE UNIQUE INDEX builds_single_base ON builds(game_id) WHERE is_base = 1;
+    """#
 }
 
 enum V1V4NamingSchema {

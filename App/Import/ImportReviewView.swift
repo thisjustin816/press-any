@@ -109,7 +109,7 @@ struct ImportDestinationSection: View {
             } header: {
                 Text("Destination")
             } footer: {
-                Text("A Base Build is a clean, unmodified ROM that patches are applied to. A Game can have one for each revision or region.")
+                Text("A Base Build is the clean, unmodified ROM that patches are applied to. Choosing it replaces this Game’s previous Base Build.")
             }
             Section {
                 metadataField("Region", text: $model.region)

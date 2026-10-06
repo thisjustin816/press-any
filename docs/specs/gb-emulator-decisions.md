@@ -1306,7 +1306,7 @@ Locked: concise Build names such as Original, v0.95, Debug 43; title/author/vers
 Locked: clean/original ROM is explicitly marked Base Build, remains playable, and anchors patch lineage.
 
 ## Q155: Multiple Base Builds
-Locked: allow multiple bases for region/revision variants, optionally one preferred; every patch recipe records exact base hash/build.
+Superseded 2026-10-06: a Game has at most one Base Build. Choosing a replacement demotes the previous one; every patch recipe still records its exact source Build and hash.
 
 ## Q156: Region/language variants
 Locked: normally group fundamentally same title as one Game with region/language Build properties; user may separate. No-Intro relationships are high-confidence evidence but not identical to the app's semantic Game model.

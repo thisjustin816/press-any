@@ -121,6 +121,14 @@ public struct ImportCommitter: Sendable {
                     preconditionFailure("Handled before transaction")
                 }
 
+                if plan.markAsBase {
+                    try builds.demoteOtherBaseBuilds(
+                        gameID: game.id,
+                        keeping: nil,
+                        modifiedAt: timestamp
+                    )
+                }
+
                 let build = Build(
                     id: makeID(),
                     gameID: game.id,

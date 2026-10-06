@@ -6,6 +6,62 @@ import Testing
 
 @Suite("GRDB migrations")
 struct MigrationTests {
+    @Test("existing Base markers collapse to one and the database enforces that role")
+    func singleBaseUpgrade() throws {
+        let database = try AppDatabase.inMemory()
+        try AppDatabase.migrator.migrate(database.writer, upTo: "mvp-v3")
+        let assetID = PersistenceCodec.uuid(UUID())
+        let olderDate = PersistenceCodec.date(Date(timeIntervalSince1970: 1_700_000_000))
+        let newerDate = PersistenceCodec.date(Date(timeIntervalSince1970: 1_700_000_001))
+        let fixtures = [true, false].map { prefersOlder in
+            (game: UUID(), older: UUID(), newer: UUID(), prefersOlder: prefersOlder)
+        }
+        try database.writer.write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO managed_assets
+                (id, kind, storage_class, content_sha256, byte_length, relative_path, integrity_status, created_at)
+                VALUES (?, 'sourceROM', 'source', ?, 1, 'Source/ROM/example.rom', 'verified', ?)
+                """,
+                arguments: [assetID, String(repeating: "a", count: 64), olderDate]
+            )
+            for fixture in fixtures {
+                let gameID = PersistenceCodec.uuid(fixture.game)
+                try db.execute(
+                    sql: """
+                    INSERT INTO games (id, primary_title, system_family, preferred_build_id, created_at, modified_at)
+                    VALUES (?, 'Example', 'gameboy', ?, ?, ?)
+                    """,
+                    arguments: [gameID, fixture.prefersOlder ? PersistenceCodec.uuid(fixture.older) : nil, olderDate, olderDate]
+                )
+                for (id, hash, date) in [(fixture.older, "a", olderDate), (fixture.newer, "b", newerDate)] {
+                    try db.execute(
+                        sql: """
+                        INSERT INTO builds
+                        (id, game_id, system, display_name, rom_asset_id, rom_sha256, source_kind, is_base, created_at, modified_at)
+                        VALUES (?, ?, 'gb', 'Example', ?, ?, 'importedROM', 1, ?, ?)
+                        """,
+                        arguments: [PersistenceCodec.uuid(id), gameID, assetID, String(repeating: hash, count: 64), date, date]
+                    )
+                }
+            }
+        }
+
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        for fixture in fixtures {
+            let builds = try repositories.builds.fetchBuilds(gameID: fixture.game)
+            #expect(builds.count == 2)
+            #expect(builds.filter(\.isBase).map(\.id) == [fixture.prefersOlder ? fixture.older : fixture.newer])
+            let demoted = try #require(builds.first { !$0.isBase })
+            #expect(throws: (any Error).self) {
+                try database.writer.write { db in
+                    try db.execute(sql: "UPDATE builds SET is_base = 1 WHERE id = ?", arguments: [PersistenceCodec.uuid(demoted.id)])
+                }
+            }
+        }
+    }
+
     @Test("a populated first-version library migrates with its rows intact")
     func populatedV1Upgrade() throws {
         let database = try AppDatabase.inMemory()

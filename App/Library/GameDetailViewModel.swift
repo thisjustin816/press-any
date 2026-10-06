@@ -152,6 +152,17 @@ final class GameDetailViewModel: ObservableObject {
         perform { try buildOperations.setPreferredBuild(gameID: gameID, buildID: build.id) }
     }
 
+    func rename(_ build: Build, to displayName: String) {
+        do {
+            try buildOperations.renameBuild(buildID: build.id, displayName: displayName)
+            reload()
+        } catch BuildOperationError.invalidBuildName {
+            errorMessage = "A Build name can’t be blank."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     /// Sharing a profile between Builds is this choice: each Build names the profile it plays.
     func setDefaultProfile(_ profile: SaveProfile?, for build: Build) {
         perform { try buildOperations.setPreferredSaveProfile(buildID: build.id, profileID: profile?.id) }

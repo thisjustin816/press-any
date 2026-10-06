@@ -172,6 +172,32 @@ final class ROMImportTests: XCTestCase {
         XCTAssertEqual(try harness.toolchainReports.fetchReports(buildID: second.build.id).first?.components.map(\.name), ["Turbo Rascal Syntax Error"])
     }
 
+    func testImportingANewBaseBuildDemotesThePreviousBase() throws {
+        let harness = try ImportHarness.make()
+        let first = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(
+                at: harness.writeExternalROM(TestROM.make(title: "FIRST", payloadByte: 1)),
+                targetGameID: nil
+            ),
+            disposition: .createGame(title: "Example"),
+            buildDisplayName: "1.0",
+            markAsBase: true
+        ))
+        let second = try harness.committer.commit(ROMImportPlan(
+            analysis: try harness.analyzer.analyzeROM(
+                at: harness.writeExternalROM(TestROM.make(title: "SECOND", payloadByte: 2)),
+                targetGameID: first.game.id
+            ),
+            disposition: .addBuild(gameID: first.game.id),
+            buildDisplayName: "2.0",
+            markAsBase: true
+        ))
+
+        let bases = try harness.builds.fetchBuilds(gameID: first.game.id).filter(\.isBase)
+        XCTAssertEqual(bases.map(\.id), [second.build.id])
+        XCTAssertEqual(try harness.builds.fetchBuild(id: first.build.id)?.isBase, false)
+    }
+
     func testImportingTheSameROMAgainRepairsADamagedSourceFile() throws {
         let harness = try ImportHarness.make()
         let romURL = try harness.writeExternalROM(TestROM.make(title: "REPAIR", cgb: false))

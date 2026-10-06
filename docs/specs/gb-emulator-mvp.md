@@ -100,7 +100,7 @@ and Technical Info shows the stored values. Unknown tags are not guessed. Quick 
 uses the original picked filename. Duplicate imports do not overwrite existing Build metadata
 (`docs/decisions.md`, 2026-10-05).
 
-A Game may have multiple Base Builds for revisions/regions.
+A Game may have at most one Base Build. Marking or importing a replacement demotes the previous Base Build; existing patch recipes retain their exact source Build and hash.
 
 ### SaveProfile
 Stable UUID, Game association, display name, optional icon/badge, current battery-save asset, optional ancestry (`copiedFromProfileID`), RTC context where required, aggregate play statistics, and narrow playthrough-specific settings.
@@ -148,7 +148,7 @@ Exact duplicate ROM must not create a second blob or Build accidentally.
 ## Build operations MVP
 - Add imported ROM as Build of existing Game.
 - Set Preferred Build.
-- Mark one or more Base Builds.
+- Mark one Base Build, replacing the previous Base Build when necessary.
 - Promote Build to separate Game: Move or Copy, default Move.
 - Merge standalone Game into another Game: Move or Copy Builds with review.
 - Preserve lineage and Build-scoped data.
@@ -228,7 +228,7 @@ Do not block the MVP on: iCloud, Community Catalog, automatic artwork providers,
 1. Import same ROM twice -> one content blob; no accidental duplicate Build.
 2. Import modified ROM -> attach as second Build of same Game -> Game UUID unchanged.
 3. Promote Build to Game and merge it back -> lineage/data preserved.
-4. Multiple region/revision Base Builds coexist without hash confusion.
+4. Marking or importing a new Base Build demotes the previous one without changing existing patch recipes.
 5. Duplicate Save Profile -> source bytes unchanged after target gameplay writes.
 6. Two Builds intentionally share one Save Profile -> battery save shared; save states remain distinct.
 7. Quick Play with copied library save -> source save hash remains unchanged after session.

@@ -187,7 +187,6 @@ files staged.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | partial | Import-Review-style inheritance step (artwork, docs, tags, compatible profiles; deselectable) on promote/merge | v1 (mvp says merge "with review") | Q83/Q84 | review sheet copies artwork and chosen Save Profiles; docs and tags don't exist yet |
-| missing | Preferred Base Build among several | v1 | Q155 (optional) |  |
 | missing | Lightweight Build timeline (versions, hashes, parents, notes, import/activation history) | v1 | prod "Game/Build restructuring" |  |
 | missing | Build comparison (changed bytes/ranges, size, banks, header) | v1 | dec 5 |  |
 
@@ -195,7 +194,8 @@ Done: Make Separate Game: Move/Copy, default Move, Build UUID/blob preserved, Bu
 follows; Merge into Game: Move/Copy, lineage/recipes remapped; Same image already in target: Copy
 skips, Move refused naming the Builds; Profiles/artwork/preferences follow when the source Game is
 emptied or merged away; Promoted Game records the Game it split from (Split From), kept by title
-once that Game is gone; Mark or unmark imported Builds as Base Builds after import.
+once that Game is gone; Mark or unmark imported Builds as Base Builds after import, with a new Base
+automatically replacing the previous one; rename a Build from its long-press menu.
 
 ### Patching
 
@@ -222,7 +222,8 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | Save Profile locking | later | dec 9/33 |  |
 
 Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play
-once changed, at most every five seconds of play; Compatible Builds share a profile on purpose; New
+once changed, at most every five seconds of play and off the frame-pacing queue; Compatible Builds
+share a profile on purpose; New
 blank profile; duplicate profile (bytes copied, ancestry shown); Import .sav into a new profile,
 or into an existing one after confirming, keeping its old save as "<name> before import";
 Variable maps (GB Studio globals, RGBDS .sym, GBDK .noi) kept on the exact Build; Each profile

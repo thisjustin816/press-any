@@ -53,7 +53,8 @@ public struct FilenameMetadata: Equatable, Sendable {
 
 public enum FilenameMetadataParser {
     public static func parse(filename: String) -> FilenameMetadata {
-        let base = (filename as NSString).deletingPathExtension
+        let decodedFilename = filename.removingPercentEncoding ?? filename
+        let base = (decodedFilename as NSString).deletingPathExtension
         let parenthetical = captures(in: base, pattern: #"\(([^()]*)\)"#)
         let bracketed = captures(in: base, pattern: #"\[([^\[\]]*)\]"#)
         let metadataStart = [base.firstIndex(of: "("), base.firstIndex(of: "[")]
@@ -77,6 +78,17 @@ public enum FilenameMetadataParser {
         var isHack = false
         var recognizedGroups = Set<String>()
         for group in parenthetical + bracketed {
+            if let parts = firstMatchGroups(
+                in: group,
+                pattern: #"(?i)^\s*(.+?\b(?:hack|patch|fix|translation|mod)\b.*?)\s+by\s+(.+?)\s+v([0-9]+(?:\.[0-9]+){0,3})\s*$"#
+            ), parts.count == 3 {
+                hackTitle = hackTitle ?? parts[0]
+                author = author ?? parts[1]
+                version = version ?? parts[2]
+                isHack = true
+                recognizedGroups.insert(group)
+                continue
+            }
             let tokens = group.split(separator: ",", omittingEmptySubsequences: false)
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             if !tokens.isEmpty && tokens.allSatisfy({ regions.contains($0) }) {
@@ -185,7 +197,7 @@ public enum FilenameMetadataParser {
         }
         let suggestedBuildName = buildName(for: releaseKind, metadata: metadata)
         let normalizedFilename = canonicalFilename(
-            fileExtension: (filename as NSString).pathExtension.lowercased(),
+            fileExtension: (decodedFilename as NSString).pathExtension.lowercased(),
             title: cleanTitle,
             metadata: metadata,
             unknownGroups: unknownGroups
@@ -258,6 +270,16 @@ public enum FilenameMetadataParser {
 
     private static func firstCapture(in value: String, patterns: [String]) -> String? {
         patterns.lazy.compactMap { captures(in: value, pattern: $0).first }.first
+    }
+
+    private static func firstMatchGroups(in value: String, pattern: String) -> [String]? {
+        guard let expression = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(value.startIndex..<value.endIndex, in: value)
+        guard let match = expression.firstMatch(in: value, range: range) else { return nil }
+        return (1..<match.numberOfRanges).compactMap { index in
+            guard let captureRange = Range(match.range(at: index), in: value) else { return nil }
+            return String(value[captureRange])
+        }
     }
 
     private static func captures(in value: String, pattern: String) -> [String] {

@@ -47,7 +47,7 @@ Stable user-facing identity. Owns metadata, aliases, collections/tags, default a
 Exact executable ROM identity. Immutable ROM hash. May be imported complete ROM or generated from Base Build + patch recipe. Stores region/language/revision/version, lineage, toolchain detection, preferred Save Profile, core pin, settings overrides, optional artwork/docs overrides, notes and per-Build playtime.
 
 ### Base Builds
-A Game may have multiple bases (regions/revisions). Patch recipes always reference exact base hash.
+A Game has at most one current base. Choosing a new Base Build demotes the previous one. Patch recipes keep their exact source Build and hash even after that change.
 
 ### Save Profile
 Named playthrough battery save. Manually creatable: blank, duplicate, import `.sav`, Quick Play promotion, future migration. Flat list with subtle ancestry. One current battery save per profile. Narrow overrides for cheats/RTC/autoresume/rewind where appropriate. Per-profile playtime/last played/session count.

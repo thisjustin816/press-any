@@ -11,12 +11,16 @@ final class GameplayDriver: @unchecked Sendable {
     private let runtime: any GameplayRuntime
     private let input: GameplayInputAccumulator
     private let queue = DispatchQueue(label: "Gameplay.Driver", qos: .userInteractive)
+    private let saveQueue = DispatchQueue(label: "Gameplay.Save", qos: .utility)
     private let stateLock = NSLock()
+    private let saveStateLock = NSLock()
+    private let savePollNanoseconds: UInt64
 
     private var running = false
     private var requestedSpeed: EmulationSpeed = .normal
-    /// Read and written only on the driver queue.
+    /// Read and written only on the save queue.
     private var lastSaveFailed = false
+    private var saveCheckInFlight = false
 
     var onFrame: FrameHandler?
     var onAudio: AudioHandler?
@@ -26,9 +30,14 @@ final class GameplayDriver: @unchecked Sendable {
     /// check tries again.
     var onSaveError: ErrorHandler?
 
-    init(runtime: any GameplayRuntime, input: GameplayInputAccumulator) {
+    init(
+        runtime: any GameplayRuntime,
+        input: GameplayInputAccumulator,
+        savePollNanoseconds: UInt64 = 1_000_000_000
+    ) {
         self.runtime = runtime
         self.input = input
+        self.savePollNanoseconds = savePollNanoseconds
     }
 
     /// Whether the frame loop is running. It stops on its own when a frame fails.
@@ -50,6 +59,7 @@ final class GameplayDriver: @unchecked Sendable {
     func stop() {
         stateLock.withLock { running = false }
         queue.sync {}
+        saveQueue.sync {}
     }
 
     func setSpeed(_ speed: EmulationSpeed) {
@@ -63,10 +73,15 @@ final class GameplayDriver: @unchecked Sendable {
 
     private func runLoop() {
         var pacer = FramePacer(start: DispatchTime.now().uptimeNanoseconds)
+        var emulatedNanosecondsSinceSavePoll: UInt64 = 0
         while stateLock.withLock({ running }) {
             do {
                 let frame = try runtime.stepFrame(input: input.current())
-                flushGameSave()
+                emulatedNanosecondsSinceSavePoll &+= frame.emulatedNanoseconds
+                if emulatedNanosecondsSinceSavePoll >= savePollNanoseconds {
+                    emulatedNanosecondsSinceSavePoll = 0
+                    scheduleGameSave()
+                }
                 let samples = try runtime.drainAudio(maxFrames: 4096)
                 let rumble = try runtime.consumeRumbleAmplitude()
 
@@ -82,12 +97,24 @@ final class GameplayDriver: @unchecked Sendable {
         }
     }
 
-    private func flushGameSave() {
-        do {
-            if try runtime.flushBatteryIfChanged() { lastSaveFailed = false }
-        } catch {
-            if !lastSaveFailed { onSaveError?(error) }
-            lastSaveFailed = true
+    /// Persistence can touch the filesystem and database. Keep it off the frame-pacing queue so a
+    /// game that updates SRAM during play cannot hitch every time its periodic save is written.
+    private func scheduleGameSave() {
+        let shouldSchedule = saveStateLock.withLock { () -> Bool in
+            guard !saveCheckInFlight else { return false }
+            saveCheckInFlight = true
+            return true
+        }
+        guard shouldSchedule else { return }
+        saveQueue.async { [weak self] in
+            guard let self else { return }
+            defer { self.saveStateLock.withLock { self.saveCheckInFlight = false } }
+            do {
+                if try self.runtime.flushBatteryIfChanged() { self.lastSaveFailed = false }
+            } catch {
+                if !self.lastSaveFailed { self.onSaveError?(error) }
+                self.lastSaveFailed = true
+            }
         }
     }
 

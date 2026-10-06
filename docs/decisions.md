@@ -5,16 +5,22 @@ specs where they conflict; update the spec it touches in the same change.
 
 ## 2026-10-06: Shared files open over a running game
 
-A ROM or patch shared to the app mid-game opens over the game rather than waiting for it to
-close. The game pauses as it does for the game menu and stays paused when the sheet closes, so the
-player resumes it. Import Review and Open Patch work as they do from the library. Quick Play from
-that sheet reads "Close Game and Quick Play": the running game closes the normal way, saving
-first, and a closing Quick Play session still shows its Keep for Later sheet before the shared ROM
-starts. Choosing Resume on that sheet drops the shared ROM instead. This replaces the wait for
-active gameplay in the 2026-10-05 shared-files entry.
+A ROM or patch shared to the app mid-game opens over the game. The game pauses as it does for the
+game menu and stays paused when the sheet closes, so the player resumes it. Import Review and Open
+Patch work as they do from the library. Quick Play from that sheet reads "Close Game and Quick
+Play": the running game closes the normal way, saving first, and a closing Quick Play session still
+shows its Keep for Later sheet before the shared ROM starts. Choosing Resume on that sheet drops the
+shared ROM instead. This replaces the wait for active gameplay in the 2026-10-05 shared-files entry.
 
 Import Review lists the destination and Build details first, as Quick Play promotion does, so
 choosing an existing Game comes before the ROM details.
+
+## 2026-10-06: A Game has at most one Base Build
+
+**Decision.** Base Build is a single role within a Game, not a tag shared by region or revision
+variants. Marking or importing a new Base Build automatically demotes the previous one. A hack-only
+Game may still have no Base Build, and every existing patch recipe continues to name its exact
+source Build and hash.
 
 ## 2026-10-06: New Build roles are reviewable suggestions
 
@@ -243,7 +249,9 @@ behaves as follows:
 
 - **In-game saves reach disk during play.** The game's battery save is written once it changes,
   checked at most every five seconds of play, in library sessions and Quick Play alike. A crash or
-  a killed app loses at most those few seconds of in-game saving.
+  a killed app loses at most those few seconds of in-game saving. Periodic persistence runs on a
+  separate serial queue so file and database writes do not stall frame pacing; pause and close wait
+  for an outstanding write before touching the runtime.
 - **Background and close attempt every save step.** A failed battery write no longer skips the
   Auto State, which is then the way back to that progress. When a close fails, the game stays open
   so the save can be retried, or closed without saving.
@@ -404,7 +412,7 @@ title stays after the source Game is deleted. Promoting a Game's only Build by M
 Game, so it records no lineage.
 
 A Build's menu also has Mark as Base Build / Unmark as Base Build, for imported Builds. A Game
-can have several Base Builds, one per region or revision.
+has at most one Base Build; see "2026-10-06: A Game has at most one Base Build".
 
 ## 2026-10-04: Importing a .sav into an existing profile keeps a copy
 

@@ -86,6 +86,24 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.normalizedFilename, "Base Game - Nueva [v1.0] [Spa Translation].gb")
     }
 
+    func testPercentEncodedDescriptiveHackNameIsDecodedAndSplitIntoFields() {
+        let parsed = FilenameMetadataParser.parse(
+            filename: "Bubble%20Bobble%20Part%202%20(USA,%20Europe)%20[Tearing%20fix%20&%20save%20patch%20by%20thisJUSTin816%20v1.1].gb"
+        )
+
+        XCTAssertEqual(parsed.releaseKind, .romHack)
+        XCTAssertEqual(parsed.suggestedTitle, "Tearing fix & save patch")
+        XCTAssertEqual(parsed.suggestedBuildName, "v1.1")
+        XCTAssertEqual(parsed.buildMetadata.baseTitle, "Bubble Bobble Part 2")
+        XCTAssertEqual(parsed.buildMetadata.hackTitle, "Tearing fix & save patch")
+        XCTAssertEqual(parsed.buildMetadata.author, "thisJUSTin816")
+        XCTAssertEqual(parsed.buildMetadata.versionString, "1.1")
+        XCTAssertEqual(
+            parsed.normalizedFilename,
+            "Bubble Bobble Part 2 - Tearing fix & save patch (USA, Europe) [v1.1] [by thisJUSTin816].gb"
+        )
+    }
+
     func testNumericVersionKeysOrderNumericallyAndNormalizeTrailingZeroes() throws {
         let key = { (version: String) in BuildImportMetadata(versionString: version).versionSortKey }
         XCTAssertLessThan(try XCTUnwrap(key("1.2")), try XCTUnwrap(key("1.10")))

@@ -40,6 +40,8 @@ struct GameDetailView: View {
     @State private var badgeTarget: SaveProfile?
     @State private var badgeText = ""
     @State private var deletionTarget: SaveProfile?
+    @State private var renamingBuild: Build?
+    @State private var buildName = ""
 
     private struct SettingsTarget: Identifiable {
         let id = UUID()
@@ -319,6 +321,14 @@ struct GameDetailView: View {
 
     private func withAlerts(_ content: some View) -> some View {
         content
+            .alert("Rename Build", isPresented: Binding(
+                get: { renamingBuild != nil },
+                set: { if !$0 { renamingBuild = nil } }
+            ), presenting: renamingBuild) { build in
+                TextField("Build Name", text: $buildName)
+                Button("Rename") { model.rename(build, to: buildName) }
+                Button("Cancel", role: .cancel) {}
+            }
             .alert("New Save Profile", isPresented: $showNewProfile) {
                 TextField("Name", text: $newProfileName)
                 Button("Create") {
@@ -418,6 +428,10 @@ struct GameDetailView: View {
         }
         Button("Set as Preferred") { model.setPreferredBuild(build) }
         Divider()
+        Button("Rename Build…") {
+            buildName = build.displayName
+            renamingBuild = build
+        }
         Button("Technical Info…") { technicalInfo = build }
         Button("Build Settings…") {
             settingsTarget = SettingsTarget(
