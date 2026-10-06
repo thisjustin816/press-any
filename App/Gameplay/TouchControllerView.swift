@@ -239,14 +239,14 @@ final class TouchControllerView: UIView {
 
     /// A Game Boy's D-pad: a cross, each pressed arm darker.
     private func drawCrossDPad(_ touchRect: TouchRect, input: EmulatorInputState, palette: ControllerPalette, in context: CGContext) {
-        let rect = cgRect(touchRect)
+        let pressed = input.up || input.down || input.left || input.right
+        let rect = cgRect(touchRect).offsetBy(dx: 0, dy: pressed ? Self.pressDepth : 0)
         let arm = rect.width / 3
         let corner = arm * 0.18
-        let path = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: arm), cornerRadius: corner)
-        path.append(UIBezierPath(roundedRect: rect.insetBy(dx: arm, dy: 0), cornerRadius: corner))
-        context.setFillColor(palette.dpad.cgColor)
-        context.addPath(path.cgPath)
-        context.fillPath()
+        // One outline, so the rim follows the cross's edge and not the two bars inside it.
+        let path = UIBezierPath(cgPath: UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: arm), cornerRadius: corner).cgPath
+            .union(UIBezierPath(roundedRect: rect.insetBy(dx: arm, dy: 0), cornerRadius: corner).cgPath))
+        drawRaised(path, top: lighter(palette.dpad), bottom: palette.dpad, pressedFace: palette.dpad, pressed: pressed, palette: palette, in: context)
 
         let arms: [(CGRect, Bool)] = [
             (CGRect(x: rect.minX + arm, y: rect.minY, width: arm, height: arm), input.up),
@@ -277,8 +277,9 @@ final class TouchControllerView: UIView {
             (CGPoint(x: rect.maxX - diameter / 2, y: rect.midY), input.right),
         ]
         for (center, pressed) in centers {
-            context.setFillColor((pressed ? palette.dpadPressed : palette.dpad).cgColor)
-            context.fillEllipse(in: CGRect(x: center.x - diameter / 2, y: center.y - diameter / 2, width: diameter, height: diameter))
+            let circle = CGRect(x: center.x - diameter / 2, y: center.y - diameter / 2, width: diameter, height: diameter)
+                .offsetBy(dx: 0, dy: pressed ? Self.pressDepth : 0)
+            drawRaised(UIBezierPath(ovalIn: circle), top: lighter(palette.dpad), bottom: palette.dpad, pressedFace: palette.dpadPressed, pressed: pressed, palette: palette, in: context)
         }
     }
 
@@ -303,16 +304,8 @@ final class TouchControllerView: UIView {
     private func drawRoundButton(_ control: TouchControl, label: String?, active: Bool, palette: ControllerPalette, in context: CGContext) {
         guard let touchRect = resolver.layout.drawnRect(control) else { return }
         let rect = cgRect(touchRect)
-        context.saveGState()
-        context.addEllipse(in: rect)
-        context.clip()
-        if active {
-            context.setFillColor(palette.buttonPressed.cgColor)
-            context.fill(rect)
-        } else {
-            fillVerticalGradient(rect, from: palette.buttonTop, to: palette.buttonBottom, in: context)
-        }
-        context.restoreGState()
+        let face = rect.offsetBy(dx: 0, dy: active ? Self.pressDepth : 0)
+        drawRaised(UIBezierPath(ovalIn: face), top: palette.buttonTop, bottom: palette.buttonBottom, pressedFace: palette.buttonPressed, pressed: active, palette: palette, in: context)
         guard let label else { return }
         drawLettering(label, size: 15, at: CGPoint(x: rect.midX, y: rect.midY), distance: rect.height / 2 + 5, tilt: buttonTilt, in: context, palette: palette)
     }
@@ -328,22 +321,19 @@ final class TouchControllerView: UIView {
         context.translateBy(x: origin.x, y: origin.y)
         context.rotate(by: tilt)
         let pill = CGRect(x: -rect.width / 2, y: -rect.height / 2, width: rect.width, height: rect.height)
-        context.setFillColor((active ? palette.pillPressed : palette.pill).cgColor)
-        context.addPath(UIBezierPath(roundedRect: pill, cornerRadius: pill.height / 2).cgPath)
-        context.fillPath()
+            .offsetBy(dx: 0, dy: active ? Self.pressDepth : 0)
+        drawRaised(UIBezierPath(roundedRect: pill, cornerRadius: pill.height / 2), top: lighter(palette.pill), bottom: palette.pill, pressedFace: palette.pillPressed, pressed: active, palette: palette, in: context)
         context.restoreGState()
         // Just below the tilted pill's lowest point.
         let drop = abs(sin(tilt)) * rect.width / 2 + cos(tilt) * rect.height / 2
         drawLettering(label, size: 11, at: origin, distance: drop + 4, tilt: 0, in: context, palette: palette)
     }
 
-    /// A flat pill with its label inside, as in the Playtiles artwork.
+    /// A pill with its label inside, as in the Playtiles artwork.
     private func drawPill(_ touchRect: TouchRect?, label: String, active: Bool, palette: ControllerPalette, in context: CGContext) {
         guard let touchRect else { return }
-        let rect = cgRect(touchRect)
-        context.setFillColor((active ? palette.pillPressed : palette.pill).cgColor)
-        context.addPath(UIBezierPath(roundedRect: rect, cornerRadius: rect.height / 2).cgPath)
-        context.fillPath()
+        let rect = cgRect(touchRect).offsetBy(dx: 0, dy: active ? Self.pressDepth : 0)
+        drawRaised(UIBezierPath(roundedRect: rect, cornerRadius: rect.height / 2), top: lighter(palette.pill), bottom: palette.pill, pressedFace: palette.pillPressed, pressed: active, palette: palette, in: context)
         let string = NSAttributedString(string: label, attributes: [
             .font: UIFont.systemFont(ofSize: max(9, rect.height * 0.36), weight: .bold),
             .kern: 1.0,
@@ -374,6 +364,53 @@ final class TouchControllerView: UIView {
     private var buttonTilt: CGFloat {
         let layout = resolver.layout
         return atan2(CGFloat(layout.a.center.y - layout.b.center.y), CGFloat(layout.a.center.x - layout.b.center.x))
+    }
+
+    /// How far a pressed control's face sinks, as the menu button's wordmark does.
+    private static let pressDepth: CGFloat = 1
+
+    /// A control raised from the body like the menu button: a face lit from above, a thin rim, and
+    /// a shadow below. Pressed, the face goes flat and the shadow shrinks; callers move the path
+    /// down by `pressDepth` so it sinks too.
+    private func drawRaised(
+        _ path: UIBezierPath,
+        top: UIColor,
+        bottom: UIColor,
+        pressedFace: UIColor,
+        pressed: Bool,
+        palette: ControllerPalette,
+        in context: CGContext
+    ) {
+        context.saveGState()
+        // A shadow offset is in device space, so it falls straight down even on a tilted pill.
+        context.setShadow(
+            offset: CGSize(width: 0, height: pressed ? 1 : 3),
+            blur: 4,
+            color: UIColor.black.withAlphaComponent(pressed ? 0.15 : 0.4).cgColor
+        )
+        context.setFillColor((pressed ? pressedFace : bottom).cgColor)
+        context.addPath(path.cgPath)
+        context.fillPath()
+        context.restoreGState()
+        if !pressed {
+            context.saveGState()
+            context.addPath(path.cgPath)
+            context.clip()
+            fillVerticalGradient(path.bounds, from: top, to: bottom, in: context)
+            context.restoreGState()
+        }
+        context.setStrokeColor(palette.logo.withAlphaComponent(0.35).cgColor)
+        context.setLineWidth(1)
+        context.addPath(path.cgPath)
+        context.strokePath()
+    }
+
+    /// The lit top of a face: `color` moved a little toward white.
+    private func lighter(_ color: UIColor) -> UIColor {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let amount: CGFloat = 0.12
+        return UIColor(red: red + (1 - red) * amount, green: green + (1 - green) * amount, blue: blue + (1 - blue) * amount, alpha: alpha)
     }
 
     private func fillVerticalGradient(_ rect: CGRect, from top: UIColor, to bottom: UIColor, in context: CGContext) {
