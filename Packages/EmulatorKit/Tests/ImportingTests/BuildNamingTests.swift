@@ -15,14 +15,20 @@ final class BuildNamingTests: XCTestCase {
     }
 
     func testADuplicateNameGainsTheDayItWasAdded() {
-        XCTAssertEqual(name("Original", existing: ["original"]), "Original · Oct 6")
+        XCTAssertEqual(name("v1.0", existing: ["V1.0"]), "v1.0 · Oct 6")
+    }
+
+    func testOnlyOneBuildIsEverOriginal() {
+        XCTAssertEqual(name("Original", existing: ["original"]), "2026-10-06")
+        let timed = name("Original", existing: ["Original", "2026-10-06"])
+        XCTAssertTrue(timed.hasPrefix("2026-10-06 ") && timed.contains("12:00"), timed)
     }
 
     func testTheTimeAndThenANumberSeparateBuildsAddedTheSameDay() {
-        let timed = name("Original", existing: ["Original", "Original · Oct 6"])
-        // The locale words the date and time; both are there.
-        XCTAssertTrue(timed.hasPrefix("Original · Oct 6") && timed.contains("12:00"), timed)
-        XCTAssertEqual(name("Original", existing: ["Original", "Original · Oct 6", timed]), "\(timed) (2)")
+        let timed = name("v1.0", existing: ["v1.0", "v1.0 · Oct 6"])
+        // The locale words the time; the day and time are both there.
+        XCTAssertTrue(timed.hasPrefix("v1.0 · Oct 6, ") && timed.contains("12:00"), timed)
+        XCTAssertEqual(name("v1.0", existing: ["v1.0", "v1.0 · Oct 6", timed]), "\(timed) (2)")
     }
 
     func testSuggestionsCoverEscapedFilenameAndDuplicateNamesOnly() throws {
@@ -61,7 +67,7 @@ final class BuildNamingTests: XCTestCase {
 
         XCTAssertEqual(suggestions.map(\.buildID), [escaped.id, duplicate.id])
         // A dotted "Rev" is the homebrew version.
-        XCTAssertEqual(suggestions.map(\.suggestedName), ["v0.2.0", "Original · Oct 8"])
+        XCTAssertEqual(suggestions.map(\.suggestedName), ["v0.2.0", "2026-10-08"])
         XCTAssertEqual(suggestions.first?.currentName, escaped.displayName)
     }
 

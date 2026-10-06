@@ -33,13 +33,14 @@ version. Versions keep a semver prerelease or build suffix such as "-beta.3" or 
 sort with their numeric part. Loose forms such as "r2" or a bare trailing number stay part of the
 title, since names like "R-Type" and "Mega Man 2" look the same.
 
-## 2026-10-06: Repeated Build names gain the date they were added
+## 2026-10-06: Repeated Build names gain when they were added
 
-When a suggested Build name repeats one already in the Game, as "Original" does for files without
-version tags, the suggestion adds the day the Build is added: "Original · Oct 6", then the time for
-Builds added the same day, then a number. Import Review, Quick Play promotion and Open Patch suggest
-names this way, and a name the player typed is left alone. Technical Info shows when a Build was
-added, and a Build whose name another Build shares shows its date and time in the list.
+Only one Build in a Game is ever "Original". A later file without version tags is named for the day
+it is added, "2026-10-06", as date-stamped files are. Any other suggested name that repeats one in
+the Game gains the day: "v1.0 · Oct 6". Both add the time for Builds added the same day, then a
+number. Import Review, Quick Play promotion and Open Patch suggest names this way, and a name the
+player typed is left alone. Technical Info shows when a Build was added, and a Build whose name
+another Build shares shows its date and time in the list.
 
 Suggest Build Names, in the library's view menu, applies the same rules to Builds already in the
 library. It lists only names that look generated: ones still carrying URL escapes, ones that are

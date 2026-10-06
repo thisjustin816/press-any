@@ -3,9 +3,10 @@ import EmulatorDomain
 import Foundation
 
 public enum BuildNaming {
-    /// Returns `name`, or `name` with when the Build was added if another Build in the Game already
-    /// has that name: "Original · Oct 6", then with the time for Builds added the same day, then
-    /// numbered.
+    /// Returns `name`, or a name that tells this Build apart when another Build in the Game already
+    /// has it. Only one Build is ever "Original": a later untagged one is named for the day it was
+    /// added, "2026-10-06", as date-stamped files are. Any other repeated name gains the day,
+    /// "v1.0 · Oct 6". Either then adds the time for Builds added the same day, then a number.
     public static func distinctName(
         _ name: String,
         existing: [String],
@@ -17,14 +18,20 @@ public enum BuildNaming {
         func isFree(_ candidate: String) -> Bool { !taken.contains(candidate.lowercased()) }
         guard !isFree(name) else { return name }
 
-        let style = Date.FormatStyle(locale: locale, timeZone: timeZone).month(.abbreviated).day()
-        let day = "\(name) · \(date.formatted(style))"
-        if isFree(day) { return day }
-        let dated = "\(name) · \(date.formatted(style.hour().minute()))"
-        if isFree(dated) { return dated }
+        let time = date.formatted(Date.FormatStyle(locale: locale, timeZone: timeZone).hour().minute())
+        let candidates: [String]
+        if name == "Original" {
+            let day = date.formatted(Date.ISO8601FormatStyle(timeZone: timeZone).year().month().day())
+            candidates = [day, "\(day) \(time)"]
+        } else {
+            let day = date.formatted(Date.FormatStyle(locale: locale, timeZone: timeZone).month(.abbreviated).day())
+            candidates = ["\(name) · \(day)", "\(name) · \(day), \(time)"]
+        }
+        if let free = candidates.first(where: isFree) { return free }
+        let last = candidates[candidates.count - 1]
         var number = 2
-        while !isFree("\(dated) (\(number))") { number += 1 }
-        return "\(dated) (\(number))"
+        while !isFree("\(last) (\(number))") { number += 1 }
+        return "\(last) (\(number))"
     }
 
     /// The Build name a patch's filename suggests. A patch makes a variant, so the parser's generic
