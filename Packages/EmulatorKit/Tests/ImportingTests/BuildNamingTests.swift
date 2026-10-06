@@ -60,8 +60,8 @@ final class BuildNamingTests: XCTestCase {
             .suggestions(locale: locale, timeZone: utc)
 
         XCTAssertEqual(suggestions.map(\.buildID), [escaped.id, duplicate.id])
-        // The parser reads no revision from "Rev 0.2.0", so the region names the Build.
-        XCTAssertEqual(suggestions.map(\.suggestedName), ["World", "Original · Oct 8"])
+        // A dotted "Rev" is the homebrew version.
+        XCTAssertEqual(suggestions.map(\.suggestedName), ["v0.2.0", "Original · Oct 8"])
         XCTAssertEqual(suggestions.first?.currentName, escaped.displayName)
     }
 

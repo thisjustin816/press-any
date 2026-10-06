@@ -109,12 +109,48 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertLessThan(try XCTUnwrap(key("1.2")), try XCTUnwrap(key("1.10")))
         XCTAssertEqual(key("1.2"), key("1.2.0"))
         XCTAssertEqual(key("01.02"), key("1.2"))
-        for invalid in ["beta", "1..2", "1.2-beta", "1.2.3.4.5", "99999999999", "١.٢"] {
+        for invalid in ["beta", "1..2", "1.2.3.4.5", "99999999999", "١.٢"] {
             XCTAssertNil(key(invalid), invalid)
         }
     }
 
     func testEmptyReviewFieldsBecomeAbsentMetadata() {
         XCTAssertEqual(BuildImportMetadata(region: "  ", language: "\n", revision: "", versionString: " "), BuildImportMetadata())
+    }
+
+    func testADottedRevIsTheHomebrewVersionWithItsBuildSuffix() {
+        let parsed = FilenameMetadataParser.parse(filename: "Match%20Land%20%28World%29%20%28En%29%20%28Rev%200.2.0%2Bdeferred6%29.gb")
+        XCTAssertEqual(parsed.suggestedTitle, "Match Land")
+        XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(region: "World", language: "En", versionString: "0.2.0+deferred6"))
+        XCTAssertEqual(parsed.unknownGroups, [])
+        XCTAssertEqual(parsed.suggestedBuildName, "v0.2.0+deferred6")
+    }
+
+    func testRetailRevisionsStayRevisions() {
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Example (USA) (Rev 1).gb").buildMetadata,
+                       BuildImportMetadata(region: "USA", revision: "1"))
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Example (Europe) (Rev A).gb").suggestedBuildName, "Rev A")
+    }
+
+    func testSemverPrereleaseAndBuildSuffixesStayInTheVersion() {
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Example (v1.2.0-beta.3).gbc").buildMetadata.versionString, "1.2.0-beta.3")
+        let suffixed = FilenameMetadataParser.parse(filename: "Example v0.9+build5.gb")
+        XCTAssertEqual(suffixed.suggestedTitle, "Example")
+        XCTAssertEqual(suffixed.buildMetadata.versionString, "0.9+build5")
+    }
+
+    func testTitlesThatLookLikeVersionsAreLeftAlone() {
+        for (filename, title) in [("R-Type (USA, Europe).gb", "R-Type"), ("Mega Man 2 (USA).gb", "Mega Man 2")] {
+            let parsed = FilenameMetadataParser.parse(filename: filename)
+            XCTAssertEqual(parsed.suggestedTitle, title)
+            XCTAssertNil(parsed.buildMetadata.versionString)
+        }
+    }
+
+    func testSuffixedVersionsSortWithTheirNumericVersion() {
+        let plain = BuildImportMetadata(versionString: "0.2.0").versionSortKey
+        let suffixed = BuildImportMetadata(versionString: "0.2.0+deferred6").versionSortKey
+        XCTAssertEqual(suffixed, plain.map { $0 + "+deferred6" })
+        XCTAssertLessThan(suffixed!, BuildImportMetadata(versionString: "0.3").versionSortKey!)
     }
 }

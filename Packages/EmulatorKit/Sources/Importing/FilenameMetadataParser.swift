@@ -52,6 +52,11 @@ public struct FilenameMetadata: Equatable, Sendable {
 }
 
 public enum FilenameMetadataParser {
+    /// A semver prerelease ("-beta.3") or build ("+deferred6") suffix, kept as part of the version.
+    static let versionSuffixPattern = #"(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?(?:\+[0-9A-Za-z][0-9A-Za-z.-]*)?"#
+    /// One to four dotted numbers, as in "1", "1.1" or "0.2.0", with an optional semver suffix.
+    static let versionPattern = #"[0-9]+(?:\.[0-9]+){0,3}"# + versionSuffixPattern
+
     public static func parse(filename: String) -> FilenameMetadata {
         let decodedFilename = filename.removingPercentEncoding ?? filename
         let base = (decodedFilename as NSString).deletingPathExtension
@@ -80,7 +85,7 @@ public enum FilenameMetadataParser {
         for group in parenthetical + bracketed {
             if let parts = firstMatchGroups(
                 in: group,
-                pattern: #"(?i)^\s*(.+?\b(?:hack|patch|fix|translation|mod)\b.*?)\s+by\s+(.+?)\s+v([0-9]+(?:\.[0-9]+){0,3})\s*$"#
+                pattern: #"(?i)^\s*(.+?\b(?:hack|patch|fix|translation|mod)\b.*?)\s+by\s+(.+?)\s+v("# + versionPattern + #")\s*$"#
             ), parts.count == 3 {
                 hackTitle = hackTitle ?? parts[0]
                 author = author ?? parts[1]
@@ -102,7 +107,12 @@ public enum FilenameMetadataParser {
                 revision = revision ?? value
                 recognizedGroups.insert(group)
             }
-            if let value = captures(in: group, pattern: #"(?i)^\s*v(?:ersion)?\s*([0-9]+(?:\.[0-9]+){0,3})\s*$"#).first {
+            // Retail revisions are a number or a letter. Homebrew uses "Rev 0.2.0" for its version.
+            if let value = captures(in: group, pattern: #"(?i)^\s*Rev(?:ision)?\s+([0-9]+\.[0-9]+(?:\.[0-9]+){0,2}"# + versionSuffixPattern + #")\s*$"#).first {
+                version = version ?? value
+                recognizedGroups.insert(group)
+            }
+            if let value = captures(in: group, pattern: #"(?i)^\s*v(?:ersion)?\s*("# + versionPattern + #")\s*$"#).first {
                 version = version ?? value
                 recognizedGroups.insert(group)
             }
@@ -153,7 +163,7 @@ public enum FilenameMetadataParser {
         }
         // Homebrew releases commonly put an explicit numeric version at the end of the title.
         let cleanTitle: String
-        if let suffixRange = title.range(of: #"(?i)\s+v[0-9]+(?:\.[0-9]+){0,3}$"#, options: .regularExpression) {
+        if let suffixRange = title.range(of: #"(?i)\s+v"# + versionPattern + #"$"#, options: .regularExpression) {
             let suffix = title[suffixRange].trimmingCharacters(in: .whitespacesAndNewlines)
             version = version ?? String(suffix.dropFirst())
             cleanTitle = String(title[..<suffixRange.lowerBound])

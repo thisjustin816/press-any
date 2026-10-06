@@ -3,6 +3,14 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: A dotted Rev is a homebrew version
+
+Filenames use "Rev" two ways. A number or a letter, as in "(Rev 1)" or "(Rev A)", stays a retail
+revision. A dotted value, as in "(Rev 0.2.0)", is how homebrew labels a release, so it becomes the
+version. Versions keep a semver prerelease or build suffix such as "-beta.3" or "+deferred6", and
+sort with their numeric part. Loose forms such as "r2" or a bare trailing number stay part of the
+title, since names like "R-Type" and "Mega Man 2" look the same.
+
 ## 2026-10-06: Repeated Build names gain the date they were added
 
 When a suggested Build name repeats one already in the Game, as "Original" does for files without

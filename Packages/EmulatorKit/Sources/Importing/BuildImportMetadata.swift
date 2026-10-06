@@ -53,14 +53,18 @@ public struct BuildImportMetadata: Equatable, Sendable {
         )
     }
 
-    /// Fixed-width components let SQLite sort numeric releases as text.
+    /// Fixed-width components let SQLite sort numeric releases as text. A semver suffix such as
+    /// "-beta.3" or "+build5" follows the numeric part, so variants of one version sort together.
     public var versionSortKey: String? {
         guard let versionString else { return nil }
-        let parts = versionString.split(separator: ".", omittingEmptySubsequences: false)
+        let suffixStart = versionString.firstIndex { $0 == "-" || $0 == "+" } ?? versionString.endIndex
+        let suffix = versionString[suffixStart...]
+        let parts = versionString[..<suffixStart].split(separator: ".", omittingEmptySubsequences: false)
         guard (1...4).contains(parts.count), parts.allSatisfy({
             !$0.isEmpty && $0.count <= 10 && $0.utf8.allSatisfy { (48...57).contains($0) }
         }) else { return nil }
         let padded = parts.map { String(repeating: "0", count: 10 - $0.count) + $0 }
         return (padded + Array(repeating: String(repeating: "0", count: 10), count: 4 - parts.count)).joined(separator: ".")
+            + suffix
     }
 }
