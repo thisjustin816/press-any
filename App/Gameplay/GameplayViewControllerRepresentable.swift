@@ -15,6 +15,10 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let soundMode: SoundMode
     let hidesTouchControlsWithController: Bool
     let touchHaptics: TouchHaptics
+    /// A sheet is open over the game, which pauses it.
+    var isCoveredBySheet = false
+    /// Set once to close the game the normal way, saving first.
+    var closeRequested = false
     let onClose: () -> Void
     var onAddToLibrary: (() -> Void)?
 
@@ -38,5 +42,18 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
         return controller
     }
 
-    func updateUIViewController(_ uiViewController: GameplayViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: GameplayViewController, context: Context) {
+        uiViewController.setCoveredBySheet(isCoveredBySheet)
+        // Updates repeat, and a close that fails to save waits on the player, so ask only once.
+        if closeRequested, !context.coordinator.closeSent {
+            context.coordinator.closeSent = true
+            uiViewController.requestClose()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator {
+        var closeSent = false
+    }
 }

@@ -97,6 +97,6 @@ if source.count(hook) != 1:
 path.write_text(source.replace(hook, '    func prepareGameMenu() -> [UIMenuElement] {\n'))
 PY
 
-run_control testSharedGBCQuickPlayQueuesROMUntilSessionCloses menu-control \
+run_control testSharedROMOpensOverQuickPlayAndPausesIt menu-control \
   'opening the game menu pauses the game'
 echo "Removing the game-menu pause hook fails the menu's Resume assertion."

@@ -3,6 +3,8 @@ import SwiftUI
 struct SharedFileView: View {
     let file: SharedFile
     let container: AppContainer
+    /// A game is running, which Quick Play closes first.
+    var quickPlayClosesGame = false
     let onFinished: () -> Void
     let onQuickPlay: (QuickPlayRequest) -> Void
 
@@ -23,7 +25,7 @@ struct SharedFileView: View {
                     Form {
                         Section {
                             Text(file.originalFilename)
-                            Button("Quick Play", systemImage: "play.circle") {
+                            Button(quickPlayClosesGame ? "Close Game and Quick Play" : "Quick Play", systemImage: "play.circle") {
                                 onQuickPlay(QuickPlayRequest(
                                     url: file.url,
                                     copiedSaveProfileID: nil,

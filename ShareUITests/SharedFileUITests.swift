@@ -31,7 +31,7 @@ final class SharedFileUITests: XCTestCase {
         expect(app.staticTexts["Original"])
     }
 
-    func testSharedGBCQuickPlayQueuesROMUntilSessionCloses() {
+    func testSharedROMOpensOverQuickPlayAndPausesIt() {
         start()
         share(colorROM)
         expect(app.navigationBars["Open ROM"], timeout: 45)
@@ -45,15 +45,20 @@ final class SharedFileUITests: XCTestCase {
         expect(app.buttons["Game Menu"])
 
         share(baseROM)
-        expect(app.buttons["Game Menu"])
-        XCTAssertFalse(app.navigationBars["Open ROM"].exists, "sharing must not replace active gameplay")
-        closeGameplay()
-        expect(app.buttons["Keep for Later"])
-        XCTAssertFalse(app.navigationBars["Open ROM"].exists, "the queued ROM waits for the session sheet too")
-        app.buttons["Keep for Later"].tap()
-        expect(app.navigationBars["Open ROM"], timeout: 45)
+        expect(app.navigationBars["Open ROM"], message: "a file shared mid-game opens over the game", timeout: 45)
         expect(app.staticTexts[baseROM])
         app.buttons["Cancel"].tap()
+        expect(app.buttons["Resume Game"], message: "the game stays paused after the shared file closes")
+
+        share(baseROM)
+        expect(app.navigationBars["Open ROM"], timeout: 45)
+        app.buttons["Close Game and Quick Play"].tap()
+        expect(app.buttons["Keep for Later"], message: "the running Quick Play closes the normal way first")
+        app.buttons["Keep for Later"].tap()
+        expect(app.buttons["Game Menu"], message: "the shared ROM starts once the earlier game has closed")
+        closeGameplay()
+        expect(app.buttons["Keep for Later"])
+        app.buttons["Keep for Later"].tap()
         expect(app.staticTexts["No Games"])
     }
 
@@ -78,20 +83,19 @@ final class SharedFileUITests: XCTestCase {
         expect(app.staticTexts["Original"])
     }
 
-    func testPatchWaitsForLibraryGameplayToClose() {
+    func testSharedPatchOpensOverLibraryGameplay() {
         start()
         importBaseROM()
         openGameDetails()
         app.buttons["game.play"].tap()
         expect(app.buttons["Game Menu"])
         share("gbdk450-rev-v1.0-to-v1.1.ips")
-        expect(app.buttons["Game Menu"])
-        XCTAssertFalse(app.navigationBars["Open Patch"].exists)
+        expect(app.navigationBars["Open Patch"], message: "a patch shared mid-game opens over the game", timeout: 45)
+        applyPatch(name: "Mid-Game Patch Build")
+        expect(app.buttons["Resume Game"], message: "the game stays paused after the patch is applied")
         closeGameplay()
-        expect(app.navigationBars["Open Patch"], timeout: 45)
-        applyPatch(name: "Queued Patch Build")
         expect(app.navigationBars[gameTitle])
-        expect(app.staticTexts["Queued Patch Build"])
+        expect(app.staticTexts["Mid-Game Patch Build"])
     }
 
     func testSharedPatchCancellationKeepsOriginalBuild() {

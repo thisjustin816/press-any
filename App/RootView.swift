@@ -43,6 +43,8 @@ struct RootView: View {
     /// Retained until dismissal, so Quick Play can copy the ROM before receipt cleanup.
     @State private var closingSharedFile: SharedFile?
     @State private var sharedQuickPlay: QuickPlayRequest?
+    /// Quick Play was chosen for a file shared mid-game, so that game closes first.
+    @State private var closesGameForSharedQuickPlay = false
 
     var body: some View {
         Group {
@@ -66,18 +68,8 @@ struct RootView: View {
         .onChange(of: pendingResume != nil || riskyLaunch != nil) { _, hasPendingLaunch in
             if !hasPendingLaunch { presentNextSharedFile() }
         }
-        .sheet(item: $sharedFile, onDismiss: finishSharedFile) { file in
-            if let container = bootstrap.container {
-                SharedFileView(
-                    file: file,
-                    container: container,
-                    onFinished: { sharedFile = nil },
-                    onQuickPlay: { request in
-                        sharedQuickPlay = request
-                        sharedFile = nil
-                    }
-                )
-            }
+        .sheet(item: sharedFileBinding(overGameplay: false), onDismiss: finishSharedFile) { file in
+            sharedFileView(file)
         }
         .fullScreenCover(item: $gameplay, onDismiss: showClosingQuickPlay) { presentation in
             GameplayViewControllerRepresentable(
@@ -93,6 +85,8 @@ struct RootView: View {
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
                 hidesTouchControlsWithController: bootstrap.container?.hidesTouchControlsWithController() ?? true,
                 touchHaptics: bootstrap.container?.touchHaptics() ?? .light,
+                isCoveredBySheet: sharedFile != nil,
+                closeRequested: closesGameForSharedQuickPlay,
                 onClose: { endGameplay(presentation) },
                 onAddToLibrary: presentation.isQuickPlay
                     ? {
@@ -104,6 +98,10 @@ struct RootView: View {
             .ignoresSafeArea()
             // The status bar sits on the controller's body: dark text on Classic, light on Dark.
             .preferredColorScheme(bootstrap.container?.controllerTheme().colorScheme)
+            // The library's sheet can't show over this cover, so a file shared mid-game opens here.
+            .sheet(item: sharedFileBinding(overGameplay: true), onDismiss: finishSharedFile) { file in
+                sharedFileView(file)
+            }
         }
         .sheet(item: $endedQuickPlay, onDismiss: resumeChosenQuickPlay) { session in
             if let container = bootstrap.container {
@@ -173,8 +171,32 @@ struct RootView: View {
         }
     }
 
+    /// One shared file shows at a time: over the library, or over gameplay, which it pauses.
+    private func sharedFileBinding(overGameplay: Bool) -> Binding<SharedFile?> {
+        Binding(
+            get: { (gameplay != nil) == overGameplay ? sharedFile : nil },
+            set: { sharedFile = $0 }
+        )
+    }
+
+    @ViewBuilder
+    private func sharedFileView(_ file: SharedFile) -> some View {
+        if let container = bootstrap.container {
+            SharedFileView(
+                file: file,
+                container: container,
+                quickPlayClosesGame: gameplay != nil,
+                onFinished: { sharedFile = nil },
+                onQuickPlay: { request in
+                    sharedQuickPlay = request
+                    sharedFile = nil
+                }
+            )
+        }
+    }
+
     private func presentNextSharedFile() {
-        guard gameplay == nil, endedQuickPlay == nil, closingQuickPlayID == nil,
+        guard endedQuickPlay == nil, closingQuickPlayID == nil,
               pendingResume == nil, riskyLaunch == nil, errorMessage == nil,
               closingSharedFile == nil, sharedFile == nil, !queuedSharedFiles.isEmpty else { return }
         let next = queuedSharedFiles.removeFirst()
@@ -183,6 +205,17 @@ struct RootView: View {
     }
 
     private func finishSharedFile() {
+        if sharedQuickPlay != nil, gameplay != nil {
+            closesGameForSharedQuickPlay = true
+            return
+        }
+        startSharedQuickPlay()
+        presentNextSharedFile()
+    }
+
+    /// Starts Quick Play chosen for a shared file, then lets the file's receipt go. Quick Play
+    /// copies the ROM first, so the receipt has to outlive it.
+    private func startSharedQuickPlay() {
         guard let container = bootstrap.container else { return }
         if let request = sharedQuickPlay {
             sharedQuickPlay = nil
@@ -192,7 +225,6 @@ struct RootView: View {
             container.sharedFileInbox.discard(file)
             closingSharedFile = nil
         }
-        presentNextSharedFile()
     }
 
     private func launch(_ context: LaunchContext, container: AppContainer, checkSave: Bool = true) {
@@ -329,6 +361,7 @@ struct RootView: View {
 
     private func showClosingQuickPlay() {
         guard let id = closingQuickPlayID else {
+            startSharedQuickPlay()
             presentNextSharedFile()
             return
         }
@@ -345,16 +378,22 @@ struct RootView: View {
         }
     }
 
+    /// After a Quick Play session's sheet. Resuming that session drops a shared file's pending
+    /// Quick Play, since the player chose the earlier game instead.
     private func resumeChosenQuickPlay() {
         guard let session = quickPlayToResume, let container = bootstrap.container else {
+            startSharedQuickPlay()
             presentNextSharedFile()
             return
         }
         quickPlayToResume = nil
+        sharedQuickPlay = nil
+        startSharedQuickPlay()
         resumeQuickPlay(session, container: container)
     }
 
     private func endGameplay(_ presentation: GameplayPresentation) {
+        closesGameForSharedQuickPlay = false
         switch presentation.kind {
         case .library:
             bootstrap.container?.stopActiveSession(createAutoState: false)

@@ -11,6 +11,9 @@ struct ImportReviewView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // First, as in Quick Play promotion, so choosing an existing Game isn't missed below the ROM details.
+                ImportDestinationSection(model: model)
+
                 Section {
                     LabeledContent("File", value: model.analysis.originalFilename)
                     LabeledContent("Suggested Filename", value: model.normalizedFilename)
@@ -30,8 +33,6 @@ struct ImportReviewView: View {
                 }
 
                 ToolchainSection(reports: model.analysis.toolchainReports)
-
-                ImportDestinationSection(model: model)
 
                 if let message = model.errorMessage {
                     Section {

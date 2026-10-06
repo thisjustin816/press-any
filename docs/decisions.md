@@ -3,6 +3,19 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: Shared files open over a running game
+
+A ROM or patch shared to the app mid-game opens over the game rather than waiting for it to
+close. The game pauses as it does for the game menu and stays paused when the sheet closes, so the
+player resumes it. Import Review and Open Patch work as they do from the library. Quick Play from
+that sheet reads "Close Game and Quick Play": the running game closes the normal way, saving
+first, and a closing Quick Play session still shows its Keep for Later sheet before the shared ROM
+starts. Choosing Resume on that sheet drops the shared ROM instead. This replaces the wait for
+active gameplay in the 2026-10-05 shared-files entry.
+
+Import Review lists the destination and Build details first, as Quick Play promotion does, so
+choosing an existing Game comes before the ROM details.
+
 ## 2026-10-06: New Build roles are reviewable suggestions
 
 Import Review suggests both Base and Preferred roles instead of silently deciding them. A

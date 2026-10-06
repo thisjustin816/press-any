@@ -96,7 +96,7 @@ Multiple typed assets: front/back box, cartridge/label, title screen, screenshot
 
 ### Sources
 - Files/document picker.
-- Share Sheet/Open In. Direct `.gb`/`.gbc` files offer Quick Play or Import Review; `.ips`/`.bps` files require choosing a Game and base Build. Receive a bounded copy before review, keeping the sender's file untouched, and wait for active gameplay to close.
+- Share Sheet/Open In. Direct `.gb`/`.gbc` files offer Quick Play or Import Review; `.ips`/`.bps` files require choosing a Game and base Build. Receive a bounded copy before review, keeping the sender's file untouched. During gameplay the file opens over the paused game; Quick Play closes that game first.
 - ZIP + 7z v1; RAR tentative v1.1.
 - Archives are temporary containers and are not retained.
 - Safe archive handling: path traversal protection, nested-depth and decompression limits, malformed/password-protected handling, no executable behavior.

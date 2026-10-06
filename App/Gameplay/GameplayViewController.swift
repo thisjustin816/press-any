@@ -22,6 +22,7 @@ final class GameplayViewController: UIViewController {
     /// Uptime when Quick Play's file was chosen, cleared once the first frame is reported.
     private var firstFrameClock: UInt64?
     private var pauseReasons = GameplayPauseReasons()
+    private var coveredBySheet = false
     /// Set when the scene went to the background, so returning applies Resume Games.
     private var backgrounded = false
     /// Set once an emulation error has stopped the game for good.
@@ -593,6 +594,21 @@ final class GameplayViewController: UIViewController {
 
     private func closeTapped() {
         finish(.close)
+    }
+
+    /// Closes the game as the menu's Close Game does, for a caller replacing it with another game.
+    func requestClose() {
+        closeTapped()
+    }
+
+    /// A sheet over the game, such as a file shared mid-game, pauses it as the game menu does, so
+    /// the player resumes when the sheet closes. The game's own alerts give way to the sheet.
+    func setCoveredBySheet(_ covered: Bool) {
+        guard covered != coveredBySheet else { return }
+        coveredBySheet = covered
+        guard covered else { return }
+        if presentedViewController is UIAlertController { dismiss(animated: false) }
+        pauseGameplay()
     }
 
     private func addToLibraryTapped() {
