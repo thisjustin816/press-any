@@ -147,12 +147,13 @@ group with **automatic distribution** turned on receives each processed build; o
 groups get a build once it is added to them in App Store Connect.
 
 The marketing version comes from `MARKETING_VERSION` in `project.yml` (currently
-`0.1.0`), and TestFlight shows it with the build number beside it. It changes only
-when that value is edited. The build number encodes the workflow run and retry as
-three numeric components: run 1,
-attempt 1 is `1.1.1`; run 100, attempt 1 is `2.0.1`. Retrying a run uploads a
-different build number. Keep this workflow as the build-number source for this
-marketing version; other upload paths must avoid collisions.
+`0.1`), and TestFlight shows it with the build number beside it, as `0.1 (57)`.
+The version changes only when that value is edited. The build number is the
+workflow's run number; a retried run adds its attempt, as `57.2`, because Apple
+refuses a second binary with the same build number. Builds uploaded before this
+scheme were numbered `1.<run>.<attempt>`; every run number since is higher. Keep
+this workflow as the build-number source; other upload paths must avoid
+collisions.
 
 After a successful upload, wait for Apple's processing, then open **Apps → Press
 Any → TestFlight**. Resolve any processing or compliance questions shown there.
