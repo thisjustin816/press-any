@@ -24,6 +24,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Share a compatible Save Profile between Builds, then fork it and confirm divergence.
 - [ ] State created on Build A is never loadable on Build B.
 - [ ] Create an IPS/BPS-derived Build and launch it.
+- [ ] Keep Game Details open, share a patch to the app, apply it to that Game and return to details. The new Build appears without backing out and reopening the Game.
 - [ ] Remove its generated-ROM cache, relaunch, and confirm deterministic rebuild.
 - [ ] Quick Play a new test build using a copy of Main; mutate the temporary save; Main remains unchanged.
 - [ ] Promote the Quick Play session and choose whether its save becomes a new/default profile.

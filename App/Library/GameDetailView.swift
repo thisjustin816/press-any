@@ -80,6 +80,7 @@ struct GameDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .task { model.reload() }
+            .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in model.reload() }
     }
 
     // The screen is split into pieces the compiler type-checks one at a time; as one expression
