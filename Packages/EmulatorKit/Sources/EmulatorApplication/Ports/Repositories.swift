@@ -52,6 +52,24 @@ public protocol BuildVariableMapRepository: Sendable {
 public protocol PatchRecipeRepository: Sendable {
     func insertPatchRecipe(_ recipe: PatchRecipe) throws
     func fetchPatchRecipe(resultBuildID: UUID) throws -> PatchRecipe?
+    /// The recipes that patch this Build, whose results are rebuilt from it.
+    func fetchPatchRecipes(baseBuildID: UUID) throws -> [PatchRecipe]
+}
+
+/// Recently Deleted. Every other repository read leaves out a deletion's records until it is
+/// restored, and purging removes them for good.
+public protocol LibraryDeletionRepository: Sendable {
+    /// Records the deletion and hides its records.
+    func insertDeletion(_ deletion: LibraryDeletion) throws
+    /// Newest first.
+    func fetchDeletions() throws -> [LibraryDeletion]
+    /// Brings the records back. A restored Base Build stays Base only while its Game has no other.
+    func restoreDeletion(id: UUID) throws
+    /// Removes the deletion's records for good, with any deleted patched Build that can no longer
+    /// be rebuilt without them, and leaves a tombstone for each. Returns the assets those records
+    /// used that nothing uses now; their rows are gone, and the caller removes their files.
+    func purgeDeletion(id: UUID, at date: Date) throws -> [ManagedAsset]
+    func fetchTombstones() throws -> [Tombstone]
 }
 
 public protocol ManagedAssetRepository: Sendable {

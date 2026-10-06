@@ -409,7 +409,7 @@ private enum TestFailure: Error {
     case expectedRollback
 }
 
-private struct Fixture {
+struct Fixture {
     let game: Game
     let build: Build
     let patchedBuild: Build
