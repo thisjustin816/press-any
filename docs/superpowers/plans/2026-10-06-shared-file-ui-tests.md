@@ -35,7 +35,21 @@
 
 **Interfaces:** The UI CI job saves green and regression-control results. The control removes only Game Details' `.libraryDidChange` receiver and runs `testSharedIPSRefreshesOpenGameDetails`, requiring that specific test to fail its new-Build assertion.
 
-- [ ] Run the complete simulator suite and resolve any failures.
-- [ ] Run the regression control with the listener removed, check the named assertion failure, and restore the source with a shell trap.
-- [ ] Document simulator evidence and keep the physical-device checklist pending.
-- [ ] Commit and push the final test and documentation changes; report the CI run and its actual results.
+- [x] Run the complete simulator suite and resolve any failures.
+- [x] Run the regression control with the listener removed, check the named assertion failure, and restore the source with a shell trap.
+- [x] Document simulator evidence and keep the physical-device checklist pending.
+- [x] Commit and push the final test and documentation changes; report the CI run and its actual results.
+
+## Verification evidence
+
+- [iOS run 37405980704](https://github.com/thisjustin816/press-any/actions/runs/37405980704),
+  commit `6708085`: all six share-sheet UI scenarios passed on iPhone 17 Pro. The control
+  removed the refresh listener and failed the IPS test at the missing new-Build assertion.
+  The script restored the source and the job passed, retaining both result bundles.
+- All 31 hosted app tests, iOS package tests and the unsigned Release archive passed on that
+  commit. [Linux CI 37405980652](https://github.com/thisjustin816/press-any/actions/runs/37405980652)
+  passed too.
+- Swift syntax parsing, shellcheck, actionlint, YAML validation, repository hygiene and
+  `git diff --check` passed. A cleanup smoke check confirmed that repeated runs remove only
+  their named result bundles and stale control log while retaining DerivedData and unrelated files.
+- Physical-iPhone checks in `docs/mvp-verification.md` remain pending.

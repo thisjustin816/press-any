@@ -45,6 +45,12 @@ select another simulator. The sender is a separate test app and is excluded from
 app's scheme. These simulator flows still leave Files/browser variants and physical-iPhone
 handoff in the device checklist.
 
+On October 6, 2026, [run 37405980704](https://github.com/thisjustin816/press-any/actions/runs/37405980704)
+passed all six shared-file UI scenarios on commit `6708085`. The refresh control failed at the
+expected new-Build assertion with the listener removed, then restored the source. All 31 hosted
+app tests, iOS package tests and the unsigned Release archive also passed; Linux CI passed on
+the same commit.
+
 Audio buffering has package tests, but the sound, latency, audio routes and interruptions still
 need a physical iPhone. The unsigned archive job checks Release compilation and resources; it
 does not install or run the app on a device.
