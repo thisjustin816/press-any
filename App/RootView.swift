@@ -5,6 +5,7 @@ import GameplayInput
 import Foundation
 import QuickPlay
 import SwiftUI
+import UIKit
 
 @MainActor
 final class AppBootstrap: ObservableObject {
@@ -47,6 +48,8 @@ struct RootView: View {
     @State private var closesGameForSharedQuickPlay = false
     /// A shared file that couldn't be received, reported over the library or over gameplay.
     @State private var sharedFileError: String?
+    /// Set while a queued shared file waits for another sheet to close.
+    @State private var sharedFileRetryScheduled = false
 
     var body: some View {
         Group {
@@ -222,9 +225,32 @@ struct RootView: View {
         guard endedQuickPlay == nil, closingQuickPlayID == nil,
               pendingResume == nil, riskyLaunch == nil, errorMessage == nil, sharedFileError == nil,
               closingSharedFile == nil, sharedFile == nil, !queuedSharedFiles.isEmpty else { return }
+        // A sheet the library or Game Details opened, such as Import Review, may hold work in
+        // progress, so the file waits for it to close.
+        guard !hasOtherPresentation else {
+            guard !sharedFileRetryScheduled else { return }
+            sharedFileRetryScheduled = true
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(500))
+                sharedFileRetryScheduled = false
+                presentNextSharedFile()
+            }
+            return
+        }
         let next = queuedSharedFiles.removeFirst()
         closingSharedFile = next
         sharedFile = next
+    }
+
+    /// Whether something other than RootView's own presentations is on screen: anything above the
+    /// library, or above the game while one is running. Those sheets aren't RootView state, so UIKit
+    /// is the one place that knows about them.
+    private var hasOtherPresentation: Bool {
+        let root = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow?.rootViewController }
+            .first
+        let library = root?.presentedViewController
+        return gameplay == nil ? library != nil : library?.presentedViewController != nil
     }
 
     private func finishSharedFile() {

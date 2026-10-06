@@ -126,3 +126,25 @@ public struct BuildNameSuggester: Sendable {
         return candidates.contains { $0.caseInsensitiveCompare(name) == .orderedSame }
     }
 }
+
+/// Finds the Game an imported file probably belongs to, from its title. Titles compare without case,
+/// punctuation or spacing, so "match-land.gb" matches "Match Land". A hack also tries its base
+/// title. More than one matching Game is no match, so the player chooses.
+public enum GameMatcher {
+    public static func matchingGameID(for naming: FilenameMetadata, headerTitle: String, in games: [Game]) -> UUID? {
+        var titles = [naming.suggestedTitle, headerTitle]
+        if let base = naming.buildMetadata.baseTitle { titles.append(base) }
+        for title in titles {
+            let key = normalized(title)
+            guard !key.isEmpty else { continue }
+            let matches = games.filter { normalized($0.primaryTitle) == key }
+            if matches.count == 1 { return matches[0].id }
+            if matches.count > 1 { return nil }
+        }
+        return nil
+    }
+
+    static func normalized(_ title: String) -> String {
+        String(title.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
+    }
+}

@@ -83,4 +83,42 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertFalse(result.build.isBase)
         XCTAssertEqual(result.game.preferredBuildID, result.build.id)
     }
+
+    func testANewHomebrewBuildJoinsTheMatchingGameAsBaseAndPreferred() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let coordinator = ImportCoordinator(
+            analyzer: container.importAnalyzer,
+            committer: container.importCommitter,
+            assetStore: container.fileStore
+        )
+
+        var firstBytes = Data(repeating: 0, count: 0x8000)
+        firstBytes[0x200] = 1
+        let firstFile = root.appendingPathComponent("match-land.gb")
+        try firstBytes.write(to: firstFile)
+        let first = try ImportReviewViewModel(
+            analysis: coordinator.analyzeROM(at: firstFile),
+            games: [],
+            coordinator: coordinator
+        ).commit()
+
+        var updateBytes = firstBytes
+        updateBytes[0x201] = 2
+        let updateFile = root.appendingPathComponent("Match Land (World) (Rev 0.2.0).gb")
+        try updateBytes.write(to: updateFile)
+        let update = ImportReviewViewModel(
+            analysis: try coordinator.analyzeROM(at: updateFile),
+            games: [first.game],
+            coordinator: coordinator
+        )
+
+        XCTAssertEqual(update.destination, .existing(first.game.id))
+        XCTAssertTrue(update.markAsBase)
+        XCTAssertTrue(update.markAsPreferred)
+        let result = try update.commit()
+        XCTAssertTrue(result.build.isBase)
+        XCTAssertEqual(try container.repositories.builds.fetchBuild(id: first.build.id)?.isBase, false)
+    }
 }

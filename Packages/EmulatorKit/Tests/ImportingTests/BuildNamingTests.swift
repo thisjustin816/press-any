@@ -77,3 +77,35 @@ final class BuildNamingTests: XCTestCase {
         BuildNaming.distinctName(name, existing: existing, addedAt: october6, locale: locale, timeZone: utc)
     }
 }
+
+final class GameMatcherTests: XCTestCase {
+    private func game(_ title: String) -> Game {
+        Game(id: UUID(), primaryTitle: title, systemFamily: "gb", createdAt: .now, modifiedAt: .now)
+    }
+
+    func testSimilarFilenamesMatchTheExistingGame() {
+        let matchLand = game("Match Land")
+        let games = [game("Tetris"), matchLand]
+        for filename in ["match-land.gb", "Match_Land.gbc", "Match%20Land%20%28World%29%20%28Rev%200.2.0%29.gb"] {
+            let naming = FilenameMetadataParser.parse(filename: filename)
+            XCTAssertEqual(GameMatcher.matchingGameID(for: naming, headerTitle: "", in: games), matchLand.id, filename)
+        }
+    }
+
+    func testTheHeaderTitleAndAHacksBaseTitleAlsoMatch() {
+        let tetris = game("Tetris")
+        let header = FilenameMetadataParser.parse(filename: "unknown.gb")
+        XCTAssertEqual(GameMatcher.matchingGameID(for: header, headerTitle: "TETRIS", in: [tetris]), tetris.id)
+        let hack = FilenameMetadataParser.parse(filename: "Tetris - Plus [Hack] [by Jane].gb")
+        XCTAssertEqual(GameMatcher.matchingGameID(for: hack, headerTitle: "", in: [tetris]), tetris.id)
+    }
+
+    func testNoMatchOrSeveralMatchesSuggestNothing() {
+        let naming = FilenameMetadataParser.parse(filename: "Match Land.gb")
+        XCTAssertNil(GameMatcher.matchingGameID(for: naming, headerTitle: "", in: [game("Tetris")]))
+        XCTAssertNil(GameMatcher.matchingGameID(for: naming, headerTitle: "", in: [game("Match Land"), game("match-land")]))
+        // Whole titles only: a sequel isn't the original.
+        let sequel = FilenameMetadataParser.parse(filename: "Mega Man 2 (USA).gb")
+        XCTAssertNil(GameMatcher.matchingGameID(for: sequel, headerTitle: "", in: [game("Mega Man")]))
+    }
+}

@@ -3,6 +3,20 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-06: New Builds default to Preferred and Base, and match existing Games
+
+Import Review now defaults every new Build to Preferred, and to Base unless it is a ROM hack. A new
+homebrew or retail Build therefore becomes the Game's Base, replacing the previous one; a ROM hack
+or a patch-created Build is Preferred but not Base. The toggles remain in review. This replaces the
+conservative default for ordinary additional ROMs in "New Build roles are reviewable suggestions".
+
+Import Review also suggests an existing Game whose title matches the file's title, header title or,
+for a hack, base title, compared without case, punctuation or spacing. Only a whole-title match
+counts, so "Mega Man 2" never joins "Mega Man", and two matching Games suggest neither.
+
+A file shared while another sheet is open, such as Import Review mid-edit or the game's Resume
+prompt, waits in the queue until that sheet closes, so work in progress is never replaced.
+
 ## 2026-10-06: A dotted Rev is a homebrew version
 
 Filenames use "Rev" two ways. A number or a letter, as in "(Rev 1)" or "(Rev A)", stays a retail

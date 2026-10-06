@@ -60,7 +60,8 @@ final class ImportReviewViewModel: ObservableObject {
         status = metadata.status ?? ""
 
         let initialDestination: Destination
-        if let suggested = analysis.suggestedGameID {
+        if let suggested = analysis.suggestedGameID
+            ?? GameMatcher.matchingGameID(for: analysis.filenameMetadata, headerTitle: analysis.header.title, in: games) {
             initialDestination = .existing(suggested)
         } else {
             initialDestination = .newGame
@@ -154,17 +155,14 @@ final class ImportReviewViewModel: ObservableObject {
         coordinator.discard(analysis)
     }
 
+    /// A new Build is the one to play and, unless it's a hack, the clean ROM patches apply to.
+    /// Marking it Base replaces the Game's previous Base Build.
     private static func suggestedBase(for kind: FilenameReleaseKind, destination: Destination) -> Bool {
-        return switch kind {
-        case .romHack: false
-        case .development: true
-        case .standard: destination == .newGame
-        }
+        kind != .romHack
     }
 
     private static func suggestedPreferred(for kind: FilenameReleaseKind, destination: Destination) -> Bool {
-        if destination == .newGame { return true }
-        return kind == .development || kind == .romHack
+        true
     }
 
     private var reviewedMetadata: BuildImportMetadata {
