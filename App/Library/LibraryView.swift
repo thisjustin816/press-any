@@ -32,6 +32,8 @@ struct LibraryView: View {
     @State private var quickPlayToResume: QuickPlaySession?
     @State private var screenshotGameID: UUID?
     @State private var screenshotBuildInfo: Build?
+    @State private var gameToRename: Game?
+    @State private var renameTitle = ""
     /// Off hides the titles under grid tiles, for libraries whose box art carries the name.
     @AppStorage("library.showsGridTitles") private var showsGridTitles = true
 
@@ -61,7 +63,8 @@ struct LibraryView: View {
         _model = StateObject(wrappedValue: LibraryViewModel(
             gameRepository: container.repositories.games,
             buildRepository: container.repositories.builds,
-            launchResolver: container.preferredLaunchResolver
+            launchResolver: container.preferredLaunchResolver,
+            buildOperations: container.buildOperations
         ))
     }
 
@@ -219,6 +222,14 @@ struct LibraryView: View {
                     games: container.repositories.games
                 )
             }
+            .alert("Rename Game", isPresented: Binding(
+                get: { gameToRename != nil },
+                set: { if !$0 { gameToRename = nil } }
+            ), presenting: gameToRename) { game in
+                TextField("Game Title", text: $renameTitle)
+                Button("Rename") { model.renameGame(game, to: renameTitle) }
+                Button("Cancel", role: .cancel) {}
+            }
             .alert("Library Error", isPresented: Binding(
                 get: { model.errorMessage != nil },
                 set: { if !$0 { model.clearError() } }
@@ -249,9 +260,7 @@ struct LibraryView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Play") { launch(game) }
-                    }
+                    .contextMenu { gameActions(game) }
                 }
             }
             .padding()
@@ -279,8 +288,18 @@ struct LibraryView: View {
                 Button("Play") { launch(game) }
                     .tint(.accentColor)
             }
+            .contextMenu { gameActions(game) }
         }
         .listStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func gameActions(_ game: Game) -> some View {
+        Button("Play", systemImage: "play.fill") { launch(game) }
+        Button("Rename…", systemImage: "pencil") {
+            renameTitle = game.primaryTitle
+            gameToRename = game
+        }
     }
 
     private func launch(_ game: Game) {

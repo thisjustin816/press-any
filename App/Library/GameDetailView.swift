@@ -208,7 +208,7 @@ struct GameDetailView: View {
                 } label: {
                     Label("Game Settings…", systemImage: "gearshape")
                 }
-                Button("Rename Game…") {
+                Button("Rename Game…", systemImage: "pencil") {
                     gameTitle = model.game?.primaryTitle ?? ""
                     showRenameGame = true
                 }
