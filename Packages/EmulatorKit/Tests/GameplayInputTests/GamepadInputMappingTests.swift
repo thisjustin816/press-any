@@ -45,10 +45,21 @@ final class GamepadInputMappingTests: XCTestCase {
         XCTAssertEqual(GamepadInputMapping.input(buttonA: true, buttonB: true), .init(a: true, b: true))
     }
 
-    func testMenuIsStartAndEitherOptionsOrLeftShoulderIsSelect() {
+    func testMenuOrXIsStartAndOptionsOrYIsSelect() {
         XCTAssertEqual(GamepadInputMapping.input(menu: true), .init(start: true))
+        XCTAssertEqual(GamepadInputMapping.input(buttonX: true), .init(start: true))
         XCTAssertEqual(GamepadInputMapping.input(options: true), .init(select: true))
-        XCTAssertEqual(GamepadInputMapping.input(leftShoulder: true), .init(select: true))
-        XCTAssertEqual(GamepadInputMapping.input(menu: true, options: true, leftShoulder: true), .init(start: true, select: true))
+        XCTAssertEqual(GamepadInputMapping.input(buttonY: true), .init(select: true))
+        XCTAssertEqual(GamepadInputMapping.input(buttonX: true, buttonY: true), .init(start: true, select: true))
+    }
+
+    func testPlayStationPutsAOnCircleAndStartOnTriangle() {
+        // GameController reports Cross as A, Circle as B, Square as X and Triangle as Y.
+        XCTAssertEqual(GamepadInputMapping.input(buttonB: true, isPlayStation: true), .init(a: true))
+        XCTAssertEqual(GamepadInputMapping.input(buttonA: true, isPlayStation: true), .init(b: true))
+        XCTAssertEqual(GamepadInputMapping.input(buttonY: true, isPlayStation: true), .init(start: true))
+        XCTAssertEqual(GamepadInputMapping.input(buttonX: true, isPlayStation: true), .init(select: true))
+        XCTAssertEqual(GamepadInputMapping.input(menu: true, isPlayStation: true), .init(start: true))
+        XCTAssertEqual(GamepadInputMapping.input(options: true, isPlayStation: true), .init(select: true))
     }
 }

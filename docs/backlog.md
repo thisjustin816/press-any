@@ -380,8 +380,8 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | missing | Separate phone and controller intensity | v1 |  |
 
 Done: Apple GameController input (extendedGamepad), D-pad and left thumbstick with a radial dead
-zone and eight equal sectors; A and B by the controller's letters, Menu = START, Options or L1 =
-SELECT; iOS controller customizations, including per-app ones, are the only button mapping; Connected controllers use Game
+zone and eight equal sectors; A and B by the controller's letters (Circle = A and Cross = B on PlayStation),
+Menu or X = START, Options or Y = SELECT (Triangle and Square on PlayStation), shoulders free; iOS controller customizations, including per-app ones, are the only button mapping; Connected controllers use Game
 Boy and follow Orientation even with Playtiles chosen; Disconnect releases input, restores the
 chosen layout, pauses and shows a notice without restarting; A controller hides the touch
 controls, a touch brings them back until its next button press, and Settings can keep them;

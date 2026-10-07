@@ -30,10 +30,15 @@ final class PhysicalControllerMonitorTests: XCTestCase {
         try assertInput(.init()) { $0.leftThumbstick.setValueForXAxis(0.1, yAxis: 0.1) }
     }
 
-    func testMenuOptionsAndLeftShoulderKeepStartAndSelect() throws {
+    func testMenuAndXAreStartOptionsAndYAreSelectAndShouldersAreFree() throws {
         try assertInput(.init(start: true)) { $0.buttonMenu.setValue(1) }
+        try assertInput(.init(start: true)) { $0.buttonX.setValue(1) }
         try assertInput(.init(select: true)) { try XCTUnwrap($0.buttonOptions).setValue(1) }
-        try assertInput(.init(select: true)) { $0.leftShoulder.setValue(1) }
+        try assertInput(.init(select: true)) { $0.buttonY.setValue(1) }
+        try assertInput(.init()) {
+            $0.leftShoulder.setValue(1)
+            $0.rightShoulder.setValue(1)
+        }
     }
 
     func testQueuedInputFromADisconnectedControllerCannotPressAButtonAgain() throws {

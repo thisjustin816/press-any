@@ -102,9 +102,11 @@ final class PhysicalControllerMonitor: ObservableObject {
             leftStickY: pad.leftThumbstick.yAxis.value,
             buttonA: pad.buttonA.isPressed,
             buttonB: pad.buttonB.isPressed,
+            buttonX: pad.buttonX.isPressed,
+            buttonY: pad.buttonY.isPressed,
             menu: pad.buttonMenu.isPressed,
             options: pad.buttonOptions?.isPressed == true,
-            leftShoulder: pad.leftShoulder.isPressed
+            isPlayStation: pad is GCDualShockGamepad || pad is GCDualSenseGamepad
         ))
     }
 }
