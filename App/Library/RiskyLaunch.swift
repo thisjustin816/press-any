@@ -1,4 +1,5 @@
 import EmulatorApplication
+import EmulatorDomain
 import Foundation
 
 struct RiskyLaunch {
