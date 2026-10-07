@@ -459,6 +459,7 @@ public struct BuildOperations: Sendable {
             displayName: source.displayName,
             imageAssetID: source.imageAssetID,
             imageSHA256: source.imageSHA256,
+            imageSHA1: source.imageSHA1,
             sourceKind: source.sourceKind,
             parentBuildID: parentBuildID,
             isBase: source.isBase,

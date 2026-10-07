@@ -1,5 +1,8 @@
 # No-Intro Identity Plan
 
+Status: sections 1, 2 and 5 are done (#31 and the import-matching pull request), as is section 3
+apart from the title proposal, which waits on section 4. The parser's No-Intro flags remain.
+
 **Goal:** Recognize known Game Boy and Game Boy Color dumps by hash, take their canonical names, and group a family's regional releases under one Game, from data bundled with the app.
 
 The decision behind this plan is "The game database is No-Intro's, bundled, and refreshed by hand" in `docs/decisions.md`. The specs it serves are `dec 17` and `dec 18`, Q156 and Q157, and "Regional releases and No-Intro families".
@@ -29,7 +32,7 @@ Refreshing: download the two DB exports from DAT-o-MATIC in a browser (Download,
 
 `SHA1Digest` computes SHA-1 with CryptoKit on Apple platforms and a portable implementation elsewhere, as `SHA256Digest` does.
 
-The parser in `Importing` reads the canonical name as it reads a filename: `FilenameMetadataParser.parse(filename: dump.name + ".gb")` gives the title, region, language, revision and status flags, the Build name and the normalized filename. Flags the parser does not know yet, `Proto`, `Sample`, `Unl`, `Aftermarket`, `Pirate`, `Virtual Console` and numbered betas, are added to its status vocabulary so canonical names parse cleanly; the corpus test gains them.
+A known dump's Build Details come from No-Intro's fields, not from its name: the title, region and languages as recorded, `version` split into a revision ("Rev 1") or a version ("v1.1"), and the development status. Aftermarket and Unl never become a status or part of a Build name, since every new homebrew release carries both (owner's call, 2026-10-06). The filename parser still names unknown files; teaching it No-Intro's other flags (Proto, Sample, Pirate, Virtual Console, numbered betas) remains, with Aftermarket and Unl recognized and dropped there too.
 
 ## 3. Import
 

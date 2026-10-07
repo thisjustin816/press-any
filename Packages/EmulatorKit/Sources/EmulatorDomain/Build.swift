@@ -37,6 +37,10 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
     public var displayName: String
     public let imageAssetID: UUID
     public let imageSHA256: String
+    /// The image's SHA-1, which No-Intro's data is keyed by. SHA-256 stays the image's identity.
+    /// Nil until it is computed: at import for imported images, and once at launch for images
+    /// imported before it was kept. Patched Builds leave it nil.
+    public var imageSHA1: String?
     public let sourceKind: BuildSourceKind
     public let parentBuildID: UUID?
     public var isBase: Bool
@@ -62,6 +66,7 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         displayName: String,
         imageAssetID: UUID,
         imageSHA256: String,
+        imageSHA1: String? = nil,
         sourceKind: BuildSourceKind,
         parentBuildID: UUID? = nil,
         isBase: Bool = false,
@@ -86,6 +91,7 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         self.displayName = displayName
         self.imageAssetID = imageAssetID
         self.imageSHA256 = imageSHA256
+        self.imageSHA1 = imageSHA1?.lowercased()
         self.sourceKind = sourceKind
         self.parentBuildID = parentBuildID
         self.isBase = isBase

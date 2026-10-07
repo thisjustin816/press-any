@@ -26,6 +26,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v7-recently-deleted") { db in
             try db.execute(sql: V1V7RecentlyDeletedSchema.sql)
         }
+        migrator.registerMigration("v1-v8-image-sha1") { db in
+            try db.execute(sql: V1V8ImageSHA1Schema.sql)
+        }
         return migrator
     }
 }
@@ -35,6 +38,15 @@ extension AppDatabase {
 ///
 /// A deleted Build keeps its ROM hash, so `builds` is rebuilt to let the one-ROM-per-Game rule and
 /// the one-Base rule count only live Builds; SQLite can't drop a table constraint in place.
+/// A Build's SHA-1, for matching No-Intro's data. Nullable: Builds imported before this are
+/// filled at launch from their source files, and patched Builds have none.
+enum V1V8ImageSHA1Schema {
+    static let sql = """
+    ALTER TABLE builds ADD COLUMN rom_sha1 TEXT;
+    CREATE INDEX builds_rom_sha1 ON builds(rom_sha1);
+    """
+}
+
 enum V1V7RecentlyDeletedSchema {
     private static let buildColumns = """
     id, game_id, system, display_name, rom_asset_id, rom_sha256, source_kind, parent_build_id,

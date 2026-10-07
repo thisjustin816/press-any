@@ -62,6 +62,19 @@ public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable
         lock.withLock { values.values.filter { $0.imageSHA256 == imageSHA256 }.min { $0.createdAt < $1.createdAt } }
     }
 
+    public func fetchBuilds(imageSHA1s: [String]) throws -> [Build] {
+        let wanted = Set(imageSHA1s.map { $0.lowercased() })
+        return lock.withLock { values.values.filter { $0.imageSHA1.map(wanted.contains) == true }.sorted { $0.createdAt < $1.createdAt } }
+    }
+
+    public func fetchImportedBuildsMissingImageSHA1() throws -> [Build] {
+        lock.withLock { values.values.filter { $0.imageSHA1 == nil && $0.sourceKind == .importedImage }.sorted { $0.createdAt < $1.createdAt } }
+    }
+
+    public func setImageSHA1(buildID: UUID, sha1: String) throws {
+        lock.withLock { values[buildID]?.imageSHA1 = sha1.lowercased() }
+    }
+
     public func insertBuild(_ build: Build) throws { lock.withLock { values[build.id] = build } }
     public func updateBuildMetadata(_ build: Build) throws { lock.withLock { values[build.id] = build } }
 

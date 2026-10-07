@@ -14,6 +14,7 @@ scenarios on a simulator. Keep these device checks pending until they pass on an
 Verify with a user-supplied legal ROM:
 
 - [ ] Generate/open the iOS project from a clean checkout.
+- [ ] A fresh install opens on the welcome screen, in Light and Dark Mode and at the largest text size; Get Started or a swipe down leaves the library, and later launches skip it. Settings > How Press Any Works shows it again.
 - [ ] Launch a GB game and a GBC game through SameBoy with correct colors, orientation, native speed and audio.
 - [ ] Touch input works with acceptable latency.
 - [ ] With Playtiles selected and the physical overlay aligned, press left/right/up/down slightly off-center: each stays straight. Deliberate diagonals and sliding back to straight directions still work.

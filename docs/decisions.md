@@ -3,6 +3,18 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-07: A welcome screen until the onboarding exists
+
+The first launch shows one welcome screen ahead of the library: what the app is, how the library,
+Builds, saves and Quick Play work, the game menu, exports, and that it comes with no games. It is
+the stopgap for Q183's onboarding, needed now that builds go to people who weren't there for the
+design. It shows once, again only when its content changes enough to raise its version, and
+never in an automated run. Settings > How Press Any Works opens it at any time. A launch that
+opens a shared file or a game goes straight there, and the welcome waits for the next launch.
+
+The fuller first-launch onboarding in Q183, with its opt-ins and contextual introductions,
+replaces it later.
+
 ## 2026-10-06: Raised controls, and Resume sits on the picture
 
 The Playtiles alignment guide is raised from the body, where it was pressed in: its top edge

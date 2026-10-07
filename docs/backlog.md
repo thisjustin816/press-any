@@ -71,7 +71,7 @@ Open items in each area are in the table, finished ones on the line under it.
 |---|---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | prod "Platform", acceptance-matrix "Release" | manual TestFlight upload workflow and setup (docs/release.md); App Store listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | later 12 | none |
-| missing | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | Q183 | only the one-time "Tap Press Any for the menu" hint |
+| partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | Q183; D "A welcome screen until the onboarding exists" | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | Q184, dec 12 | none |
 | missing | Landscape gameplay | v1 | prod "Layouts, skins, touch"; dec 22 | TouchControlLayout is portrait-only |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | later 12 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
@@ -179,19 +179,19 @@ Done: Search by primary title.
 | partial | Header read/validate/display, no editing | v1 | dec 18 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
 | partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |
-| missing | Verification status Verified/Modified/Unknown; never auto-repair | v1 | dec 18 |  |
-| missing | No-Intro GB/GBC data: the DB export for both systems turned into one compact bundled file by `Scripts/generate-known-dumps.py`, refreshed by hand from a browser download and reviewed per update | v1 | later 11; prod "ROM identity"; D "The game database is No-Intro's" | the license allows bundling; DAT-o-MATIC bans automated clients, so `no-intro-update.yml` is not built |
-| missing | Bundled No-Intro baseline; matching works offline | v1 | dec 18; prod "ROM identity" | ships in the app, refreshed with app releases |
 | missing | Signed/validated downloadable database updates | v1.1 | dec 18 | needs a host and a signing key; the bundled file already carries its date |
-| missing | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | dec 18; Q156; D "Regional releases and No-Intro families" | today they come only from filename tags |
-| missing | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | Q156/Q157; prod "ROM identity" | today only a matching title after tags are stripped joins an existing Game |
+| partial | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | dec 18; Q156; D "Regional releases and No-Intro families" | matched by SHA-1; a known dump takes its canonical name, region, language and revision through the filename parser; status flags such as Aftermarket and Unl are not parsed yet |
+| partial | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | Q156/Q157; prod "ROM identity" | a release suggests the one Game holding its family; several such Games are listed first for the player to choose; the preferred-region title and Preferred proposal remain |
 | missing | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Build Names | v1 | Q157; D "Regional releases and No-Intro families" |  |
 | missing | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 | D "Regional releases and No-Intro families" |  |
 | partial | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | dec 17 | user can pick an existing Game as destination; no lineage-without-base metadata |
 | partial | Multi-signal development-build matching, never silently attach | v1 | Q151; mvp "Import MVP" step 5 | only exact hash or explicit target; no heuristics |
 | missing | Quiet provider metadata refresh never overwriting user overrides | v1 | Q165 |  |
 
-Done: SHA-256 identity for every ROM; Original imported filename preserved permanently.
+Done: SHA-256 identity for every ROM; Original imported filename preserved permanently; the bundled
+No-Intro data (both systems' DB exports, aftermarket releases included) with its generator, manual
+refresh and 90-day CI reminder; Verified / Bad Dump / Modified / Unknown in Technical Info, never
+altering a ROM.
 
 ### Import
 

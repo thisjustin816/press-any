@@ -33,7 +33,7 @@ let package = Package(
         .target(name: "EmulatorDomain"),
         .target(name: "EmulatorApplication", dependencies: ["EmulatorDomain", "EmulationCore"]),
         .target(name: "AssetStorage", dependencies: ["EmulatorDomain", "EmulatorApplication"]),
-        .target(name: "Importing", dependencies: ["EmulatorDomain", "EmulatorApplication", "ToolchainDetection"]),
+        .target(name: "Importing", dependencies: ["EmulatorDomain", "EmulatorApplication", "ToolchainDetection", "GameIdentity"]),
         // Importing for its ROM header rules, so a patched image is classified the way an import is.
         .target(name: "Patching", dependencies: ["EmulatorDomain", "EmulatorApplication", "Importing", "ToolchainDetection"]),
         .target(name: "EmulationCore", dependencies: ["EmulatorDomain"]),
@@ -45,7 +45,7 @@ let package = Package(
         .target(name: "EmulatorKitTestSupport", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore"]),
         .target(name: "ToolchainDetection", dependencies: ["EmulatorDomain"]),
         // No-Intro's known dumps, bundled as data; Scripts/generate-known-dumps.py writes the file.
-        .target(name: "GameIdentity", dependencies: ["EmulatorDomain"], resources: [.process("Resources")]),
+        .target(name: "GameIdentity", dependencies: ["EmulatorDomain", "EmulatorApplication"], resources: [.process("Resources")]),
         // SameBoy's headers are not self-contained (apu.h uses GB_ENUM, which only save_state.h
         // defines), so a clang module over Core/ cannot build in Xcode. Only the C bridge includes
         // them, through the header search path below; Swift sees SameBoyBridge alone. SwiftPM needs
@@ -84,7 +84,7 @@ let package = Package(
         .testTarget(name: "EmulatorDomainTests", dependencies: ["EmulatorDomain"]),
         .testTarget(name: "EmulatorApplicationTests", dependencies: ["EmulatorKitTestSupport", "EmulatorApplication", "EmulatorDomain", "AssetStorage"]),
         .testTarget(name: "AssetStorageTests", dependencies: ["EmulatorKitTestSupport", "AssetStorage"]),
-        .testTarget(name: "ImportingTests", dependencies: ["EmulatorKitTestSupport", "Importing", "AssetStorage"]),
+        .testTarget(name: "ImportingTests", dependencies: ["EmulatorKitTestSupport", "Importing", "AssetStorage", "GameIdentity"]),
         .testTarget(name: "PatchingTests", dependencies: ["EmulatorKitTestSupport", "Patching", "AssetStorage", "EmulatorApplication"]),
         .testTarget(name: "EmulationCoreTests", dependencies: ["EmulationCore", "EmulatorKitTestSupport", "EmulatorApplication"]),
         .testTarget(name: "EmulationSessionTests", dependencies: ["EmulationSession", "EmulationCore", "EmulatorKitTestSupport", "AssetStorage"]),
@@ -92,7 +92,7 @@ let package = Package(
         .testTarget(name: "GameplayInputTests", dependencies: ["GameplayInput", "EmulationCore"]),
         .testTarget(name: "GameplayAudioTests", dependencies: ["GameplayAudio", "EmulationCore"]),
         .testTarget(name: "SameBoyAdapterTests", dependencies: ["SameBoyAdapter", "EmulatorKitTestSupport"]),
-        .testTarget(name: "GameIdentityTests", dependencies: ["GameIdentity", "EmulatorDomain"]),
+        .testTarget(name: "GameIdentityTests", dependencies: ["GameIdentity", "EmulatorDomain", "EmulatorKitTestSupport", "AssetStorage"]),
         .testTarget(name: "ToolchainDetectionTests", dependencies: ["ToolchainDetection", "EmulatorDomain", "EmulatorKitTestSupport"]),
         .testTarget(
             name: "ArchitectureProofTests",
