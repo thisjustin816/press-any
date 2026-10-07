@@ -13,7 +13,7 @@ struct WelcomeView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     WordmarkView(size: 34)
                         .accessibilityLabel(AppBrand.displayName)
-                    Text("A Game Boy and Game Boy Color player.")
+                    Text("A Game Boy emulator.")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                 }
