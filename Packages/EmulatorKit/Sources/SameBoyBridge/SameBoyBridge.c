@@ -23,6 +23,8 @@
 // The most a GB/GBC cartridge maps (MBC5's 512 banks of 16 KB), and the largest image the app
 // imports or a patch produces.
 #define SB_MAX_ROM_SIZE (8u * 1024u * 1024u)
+// Enough for the longest Blargg report, which the harness drains every frame.
+#define SB_SERIAL_CAPACITY 4096u
 
 struct SBInstance {
     GB_gameboy_t *gb;
@@ -34,6 +36,10 @@ struct SBInstance {
     bool vblank;
     bool has_run; // Whether any emulation has run since the image was loaded or reset.
     bool previewing;
+    uint8_t serial[SB_SERIAL_CAPACITY];
+    size_t serial_count;
+    uint8_t serial_byte;
+    uint8_t serial_bits;
 };
 
 static uint32_t sb_encode_bgra(GB_gameboy_t *gb, uint8_t r, uint8_t g, uint8_t b)
@@ -354,6 +360,55 @@ bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size)
     if (!instance || !instance->gb || !bytes || size == 0) return false;
     instance->has_run = true;
     return GB_load_state_from_buffer(instance->gb, bytes, size) == 0;
+}
+
+SBRegisters SBReadRegisters(SBInstance *instance)
+{
+    if (!instance || !instance->gb) return (SBRegisters){0};
+    GB_registers_t *registers = GB_get_registers(instance->gb);
+    return (SBRegisters){
+        .a = registers->af >> 8, .f = registers->af & 0xff,
+        .b = registers->bc >> 8, .c = registers->bc & 0xff,
+        .d = registers->de >> 8, .e = registers->de & 0xff,
+        .h = registers->hl >> 8, .l = registers->hl & 0xff,
+        .sp = registers->sp, .pc = registers->pc,
+    };
+}
+
+uint8_t SBReadMemory(SBInstance *instance, uint16_t addr)
+{
+    if (!instance || !instance->gb) return 0xff;
+    return GB_safe_read_memory(instance->gb, addr);
+}
+
+// Each bit the game shifts out, most significant first; eight make a byte.
+static void sb_serial_bit_callback(GB_gameboy_t *gb, bool bit)
+{
+    SBInstance *instance = GB_get_user_data(gb);
+    if (!instance) return;
+    instance->serial_byte = (uint8_t)(instance->serial_byte << 1) | (bit ? 1 : 0);
+    if (++instance->serial_bits < 8) return;
+    if (instance->serial_count < SB_SERIAL_CAPACITY) {
+        instance->serial[instance->serial_count++] = instance->serial_byte;
+    }
+    instance->serial_bits = 0;
+}
+
+void SBCaptureSerial(SBInstance *instance, bool enabled)
+{
+    if (!instance || !instance->gb) return;
+    GB_set_serial_transfer_bit_start_callback(instance->gb, enabled ? sb_serial_bit_callback : NULL);
+    instance->serial_bits = 0;
+}
+
+size_t SBDrainSerial(SBInstance *instance, uint8_t *output, size_t max_bytes)
+{
+    if (!instance || !output) return 0;
+    size_t count = instance->serial_count < max_bytes ? instance->serial_count : max_bytes;
+    memcpy(output, instance->serial, count);
+    memmove(instance->serial, instance->serial + count, instance->serial_count - count);
+    instance->serial_count -= count;
+    return count;
 }
 
 void SBReset(SBInstance *instance)

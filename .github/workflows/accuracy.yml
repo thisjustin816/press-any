@@ -1,0 +1,56 @@
+name: Accuracy
+
+# Runs Blargg's and the Mooneye Test Suite's ROMs through SameBoyBridge and compares the results
+# with Scripts/tests/accuracy-expected.txt. The suites are pinned, so a result can only change
+# when SameBoy, the bridge, the boot ROMs or the harness do; the job runs for those changes alone.
+
+on:
+  pull_request:
+    paths:
+      - Packages/EmulatorKit/Dependencies/SameBoy
+      - Packages/EmulatorKit/Sources/SameBoyBridge/**
+      - Scripts/generate-sameboy-bootroms.sh
+      - Scripts/test-accuracy-roms.sh
+      - Scripts/tests/sameboy_test_roms.c
+      - Scripts/tests/accuracy-expected.txt
+      - .github/workflows/accuracy.yml
+  push:
+    branches: [main]
+    paths:
+      - Packages/EmulatorKit/Dependencies/SameBoy
+      - Packages/EmulatorKit/Sources/SameBoyBridge/**
+      - Scripts/generate-sameboy-bootroms.sh
+      - Scripts/test-accuracy-roms.sh
+      - Scripts/tests/sameboy_test_roms.c
+      - Scripts/tests/accuracy-expected.txt
+      - .github/workflows/accuracy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: accuracy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-roms:
+    name: Accuracy test ROMs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends bison cmake libpng-dev pkg-config
+      # SameBoy's boot ROMs need RGBDS, which Ubuntu packages too old a version of.
+      - name: Build RGBDS
+        run: |
+          git clone -q --depth 1 --branch v0.9.0 https://github.com/gbdev/rgbds "$RUNNER_TEMP/rgbds"
+          cmake -S "$RUNNER_TEMP/rgbds" -B "$RUNNER_TEMP/rgbds/build" -DCMAKE_BUILD_TYPE=Release >/dev/null
+          cmake --build "$RUNNER_TEMP/rgbds/build" -j "$(nproc)" >/dev/null
+          sudo cmake --install "$RUNNER_TEMP/rgbds/build" >/dev/null
+      - name: Run the test ROMs
+        run: ./Scripts/test-accuracy-roms.sh

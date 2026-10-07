@@ -54,6 +54,11 @@ typedef struct {
     int16_t right;
 } SBStereoSample;
 
+typedef struct {
+    uint8_t a, f, b, c, d, e, h, l;
+    uint16_t sp, pc;
+} SBRegisters;
+
 SBInstance *SBCreate(SBModel model);
 void SBDestroy(SBInstance *instance);
 
@@ -84,6 +89,14 @@ bool SBSaveState(SBInstance *instance, uint8_t *output, size_t size);
 bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size);
 
 void SBReset(SBInstance *instance);
+
+/// For the accuracy harness: test ROMs report their results in CPU registers (Mooneye, SameSuite),
+/// as text sent out of the serial port with no link partner, or in cartridge RAM (Blargg).
+SBRegisters SBReadRegisters(SBInstance *instance);
+/// Reads the byte the CPU would see at addr, without side effects.
+uint8_t SBReadMemory(SBInstance *instance, uint16_t addr);
+void SBCaptureSerial(SBInstance *instance, bool enabled);
+size_t SBDrainSerial(SBInstance *instance, uint8_t *output, size_t max_bytes);
 
 #ifdef __cplusplus
 }
