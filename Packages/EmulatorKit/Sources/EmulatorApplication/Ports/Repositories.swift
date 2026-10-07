@@ -14,6 +14,11 @@ public protocol BuildRepository: Sendable {
     func fetchBuilds(gameID: UUID) throws -> [Build]
     func fetchBuild(gameID: UUID, imageSHA256: String) throws -> Build?
     func fetchBuild(imageSHA256: String) throws -> Build?
+    /// Live Builds whose image has one of these SHA-1s.
+    func fetchBuilds(imageSHA1s: [String]) throws -> [Build]
+    /// Live imported Builds whose SHA-1 hasn't been computed yet.
+    func fetchImportedBuildsMissingImageSHA1() throws -> [Build]
+    func setImageSHA1(buildID: UUID, sha1: String) throws
     func insertBuild(_ build: Build) throws
     func updateBuildMetadata(_ build: Build) throws
     func moveBuild(id: UUID, toGameID: UUID) throws

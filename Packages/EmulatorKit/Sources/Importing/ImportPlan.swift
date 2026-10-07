@@ -1,5 +1,6 @@
 import EmulatorDomain
 import Foundation
+import GameIdentity
 
 public enum ROMImportDisposition: Equatable, Sendable {
     case createGame(title: String)
@@ -20,6 +21,16 @@ public struct ROMImportAnalysis: Equatable, Sendable {
     /// What each toolchain detector found in the image. Shown for review and stored on the Build;
     /// it never decides the Game.
     public let toolchainReports: [ToolchainDetectionReport]
+    /// Nil only for analyses made before SHA-1 was computed, such as in tests.
+    public let imageSHA1: String?
+    /// The No-Intro game the image is a copy of, when it is one. `filenameMetadata` then comes from
+    /// No-Intro's fields instead of the file's name, which stays in `originalFilename`.
+    public let knownDump: KnownDump?
+    /// The image as No-Intro lists it, which says whether it is a bad copy.
+    public let knownFile: KnownDumpFile?
+    /// The Games already holding a Build from the dump's family. With exactly one, it is the
+    /// suggested Game; with several, the player chooses (Q157).
+    public let familyGameIDs: [UUID]
 
     public init(
         transactionID: UUID,
@@ -31,7 +42,11 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         filenameMetadata: FilenameMetadata,
         exactExistingBuildID: UUID?,
         suggestedGameID: UUID?,
-        toolchainReports: [ToolchainDetectionReport] = []
+        toolchainReports: [ToolchainDetectionReport] = [],
+        imageSHA1: String? = nil,
+        knownDump: KnownDump? = nil,
+        knownFile: KnownDumpFile? = nil,
+        familyGameIDs: [UUID] = []
     ) {
         self.transactionID = transactionID
         self.stagedURL = stagedURL
@@ -43,6 +58,10 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         self.exactExistingBuildID = exactExistingBuildID
         self.suggestedGameID = suggestedGameID
         self.toolchainReports = toolchainReports
+        self.imageSHA1 = imageSHA1
+        self.knownDump = knownDump
+        self.knownFile = knownFile
+        self.familyGameIDs = familyGameIDs
     }
 }
 

@@ -235,7 +235,7 @@ public enum FilenameMetadataParser {
         )
     }
 
-    private static func buildName(for kind: FilenameReleaseKind, metadata: BuildImportMetadata) -> String {
+    static func buildName(for kind: FilenameReleaseKind, metadata: BuildImportMetadata) -> String {
         var parts: [String] = []
         if let version = metadata.versionString {
             parts.append(isDateVersion(version) ? version.replacingOccurrences(of: ".", with: "-") : "v\(version)")

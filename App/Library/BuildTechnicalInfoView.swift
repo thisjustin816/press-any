@@ -1,4 +1,5 @@
 import EmulatorDomain
+import GameIdentity
 import SwiftUI
 
 /// A Build's exact identity and what it was made with. Opening it detects the image again, so a
@@ -11,6 +12,22 @@ struct BuildTechnicalInfoView: View {
     @State private var errorMessage: String?
     @State private var variableMaps: [BuildVariableMap] = []
     @Environment(\.dismiss) private var dismiss
+
+    /// How the image compares with No-Intro's data; a patched Build follows its bases.
+    private var verification: String {
+        let builds = container.repositories.builds
+        let result = container.knownDumps?.verification(
+            of: build,
+            sha1: { $0.imageSHA1 },
+            lookup: { try? builds.fetchBuild(id: $0) }
+        )
+        switch result {
+        case .verified(let dump): return "Verified · \(dump.name)"
+        case .badDump(let dump): return "Bad Dump · \(dump.name)"
+        case .modified(let dump): return "Modified · patched from \(dump.name)"
+        case .unknown, nil: return "Unknown"
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -32,6 +49,7 @@ struct BuildTechnicalInfoView: View {
                     if let pin = build.corePin {
                         LabeledContent("Core", value: "\(pin.descriptor.identifier) \(pin.descriptor.version)")
                     }
+                    LabeledContent("No-Intro", value: verification)
                     SHA256Row(hash: build.imageSHA256)
                 }
 

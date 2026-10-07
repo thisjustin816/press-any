@@ -41,7 +41,7 @@ public struct ImportCommitter: Sendable {
     public func commit(_ plan: ROMImportPlan) throws -> ROMImportResult {
         if case .duplicateExisting(let buildID) = plan.disposition {
             defer { try? assetStore.removeIfExists(plan.analysis.stagedURL.deletingLastPathComponent()) }
-            guard let build = try builds.fetchBuild(id: buildID) else {
+            guard var build = try builds.fetchBuild(id: buildID) else {
                 throw ImportCommitterError.buildNotFound(buildID)
             }
             guard let game = try games.fetchGame(id: build.gameID) else {
@@ -58,6 +58,10 @@ public struct ImportCommitter: Sendable {
             // The same image gives the same findings, but a newer detector may find more.
             for report in plan.analysis.toolchainReports {
                 try toolchainReports.saveReport(report, buildID: build.id, detectedAt: now())
+            }
+            if build.imageSHA1 == nil, let sha1 = plan.analysis.imageSHA1 {
+                try builds.setImageSHA1(buildID: build.id, sha1: sha1)
+                build.imageSHA1 = sha1
             }
             return ROMImportResult(
                 game: game,
@@ -136,6 +140,7 @@ public struct ImportCommitter: Sendable {
                     displayName: plan.buildDisplayName,
                     imageAssetID: sourceAsset.id,
                     imageSHA256: plan.analysis.sha256,
+                    imageSHA1: plan.analysis.imageSHA1,
                     sourceKind: .importedImage,
                     isBase: plan.markAsBase,
                     region: plan.metadata.region,
