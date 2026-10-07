@@ -156,7 +156,7 @@ struct SharedPatchView: View {
                 Button("Apply Anyway", role: .destructive) { apply(to: build, ignoringBaseMismatch: true) }
                 Button("Cancel", role: .cancel) { mismatchedBuild = nil }
             } message: { build in
-                Text("\(build.displayName) doesn't match the patch's expected base.\n\n\(baseMismatchDetails)\n\nApplying it anyway may produce a game that doesn't work.")
+                Text("“\(build.displayName)” doesn’t match the patch’s expected base.\n\n\(baseMismatchDetails)\n\nApplying it anyway may produce a game that doesn’t work.")
             }
             .alert("Build Created", isPresented: Binding(
                 get: { createdBuild != nil },
