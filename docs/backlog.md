@@ -21,24 +21,24 @@ migrating later.
    `docs/product.md` describes the design.
 2. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
    metadata provenance with Metadata Details, Build notes, per-Build playtime and the Build
-   timeline, tags, collections and favorites, declared save compatibility, per-step patch input
-   hashes, and the cross-region save check.
+   timeline, favorites, declared save compatibility, per-step patch input hashes, and the
+   cross-region save check.
 3. Multi-signal development-build matching, the one import item left in v1.
-4. Library features on that data: FTS5 search, sorting, smart and manual collections, play
-   statistics, the Developer view, the signed catalog file, and the storage screen with cleanup,
-   in-flight protection and verification on read.
-5. iCloud sync, once tombstones and the schema have settled.
-6. Exports, last of the library work because their format follows the settled schema: Library
+4. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
+   with cleanup, in-flight protection and verification on read.
+5. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
    Files folder they land in come first, as they don't depend on the schema.
-7. The rest of the v1 core: Quick Save and save state slots, crash recovery, reopening the last
+6. The rest of the v1 core: Quick Save and save state slots, crash recovery, reopening the last
    game, a fixed controller combo for the game menu, and rumble routing.
 
 v1 is a good core experience; everything else waits for v1.1: ZIP, 7z and multi-asset import,
 artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
 Actions, the DMG/GBC/SGB model override, shaders and the layout editor with skin import,
-screenshots and notes, and external displays. The hosted Community Catalog follows v1.
+screenshots and notes, external displays, tags and collections, iCloud sync once the schema has
+settled, the Community Catalog and metadata providers, crash reporting and usage counts, Developer
+Mode, core updates, and the internal registries and descriptors.
 
 ## Known bugs
 
@@ -53,11 +53,11 @@ Open items in each area are in the table, finished ones on the line under it.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | manual TestFlight upload workflow and setup (docs/release.md); App Store listing, review and rights gate not started |
-| missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | none |
+| missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1.1 | none |
 | partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
-| missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | none |
+| missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |
 | partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
-| missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
+| missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1.1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
 | missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow already seeds from `TestROMs/` |
 
 Done: A Press Any folder in Files holding Exports, with the library kept in Application Support and
@@ -71,9 +71,9 @@ Acknowledgements screen listing SameBoy + GRDB with full licenses.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Registries for platforms, cores, image analyzers, toolchain detectors, patch formats | v1 | CoreRegistry + ToolchainDetectorRegistry exist; no platform or analyzer registry; patch formats dispatched by file extension in PatchStackApplier |
-| missing | PlatformDescriptor / HardwareDescriptor / DistributionDescriptor / CompatibilityRecord (core target + hardware target) | v1 |  |
-| missing | Input and memory descriptors | v1 |  |
+| partial | Registries for platforms, cores, image analyzers, toolchain detectors, patch formats | v1.1 | CoreRegistry + ToolchainDetectorRegistry exist; no platform or analyzer registry; patch formats dispatched by file extension in PatchStackApplier |
+| missing | PlatformDescriptor / HardwareDescriptor / DistributionDescriptor / CompatibilityRecord (core target + hardware target) | v1.1 |  |
+| missing | Input and memory descriptors | v1.1 |  |
 
 Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` contracts.
 
@@ -81,8 +81,8 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Nonintrusive "core update available" notice | v1 | none |
-| missing | Explicit, reversible core-migration checkpoint (new state lineage, rollback when old core available) | v1 | none |
+| missing | Nonintrusive "core update available" notice | v1.1 | none |
+| missing | Explicit, reversible core-migration checkpoint (new state lineage, rollback when old core available) | v1.1 | none |
 | partial | Automatic model selection | v1.1 | CGB flag 0x80/0xC0 -> CGB, else DMG (SameBoyAdapter.loadImage); SGB never chosen |
 | missing | Model override DMG/GBC/SGB at App->System->Game->Build | v1.1 | no setting key |
 | missing | SGB mode: palettes, borders, game enhancements (custom border editing deferred) | v1.1 | no SGB model/boot ROM in bridge |
@@ -120,7 +120,7 @@ ROMs and patches on demand.
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain and sidecars were MVP) | toolchain reports and variable maps done; the rest missing |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1.1 |  |
 | missing | Typed multi-artwork model with primary selection | v1.1 | Game.artworkAssetID is a single image |
-| missing | Tags and collections | v1 |  |
+| missing | Tags and collections | v1.1 |  |
 
 Done: Game: UUID, primary title, system family, preferred Build/Profile, timestamps; Build: UUID,
 gameID, system, concise name, immutable hash, sourceKind, parent lineage, Base marker, preferred
@@ -135,10 +135,10 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Optional Developer view (Build/version/profile details) | v1 |  |
-| missing | Manual collections/folders | v1 |  |
-| missing | Smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates) | v1 |  |
-| missing | Tags on Games/Builds via long-press/overflow | v1 |  |
+| missing | Optional Developer view (Build/version/profile details) | v1.1 |  |
+| missing | Manual collections/folders | v1.1 |  |
+| missing | Smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates) | v1.1 |  |
+| missing | Tags on Games/Builds via long-press/overflow | v1.1 |  |
 | partial | Sorting | v1 | title only; recent/added/playtime/release year/system/developer/publisher/hack author/Build version/last Build change/manual order missing |
 | missing | Favorites | v1 |  |
 | partial | Play statistics | v1 | profile playtime, session count, last played recorded but never displayed; per-Build playtime, Game rollups, play count, last played on Game missing |
@@ -170,7 +170,7 @@ Done: Search by primary title.
 | missing | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 |  |
 | partial | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | user can pick an existing Game as destination; no lineage-without-base metadata |
 | partial | Multi-signal development-build matching, never silently attach | v1 | only exact hash or explicit target; no heuristics |
-| missing | Quiet provider metadata refresh never overwriting user overrides | v1 |  |
+| missing | Quiet provider metadata refresh never overwriting user overrides | v1.1 |  |
 
 Done: SHA-256 identity for every ROM; Original imported filename preserved permanently; the bundled
 No-Intro data (both systems' DB exports, aftermarket releases included) with its generator, manual
@@ -218,8 +218,8 @@ automatically replacing the previous one; rename a Build from its long-press men
 |---|---|---|---|
 | missing | Editable stacks UI: reorder/enable/disable/add/remove -> new Build | v1 |  |
 | missing | Patch base by region: when a patch expects another regional release already in the Game, such as USA when Europe was chosen, review offers that Build | v1 | a fan translation of a Japanese release joins the family's Game through its base |
-| partial | Pluggable patch-format architecture | v1 | switch on extension, no registry |
-| missing | Patch metadata with confidence/provenance (catalog > README > filename) | v1 |  |
+| partial | Pluggable patch-format architecture | v1.1 | switch on extension, no registry |
+| missing | Patch metadata with confidence/provenance (catalog > README > filename) | v1.1 |  |
 | missing | BPS generation from base vs modified Build | v1.1 |  |
 | missing | Quick Play a patch against a base without creating a Build | future |  |
 | missing | Expected input hash on every step of a patch stack; review shows expected and selected hashes when they differ | v1 | PatchRecipe checks only the base and the result; IPS carries no checksum of its own |
@@ -441,32 +441,32 @@ title placeholder fallback; Artwork follows Builds when a Game is emptied by pro
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Sync all library state except ROM blobs | v1 | stable UUIDs exist, nothing else |
-| partial | Tombstones; offline devices cannot resurrect | v1 | local tombstones are kept for good; sync must check them |
-| missing | Field-level merge where safe | v1 |  |
-| missing | Divergent .sav preserved, explicit resolution, split into new profile | v1 |  |
+| missing | Sync all library state except ROM blobs | v1.1 | stable UUIDs exist, nothing else |
+| partial | Tombstones; offline devices cannot resurrect | v1.1 | local tombstones are kept for good; sync must check them |
+| missing | Field-level merge where safe | v1.1 |  |
+| missing | Divergent .sav preserved, explicit resolution, split into new profile | v1.1 |  |
 
 ### Community Catalog
 
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Signed catalog file read offline: Game and Build metadata, expected hashes, lineage, patch download locations, no ROMs; nothing else depends on it | v1 |  |
-| missing | Opt-in anonymous read; lightweight identity to contribute; optional attribution | after v1 | hosted service |
-| missing | Moderated submissions, trust layers, structured evidence, rejection reasons | after v1 | hosted service |
-| missing | Field-level corrections; "Suggest This Correction" after local edit, never auto-submit | after v1 | hosted service |
-| missing | Metadata, artwork, legal patch references/uploads; no ROM hosting | after v1 | hosted service; the v1 file carries references |
-| missing | Update discovery: quiet badge, optional verified pre-download, per-Game override, details | after v1 |  |
-| missing | Update import as new Build via normal review, old kept for rollback | after v1 |  |
-| missing | Backend (PostgreSQL/Supabase-shaped), CC0 factual metadata policy | after v1 |  |
+| missing | Signed catalog file read offline: Game and Build metadata, expected hashes, lineage, patch download locations, no ROMs; nothing else depends on it | v1.1 |  |
+| missing | Opt-in anonymous read; lightweight identity to contribute; optional attribution | after v1.1 | hosted service |
+| missing | Moderated submissions, trust layers, structured evidence, rejection reasons | after v1.1 | hosted service |
+| missing | Field-level corrections; "Suggest This Correction" after local edit, never auto-submit | after v1.1 | hosted service |
+| missing | Metadata, artwork, legal patch references/uploads; no ROM hosting | after v1.1 | hosted service; the v1 file carries references |
+| missing | Update discovery: quiet badge, optional verified pre-download, per-Game override, details | after v1.1 |  |
+| missing | Update import as new Build via normal review, old kept for rollback | after v1.1 |  |
+| missing | Backend (PostgreSQL/Supabase-shaped), CC0 factual metadata policy | after v1.1 |  |
 
 ### Metadata databases
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Bundled offline identity baseline + validated downloadable updates | v1 |  |
-| missing | Pluggable metadata provider chain (canonical -> online -> catalog -> user override) | v1 |  |
-| missing | Separate opt-in homebrew/ROM-hack catalog with provenance | v1 |  |
+| missing | Bundled offline identity baseline + validated downloadable updates | v1.1 |  |
+| missing | Pluggable metadata provider chain (canonical -> online -> catalog -> user override) | v1.1 |  |
+| missing | Separate opt-in homebrew/ROM-hack catalog with provenance | v1.1 |  |
 
 ### Backups and migration
 
@@ -491,7 +491,7 @@ Files without replacing an earlier export.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Synchronized tombstones | v1 | purging writes a permanent local tombstone; syncing them waits on iCloud |
+| partial | Synchronized tombstones | v1.1 | purging writes a permanent local tombstone; syncing them waits on iCloud |
 | missing | Lightweight Undo for recent structural operations | v1 |  |
 
 Done: Dependency-aware deletion: the confirmation names patched Builds and emptied Games that go
@@ -515,10 +515,10 @@ after shortfalls); frames run on the display refresh at native speed, up to 120 
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Opt-in crash reporting limited to non-content diagnostics | v1 | no crash reporting at all |
-| missing | Opt-in anonymous usage counts (Games, Builds per Game, Save Profiles used by several Builds, Quick Play sessions added to the library), never titles, hashes, filenames or contents | v1 | endpoint or provider and privacy copy not chosen; PRIVACY.md and the App Store privacy answers change with it |
+| missing | Opt-in crash reporting limited to non-content diagnostics | v1.1 | no crash reporting at all |
+| missing | Opt-in anonymous usage counts (Games, Builds per Game, Save Profiles used by several Builds, Quick Play sessions added to the library), never titles, hashes, filenames or contents | v1.1 | endpoint or provider and privacy copy not chosen; PRIVACY.md and the App Store privacy answers change with it |
 | missing | Explicit bug-report export with checklist/preview | v1.1 |  |
-| missing | Accurate privacy/consent copy for provider queries and catalog; keys server-side/secure storage | v1 |  |
+| missing | Accurate privacy/consent copy for provider queries and catalog; keys server-side/secure storage | v1.1 |  |
 
 Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filenames, notes).
 
@@ -564,7 +564,7 @@ Add to Library, never before the first frame; Feeds the save compatibility check
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Optional Included Games manifest (ID, hashes, licenses, permission record, releaseApproved gate) imported through the normal path | v1 |  |
+| missing | Optional Included Games manifest (ID, hashes, licenses, permission record, releaseApproved gate) imported through the normal path | v1.1 |  |
 
 ### CI / generated pipelines
 

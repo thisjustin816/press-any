@@ -34,13 +34,13 @@ change. There is no separate decision log.
 - The library, Game Details, Settings and every sheet are portrait. Gameplay also turns to
   landscape (see Landscape).
 
-v1 is a good core experience: the library model, saves and states, patching, Quick Play, Fast
-Forward, rumble, Bluetooth controllers, landscape and the built-in layouts. iCloud and the
-Community Catalog also target v1, but either can move to v1.1 after an explicit review if it's
-the only thing holding up a stable emulator. Everything else waits for v1.1: archive and
-multi-asset imports, automatic artwork and documents, rewind, slow motion, frame advance and Quick
-Actions, the model override, curated shaders, the layout editor and skin import, screenshots and
-notes, and external displays.
+v1 is a good core experience: the library model with search, sorting and favorites, saves and
+states with Library Backup, patching, Quick Play, Fast Forward, rumble, Bluetooth controllers,
+landscape and the built-in layouts. Everything else waits for v1.1: iCloud sync, the Community
+Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
+artwork and documents, rewind, slow motion, frame advance and Quick Actions, the model override,
+curated shaders, the layout editor and skin import, screenshots and notes, external displays,
+crash reporting and usage counts, and Developer Mode.
 
 ## Library model
 
@@ -51,8 +51,8 @@ versions, regional and revision variants, and Builds moving in or out. It has a 
 title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its
 own name; the base game's title stays as lineage.
 
-v1 adds aliases (indexed for search, including a No-Intro family's regional titles), tags,
-collections, favorites and metadata provenance; documents and typed artwork follow in v1.1.
+v1 adds aliases (indexed for search, including a No-Intro family's regional titles), favorites
+and metadata provenance; tags, collections, documents and typed artwork follow in v1.1.
 
 ### Build
 
@@ -728,7 +728,7 @@ AirPlay and wired displays show the game as an independent render target with it
 aspect and shader, while the phone becomes a controller with Quick Actions, the manual, states and
 Build switching. Chromecast is out of scope.
 
-### iCloud
+### iCloud (v1.1)
 
 Syncs everything except ROMs: metadata, profiles and saves, states, cheats, settings, tags,
 artwork and document overrides, patches, layouts, notes, captures and statistics. Field-level
@@ -736,11 +736,11 @@ merges where safe; divergent `.sav` files are both kept for the player to choose
 separate profiles, or duplicate first. Deletions sync as tombstones. iCloud is sync, not hidden
 save history.
 
-### Community Catalog
+### Community Catalog (v1.1)
 
-v1 reads a signed catalog file offline: Game and Build metadata, expected hashes, lineage and where
-to download patches, never ROMs. Playing, importing and patching never depend on it. The hosted
-service follows v1: anonymous reading, an account to contribute, optional attribution,
+v1.1 reads a signed catalog file offline: Game and Build metadata, expected hashes, lineage and
+where to download patches, never ROMs. Playing, importing and patching never depend on it. The
+hosted service follows: anonymous reading, an account to contribute, optional attribution,
 moderation with reasons for rejections, field-level corrections with evidence, Suggest This
 Correction after a local edit (never automatic), and no comments or ratings. Update discovery shows
 a quiet badge by default, with optional verified pre-download and per-Game overrides; an update
@@ -756,7 +756,7 @@ encryption, with no recovery promise. Restore merges by stable IDs and hashes wi
 or replaces the whole library on request, and shows a report before and after. Adapters for Delta,
 Manic, Afterplay and Playtiles exports come later and report what they can't carry over.
 
-### Developer Mode
+### Developer Mode (v1.1)
 
 An Advanced toggle with an explanation. Its tools (memory search and editing, watches, hashes,
 patch provenance, frame advance, RTC controls, save details) appear in context rather than
@@ -764,7 +764,7 @@ replacing the interface.
 
 ### Privacy and telemetry
 
-Crash reports and anonymous usage counts are both opt-in. Usage counts are numbers only (Games,
+Crash reports and anonymous usage counts (v1.1) are both opt-in. Usage counts are numbers only (Games,
 Builds per Game, profiles shared by Builds, Quick Play sessions promoted), never titles, hashes,
 filenames or library contents; where they go and the privacy copy are still open. Nothing
 automatic ever uploads ROM, save or state bytes, screenshots, memory, filenames, notes or library
@@ -793,8 +793,8 @@ silently. The default shader must hold full speed on the slowest supported devic
   concepts; core compatibility isn't hardware compatibility.
 - Contracts say `GameImage` and `PersistentSave` rather than ROM and battery; GB-specific UI still
   says ROM and .sav. Cores and toolchain detectors have registries; platforms, image analyzers and
-  patch formats get theirs in v1, with input and memory descriptors.
-- A Build pins the core version it first launched with. v1 shows a quiet notice when a newer core
+  patch formats get theirs in v1.1, with input and memory descriptors.
+- A Build pins the core version it first launched with. v1.1 shows a quiet notice when a newer core
   is available and makes migration an explicit, reversible checkpoint that starts a new state
   lineage; rolling back is offered only when the old core can actually run.
 - `FeatureEntitlementProvider` keeps StoreKit out of the domain, core, storage and import code.
@@ -828,7 +828,7 @@ silently. The default shader must hold full speed on the slowest supported devic
 - No commercial ROMs or saves as fixtures. `TestROMs/` holds original, redistributable ROMs built
   from source beside them, each listed in `TestROMs/manifest.json`.
 - App Store screenshots and previews show homebrew and the original test ROMs only.
-- v1 adds CONTRIBUTING, SECURITY, a code of conduct and a trademark policy, with DCO sign-off and
+- v1.1 adds CONTRIBUTING, SECURITY, a code of conduct and a trademark policy, with DCO sign-off and
   no copyright-assignment CLA.
 
 ## Automation
