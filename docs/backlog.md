@@ -30,7 +30,7 @@ migrating later.
 6. The rest of the v1 core: Quick Save and save state slots, crash recovery, reopening the last
    game, and a fixed controller combo for the game menu.
 
-v1 is a good core experience; everything else waits for v1.1: ZIP, 7z and multi-asset import,
+v1 is a good core experience; everything else waits for v1.1: 7z and multi-asset import,
 artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
 Actions, the DMG/GBC/SGB model override, shaders and the layout editor with skin import,
 screenshots and notes, external displays, tags and collections, iCloud sync once the schema has
@@ -185,7 +185,7 @@ altering a ROM.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Files default-open handling with another emulator installed | v1 | Owner/Viewer declarations for .gb/.gbc/.ips/.bps; cited Delta, Provenance, SameBoy and RetroArch ROM identifiers accepted (see product.md, Shared files); hosted app test covers rank, role, extensions and identifiers; physical-iPhone tap and Share > Press Any checks pending in mvp-verification.md; iOS chooses the default between claiming apps |
-| missing | ZIP + 7z (libarchive) with archive safety (depth/ratio limits, traversal, password detect) | v1.1 |  |
+| partial | ZIP + 7z with archive safety (size limits, traversal, password detect) | v1.1 | shared zips open each ROM, patch and save inside, read in memory with the system zlib (stored and deflate, per-kind size limits, CRC checked, encrypted and Zip64 refused); 7z remains |
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path only repairs the blob |
 | missing | Visual artwork comparison (existing/fetched/packaged) in review | v1.1 |  |

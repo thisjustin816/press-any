@@ -30,6 +30,8 @@ public struct ImportSizeLimit: Equatable, Sendable {
     /// Stored artwork is downscaled, so only the file as picked can be this large.
     public static let artwork = ImportSizeLimit(bytes: 20 * 1_048_576)
     public static let variableMap = ImportSizeLimit(bytes: 4 * 1_048_576)
+    /// A zip holding a ROM, patches or saves. Each file inside is held to its own kind's limit.
+    public static let archive = ImportSizeLimit(bytes: 32 * 1_048_576)
 
     /// Throws when the file, after following symbolic links, is larger than the limit.
     public func check(fileAt url: URL) throws {

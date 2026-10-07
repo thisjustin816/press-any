@@ -67,6 +67,20 @@
 				<string>com.thisjustin816.emulator.save</string>
 			</array>
 		</dict>
+		<!-- Alternate, not Owner: Press Any reads the ROMs, patches and saves in a zip, but other
+		     zips should keep opening where they did. -->
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Zip Archive</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.zip-archive</string>
+			</array>
+		</dict>
 		<dict>
 			<key>CFBundleTypeName</key>
 			<string>IPS Patch</string>

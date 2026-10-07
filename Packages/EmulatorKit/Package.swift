@@ -33,7 +33,9 @@ let package = Package(
         .target(name: "EmulatorDomain"),
         .target(name: "EmulatorApplication", dependencies: ["EmulatorDomain", "EmulationCore"]),
         .target(name: "AssetStorage", dependencies: ["EmulatorDomain", "EmulatorApplication"]),
-        .target(name: "Importing", dependencies: ["EmulatorDomain", "EmulatorApplication", "ToolchainDetection", "GameIdentity"]),
+        // The system zlib, for reading zip archives.
+        .systemLibrary(name: "CZlib", path: "Sources/CZlib"),
+        .target(name: "Importing", dependencies: ["EmulatorDomain", "EmulatorApplication", "ToolchainDetection", "GameIdentity", "CZlib"]),
         // Importing for its ROM header rules, so a patched image is classified the way an import is.
         .target(name: "Patching", dependencies: ["EmulatorDomain", "EmulatorApplication", "Importing", "ToolchainDetection"]),
         .target(name: "EmulationCore", dependencies: ["EmulatorDomain"]),

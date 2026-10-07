@@ -226,9 +226,8 @@ changes the library; review shows what will happen; commit is all or nothing.
 ### Planned (v1.1 unless noted)
 
 - v1: development matching from several signals, preselecting a Game only at high confidence.
-- ZIP and 7z through libarchive, as temporary containers that aren't kept. Limits on nesting
-  depth, size and ratio; no path traversal or links; malformed and password-protected archives
-  fail cleanly. RAR is tentative.
+- 7z through libarchive, as a temporary container that isn't kept, with the same limits as zip.
+  RAR is tentative.
 - Multi-asset review that groups ROMs, patches, saves, artwork, documents, READMEs, changelogs,
   variable maps and skins, attaches several ROMs to one Game in one flow, and compares existing,
   fetched and packaged artwork visually.
@@ -736,6 +735,12 @@ exposes them; custom border editing is later.
 | [SameBoy](https://github.com/LIJI32/SameBoy/blob/c458e7c5d2d350fb37a1931c40da9f758d28d240/iOS/Info.plist) | `com.github.liji32.sameboy.gb` | `com.github.liji32.sameboy.gbc` |
 | [RetroArch](https://github.com/libretro/RetroArch/blob/2a515ab854de947bd3dad625c66e145a9d1a400b/pkg/apple/iOS/Info.plist) | `com.retroarch.gb` | `com.retroarch.gbc` |
 
+- A shared zip, the way ROM hacks and homebrew are downloaded, opens each ROM, patch and save
+  inside it in turn, as if each were shared on its own; readmes, folders and macOS metadata are
+  skipped. Zip is registered at Alternate rank, so other zips keep opening where they did. The
+  zip is read in memory and never kept: at most 32 MB, its entries stored or deflated, each held
+  to its own kind's size limit before it's inflated and checked against its CRC32. Encrypted,
+  Zip64 and damaged archives are refused.
 - A shared ROM offers Quick Play or Import to Library. A shared patch opens Open Patch, which
   needs a Game and a base Build. A shared save opens Open Save, which imports it as a new Save
   Profile in the chosen Game. The Game is preselected when the save is named like exactly one
