@@ -63,197 +63,7 @@ struct AppSettingsView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Picker("Controller Layout", selection: $controllerLayout) {
-                        Text("Game Boy").tag(TouchControlStyle.gameBoy)
-                        Text("Playtiles").tag(TouchControlStyle.playtiles)
-                    }
-                } header: {
-                    Text("Controls")
-                } footer: {
-                    Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits the Playtiles controller.")
-                }
-
-                Section {
-                    Picker("Controller Theme", selection: $controllerTheme) {
-                        Text("Match System").tag(ControllerTheme.matchSystem)
-                        Text("Classic").tag(ControllerTheme.classic)
-                        Text("Dark").tag(ControllerTheme.dark)
-                    }
-                } footer: {
-                    Text("Match System uses Classic in Light Mode and Dark in Dark Mode.")
-                }
-
-                Section {
-                    Toggle("Tap Game for Menu", isOn: $tapGameForMenu)
-                } footer: {
-                    Text("Tapping the \(AppBrand.displayName) button pauses the game and opens the menu. This adds tapping the game itself.")
-                }
-
-                Section {
-                    Toggle("Hide Touch Controls with a Controller", isOn: $hidesTouchControlsWithController)
-                } footer: {
-                    Text("A touch on the screen brings them back until the controller’s next button press.")
-                }
-
-                Section {
-                    Picker("Touch Haptics", selection: $touchHaptics) {
-                        Text("Off").tag(TouchHaptics.off)
-                        Text("Light").tag(TouchHaptics.light)
-                        Text("Medium").tag(TouchHaptics.medium)
-                    }
-                } footer: {
-                    Text("How the on-screen buttons tap back when pressed. They stay still while a controller is in use.")
-                }
-
-                Section {
-                    Picker("Screen Scaling", selection: $screenScaling) {
-                        Text("Integer").tag(ScreenScaling.integer)
-                        Text("Fill").tag(ScreenScaling.fill)
-                    }
-                } header: {
-                    Text("Display")
-                } footer: {
-                    Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
-                }
-
-                Section {
-                    Picker("Color Correction", selection: $colorCorrection) {
-                        ForEach(ColorCorrection.allCases, id: \.self) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                } footer: {
-                    Text(ColorCorrection.explanation)
-                }
-
-                Section {
-                    Picker("DMG Palette", selection: $dmgPalette) {
-                        ForEach(DMGPalette.allCases, id: \.self) { palette in
-                            Text(palette.displayName).tag(palette)
-                        }
-                    }
-                } footer: {
-                    Text(DMGPalette.explanation)
-                }
-
-                Section {
-                    Picker("LCD Filter", selection: $lcdFilter) {
-                        ForEach(LCDFilter.allCases, id: \.self) { filter in
-                            Text(filter.displayName).tag(filter)
-                        }
-                    }
-                } footer: {
-                    Text("LCD 1× adds a subtle pixel grid. LCD 3× adds red, green and blue subpixels. Screen size stays the same.")
-                }
-
-                Section {
-                    Picker("Frame Blending", selection: $frameBlending) {
-                        ForEach(FrameBlending.allCases, id: \.self) { blending in
-                            Text(blending.displayName).tag(blending)
-                        }
-                    }
-                } footer: {
-                    Text("Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things.")
-                }
-
-                Section {
-                    Picker("Fast Forward Speed", selection: $fastForwardSpeed) {
-                        ForEach(FastForwardSpeed.allCases, id: \.self) { speed in
-                            Text(speed.displayName).tag(speed)
-                        }
-                    }
-                } footer: {
-                    Text("How fast Fast Forward in the game menu runs. Unlimited runs as fast as your phone can.")
-                }
-
-                Section {
-                    Picker("Fast Forward Audio", selection: $fastForwardAudio) {
-                        ForEach(FastForwardAudio.allCases, id: \.self) { audio in
-                            Text(audio.displayName).tag(audio)
-                        }
-                    }
-                } footer: {
-                    Text("Muted is silent while Fast Forward runs. Accelerated plays the sound sped up with the game, up to 4×. Faster speeds stay muted.")
-                }
-
-                Section {
-                    Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
-                } footer: {
-                    Text("Library games open on the game instead of the boot logo. Quick Play always skips it.")
-                }
-
-                Section {
-                    Picker("Sound", selection: $soundMode) {
-                        Text("Follow Silent Switch").tag(SoundMode.followSilentSwitch)
-                        Text("Always On").tag(SoundMode.alwaysOn)
-                        Text("Always Off").tag(SoundMode.alwaysOff)
-                    }
-                } header: {
-                    Text("Sound")
-                } footer: {
-                    Text("Always Off leaves music from other apps playing.")
-                }
-
-                Section {
-                    Picker("Resume Games", selection: $autoResumePolicy) {
-                        Text("Always").tag(AutoResumePolicy.always)
-                        Text("Ask").tag(AutoResumePolicy.ask)
-                        Text("Never").tag(AutoResumePolicy.never)
-                    }
-                } header: {
-                    Text("Playing")
-                } footer: {
-                    Text("Whether a game picks up where you left off when you open it again or return to the app.")
-                }
-
-                Section {
-                    ForEach(GameSystem.allCases, id: \.self) { system in
-                        Button {
-                            systemSettings = SystemSettingsTarget(system: system)
-                        } label: {
-                            LabeledContent(system.displayName) {
-                                Image(systemName: "chevron.right")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        .foregroundStyle(.primary)
-                    }
-                } header: {
-                    Text("Systems")
-                } footer: {
-                    Text("Settings for every game on one system. A Game or Build can still set its own.")
-                }
-
-                if let libraryDeletion, let games {
-                    Section {
-                        NavigationLink("Recently Deleted") {
-                            RecentlyDeletedView(operations: libraryDeletion, games: games)
-                        }
-                    }
-                }
-
-                if let integrityChecker {
-                    LibraryCheckSection(checker: integrityChecker)
-                }
-
-                Section {
-                    NavigationLink("How \(AppBrand.displayName) Works") { WelcomeView() }
-                    if let privacyURL = URL(string: "https://github.com/thisjustin816/press-any/blob/main/PRIVACY.md") {
-                        Link("Privacy Policy", destination: privacyURL)
-                    }
-                    NavigationLink("Acknowledgements") { AcknowledgementsView() }
-                }
-
-                if let errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
+            settingsForm
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -275,17 +85,215 @@ struct AppSettingsView: View {
             .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
             .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
             .onChange(of: controllerTheme) { _, newValue in save(newValue, .controllerTheme) }
-            .onChange(of: lcdFilter) { _, newValue in save(newValue, .lcdFilter) }
-            .onChange(of: colorCorrection) { _, newValue in save(newValue, .colorCorrection) }
-            .onChange(of: dmgPalette) { _, newValue in save(newValue, .dmgPalette) }
-            .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
-            .onChange(of: fastForwardSpeed) { _, newValue in save(newValue, .fastForwardSpeed) }
-            .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
-            .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
             .onChange(of: tapGameForMenu) { _, newValue in save(newValue, .tapGameForMenu) }
             .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
             .onChange(of: hidesTouchControlsWithController) { _, newValue in save(newValue, .hideTouchControlsWithController) }
             .onChange(of: touchHaptics) { _, newValue in save(newValue, .touchHaptics) }
+        }
+    }
+
+    private var settingsForm: some View {
+        formContent
+        .onChange(of: lcdFilter) { _, newValue in save(newValue, .lcdFilter) }
+        .onChange(of: colorCorrection) { _, newValue in save(newValue, .colorCorrection) }
+        .onChange(of: dmgPalette) { _, newValue in save(newValue, .dmgPalette) }
+        .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
+        .onChange(of: fastForwardSpeed) { _, newValue in save(newValue, .fastForwardSpeed) }
+        .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
+        .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
+    }
+
+    private var formContent: some View {
+        Form {
+            Section {
+                Picker("Controller Layout", selection: $controllerLayout) {
+                    Text("Game Boy").tag(TouchControlStyle.gameBoy)
+                    Text("Playtiles").tag(TouchControlStyle.playtiles)
+                }
+            } header: {
+                Text("Controls")
+            } footer: {
+                Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits the Playtiles controller.")
+            }
+
+            Section {
+                Picker("Controller Theme", selection: $controllerTheme) {
+                    Text("Match System").tag(ControllerTheme.matchSystem)
+                    Text("Classic").tag(ControllerTheme.classic)
+                    Text("Dark").tag(ControllerTheme.dark)
+                }
+            } footer: {
+                Text("Match System uses Classic in Light Mode and Dark in Dark Mode.")
+            }
+
+            Section {
+                Toggle("Tap Game for Menu", isOn: $tapGameForMenu)
+            } footer: {
+                Text("Tapping the \(AppBrand.displayName) button pauses the game and opens the menu. This adds tapping the game itself.")
+            }
+
+            Section {
+                Toggle("Hide Touch Controls with a Controller", isOn: $hidesTouchControlsWithController)
+            } footer: {
+                Text("A touch on the screen brings them back until the controller’s next button press.")
+            }
+
+            Section {
+                Picker("Touch Haptics", selection: $touchHaptics) {
+                    Text("Off").tag(TouchHaptics.off)
+                    Text("Light").tag(TouchHaptics.light)
+                    Text("Medium").tag(TouchHaptics.medium)
+                }
+            } footer: {
+                Text("How the on-screen buttons tap back when pressed. They stay still while a controller is in use.")
+            }
+
+            Section {
+                Picker("Screen Scaling", selection: $screenScaling) {
+                    Text("Integer").tag(ScreenScaling.integer)
+                    Text("Fill").tag(ScreenScaling.fill)
+                }
+            } header: {
+                Text("Display")
+            } footer: {
+                Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
+            }
+
+            Section {
+                Picker("Color Correction", selection: $colorCorrection) {
+                    ForEach(ColorCorrection.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+            } footer: {
+                Text(ColorCorrection.explanation)
+            }
+
+            Section {
+                Picker("DMG Palette", selection: $dmgPalette) {
+                    ForEach(DMGPalette.allCases, id: \.self) { palette in
+                        Text(palette.displayName).tag(palette)
+                    }
+                }
+            } footer: {
+                Text(DMGPalette.explanation)
+            }
+
+            Section {
+                Picker("LCD Filter", selection: $lcdFilter) {
+                    ForEach(LCDFilter.allCases, id: \.self) { filter in
+                        Text(filter.displayName).tag(filter)
+                    }
+                }
+            } footer: {
+                Text("LCD 1× adds a subtle pixel grid. LCD 3× adds red, green and blue subpixels. Screen size stays the same.")
+            }
+
+            Section {
+                Picker("Frame Blending", selection: $frameBlending) {
+                    ForEach(FrameBlending.allCases, id: \.self) { blending in
+                        Text(blending.displayName).tag(blending)
+                    }
+                }
+            } footer: {
+                Text("Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things.")
+            }
+
+            Section {
+                Picker("Fast Forward Speed", selection: $fastForwardSpeed) {
+                    ForEach(FastForwardSpeed.allCases, id: \.self) { speed in
+                        Text(speed.displayName).tag(speed)
+                    }
+                }
+            } footer: {
+                Text("How fast Fast Forward in the game menu runs. Unlimited runs as fast as your phone can.")
+            }
+
+            Section {
+                Picker("Fast Forward Audio", selection: $fastForwardAudio) {
+                    ForEach(FastForwardAudio.allCases, id: \.self) { audio in
+                        Text(audio.displayName).tag(audio)
+                    }
+                }
+            } footer: {
+                Text("Muted is silent while Fast Forward runs. Accelerated plays the sound sped up with the game, up to 4×. Faster speeds stay muted.")
+            }
+
+            Section {
+                Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
+            } footer: {
+                Text("Library games open on the game instead of the boot logo. Quick Play always skips it.")
+            }
+
+            Section {
+                Picker("Sound", selection: $soundMode) {
+                    Text("Follow Silent Switch").tag(SoundMode.followSilentSwitch)
+                    Text("Always On").tag(SoundMode.alwaysOn)
+                    Text("Always Off").tag(SoundMode.alwaysOff)
+                }
+            } header: {
+                Text("Sound")
+            } footer: {
+                Text("Always Off leaves music from other apps playing.")
+            }
+
+            Section {
+                Picker("Resume Games", selection: $autoResumePolicy) {
+                    Text("Always").tag(AutoResumePolicy.always)
+                    Text("Ask").tag(AutoResumePolicy.ask)
+                    Text("Never").tag(AutoResumePolicy.never)
+                }
+            } header: {
+                Text("Playing")
+            } footer: {
+                Text("Whether a game picks up where you left off when you open it again or return to the app.")
+            }
+
+            Section {
+                ForEach(GameSystem.allCases, id: \.self) { system in
+                    Button {
+                        systemSettings = SystemSettingsTarget(system: system)
+                    } label: {
+                        LabeledContent(system.displayName) {
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                }
+            } header: {
+                Text("Systems")
+            } footer: {
+                Text("Settings for every game on one system. A Game or Build can still set its own.")
+            }
+
+            if let libraryDeletion, let games {
+                Section {
+                    NavigationLink("Recently Deleted") {
+                        RecentlyDeletedView(operations: libraryDeletion, games: games)
+                    }
+                }
+            }
+
+            if let integrityChecker {
+                LibraryCheckSection(checker: integrityChecker)
+            }
+
+            Section {
+                NavigationLink("How \(AppBrand.displayName) Works") { WelcomeView() }
+                if let privacyURL = URL(string: "https://github.com/thisjustin816/press-any/blob/main/PRIVACY.md") {
+                    Link("Privacy Policy", destination: privacyURL)
+                }
+                NavigationLink("Acknowledgements") { AcknowledgementsView() }
+            }
+
+            if let errorMessage {
+                Section {
+                    Text(errorMessage)
+                        .foregroundStyle(.red)
+                }
+            }
         }
     }
 
