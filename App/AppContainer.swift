@@ -50,6 +50,7 @@ final class AppContainer {
     let quickPlayPromoter: PromoteQuickPlay
     let coreRegistry: CoreRegistry
     let settingsResolver: SettingsResolver
+    let launchHistory: SessionLaunchHistory
 
     private(set) var activeSession: EmulationSession?
 
@@ -219,6 +220,7 @@ final class AppContainer {
         )
         coreRegistry = CoreRegistry(factories: [SameBoyCoreFactory()])
         settingsResolver = SettingsResolver(store: repositories.settings)
+        launchHistory = SessionLaunchHistory(store: repositories.settings)
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
         _ = try? libraryDeletion.purgeExpired()
@@ -257,6 +259,8 @@ final class AppContainer {
             imageResolver: launchImageResolver,
             coreRegistry: coreRegistry,
             settings: settingsResolver,
+            launchHistory: launchHistory,
+            transactions: repositories.transactions,
             thumbnails: PNGFrameEncoder()
         )
     }
@@ -278,6 +282,31 @@ final class AppContainer {
         )
         activeSession = launch.session
         return restore
+    }
+
+    func launchRestoration() throws -> SessionLaunchAction {
+        guard let context = try launchHistory.context() else { return .library }
+        guard let build = try repositories.builds.fetchBuild(id: context.buildID), build.gameID == context.gameID,
+              let profile = try repositories.saveProfiles.fetchSaveProfile(id: context.saveProfileID),
+              profile.gameID == context.gameID else {
+            try launchHistory.closed()
+            return .library
+        }
+        let checkpoint = try repositories.saveStates.fetchSaveStates(
+            buildID: context.buildID, saveProfileID: context.saveProfileID
+        ).filter { $0.kind == .crashRecovery }.max { $0.createdAt < $1.createdAt }
+        return try launchHistory.launchAction(checkpoint: checkpoint)
+    }
+
+    func prepareRecovery(context: LaunchContext, checkpoint: SaveState) -> PreparedLaunch {
+        let session = makeEmulationSession()
+        return PreparedLaunch(
+            context: context, session: session, policy: session.autoResumePolicy(for: context), autoState: checkpoint
+        )
+    }
+
+    func startNormallyAfterCrash() throws {
+        try launchHistory.closed()
     }
 
     /// The controller layout for a launch. Unset or unreadable means the Game Boy layout.

@@ -6,6 +6,7 @@ import UIKit
 
 @MainActor
 final class PhysicalControllerMonitor: ObservableObject {
+    var onMenuChanged: ((Bool) -> Void)?
     var onInputChanged: ((EmulatorInputState) -> Void)?
     var onConnectionChanged: ((Bool) -> Void)?
     var onUnexpectedDisconnect: (() -> Void)?
@@ -66,6 +67,7 @@ final class PhysicalControllerMonitor: ObservableObject {
             return
         }
         activeController = controller
+        onMenuChanged?(false)
         installHandlers(on: controller)
         onConnectionChanged?(true)
         publish(from: controller)
@@ -74,6 +76,7 @@ final class PhysicalControllerMonitor: ObservableObject {
     private func handleDisconnect(_ controller: GCController) {
         guard activeController === controller else { return }
         activeController = nil
+        onMenuChanged?(false)
         onInputChanged?(.init())
         onConnectionChanged?(false)
         onUnexpectedDisconnect?()
@@ -85,6 +88,12 @@ final class PhysicalControllerMonitor: ObservableObject {
 
     private func installHandlers(on controller: GCController) {
         guard let pad = controller.extendedGamepad else { return }
+        pad.buttonMenu.pressedChangedHandler = { [weak self, weak controller] _, _, pressed in
+            Task { @MainActor in
+                guard let self, let controller, self.activeController === controller else { return }
+                self.onMenuChanged?(pressed)
+            }
+        }
         pad.valueChangedHandler = { [weak self, weak controller] _, _ in
             guard let self, let controller else { return }
             Task { @MainActor in self.publish(from: controller) }

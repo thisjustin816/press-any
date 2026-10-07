@@ -42,6 +42,41 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(runtime.frames, frames)
     }
 
+    func testControllerMenuOpensAndClosesWithTouchControlsHidden() throws {
+        let (gameplay, runtime, monitor) = makeGameplay()
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.rootViewController = gameplay
+        window.makeKeyAndVisible()
+        gameplay.view.layoutIfNeeded()
+        defer {
+            gameplay.sceneWillDeactivate()
+            window.isHidden = true
+        }
+        monitor.selectPlayerOne(GCController.withExtendedGamepad())
+        XCTAssertFalse(gameplay.showsTouchControls)
+        monitor.onMenuChanged?(true)
+        let openDeadline = Date().addingTimeInterval(3)
+        while !gameplay.isGameMenuOpen, Date() < openDeadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        }
+        XCTAssertTrue(gameplay.isGameMenuOpen)
+        XCTAssertTrue(gameplay.isShowingPaused)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertFalse(gameplay.heldInput.start)
+        monitor.onMenuChanged?(false)
+        monitor.onMenuChanged?(true)
+        let closeDeadline = Date().addingTimeInterval(3)
+        while gameplay.isGameMenuOpen || !gameplay.isRunningFrames, Date() < closeDeadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        }
+        XCTAssertFalse(gameplay.isGameMenuOpen)
+        XCTAssertTrue(gameplay.isRunningFrames)
+        XCTAssertFalse(gameplay.isShowingPaused)
+        XCTAssertFalse(gameplay.heldInput.start)
+        XCTAssertFalse(runtime.failedFrame)
+    }
+
     func testTheGameMenuChangesSoundWhileTheGameStaysPaused() throws {
         let (gameplay, _, _) = makeGameplay()
         var saved: [SoundMode] = []

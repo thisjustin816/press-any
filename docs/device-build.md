@@ -8,7 +8,7 @@ iCloud, push notifications or App Groups, so free signing is enough.
 
 - A Mac with a current Xcode. CI builds with Xcode 26.6; your Xcode must also support the iOS
   version on your phone.
-- An iPhone on iOS 17 or later.
+- An iPhone on iOS 17.4 or later.
 - [Homebrew](https://brew.sh).
 - An Apple ID.
 - A Game Boy or Game Boy Color ROM you are entitled to use. The original homebrew ROMs in

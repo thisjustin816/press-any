@@ -59,7 +59,7 @@ Open items in each area are in the table, finished ones on the line under it.
 | missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow already seeds from `TestROMs/` |
 
 Done: A Press Any folder in Files holding Exports, with the library kept in Application Support and
-an empty share Inbox removed at launch; iOS 17 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
+an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
 Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (heavy
 italic, magenta "A") in library toolbar and controller body; App icon (A button; light/dark/tinted);
 Acknowledgements screen listing SameBoy + GRDB with full licenses.
@@ -264,11 +264,11 @@ states.
 | missing | Configurable automatic cleanup; pinned/favorited exempt | v1 |  |
 | missing | State records cheat config; offer Restore Cheat Configuration | v1.1 |  |
 | missing | Per-Save-Profile autoresume override | v1.1 |  |
-| missing | Separate crash-recovery checkpoint + Recover Session / Start Normally | v1 | SaveStateKind.crashRecovery unused |
-| missing | App relaunch returns to the previous game/session | v1 |  |
+| done | Separate crash-recovery checkpoint + Recover Session / Start Normally | v1 | One hidden state per Build and Save Profile, refreshed each minute of play; clean close or Auto State removes it. An open-session marker offers recovery without automatic launch; Start Normally keeps the checkpoint until that Build launches |
+| done | App relaunch returns to the previous game/session | v1 | A library game saved in the background reopens with Resume Games (Always, Ask or Never); a closed game stays closed, and Quick Play is excluded |
 | missing | In-game Build/Profile switching (save, check, relaunch) | v1.1 |  |
 
-Done: Basic manual save + load state (menu lists all states); States
+Done: Basic manual save + load state (menu hides crash checkpoints); States
 never cross Build/Profile/core/serialization context; Auto State on background, close and session
 switch; rolling 5; Resume Games Always/Ask/Never (default Always), inheritable System/Game/Build,
 Ask prompt, foreground policy; Auto State not restored once the profile's save is newer; Failed
@@ -378,13 +378,13 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1.1 | first connected used; selectPlayerOne() has no UI |
-| missing | Controller hotkey combos and menu navigation | v1 | Menu stays START, so opening the game menu from a controller needs a fixed combo, not a user mapping; Home is never taken |
+| done | Controller Menu opens and closes the game menu | v1 | Menu opens the game menu with no combo; pressing it again closes and resumes, including with touch controls hidden. X or PlayStation Triangle stays START; Y or Square stays SELECT; Home is never taken |
 | missing | Rumble routing override Phone / Controller / Both / Off | v1.1 |  |
 | missing | Separate phone and controller intensity | v1.1 |  |
 
 Done: Apple GameController input (extendedGamepad), D-pad and left thumbstick with a radial dead
 zone and eight equal sectors; A and B by the controller's letters (Circle = A and Cross = B on PlayStation),
-Menu or X = START, Options or Y = SELECT (Triangle and Square on PlayStation), shoulders free; iOS controller customizations, including per-app ones, are the only button mapping; Connected controllers use Game
+Menu opens the game menu and closes it with Resume; X = START, Options or Y = SELECT (Triangle and Square on PlayStation), shoulders free; iOS controller customizations, including per-app ones, are the only button mapping; Connected controllers use Game
 Boy and follow Orientation even with Playtiles chosen; Disconnect releases input, restores the
 chosen layout, pauses and shows a notice without restarting; A controller hides the touch
 controls, a touch brings them back until its next button press, and Settings can keep them;

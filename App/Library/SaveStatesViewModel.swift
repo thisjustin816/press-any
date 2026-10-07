@@ -40,6 +40,7 @@ final class SaveStatesViewModel: ObservableObject {
     func reload() {
         do {
             states = try repository.fetchSaveStates(saveProfileID: profile.id)
+                .filter { $0.kind != .crashRecovery }
             buildNames = Dictionary(
                 try builds.fetchBuilds(gameID: profile.gameID).map { ($0.id, $0.displayName) },
                 uniquingKeysWith: { first, _ in first }

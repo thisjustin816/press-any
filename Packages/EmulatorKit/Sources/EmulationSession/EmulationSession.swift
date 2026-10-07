@@ -53,6 +53,8 @@ public final class EmulationSession: @unchecked Sendable {
     private let persistentSaveService: PersistentSaveService
     private let stateService: SaveStateService
     private let settings: SettingsResolver?
+    private let launchHistory: SessionLaunchHistory?
+    private var lastCheckpointNanoseconds: UInt64 = 0
 
     private let lock = NSLock()
     private var _state: EmulationSessionState = .idle
@@ -78,6 +80,8 @@ public final class EmulationSession: @unchecked Sendable {
         imageResolver: any BuildImageResolving,
         coreRegistry: CoreRegistry,
         settings: SettingsResolver? = nil,
+        launchHistory: SessionLaunchHistory? = nil,
+        transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
         thumbnails: (any FrameImageEncoding)? = nil,
         batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
@@ -95,10 +99,12 @@ public final class EmulationSession: @unchecked Sendable {
             states: states,
             assets: assets,
             assetStore: assetStore,
+            transactions: transactions,
             thumbnails: thumbnails,
             now: now
         )
         self.settings = settings
+        self.launchHistory = launchHistory
         self.batteryCheckIntervalNanoseconds = UInt64(batteryCheckInterval * 1_000_000_000)
     }
 
@@ -114,7 +120,7 @@ public final class EmulationSession: @unchecked Sendable {
         lock.withLock { basePlaytimeSeconds + Double(sessionEmulatedNanoseconds) / 1_000_000_000 }
     }
 
-    /// Starts the session, restoring `autoState` when one is given. A state that fails to restore
+    /// Starts the session, restoring the supplied state when one is given. A state that fails to restore
     /// boots the game normally and stays on disk for diagnosis.
     @discardableResult
     public func start(context: LaunchContext, resumeFrom autoState: SaveState? = nil) throws -> AutoStateRestore {
@@ -152,6 +158,14 @@ public final class EmulationSession: @unchecked Sendable {
                 return newWorker
             }
 
+            try launchHistory?.started(context)
+            for profile in try profiles.fetchSaveProfiles(gameID: context.gameID) {
+                try stateService.removeCrashRecoveryStates(
+                    context: LaunchContext(gameID: context.gameID, buildID: context.buildID, saveProfileID: profile.id),
+                    keeping: autoState?.kind == .crashRecovery ? autoState?.id : nil
+                )
+            }
+
             let newWorker: SessionWorker
             let restore: AutoStateRestore
             if let autoState {
@@ -179,6 +193,7 @@ public final class EmulationSession: @unchecked Sendable {
                 basePlaytimeSeconds = profile.totalPlaytimeSeconds
                 latestFrame = nil
                 lastBatteryCheckNanoseconds = 0
+                lastCheckpointNanoseconds = 0
                 lastWrittenBattery = savedBattery
                 _state = .running(context)
             }
@@ -227,6 +242,7 @@ public final class EmulationSession: @unchecked Sendable {
     public func saveStates() throws -> [SaveState] {
         let (_, context, _) = try snapshotActive()
         return try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
+            .filter { $0.kind != .crashRecovery }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
@@ -294,6 +310,7 @@ public final class EmulationSession: @unchecked Sendable {
 
     public func resume() throws {
         let (_, context, _) = try snapshotActive()
+        try launchHistory?.started(context)
         lock.withLock { _state = .running(context) }
     }
 
@@ -369,13 +386,31 @@ public final class EmulationSession: @unchecked Sendable {
     public func saveAutoState() throws -> SaveState {
         let (worker, context, _) = try snapshotActive()
         _ = try? flushBatteryIfDirty()
-        return try stateService.save(
+        let state = try stateService.save(
             worker: worker,
             context: context,
             kind: .auto,
             playtimeSeconds: playtimeSeconds,
             frame: currentFrame
         )
+        try stateService.removeCrashRecoveryStates(context: context)
+        return state
+    }
+
+    /// The periodic save queue calls this during play. Checkpoints have their own cadence and
+    /// never enter the player's state list or Auto State retention.
+    @discardableResult
+    public func saveCrashRecoveryIfDue() throws -> Bool {
+        let (worker, context, running) = try snapshotActive()
+        guard running else { return false }
+        let elapsed = lock.withLock { sessionEmulatedNanoseconds }
+        guard elapsed &- lock.withLock({ lastCheckpointNanoseconds }) >= 60_000_000_000 else { return false }
+        _ = try stateService.save(
+            worker: worker, context: context, kind: .crashRecovery,
+            playtimeSeconds: playtimeSeconds
+        )
+        lock.withLock { lastCheckpointNanoseconds = elapsed }
+        return true
     }
 
     /// The state's thumbnail image, or nil when it has none.
@@ -455,10 +490,14 @@ public final class EmulationSession: @unchecked Sendable {
     /// App lifecycle entry point. Gameplay is paused before persistent state is captured.
     public func background() throws {
         try pause()
+        let (_, context, _) = try snapshotActive()
         try SessionSaveError.attempting([
             { _ = try self.flushBattery() },
             { try self.recordPlaytime() },
-            { _ = try self.saveAutoState() },
+            {
+                _ = try self.saveAutoState()
+                try self.launchHistory?.backgroundSaved(context)
+            },
         ])
     }
 
@@ -495,6 +534,9 @@ public final class EmulationSession: @unchecked Sendable {
             if createAutoState { steps.append { _ = try self.saveAutoState() } }
             try SessionSaveError.attempting(steps)
         }
+        let (_, context, _) = try snapshotActive()
+        try stateService.removeCrashRecoveryStates(context: context)
+        try launchHistory?.closed()
         lock.withLock {
             worker = nil
             activeContext = nil

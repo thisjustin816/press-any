@@ -30,8 +30,8 @@ final class PhysicalControllerMonitorTests: XCTestCase {
         try assertInput(.init()) { $0.leftThumbstick.setValueForXAxis(0.1, yAxis: 0.1) }
     }
 
-    func testMenuAndXAreStartOptionsAndYAreSelectAndShouldersAreFree() throws {
-        try assertInput(.init(start: true)) { $0.buttonMenu.setValue(1) }
+    func testMenuIsSeparateAndXIsStartOptionsAndYAreSelectAndShouldersAreFree() throws {
+        try assertInput(.init()) { $0.buttonMenu.setValue(1) }
         try assertInput(.init(start: true)) { $0.buttonX.setValue(1) }
         try assertInput(.init(select: true)) { try XCTUnwrap($0.buttonOptions).setValue(1) }
         try assertInput(.init(select: true)) { $0.buttonY.setValue(1) }
@@ -39,6 +39,23 @@ final class PhysicalControllerMonitorTests: XCTestCase {
             $0.leftShoulder.setValue(1)
             $0.rightShoulder.setValue(1)
         }
+    }
+
+    func testMenuPressAndReleaseReachTheGameMenuWithoutStart() throws {
+        let controller = GCController.withExtendedGamepad()
+        let pad = try XCTUnwrap(controller.extendedGamepad)
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
+        var menuChanges: [Bool] = []
+        var input = EmulatorInputState()
+        monitor.onMenuChanged = { menuChanges.append($0) }
+        monitor.onInputChanged = { input = $0 }
+        monitor.selectPlayerOne(controller)
+        let handler = try XCTUnwrap(pad.buttonMenu.pressedChangedHandler)
+        handler(pad.buttonMenu, 1, true)
+        handler(pad.buttonMenu, 0, false)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        XCTAssertEqual(menuChanges, [false, true, false])
+        XCTAssertFalse(input.start)
     }
 
     func testQueuedInputFromADisconnectedControllerCannotPressAButtonAgain() throws {

@@ -12,6 +12,11 @@ final class AppBootstrap: ObservableObject {
     let container: AppContainer?
     let errorDescription: String?
 
+    init(container: AppContainer) {
+        self.container = container
+        errorDescription = nil
+    }
+
     init() {
         do {
             let live = try AppContainer.live()
@@ -32,6 +37,8 @@ struct RootView: View {
     @State private var gameplay: GameplayPresentation?
     @State private var errorMessage: String?
     @State private var pendingResume: PreparedLaunch?
+    @State private var pendingRecovery: PreparedLaunch?
+    @State private var restoredLaunch = false
     @State private var riskyLaunch: RiskyLaunch?
     @State private var damagedSave: DamagedSaveLaunch?
     /// The Quick Play session whose gameplay screen is closing, shown once the cover is gone.
@@ -58,6 +65,22 @@ struct RootView: View {
     @State private var showsWelcome = false
 
     var body: some View {
+        withLaunchAlerts(content)
+            .alert(AppBrand.displayName, isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {
+                    errorMessage = nil
+                    presentNextSharedFile()
+                }
+            } message: {
+                Text(errorMessage ?? "Unknown error")
+            }
+    }
+
+    // Split from the body so the compiler can type-check each part in reasonable time.
+    private var content: some View {
         Group {
             if let container = bootstrap.container {
                 LibraryView(
@@ -76,13 +99,14 @@ struct RootView: View {
         }
         .task {
             openScreenshotScene()
+            restoreLastSession()
             showWelcomeIfNeeded()
         }
         .onOpenURL { receiveSharedFile($0) }
         .onChange(of: gameplayOrientations, initial: true) { _, mask in
             GameplayOrientation.update(mask)
         }
-        .onChange(of: pendingResume != nil || riskyLaunch != nil || damagedSave != nil) { _, hasPendingLaunch in
+        .onChange(of: pendingRecovery != nil || pendingResume != nil || riskyLaunch != nil || damagedSave != nil) { _, hasPendingLaunch in
             if !hasPendingLaunch { presentNextSharedFile() }
         }
         .sheet(item: sharedFileBinding(overGameplay: false), onDismiss: finishSharedFile) { file in
@@ -164,57 +188,69 @@ struct RootView: View {
                 .interactiveDismissDisabled()
             }
         }
-        .alert("Resume where you left off?", isPresented: Binding(
-            get: { pendingResume != nil },
-            set: { if !$0 { pendingResume = nil } }
-        ), presenting: pendingResume) { launch in
-            Button("Resume") { start(launch, resume: true) }
-            Button("Start Over") { start(launch, resume: false) }
-        } message: { _ in
-            Text("Start Over boots the game from its battery save. The resume point is kept.")
-        }
-        .alert("This save may not work with this Build", isPresented: Binding(
-            get: { riskyLaunch != nil },
-            set: { if !$0 { riskyLaunch = nil } }
-        ), presenting: riskyLaunch) { risky in
-            Button("Play with a Copy") { chooseSave(for: risky, newSave: false) }
-            Button("Start a New Save") { chooseSave(for: risky, newSave: true) }
-            Button("Use “\(risky.profileName)” Anyway", role: .destructive) {
-                riskyLaunch = nil
-                if let container = bootstrap.container { launch(risky.context, container: container, checkSave: false) }
+    }
+
+    /// The choices a library launch can stop for: recovery, resume, a risky or a damaged save.
+    private func withLaunchAlerts(_ view: some View) -> some View {
+        view
+            .alert("Recover Session?", isPresented: Binding(
+                get: { pendingRecovery != nil },
+                set: { if !$0 { pendingRecovery = nil } }
+            ), presenting: pendingRecovery) { launch in
+                Button("Recover Session") {
+                    pendingRecovery = nil
+                    start(launch, resume: true)
+                }
+                Button("Start Normally", role: .cancel) {
+                    pendingRecovery = nil
+                    do { try bootstrap.container?.startNormallyAfterCrash() }
+                    catch { errorMessage = "Could not clear the session: \(error.localizedDescription)" }
+                    presentNextSharedFile()
+                }
+            } message: { _ in
+                Text("The app ended while a game was open. Recover Session opens its latest checkpoint. Start Normally opens the library and keeps the checkpoint until that Build starts again.")
             }
-            Button("Cancel", role: .cancel) { riskyLaunch = nil }
-        } message: { risky in
-            Text(risky.message)
-        }
-        .alert("“\(damagedSave?.profileName ?? "")” May Be Damaged", isPresented: Binding(
-            get: { damagedSave != nil },
-            set: { if !$0 { damagedSave = nil } }
-        ), presenting: damagedSave) { damaged in
-            Button("Use It Anyway", role: .destructive) { acceptDamagedSave(damaged) }
-            Button("Start a New Save") { startNewSave(for: damaged) }
-            Button("Cancel", role: .cancel) { damagedSave = nil }
-        } message: { _ in
-            Text("Its save file changed after \(AppBrand.displayName) last wrote it. It may be damaged, or the app may have closed while saving. Use It Anyway keeps a copy of the file as it is first. Replace Save from File in the game’s Save Profiles can bring in another.")
-        }
-        .alert(AppBrand.displayName, isPresented: Binding(
-            get: { errorMessage != nil },
-            set: { if !$0 { errorMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) {
-                errorMessage = nil
-                presentNextSharedFile()
+            .alert("Resume where you left off?", isPresented: Binding(
+                get: { pendingResume != nil },
+                set: { if !$0 { pendingResume = nil } }
+            ), presenting: pendingResume) { launch in
+                Button("Resume") { start(launch, resume: true) }
+                Button("Start Over") { start(launch, resume: false) }
+            } message: { _ in
+                Text("Start Over boots the game from its battery save. The resume point is kept.")
             }
-        } message: {
-            Text(errorMessage ?? "Unknown error")
-        }
+            .alert("This save may not work with this Build", isPresented: Binding(
+                get: { riskyLaunch != nil },
+                set: { if !$0 { riskyLaunch = nil } }
+            ), presenting: riskyLaunch) { risky in
+                Button("Play with a Copy") { chooseSave(for: risky, newSave: false) }
+                Button("Start a New Save") { chooseSave(for: risky, newSave: true) }
+                Button("Use “\(risky.profileName)” Anyway", role: .destructive) {
+                    riskyLaunch = nil
+                    if let container = bootstrap.container { launch(risky.context, container: container, checkSave: false) }
+                }
+                Button("Cancel", role: .cancel) { riskyLaunch = nil }
+            } message: { risky in
+                Text(risky.message)
+            }
+            .alert("“\(damagedSave?.profileName ?? "")” May Be Damaged", isPresented: Binding(
+                get: { damagedSave != nil },
+                set: { if !$0 { damagedSave = nil } }
+            ), presenting: damagedSave) { damaged in
+                Button("Use It Anyway", role: .destructive) { acceptDamagedSave(damaged) }
+                Button("Start a New Save") { startNewSave(for: damaged) }
+                Button("Cancel", role: .cancel) { damagedSave = nil }
+            } message: { _ in
+                Text("Its save file changed after \(AppBrand.displayName) last wrote it. It may be damaged, or the app may have closed while saving. Use It Anyway keeps a copy of the file as it is first. Replace Save from File in the game’s Save Profiles can bring in another.")
+            }
     }
 
     /// A launch that opened a shared file or a game goes straight to it, and the welcome waits for
     /// the next launch.
     private func showWelcomeIfNeeded() {
         guard bootstrap.container != nil, WelcomeScreen.showsAtLaunch(),
-              gameplay == nil, sharedFile == nil, queuedSharedFiles.isEmpty else { return }
+              gameplay == nil, pendingRecovery == nil, pendingResume == nil, riskyLaunch == nil, damagedSave == nil,
+              sharedFile == nil, queuedSharedFiles.isEmpty else { return }
         showsWelcome = true
     }
 
@@ -295,7 +331,7 @@ struct RootView: View {
 
     private func presentNextSharedFile() {
         guard endedQuickPlay == nil, closingQuickPlayID == nil,
-              pendingResume == nil, riskyLaunch == nil, damagedSave == nil, errorMessage == nil, sharedFileError == nil,
+              pendingRecovery == nil, pendingResume == nil, riskyLaunch == nil, damagedSave == nil, errorMessage == nil, sharedFileError == nil,
               closingSharedFile == nil, sharedFile == nil, !queuedSharedFiles.isEmpty else { return }
         // A sheet the library or Game Details opened, such as Import Review, may hold work in
         // progress, so the file waits for it to close.
@@ -364,6 +400,24 @@ struct RootView: View {
             pendingResume = prepared
         } else {
             start(prepared, resume: true)
+        }
+    }
+
+    private func restoreLastSession() {
+        guard !restoredLaunch, let container = bootstrap.container else { return }
+        restoredLaunch = true
+        guard ScreenshotScene.current == nil else { return }
+        do {
+            switch try container.launchRestoration() {
+            case .library:
+                break
+            case .recover(let context, let checkpoint):
+                pendingRecovery = container.prepareRecovery(context: context, checkpoint: checkpoint)
+            case .reopen(let context):
+                launch(context, container: container)
+            }
+        } catch {
+            errorMessage = "Could not reopen the session: \(error.localizedDescription)"
         }
     }
 

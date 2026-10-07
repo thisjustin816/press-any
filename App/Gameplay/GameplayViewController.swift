@@ -49,6 +49,9 @@ final class GameplayViewController: UIViewController {
     private var touchControlsRevealed = false
     /// The wordmark button and optional clear picture target share the same game menu.
     private var menuButtons: [GameMenuButton] = []
+    private var controllerMenuButton = GamepadMenuButton()
+
+    var isGameMenuOpen: Bool { menuButtons.contains { $0.isMenuPresented } }
     private var fastForward = false
     // Appended only on the main actor and read only in deinit, which runs once nothing else can
     // reach the controller, so the nonisolated deinit can remove the observers without a hop.
@@ -324,6 +327,11 @@ final class GameplayViewController: UIViewController {
         let close = UIAction(title: "Close Game", image: UIImage(systemName: "xmark"), attributes: .destructive) { [weak self] _ in
             self?.closeTapped()
         }
+        #if DEBUG
+        elements.append(UIAction(title: "Crash App (Debug)", attributes: .destructive) { _ in
+            fatalError("Device crash-recovery check")
+        })
+        #endif
         elements.append(UIMenu(options: .displayInline, children: [close]))
         return elements
     }
@@ -431,6 +439,9 @@ final class GameplayViewController: UIViewController {
         touchControls.pictureOpensMenu = tapGameForMenu
         touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
+        controllerMonitor.onMenuChanged = { [weak self] pressed in
+            self?.controllerMenuChanged(pressed)
+        }
         controllerMonitor.onInputChanged = { [weak self] controllerInput in
             guard let self else { return }
             self.input.setController(controllerInput)
@@ -459,6 +470,23 @@ final class GameplayViewController: UIViewController {
 
         updateTouchControls(controllerConnected: controllerMonitor.isConnected)
         rumble.setController(controllerMonitor.activeController)
+    }
+
+    func controllerMenuChanged(_ pressed: Bool) {
+        let action = controllerMenuButton.update(isPressed: pressed, menuIsOpen: isGameMenuOpen)
+        guard let action, !stopped, !halted, !coveredBySheet else { return }
+        touchControlsRevealed = false
+        updateTouchControls(controllerConnected: controllerMonitor.isConnected)
+        switch action {
+        case .open:
+            guard presentedViewController == nil, let button = menuButtons.first else { return }
+            button.performPrimaryAction()
+        case .closeAndResume:
+            for button in menuButtons where button.isMenuPresented {
+                button.contextMenuInteraction?.dismissMenu()
+            }
+            resumeTapped()
+        }
     }
 
     private func updateControlStyle() {
@@ -867,6 +895,26 @@ final class GameplayViewController: UIViewController {
 /// The logo has a raised face with the wordmark pressed into it; an optional game-picture target
 /// remains clear.
 private final class GameMenuButton: UIButton {
+    private(set) var isMenuPresented = false
+
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        willDisplayMenuFor configuration: UIContextMenuConfiguration,
+        animator: (any UIContextMenuInteractionAnimating)?
+    ) {
+        isMenuPresented = true
+        super.contextMenuInteraction(interaction, willDisplayMenuFor: configuration, animator: animator)
+    }
+
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        willEndFor configuration: UIContextMenuConfiguration,
+        animator: (any UIContextMenuInteractionAnimating)?
+    ) {
+        isMenuPresented = false
+        super.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
+    }
+
     private let face = CAGradientLayer()
     private let wordmark = UIImageView()
     private var palette: ControllerPalette?
