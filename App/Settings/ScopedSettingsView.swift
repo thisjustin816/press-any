@@ -50,22 +50,27 @@ struct ScopedSettingsView: View {
                     options: [(.integer, "Integer"), (.fill, "Fill")],
                     context: context
                 )
-                InheritableSettingRow(
-                    title: "Color Correction",
-                    key: .colorCorrection,
-                    defaultValue: ColorCorrection.defaultValue,
-                    options: ColorCorrection.allCases.map { ($0, $0.displayName) },
-                    context: context,
-                    explanation: ColorCorrection.explanation
-                )
-                InheritableSettingRow(
-                    title: "DMG Palette",
-                    key: .dmgPalette,
-                    defaultValue: DMGPalette.defaultValue,
-                    options: DMGPalette.allCases.map { ($0, $0.displayName) },
-                    context: context,
-                    explanation: DMGPalette.explanation
-                )
+                // Each system has its own Screen Colors, so only the one that applies shows.
+                switch system {
+                case .gameBoy:
+                    InheritableSettingRow(
+                        title: "Screen Colors",
+                        key: .dmgPalette,
+                        defaultValue: DMGPalette.defaultValue,
+                        options: DMGPalette.allCases.map { ($0, $0.displayName) },
+                        context: context,
+                        explanation: DMGPalette.explanation
+                    )
+                case .gameBoyColor:
+                    InheritableSettingRow(
+                        title: "Screen Colors",
+                        key: .colorCorrection,
+                        defaultValue: ColorCorrection.defaultValue,
+                        options: ColorCorrection.allCases.map { ($0, $0.displayName) },
+                        context: context,
+                        explanation: ColorCorrection.explanation
+                    )
+                }
                 InheritableSettingRow(
                     title: "LCD Filter",
                     key: .lcdFilter,

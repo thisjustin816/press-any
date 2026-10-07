@@ -18,8 +18,6 @@ struct AppSettingsView: View {
     @State private var controllerLayout: TouchControlStyle
     @State private var controllerTheme: ControllerTheme
     @State private var lcdFilter: LCDFilter
-    @State private var colorCorrection: ColorCorrection
-    @State private var dmgPalette: DMGPalette
     @State private var frameBlending: FrameBlending
     @State private var fastForwardSpeed: FastForwardSpeed
     @State private var fastForwardAudio: FastForwardAudio
@@ -48,8 +46,6 @@ struct AppSettingsView: View {
         _controllerLayout = State(initialValue: Self.stored(TouchControlStyle.self, .controllerLayout, in: store) ?? .gameBoy)
         _controllerTheme = State(initialValue: Self.stored(ControllerTheme.self, .controllerTheme, in: store) ?? .matchSystem)
         _lcdFilter = State(initialValue: Self.stored(LCDFilter.self, .lcdFilter, in: store) ?? .off)
-        _colorCorrection = State(initialValue: Self.stored(ColorCorrection.self, .colorCorrection, in: store) ?? .defaultValue)
-        _dmgPalette = State(initialValue: Self.stored(DMGPalette.self, .dmgPalette, in: store) ?? .defaultValue)
         _frameBlending = State(initialValue: Self.stored(FrameBlending.self, .frameBlending, in: store) ?? .off)
         _fastForwardSpeed = State(initialValue: Self.stored(FastForwardSpeed.self, .fastForwardSpeed, in: store) ?? .x2)
         _fastForwardAudio = State(initialValue: Self.stored(FastForwardAudio.self, .fastForwardAudio, in: store) ?? .muted)
@@ -97,8 +93,6 @@ struct AppSettingsView: View {
     private var settingsForm: some View {
         formContent
         .onChange(of: lcdFilter) { _, newValue in save(newValue, .lcdFilter) }
-        .onChange(of: colorCorrection) { _, newValue in save(newValue, .colorCorrection) }
-        .onChange(of: dmgPalette) { _, newValue in save(newValue, .dmgPalette) }
         .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
         .onChange(of: fastForwardSpeed) { _, newValue in save(newValue, .fastForwardSpeed) }
         .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
@@ -170,26 +164,6 @@ struct AppSettingsView: View {
                 }
             } footer: {
                 Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
-            }
-
-            Section {
-                Picker("Color Correction", selection: $colorCorrection) {
-                    ForEach(ColorCorrection.allCases, id: \.self) { mode in
-                        Text(mode.displayName).tag(mode)
-                    }
-                }
-            } footer: {
-                Text(ColorCorrection.explanation)
-            }
-
-            Section {
-                Picker("DMG Palette", selection: $dmgPalette) {
-                    ForEach(DMGPalette.allCases, id: \.self) { palette in
-                        Text(palette.displayName).tag(palette)
-                    }
-                }
-            } footer: {
-                Text(DMGPalette.explanation)
             }
 
             Section {
@@ -278,7 +252,7 @@ struct AppSettingsView: View {
             } header: {
                 Text("Systems")
             } footer: {
-                Text("Settings for every game on one system. A Game or Build can still set its own.")
+                Text("Settings for every game on one system, including its Screen Colors. A Game or Build can still set its own.")
             }
 
             if let libraryDeletion, let games {
