@@ -69,8 +69,8 @@ Profile, its pinned core, settings overrides, and when it was added.
   Recipes keep their exact source Build and hash whatever happens to the Base mark.
 - A Game holds one Build per image.
 
-v1 adds Build notes, per-Build playtime and a lightweight timeline (versions, hashes, parents,
-notes, import and activation history), and a Build comparison screen. The comparison engine
+v1 adds Build notes and per-Build playtime; v1.1 adds a lightweight timeline (versions, hashes,
+parents, notes, import and activation history) and a Build comparison screen. The comparison engine
 (changed bytes and ranges, size, banks, header) exists; the screen doesn't yet.
 
 ### Save Profile
@@ -82,8 +82,8 @@ can deliberately share one. A Build remembers its preferred profile and falls ba
 default.
 
 There is no rolling battery-save history. Isolation comes from duplicating profiles. A profile
-can carry only narrow playthrough settings (cheats, RTC offset, rewind where it makes sense),
-never a full fifth settings layer.
+can carry only narrow playthrough settings (cheats, RTC offset, rewind where it makes sense; all
+v1.1), never a full fifth settings layer.
 
 ### Save state
 
@@ -258,7 +258,7 @@ promotion and Open Patch.
 
 - Richer ROM-hack metadata (hack title, author, version from bracket conventions) and a
   normalized filename suggestion, without inventing fields.
-- Rename File to Canonical Name as an explicit action; bulk rename later.
+- v1.1: Rename File to Canonical Name as an explicit action; bulk rename later.
 - Match Game for unknown ROMs, including base-game lineage without owning the base ROM, and
   offering to link the base when it's imported later.
 - Regional releases: a preferred region and language order (USA, Europe, Japan by default) that
@@ -300,11 +300,10 @@ promotion and Open Patch.
   before launch. An output whose base or patch is missing isn't disposable.
 - Open Patch (from a Game or a shared patch) requires choosing a Game and an explicit base Build.
 - v1: each step records the input hash it expects, so a stacked IPS patch can't apply to the
-  wrong input unnoticed, and review shows expected and selected hashes side by side; editable
-  stacks (reorder, enable, disable, add, remove), each edit making a new Build; patch metadata
-  with confidence, catalog over README over filename.
-- v1.1: BPS generation from a base and a modified Build. Future: Quick Play a patch without
-  making a Build.
+  wrong input unnoticed, and review shows expected and selected hashes side by side.
+- v1.1: editable stacks (reorder, enable, disable, add, remove), each edit making a new Build;
+  patch metadata with confidence, catalog over README over filename; BPS generation from a base
+  and a modified Build. Future: Quick Play a patch without making a Build.
 
 ## Saves
 
@@ -320,8 +319,8 @@ promotion and Open Patch.
   than any Auto State, the next launch boots from it.
 - A Game's default profile is starred, as its preferred Build is, and Play names the Build and
   save it will start, reading "New Save" when it will make one.
-- The cartridge clock lives inside SameBoy's save, so games with a clock work. v1 adds a
-  per-profile RTC offset and Developer Mode RTC controls.
+- The cartridge clock lives inside SameBoy's save, so games with a clock work. v1.1 adds
+  a per-profile RTC offset and Developer Mode RTC controls.
 
 ### Build switching and compatibility
 
@@ -369,8 +368,9 @@ games' saves don't carry across languages.
 - One emulator session at a time.
 - v1: Quick Save, configurable fixed slots, naming states when saving, configurable cleanup with
   pinned states exempt, a separate crash-recovery checkpoint with Recover Session or Start Normally (no automatic crash
-  loops; a force-quit gives no final callback), returning to the previous game after a relaunch,
-  and switching Build or profile from the game through the compatibility check and a relaunch.
+  loops; a force-quit gives no final callback), and returning to the previous game after a
+  relaunch. v1.1: switching Build or profile from the game through the compatibility check and a
+  relaunch.
 
 ## Quick Play
 
@@ -388,8 +388,8 @@ fresh build.
   existing save copies it in.
 - The game menu shows Save State grayed out with "Add to Library to save states", and Add to
   Library closes the game and opens promotion. The session screen opens the ROM's Technical Info.
-- Closing offers Keep for Later. Sessions expire after 24 hours; v1 makes that Immediately, 24
-  hours or 7 days.
+- Closing offers Keep for Later. Sessions expire after 24 hours; v1.1 makes that Immediately,
+  24 hours or 7 days.
 - An autosave records the battery file it was taken with and is skipped once that file is newer.
 - **Add to Library** runs Import Review and can keep the library's existing save, replace it after
   a "<profile> before Quick Play" copy, or create a new profile. Kept progress becomes what the
@@ -581,8 +581,8 @@ picture. A connected controller still hides the touch controls.
   touch layout and shows a notice.
 - Touch Haptics: Off, Light (default) or Medium, off while a controller is in use.
 - Cartridge rumble goes to the controller when it can, the phone otherwise.
-- v1: choosing Player 1 among several controllers (Player 2 is reserved for link play); Phone, Controller, Both or Off
-  rumble routing with separate intensities.
+- v1.1: choosing Player 1 among several controllers (Player 2 is reserved for link play); Phone,
+  Controller, Both or Off rumble routing with separate intensities.
 
 ### Quick Actions (v1.1)
 
@@ -633,7 +633,7 @@ exposes them; custom border editing is later.
   profile or Build for good takes all its states, including ones waiting in another deletion.
 - Purging writes a permanent tombstone so a deleted record can't come back from another device;
   tombstone expiry never counts as safe removal from an arbitrarily offline device.
-- v1: lightweight Undo for recent structural changes.
+- v1.1: lightweight Undo for recent structural changes.
 
 ## Shared files
 
@@ -782,8 +782,8 @@ Narrated gameplay isn't a v1 requirement.
 
 ### Performance
 
-Correct timing comes first. Under thermal pressure, optional shaders, rewind length and background
-work give way before gameplay, audio or input do; emulation speed and save behavior never change
+Correct timing comes first. Under thermal pressure (v1.1, once shaders and rewind exist), optional shaders, rewind
+length and background work give way before gameplay, audio or input do; emulation speed and save behavior never change
 silently. The default shader must hold full speed on the slowest supported device.
 
 ### Architecture seams

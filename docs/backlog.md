@@ -20,9 +20,8 @@ migrating later.
    and the ROM-hack naming that remains. The license is confirmed, and "No-Intro data" in
    `docs/product.md` describes the design.
 2. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
-   metadata provenance with Metadata Details, Build notes, per-Build playtime and the Build
-   timeline, favorites, declared save compatibility, per-step patch input hashes, and the
-   cross-region save check.
+   metadata provenance with Metadata Details, Build notes, per-Build playtime, favorites,
+   declared save compatibility, per-step patch input hashes, and the cross-region save check.
 3. Multi-signal development-build matching, the one import item left in v1.
 4. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
    with cleanup, in-flight protection and verification on read.
@@ -31,14 +30,15 @@ migrating later.
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
    Files folder they land in come first, as they don't depend on the schema.
 6. The rest of the v1 core: Quick Save and save state slots, crash recovery, reopening the last
-   game, a fixed controller combo for the game menu, and rumble routing.
+   game, and a fixed controller combo for the game menu.
 
 v1 is a good core experience; everything else waits for v1.1: ZIP, 7z and multi-asset import,
 artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
 Actions, the DMG/GBC/SGB model override, shaders and the layout editor with skin import,
 screenshots and notes, external displays, tags and collections, iCloud sync once the schema has
 settled, the Community Catalog and metadata providers, crash reporting and usage counts, Developer
-Mode, core updates, and the internal registries and descriptors.
+Mode, editable patch stacks, the Build timeline and comparison screen, in-game Build switching,
+RTC offsets, rumble routing, Undo, core updates, and the internal registries and descriptors.
 
 ## Known bugs
 
@@ -162,7 +162,7 @@ Done: Search by primary title.
 | partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; the parser recognizes numbered development flags and Sample, Kiosk and Debug, and drops Aftermarket and Unl; a repeated name gains the date the Build was added; Suggest Build Names reviews existing Builds; broader real-world corpus tuning remains |
 | partial | Header read/validate/display, no editing | v1 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
 | partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
-| missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | physical renaming is an explicit action |
+| missing | Explicit "Rename File to Canonical Name" (bulk later) | v1.1 | physical renaming is an explicit action |
 | missing | Signed/validated downloadable database updates | v1.1 | needs a host and a signing key; the bundled file already carries its date |
 | partial | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | matched by SHA-1; a known dump takes its canonical name, region, language and revision through the filename parser; status flags such as Aftermarket and Unl are not parsed yet |
 | partial | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | a release suggests the one Game holding its family; several such Games are listed first for the player to choose; the preferred-region title and Preferred proposal remain |
@@ -202,8 +202,8 @@ files staged.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Import-Review-style inheritance step (artwork, docs, tags, compatible profiles; deselectable) on promote/merge | v1 (mvp says merge "with review") | review sheet copies artwork and chosen Save Profiles; docs and tags don't exist yet |
-| missing | Lightweight Build timeline (versions, hashes, parents, notes, import/activation history) | v1 |  |
-| partial | Build comparison (changed bytes/ranges, size, banks, header) | v1 | the comparison engine and its tests are in Importing; the Build Details screen remains |
+| missing | Lightweight Build timeline (versions, hashes, parents, notes, import/activation history) | v1.1 |  |
+| partial | Build comparison (changed bytes/ranges, size, banks, header) | v1.1 | the comparison engine and its tests are in Importing; the Build Details screen remains |
 
 Done: Make Separate Game: Move/Copy, default Move, Build UUID/blob preserved, Build-scoped data
 follows; Merge into Game: Move/Copy, lineage/recipes remapped; Same image already in target: Copy
@@ -216,8 +216,8 @@ automatically replacing the previous one; rename a Build from its long-press men
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Editable stacks UI: reorder/enable/disable/add/remove -> new Build | v1 |  |
-| missing | Patch base by region: when a patch expects another regional release already in the Game, such as USA when Europe was chosen, review offers that Build | v1 | a fan translation of a Japanese release joins the family's Game through its base |
+| missing | Editable stacks UI: reorder/enable/disable/add/remove -> new Build | v1.1 |  |
+| missing | Patch base by region: when a patch expects another regional release already in the Game, such as USA when Europe was chosen, review offers that Build | v1.1 | a fan translation of a Japanese release joins the family's Game through its base |
 | partial | Pluggable patch-format architecture | v1.1 | switch on extension, no registry |
 | missing | Patch metadata with confidence/provenance (catalog > README > filename) | v1.1 |  |
 | missing | BPS generation from base vs modified Build | v1.1 |  |
@@ -235,7 +235,7 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 |---|---|---|---|
 | partial | Compatibility-aware Build switching (flush, analyze, risky -> migrate/duplicate/use anyway/blank) | MVP and v1 | launch check offers copy/new save/use anyway; migrate waits for v1.1 GB Studio migration |
 | missing | GB Studio save migration (version-gated, needs maps) | v1.1 |  |
-| missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
+| missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1.1 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later |  |
 | missing | Cross-region save check: launching a Build whose region or language differs from the Build that last wrote the profile warns, since many games' saves don't carry across languages | v1 | joins the existing launch check; declared save compatibility can clear it |
 | missing | Declared save compatibility between Builds (known to share, known not to), used by the launch check | v1 | the launch check only infers today (GB Studio, tools, header save hardware) |
@@ -260,10 +260,10 @@ states.
 | partial | Unlimited named states | v1 | a Save Profile's Save States renames and deletes them; Save State doesn't ask for a name |
 | missing | Configurable automatic cleanup; pinned/favorited exempt | v1 |  |
 | missing | State records cheat config; offer Restore Cheat Configuration | v1.1 |  |
-| missing | Per-Save-Profile autoresume override | v1 |  |
+| missing | Per-Save-Profile autoresume override | v1.1 |  |
 | missing | Separate crash-recovery checkpoint + Recover Session / Start Normally | v1 | SaveStateKind.crashRecovery unused |
 | missing | App relaunch returns to the previous game/session | v1 |  |
-| missing | In-game Build/Profile switching (save, check, relaunch) | v1 |  |
+| missing | In-game Build/Profile switching (save, check, relaunch) | v1.1 |  |
 
 Done: Basic manual save + load state (menu lists all states); States
 never cross Build/Profile/core/serialization context; Auto State on background, close and session
@@ -279,9 +279,9 @@ loading state"; A separated Build's states follow it to the profile copies it pl
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Configurable retention Immediately / 24 h / 7 d | v1 |  |
+| missing | Configurable retention Immediately / 24 h / 7 d | v1.1 |  |
 | partial | Session artifacts | v1.1 | battery + autosave kept; manual states ("Save states aren't kept in Quick Play"), screenshots, notes, debug captures and their transfer on promotion missing |
-| missing | Background hash/identify/toolchain detection for Quick Play | v1 | not run |
+| missing | Background hash/identify/toolchain detection for Quick Play | v1.1 | not run |
 
 Done: Temporary sandbox, no library mutation until promotion; Time-to-first-frame path: read once,
 validate, copy, hash; boot past logo (cgb_boot_fast); no optional assets; "First frame in N ms"; Use
@@ -373,10 +373,10 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | first connected used; selectPlayerOne() has no UI |
+| partial | Multiple controllers, choose Player 1, reserve Player 2 | v1.1 | first connected used; selectPlayerOne() has no UI |
 | missing | Controller hotkey combos and menu navigation | v1 | Menu stays START, so opening the game menu from a controller needs a fixed combo, not a user mapping; Home is never taken |
-| missing | Rumble routing override Phone / Controller / Both / Off | v1 |  |
-| missing | Separate phone and controller intensity | v1 |  |
+| missing | Rumble routing override Phone / Controller / Both / Off | v1.1 |  |
+| missing | Separate phone and controller intensity | v1.1 |  |
 
 Done: Apple GameController input (extendedGamepad), D-pad and left thumbstick with a radial dead
 zone and eight equal sectors; A and B by the controller's letters (Circle = A and Cross = B on PlayStation),
@@ -492,7 +492,7 @@ Files without replacing an earlier export.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Synchronized tombstones | v1.1 | purging writes a permanent local tombstone; syncing them waits on iCloud |
-| missing | Lightweight Undo for recent structural operations | v1 |  |
+| missing | Lightweight Undo for recent structural operations | v1.1 |  |
 
 Done: Dependency-aware deletion: the confirmation names patched Builds and emptied Games that go
 too, and a Game can't go while another Game's patch is built from it; Recently Deleted for 30
@@ -504,7 +504,7 @@ and save state from the UI, a save state from its profile's Save States.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Audio interruptions pause safely; route changes don't restart the game | v1 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio-only interruption that leaves the scene active still runs silently |
-| missing | Thermal-aware degradation | v1 |  |
+| missing | Thermal-aware degradation | v1.1 |  |
 | missing | Default shader sustains full speed on minimum QA device | v1.1 | no shader yet; device gate not recorded |
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
@@ -539,7 +539,7 @@ Done: Good contrast / color-independent states; haptics never sole feedback.
 ### Settings inheritance
 
 Nothing open.
-| missing | Narrow Save Profile overlay (cheats, RTC, autoresume, rewind) | v1 |  |
+| missing | Narrow Save Profile overlay (cheats, RTC, autoresume, rewind) | v1.1 |  |
 
 Done: Resolver App -> System -> Game -> Build, only explicit overrides stored, inherited source
 shown, Reset to Inherited; Implemented keys; Settings screens for App, System (Game Boy, Game Boy
