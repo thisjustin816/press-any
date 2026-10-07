@@ -6,10 +6,11 @@ import Testing
 
 @Suite("GRDB migrations")
 struct MigrationTests {
-    @Test("the v1 library-model migration preserves every populated table", arguments: [false, true])
-    func libraryModelUpgrade(includingDeletedRecords: Bool) throws {
+    @Test("library-model and save compatibility upgrades preserve every populated table",
+        arguments: ["v1-v9-game-identity", "v1-v10-library-model"], [false, true])
+    func libraryModelUpgrade(from migration: String, includingDeletedRecords: Bool) throws {
         let database = try AppDatabase.inMemory()
-        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v9-game-identity")
+        try AppDatabase.migrator.migrate(database.writer, upTo: migration)
         let fixture = try legacyFixture(in: database, includingDeletedRecords: includingDeletedRecords)
         let before = try database.writer.read { db in
             let tables = try String.fetchAll(
@@ -33,18 +34,20 @@ struct MigrationTests {
                 #expect(upgraded == rows, "migration changed existing rows in \(table)")
             }
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(2) == [
-                "v1-v9-game-identity", "v1-v10-library-model",
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(3) == [
+                "v1-v9-game-identity", "v1-v10-library-model", "v1-v11-save-compatibility",
             ])
+            #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_save_declarations") == 0)
         }
         let repositories = database.makeRepositories()
         let game = try #require(try repositories.games.fetchGame(id: fixture.game.id))
         #expect(game == fixture.game)
-        #expect(!game.isFavorite)
+        #expect(game.isFavorite == (migration == "v1-v10-library-model"))
         let build = try #require(try repositories.builds.fetchBuild(id: fixture.build.id))
         #expect(build == fixture.build)
-        #expect(build.notes.isEmpty)
-        #expect(build.totalPlaytimeSeconds == 0)
+        #expect(build.notes == (migration == "v1-v10-library-model" ? "Fixture notes\nRoute A" : ""))
+        #expect(build.totalPlaytimeSeconds == (migration == "v1-v10-library-model" ? 42.5 : 0))
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: build.id).isEmpty)
         #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id) == fixture.profile)
         #expect(try repositories.saveStates.fetchSaveState(id: fixture.state.id) == fixture.state)
         let recipe = try #require(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: fixture.patchedBuild.id))

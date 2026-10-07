@@ -6,6 +6,22 @@ import Foundation
 import XCTest
 
 final class LibraryDeletionOperationsTests: XCTestCase {
+    func testDeletingRestoringAndPurgingKeepsInMemoryDeclarationsWithTheirBuilds() throws {
+        let library = try Library()
+        let a = library.base.id, b = library.patched.id
+        let declaration = BuildSaveDeclaration(between: a, and: b, compatibility: .sharesSaves)
+        try library.builds.setSaveCompatibility(between: a, and: b, compatibility: .sharesSaves)
+        let deleted = try library.operations.delete(library.operations.planBuildDeletion(buildID: b))
+        XCTAssertTrue(try library.builds.fetchSaveDeclarations(buildID: a).isEmpty)
+        try library.operations.restore(deletionID: deleted.id)
+        XCTAssertEqual(try library.builds.fetchSaveDeclarations(buildID: b), [declaration])
+        let again = try library.operations.delete(library.operations.planBuildDeletion(buildID: b))
+        _ = try library.deletions.purgeDeletion(id: again.id, at: library.clock.now)
+        XCTAssertTrue(try library.builds.fetchSaveDeclarations(buildID: a).isEmpty)
+        try library.builds.insertBuild(library.patched)
+        XCTAssertTrue(try library.builds.fetchSaveDeclarations(buildID: b).isEmpty)
+    }
+
     func testDeletingABaseTakesItsPatchedBuildsAndAnEmptiedGame() throws {
         let library = try Library()
         let plan = try library.operations.planBuildDeletion(buildID: library.base.id)

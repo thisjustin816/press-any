@@ -35,8 +35,24 @@ extension AppDatabase {
         migrator.registerMigration("v1-v10-library-model") { db in
             try db.execute(sql: V1V10LibraryModelSchema.sql)
         }
+        migrator.registerMigration("v1-v11-save-compatibility") { db in
+            try db.execute(sql: V1V11SaveCompatibilitySchema.sql)
+        }
         return migrator
     }
+}
+
+enum V1V11SaveCompatibilitySchema {
+    static let sql = """
+    CREATE TABLE build_save_declarations (
+        first_build_id TEXT NOT NULL REFERENCES builds(id) ON DELETE CASCADE,
+        second_build_id TEXT NOT NULL REFERENCES builds(id) ON DELETE CASCADE,
+        compatibility TEXT NOT NULL CHECK (compatibility IN ('sharesSaves', 'doesNotShareSaves')),
+        PRIMARY KEY (first_build_id, second_build_id),
+        CHECK (first_build_id < second_build_id)
+    );
+    CREATE INDEX build_save_declarations_second ON build_save_declarations(second_build_id);
+    """
 }
 
 /// Recently Deleted. A deleted Game, Build, Save Profile or state keeps its row, marked with the

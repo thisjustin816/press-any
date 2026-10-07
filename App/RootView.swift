@@ -225,6 +225,10 @@ struct RootView: View {
             ), presenting: riskyLaunch) { risky in
                 Button("Play with a Copy") { chooseSave(for: risky, newSave: false) }
                 Button("Start a New Save") { chooseSave(for: risky, newSave: true) }
+                if risky.canDeclareCompatibility {
+                    Button("Always Use Saves Between These Builds") { alwaysUseSaves(for: risky) }
+                        .accessibilityIdentifier("launch.alwaysUseSaves")
+                }
                 Button("Use “\(risky.profileName)” Anyway", role: .destructive) {
                     riskyLaunch = nil
                     if let container = bootstrap.container { launch(risky.context, container: container, checkSave: false) }
@@ -468,6 +472,17 @@ struct RootView: View {
         }
     }
 
+    private func alwaysUseSaves(for risky: RiskyLaunch) {
+        riskyLaunch = nil
+        guard let container = bootstrap.container, let writer = risky.assessment.writtenBy else { return }
+        do {
+            let context = try container.chooseSaveForBuild.playSharingSaves(risky.context, writtenByBuildID: writer.id)
+            launch(context, container: container, checkSave: false)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     /// Records the save file as it is, after keeping a copy of it, and starts the game with it.
     private func acceptDamagedSave(_ damaged: DamagedSaveLaunch) {
         damagedSave = nil
@@ -677,30 +692,4 @@ private extension ControllerTheme {
 private struct DamagedSaveLaunch {
     let context: LaunchContext
     let profileName: String
-}
-
-private struct RiskyLaunch {
-    let context: LaunchContext
-    let assessment: SaveCompatibilityAssessment
-    let profileName: String
-
-    var message: String {
-        var lines = ["“\(profileName)” was last saved by \(assessment.writtenBy?.displayName ?? "another Build")."]
-        for risk in assessment.risks {
-            switch risk {
-            case .gbStudio:
-                lines.append("A GB Studio game can lay out its saved data differently from one Build to the next, even with the same GB Studio version.")
-            case .differentTools(let writtenWith, let playingWith):
-                lines.append("That Build was made with \(Self.list(writtenWith)); this one with \(Self.list(playingWith)).")
-            case .differentSaveHardware:
-                lines.append("The two Builds declare different save hardware in their cartridge headers.")
-            }
-        }
-        lines.append("A copy keeps the original save safe.")
-        return lines.joined(separator: " ")
-    }
-
-    private static func list(_ tools: [String]) -> String {
-        tools.isEmpty ? "unrecognized tools" : tools.formatted(.list(type: .and))
-    }
 }

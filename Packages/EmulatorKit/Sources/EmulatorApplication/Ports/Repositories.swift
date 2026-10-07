@@ -10,6 +10,11 @@ public protocol GameRepository: Sendable {
 }
 
 public protocol BuildRepository: Sendable {
+    /// Declarations with both Builds live, including a pair separated by a Game move.
+    func fetchSaveDeclarations(buildID: UUID) throws -> [BuildSaveDeclaration]
+    /// Sets or replaces the pair's declaration. Both Builds must be live in the same Game.
+    func setSaveCompatibility(between first: UUID, and second: UUID, compatibility: BuildSaveCompatibility) throws
+    func removeSaveCompatibility(between first: UUID, and second: UUID) throws
     func fetchBuild(id: UUID) throws -> Build?
     func fetchBuilds(gameID: UUID) throws -> [Build]
     func fetchBuild(gameID: UUID, imageSHA256: String) throws -> Build?

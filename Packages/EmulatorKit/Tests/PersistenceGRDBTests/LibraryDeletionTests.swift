@@ -7,6 +7,43 @@ import Testing
 
 @Suite("Recently Deleted in GRDB")
 struct LibraryDeletionTests {
+    @Test("either deleted Build hides declarations; restore brings them back only while the other exists",
+        arguments: [false, true])
+    func saveDeclarationsThroughDeletion(deleteFirst: Bool) throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let independent = Build(id: UUID(), gameID: fixture.game.id, system: .gameBoy,
+            displayName: "Independent", imageAssetID: fixture.romAsset.id, imageSHA256: String(repeating: "e", count: 64),
+            sourceKind: .importedImage, createdAt: now, modifiedAt: now)
+        try repositories.builds.insertBuild(independent)
+        let a = deleteFirst ? independent.id : fixture.patchedBuild.id
+        let b = deleteFirst ? fixture.patchedBuild.id : independent.id
+        let declaration = BuildSaveDeclaration(between: a, and: b, compatibility: .doesNotShareSaves)
+        try repositories.builds.setSaveCompatibility(between: a, and: b, compatibility: .doesNotShareSaves)
+        let deletedA = deletion(fixture, records: LibraryRecordSet(buildIDs: [a]), kind: .build)
+        try repositories.deletions.insertDeletion(deletedA)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a).isEmpty)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: b).isEmpty)
+        #expect(throws: BuildOperationError.buildNotFound(a)) {
+            try repositories.builds.setSaveCompatibility(between: a, and: b, compatibility: .sharesSaves)
+        }
+        try repositories.deletions.restoreDeletion(id: deletedA.id)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a) == [declaration])
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: b) == [declaration])
+        try repositories.deletions.insertDeletion(deletedA)
+        let deletedB = deletion(fixture, records: LibraryRecordSet(buildIDs: [b]), kind: .build)
+        try repositories.deletions.insertDeletion(deletedB)
+        try repositories.deletions.restoreDeletion(id: deletedA.id)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a).isEmpty)
+        _ = try repositories.deletions.purgeDeletion(id: deletedB.id, at: now)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a).isEmpty)
+        #expect(try database.writer.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_save_declarations")
+        } == 0)
+    }
+
     private let now = Date(timeIntervalSince1970: 1_700_000_500)
 
     private func deletion(_ fixture: Fixture, records: LibraryRecordSet, kind: LibraryDeletion.Kind = .game) -> LibraryDeletion {
@@ -45,6 +82,8 @@ struct LibraryDeletionTests {
         try database.migrate()
         let repositories = database.makeRepositories()
         let fixture = try Fixture.create(in: repositories)
+        let declaration = BuildSaveDeclaration(between: fixture.build.id, and: fixture.patchedBuild.id, compatibility: .sharesSaves)
+        try repositories.builds.setSaveCompatibility(between: fixture.build.id, and: fixture.patchedBuild.id, compatibility: .sharesSaves)
         let deleted = deletion(fixture, records: wholeGame(fixture))
 
         try repositories.deletions.insertDeletion(deleted)
@@ -57,6 +96,7 @@ struct LibraryDeletionTests {
         #expect(try repositories.saveStates.fetchSaveStates(saveProfileID: fixture.profile.id).isEmpty)
         #expect(try repositories.assets.fetchAssets().count == 6, "files stay referenced while restorable")
         #expect(try repositories.deletions.fetchDeletions() == [deleted])
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: fixture.build.id).isEmpty)
 
         try repositories.deletions.restoreDeletion(id: deleted.id)
 
@@ -64,6 +104,7 @@ struct LibraryDeletionTests {
         #expect(try repositories.builds.fetchBuilds(gameID: fixture.game.id) == [fixture.build, fixture.patchedBuild])
         #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: fixture.profile.id) == [fixture.state])
         #expect(try repositories.deletions.fetchDeletions().isEmpty)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: fixture.build.id) == [declaration])
     }
 
     @Test("purging removes the records, leaves tombstones and releases only unused files")

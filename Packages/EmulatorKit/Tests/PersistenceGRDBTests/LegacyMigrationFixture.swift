@@ -12,11 +12,14 @@ func legacyFixture(in database: AppDatabase, includingDeletedRecords: Bool = fal
         try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table'")
     }
     let gameColumns = try database.writer.read { db in try db.columns(in: "games").map(\.name) }
+    let buildColumns = try database.writer.read { db in try db.columns(in: "builds").map(\.name) }
     let alias = "Fixture Alias"
     try current.writer.write { db in
         let gameID = PersistenceCodec.uuid(fixture.game.id)
         let buildID = PersistenceCodec.uuid(fixture.build.id)
         let date = PersistenceCodec.date(fixture.game.createdAt)
+        try db.execute(sql: "UPDATE games SET is_favorite = 1 WHERE id = ?", arguments: [gameID])
+        try db.execute(sql: "UPDATE builds SET notes = ?, total_playtime_seconds = 42.5", arguments: ["Fixture notes\nRoute A"])
         try db.execute(
             sql: "INSERT INTO game_aliases (game_id, title) VALUES (?, ?)", arguments: [gameID, alias]
         )
@@ -69,6 +72,14 @@ func legacyFixture(in database: AppDatabase, includingDeletedRecords: Bool = fal
     var game = fixture.game
     game.hasPlayerTitle = gameColumns.contains("has_player_title") ? fixture.game.hasPlayerTitle : true
     game.aliases = destinationTables.contains("game_aliases") ? [alias] : []
-    return Fixture(game: game, build: fixture.build, patchedBuild: fixture.patchedBuild, profile: fixture.profile,
+    game.isFavorite = gameColumns.contains("is_favorite")
+    var build = fixture.build, patched = fixture.patchedBuild
+    if buildColumns.contains("notes") {
+        build.notes = "Fixture notes\nRoute A"
+        patched.notes = build.notes
+        build.totalPlaytimeSeconds = 42.5
+        patched.totalPlaytimeSeconds = 42.5
+    }
+    return Fixture(game: game, build: build, patchedBuild: patched, profile: fixture.profile,
         state: fixture.state, recipe: fixture.recipe, romAsset: fixture.romAsset)
 }
