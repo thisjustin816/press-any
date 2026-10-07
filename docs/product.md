@@ -186,6 +186,10 @@ changes the library; review shows what will happen; commit is all or nothing.
   nonzero header revision, and the player can correct or clear them. Unknown tags stay as written.
   Review labels its fields and explains Base Build and a wrong header checksum.
 - **Toolchain detection** runs when an image becomes a Build, and review shows what it found.
+- **Artwork.** Review can add the Game's artwork from Photos or Files. The image is checked and
+  downscaled when it's chosen, so an unreadable one is refused before importing, and it's set
+  once the ROM is in the library, replacing an existing Game's artwork only when the player
+  chose one. An exact duplicate doesn't offer it.
 - **Duplicates.** An exact duplicate image never makes a second file or Build. Its existing Build
   keeps its metadata. In v1.1, a duplicate import still inspects anything new that came with it
   (saves, artwork, documents, patches).
