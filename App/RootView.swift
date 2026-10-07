@@ -32,6 +32,7 @@ struct RootView: View {
     @State private var errorMessage: String?
     @State private var pendingResume: PreparedLaunch?
     @State private var riskyLaunch: RiskyLaunch?
+    @State private var damagedSave: DamagedSaveLaunch?
     /// The Quick Play session whose gameplay screen is closing, shown once the cover is gone.
     @State private var closingQuickPlayID: UUID?
     /// Set when the game menu's Add to Library closed the session, so its sheet opens on that step.
@@ -77,7 +78,7 @@ struct RootView: View {
             showWelcomeIfNeeded()
         }
         .onOpenURL { receiveSharedFile($0) }
-        .onChange(of: pendingResume != nil || riskyLaunch != nil) { _, hasPendingLaunch in
+        .onChange(of: pendingResume != nil || riskyLaunch != nil || damagedSave != nil) { _, hasPendingLaunch in
             if !hasPendingLaunch { presentNextSharedFile() }
         }
         .sheet(item: sharedFileBinding(overGameplay: false), onDismiss: finishSharedFile) { file in
@@ -180,6 +181,16 @@ struct RootView: View {
         } message: { risky in
             Text(risky.message)
         }
+        .alert("“\(damagedSave?.profileName ?? "")” May Be Damaged", isPresented: Binding(
+            get: { damagedSave != nil },
+            set: { if !$0 { damagedSave = nil } }
+        ), presenting: damagedSave) { damaged in
+            Button("Use It Anyway", role: .destructive) { acceptDamagedSave(damaged) }
+            Button("Start a New Save") { startNewSave(for: damaged) }
+            Button("Cancel", role: .cancel) { damagedSave = nil }
+        } message: { _ in
+            Text("Its save file changed after \(AppBrand.displayName) last wrote it. It may be damaged, or the app may have closed while saving. Use It Anyway keeps a copy of the file as it is first. Replace Save from File in the game’s Save Profiles can bring in another.")
+        }
         .alert(AppBrand.displayName, isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
@@ -269,7 +280,7 @@ struct RootView: View {
 
     private func presentNextSharedFile() {
         guard endedQuickPlay == nil, closingQuickPlayID == nil,
-              pendingResume == nil, riskyLaunch == nil, errorMessage == nil, sharedFileError == nil,
+              pendingResume == nil, riskyLaunch == nil, damagedSave == nil, errorMessage == nil, sharedFileError == nil,
               closingSharedFile == nil, sharedFile == nil, !queuedSharedFiles.isEmpty else { return }
         // A sheet the library or Game Details opened, such as Import Review, may hold work in
         // progress, so the file waits for it to close.
@@ -388,6 +399,31 @@ struct RootView: View {
         }
     }
 
+    /// Records the save file as it is, after keeping a copy of it, and starts the game with it.
+    private func acceptDamagedSave(_ damaged: DamagedSaveLaunch) {
+        damagedSave = nil
+        guard let container = bootstrap.container else { return }
+        do {
+            try container.acceptDamagedSave.execute(profileID: damaged.context.saveProfileID)
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+            launch(damaged.context, container: container, checkSave: false)
+        } catch {
+            errorMessage = "Couldn’t use the save: \(error.localizedDescription)"
+        }
+    }
+
+    private func startNewSave(for damaged: DamagedSaveLaunch) {
+        damagedSave = nil
+        guard let container = bootstrap.container else { return }
+        do {
+            let context = try container.chooseSaveForBuild.playWithNewSave(damaged.context)
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+            launch(context, container: container, checkSave: false)
+        } catch {
+            errorMessage = "Could not make the save: \(error.localizedDescription)"
+        }
+    }
+
     private func start(_ launch: PreparedLaunch, resume: Bool) {
         pendingResume = nil
         guard let container = bootstrap.container else { return }
@@ -413,6 +449,9 @@ struct RootView: View {
                     fastForwardAudio: container.fastForwardAudio(for: launch.context)
                 )
             )
+        } catch PersistentSaveServiceError.hashMismatch {
+            let profile = try? container.repositories.saveProfiles.fetchSaveProfile(id: launch.context.saveProfileID)
+            damagedSave = DamagedSaveLaunch(context: launch.context, profileName: profile?.displayName ?? "This Save Profile")
         } catch {
             errorMessage = "Could not start the game: \(error)"
         }
@@ -561,6 +600,13 @@ private extension ControllerTheme {
 
 /// A launch held back because its save was last written by another Build that may lay it out
 /// differently.
+/// A launch stopped because its Save Profile's save file doesn't match the hash recorded when it
+/// was written.
+private struct DamagedSaveLaunch {
+    let context: LaunchContext
+    let profileName: String
+}
+
 private struct RiskyLaunch {
     let context: LaunchContext
     let assessment: SaveCompatibilityAssessment

@@ -3,9 +3,19 @@ import EmulatorDomain
 import EmulationCore
 import Foundation
 
-public enum PersistentSaveServiceError: Error, Equatable {
+public enum PersistentSaveServiceError: Error, Equatable, LocalizedError {
     case profileNotFound(UUID)
     case assetNotFound(UUID)
+    case hashMismatch(assetID: UUID, expected: String, actual: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .hashMismatch:
+            return "This Save Profile's save file is damaged, so the game didn't start. The file was kept."
+        default:
+            return nil
+        }
+    }
 }
 
 public struct PersistentSaveService: Sendable {
@@ -105,10 +115,19 @@ public struct PersistentSaveService: Sendable {
 
     public func loadPersistentSave(for profile: SaveProfile) throws -> Data? {
         guard let assetID = profile.persistentSaveAssetID else { return nil }
-        guard let asset = try assets.fetchAsset(id: assetID) else {
+        guard var asset = try assets.fetchAsset(id: assetID) else {
             throw PersistentSaveServiceError.assetNotFound(assetID)
         }
         let url = try assetStore.managedURL(relativePath: asset.relativePath)
-        return try assetStore.readData(at: url)
+        let data = try assetStore.readData(at: url)
+        let actual = assetStore.hashData(data)
+        guard actual == asset.contentSHA256 else {
+            if asset.integrityStatus != .corrupt {
+                asset.integrityStatus = .corrupt
+                try? assets.updateMutableAsset(asset)
+            }
+            throw PersistentSaveServiceError.hashMismatch(assetID: asset.id, expected: asset.contentSHA256, actual: actual)
+        }
+        return data
     }
 }

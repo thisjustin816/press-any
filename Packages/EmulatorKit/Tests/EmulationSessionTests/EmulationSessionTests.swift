@@ -8,6 +8,170 @@ import XCTest
 @testable import EmulationSession
 
 final class EmulationSessionTests: XCTestCase {
+    func testIntactPersistentSaveLoadsWithItsRecordedHash() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+
+        XCTAssertEqual(try service.loadPersistentSave(for: harness.profile), Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        XCTAssertEqual(asset.integrityStatus, .verified)
+    }
+
+    func testDamagedPersistentSaveIsRejectedMarkedAndKept() throws {
+        try assertDamagedPersistentSaveIsRejected(markingFails: false)
+    }
+
+    func testDamagedPersistentSaveIsRejectedEvenWhenMarkingFails() throws {
+        try assertDamagedPersistentSaveIsRejected(markingFails: true)
+    }
+
+    private func assertDamagedPersistentSaveIsRejected(markingFails: Bool) throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        let url = try harness.store.managedURL(relativePath: asset.relativePath)
+        let damaged = Data([9, 8, 7])
+        try harness.store.writeDataAtomically(damaged, to: url)
+        let assets: any ManagedAssetRepository = markingFails
+            ? RefusingAssetUpdateRepository(inner: harness.assets) : harness.assets
+        let service = PersistentSaveService(profiles: harness.profiles, assets: assets, assetStore: harness.store)
+        var loaded: Data?
+
+        XCTAssertThrowsError(loaded = try service.loadPersistentSave(for: harness.profile)) { error in
+            XCTAssertEqual(error as? PersistentSaveServiceError, .hashMismatch(
+                assetID: asset.id, expected: asset.contentSHA256, actual: harness.store.hashData(damaged)
+            ))
+            XCTAssertEqual(error.localizedDescription, "This Save Profile's save file is damaged, so the game didn't start. The file was kept.")
+        }
+
+        XCTAssertNil(loaded)
+        XCTAssertEqual(try harness.store.readData(at: url), damaged)
+        var expectedAsset = asset
+        if !markingFails { expectedAsset.integrityStatus = .corrupt }
+        XCTAssertEqual(try harness.assets.fetchAsset(id: asset.id), expectedAsset)
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id), harness.profile)
+    }
+
+    func testDamagedPersistentSaveStopsLaunchBeforeCreatingACore() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        let url = try harness.store.managedURL(relativePath: asset.relativePath)
+        let damaged = Data([9, 8, 7])
+        try harness.store.writeDataAtomically(damaged, to: url)
+        let session = harness.makeSession()
+
+        XCTAssertThrowsError(try session.start(context: harness.contextA)) { error in
+            XCTAssertEqual(error as? PersistentSaveServiceError, .hashMismatch(
+                assetID: asset.id, expected: asset.contentSHA256, actual: harness.store.hashData(damaged)
+            ))
+        }
+        XCTAssertEqual(session.state, .idle)
+        XCTAssertTrue(harness.factory.cores.isEmpty)
+        try session.stop()
+        XCTAssertEqual(try harness.store.readData(at: url), damaged)
+        XCTAssertEqual(try harness.assets.fetchAsset(id: asset.id)?.integrityStatus, .corrupt)
+    }
+
+    func testAcceptingADamagedSaveKeepsACopyAndLetsTheGameStart() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        let url = try harness.store.managedURL(relativePath: asset.relativePath)
+        let found = Data([9, 8, 7])
+        try harness.store.writeDataAtomically(found, to: url)
+        XCTAssertThrowsError(try harness.makeSession().start(context: harness.contextA))
+
+        let copy = try AcceptDamagedSave(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+            .execute(profileID: harness.profile.id)
+
+        XCTAssertEqual(copy.displayName, "\(harness.profile.displayName) before playing")
+        let copyAsset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(copy.persistentSaveAssetID)))
+        XCTAssertEqual(try harness.store.readData(at: harness.store.managedURL(relativePath: copyAsset.relativePath)), found)
+        let accepted = try XCTUnwrap(harness.assets.fetchAsset(id: asset.id))
+        XCTAssertEqual(accepted.contentSHA256, harness.store.hashData(found))
+        XCTAssertEqual(accepted.byteLength, Int64(found.count))
+        XCTAssertEqual(accepted.integrityStatus, .verified)
+        XCTAssertEqual(try harness.store.readData(at: url), found, "accepting changes the record, not the file")
+
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.state, .running(harness.contextA))
+        try session.stop()
+    }
+
+    func testAFailedAcceptLeavesNoCopyBehind() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        try harness.store.writeDataAtomically(Data([9, 8, 7]), to: harness.store.managedURL(relativePath: asset.relativePath))
+        let profilesBefore = try harness.profiles.fetchSaveProfiles(gameID: harness.profile.gameID)
+
+        XCTAssertThrowsError(try AcceptDamagedSave(
+            profiles: harness.profiles,
+            assets: RefusingAssetUpdateRepository(inner: harness.assets),
+            assetStore: harness.store
+        ).execute(profileID: harness.profile.id))
+
+        XCTAssertEqual(try harness.profiles.fetchSaveProfiles(gameID: harness.profile.gameID), profilesBefore)
+        XCTAssertEqual(try harness.assets.fetchAsset(id: asset.id), asset)
+    }
+
+    func testIntactStateLoadsWithItsRecordedHash() throws {
+        let harness = try SessionHarness.make()
+        let service = SaveStateService(states: harness.states, assets: harness.assets, assetStore: harness.store)
+        let worker = SessionWorker(core: FakeEmulatorCore())
+        try worker.perform { try $0.loadPersistentSave(Data([1, 2, 3])) }
+        let state = try service.save(worker: worker, context: harness.contextA, kind: .manual, playtimeSeconds: 0)
+        try worker.perform { try $0.loadPersistentSave(Data([9])) }
+
+        try service.load(state, worker: worker, context: harness.contextA)
+
+        XCTAssertEqual(try worker.perform { try $0.persistentSaveData() }, Data([1, 2, 3]))
+        XCTAssertEqual(try harness.assets.fetchAsset(id: state.stateAssetID)?.integrityStatus, .verified)
+    }
+
+    func testDamagedStateIsRejectedBeforeDeserializationMarkedAndKept() throws {
+        try assertDamagedStateIsRejected(markingFails: false)
+    }
+
+    func testDamagedStateIsRejectedBeforeDeserializationEvenWhenMarkingFails() throws {
+        try assertDamagedStateIsRejected(markingFails: true)
+    }
+
+    private func assertDamagedStateIsRejected(markingFails: Bool) throws {
+        let harness = try SessionHarness.make()
+        let writer = SaveStateService(states: harness.states, assets: harness.assets, assetStore: harness.store)
+        let worker = SessionWorker(core: FakeEmulatorCore())
+        try worker.perform { try $0.loadPersistentSave(Data([1, 2, 3])) }
+        let state = try writer.save(worker: worker, context: harness.contextA, kind: .manual, playtimeSeconds: 0)
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: state.stateAssetID))
+        let url = try harness.store.managedURL(relativePath: asset.relativePath)
+        let damaged = try worker.perform { core in
+            try core.loadPersistentSave(Data([9]))
+            return try core.serializeState()
+        }
+        try harness.store.writeDataAtomically(damaged, to: url)
+        try worker.perform { core in
+            try core.loadPersistentSave(Data([2]))
+            (core as! FakeEmulatorCore).failsNextStateLoadPartway = true
+        }
+        let assets: any ManagedAssetRepository = markingFails
+            ? RefusingAssetUpdateRepository(inner: harness.assets) : harness.assets
+        let service = SaveStateService(states: harness.states, assets: assets, assetStore: harness.store)
+
+        XCTAssertThrowsError(try service.load(state, worker: worker, context: harness.contextA)) { error in
+            XCTAssertEqual(error as? SaveStateServiceError, .hashMismatch(
+                assetID: asset.id, expected: asset.contentSHA256, actual: harness.store.hashData(damaged)
+            ))
+            XCTAssertEqual(error.localizedDescription, "This save state is damaged, so it wasn't loaded. The file was kept.")
+        }
+
+        XCTAssertTrue(try worker.perform { ($0 as! FakeEmulatorCore).failsNextStateLoadPartway }, "deserializeState was never called")
+        XCTAssertEqual(try worker.perform { try $0.persistentSaveData() }, Data([2]))
+        XCTAssertEqual(try harness.store.readData(at: url), damaged)
+        var expectedAsset = asset
+        if !markingFails { expectedAsset.integrityStatus = .corrupt }
+        XCTAssertEqual(try harness.assets.fetchAsset(id: asset.id), expectedAsset)
+        XCTAssertEqual(try harness.states.fetchSaveStates(buildID: state.buildID, saveProfileID: state.saveProfileID), [state])
+    }
+
     func testBackgroundFlushesBatteryAndWritesAutoState() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3, 4]))
         let session = harness.makeSession()
@@ -216,6 +380,8 @@ extension EmulationSessionTests {
         XCTAssertEqual(second.state, .running(harness.contextA))
         XCTAssertEqual(try second.stepFrame().bgra8888[0], 1, "the game booted from the start")
         XCTAssertEqual(try second.saveStates().map(\.id), [autoState.id], "the rejected state is kept")
+        XCTAssertEqual(try harness.assets.fetchAsset(id: asset.id)?.integrityStatus, .corrupt)
+        XCTAssertEqual(try harness.store.readData(at: harness.store.managedURL(relativePath: asset.relativePath)), Data("corrupt".utf8))
     }
 
     func testTheProfileRemembersWhichBuildLastWroteItsSave() throws {
@@ -577,6 +743,20 @@ private final class UndeletableSaveStateRepository: SaveStateRepository, @unchec
         try inner.reassignSaveStates(buildID: buildID, fromSaveProfileID: fromSaveProfileID, toSaveProfileID: toSaveProfileID)
     }
     func deleteSaveState(id: UUID) throws { throw Refused() }
+}
+
+private struct RefusingAssetUpdateRepository: ManagedAssetRepository {
+    let inner: InMemoryAssetRepository
+    struct Refused: Error {}
+
+    func fetchAsset(id: UUID) throws -> ManagedAsset? { try inner.fetchAsset(id: id) }
+    func fetchSourceAsset(kind: ManagedAssetKind, sha256: String) throws -> ManagedAsset? {
+        try inner.fetchSourceAsset(kind: kind, sha256: sha256)
+    }
+    func fetchAsset(relativePath: String) throws -> ManagedAsset? { try inner.fetchAsset(relativePath: relativePath) }
+    func insertAsset(_ asset: ManagedAsset) throws { try inner.insertAsset(asset) }
+    func updateMutableAsset(_ asset: ManagedAsset) throws { throw Refused() }
+    func deleteAsset(id: UUID) throws { try inner.deleteAsset(id: id) }
 }
 
 private struct SessionHarness {

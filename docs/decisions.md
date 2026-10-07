@@ -17,6 +17,26 @@ steps across the cross. As SameBoy's iOS app does, the pad stays raised and tips
 end goes into shade that fades out toward the center. Each arm has an arrow pressed into it, and
 the dip at the center is lit as a hollow. This replaces the D-pad sentence in "Raised controls,
 and Resume sits on the picture".
+## 2026-10-07: A damaged save can still be played
+
+When a launch stops on a battery save that doesn't match its recorded hash, the player chooses
+what happens: Use It Anyway, Start a New Save, or Cancel. The mismatch can also mean the app
+closed between writing the file and recording it, and then the file is the newest good save, so
+refusing it with no way forward would lock the player out of their own progress. Use It Anyway
+first copies the file as found to "<name> before playing", then records it as the profile's save
+and starts the game. The alert also points to Replace Save from File.
+
+## 2026-10-07: Damaged saves stop launch and stay on disk
+
+Battery saves and save states are checked against their recorded SHA-256 before their bytes
+reach the core. A damaged battery save stops the launch and keeps the file. Loading it would let
+the next flush write the damaged data back as the player's save, silently accepting corruption.
+
+A damaged save state is not deserialized and stays on disk. A failed Auto State restore still
+boots the game normally from its battery save and tells the player the resume point was kept.
+Both mismatches mark the asset corrupt when the repository can record it; a failed status update
+still rejects the data. Verification hashes the bytes already read, without reading the file
+again. No file is deleted or repaired by verification.
 ## 2026-10-07: Save states are managed from their Save Profile
 
 A Save Profile's menu opens Save States: its states on every Build, newest first, each with its
