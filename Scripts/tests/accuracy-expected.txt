@@ -1,0 +1,231 @@
+cgb blargg/cpu_instrs/cpu_instrs.gb: pass
+cgb blargg/instr_timing/instr_timing.gb: pass
+cgb blargg/mem_timing-2/mem_timing.gb: pass
+cgb blargg/mem_timing/mem_timing.gb: pass
+cgb mooneye/build/acceptance/add_sp_e_timing.gb: pass
+cgb mooneye/build/acceptance/bits/mem_oam.gb: pass
+cgb mooneye/build/acceptance/bits/reg_f.gb: pass
+cgb mooneye/build/acceptance/bits/unused_hwio-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_div-S.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_div-dmg0.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_div-dmgABCmgb.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_div2-S.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_hwio-S.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_hwio-dmg0.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_hwio-dmgABCmgb.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_regs-dmg0.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_regs-dmgABC.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_regs-mgb.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_regs-sgb.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/boot_regs-sgb2.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/call_cc_timing.gb: pass
+cgb mooneye/build/acceptance/call_cc_timing2.gb: pass
+cgb mooneye/build/acceptance/call_timing.gb: pass
+cgb mooneye/build/acceptance/call_timing2.gb: pass
+cgb mooneye/build/acceptance/di_timing-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/div_timing.gb: pass
+cgb mooneye/build/acceptance/ei_sequence.gb: pass
+cgb mooneye/build/acceptance/ei_timing.gb: pass
+cgb mooneye/build/acceptance/halt_ime0_ei.gb: pass
+cgb mooneye/build/acceptance/halt_ime0_nointr_timing.gb: pass
+cgb mooneye/build/acceptance/halt_ime1_timing.gb: pass
+cgb mooneye/build/acceptance/halt_ime1_timing2-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/if_ie_registers.gb: pass
+cgb mooneye/build/acceptance/instr/daa.gb: pass
+cgb mooneye/build/acceptance/interrupts/ie_push.gb: pass
+cgb mooneye/build/acceptance/intr_timing.gb: pass
+cgb mooneye/build/acceptance/jp_cc_timing.gb: pass
+cgb mooneye/build/acceptance/jp_timing.gb: pass
+cgb mooneye/build/acceptance/ld_hl_sp_e_timing.gb: pass
+cgb mooneye/build/acceptance/oam_dma/basic.gb: pass
+cgb mooneye/build/acceptance/oam_dma/reg_read.gb: pass
+cgb mooneye/build/acceptance/oam_dma/sources-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/oam_dma_restart.gb: pass
+cgb mooneye/build/acceptance/oam_dma_start.gb: pass
+cgb mooneye/build/acceptance/oam_dma_timing.gb: pass
+cgb mooneye/build/acceptance/pop_timing.gb: pass
+cgb mooneye/build/acceptance/ppu/hblank_ly_scx_timing-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/ppu/intr_1_2_timing-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/ppu/intr_2_0_timing.gb: pass
+cgb mooneye/build/acceptance/ppu/intr_2_mode0_timing.gb: pass
+cgb mooneye/build/acceptance/ppu/intr_2_mode0_timing_sprites.gb: pass
+cgb mooneye/build/acceptance/ppu/intr_2_mode3_timing.gb: pass
+cgb mooneye/build/acceptance/ppu/intr_2_oam_ok_timing.gb: pass
+cgb mooneye/build/acceptance/ppu/lcdon_timing-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/ppu/lcdon_write_timing-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/ppu/stat_irq_blocking.gb: pass
+cgb mooneye/build/acceptance/ppu/stat_lyc_onoff.gb: pass
+cgb mooneye/build/acceptance/ppu/vblank_stat_intr-GS.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/push_timing.gb: pass
+cgb mooneye/build/acceptance/rapid_di_ei.gb: pass
+cgb mooneye/build/acceptance/ret_cc_timing.gb: pass
+cgb mooneye/build/acceptance/ret_timing.gb: pass
+cgb mooneye/build/acceptance/reti_intr_timing.gb: pass
+cgb mooneye/build/acceptance/reti_timing.gb: pass
+cgb mooneye/build/acceptance/rst_timing.gb: pass
+cgb mooneye/build/acceptance/serial/boot_sclk_align-dmgABCmgb.gb: fail: the test reported a failure
+cgb mooneye/build/acceptance/timer/div_write.gb: pass
+cgb mooneye/build/acceptance/timer/rapid_toggle.gb: pass
+cgb mooneye/build/acceptance/timer/tim00.gb: pass
+cgb mooneye/build/acceptance/timer/tim00_div_trigger.gb: pass
+cgb mooneye/build/acceptance/timer/tim01.gb: pass
+cgb mooneye/build/acceptance/timer/tim01_div_trigger.gb: pass
+cgb mooneye/build/acceptance/timer/tim10.gb: pass
+cgb mooneye/build/acceptance/timer/tim10_div_trigger.gb: pass
+cgb mooneye/build/acceptance/timer/tim11.gb: pass
+cgb mooneye/build/acceptance/timer/tim11_div_trigger.gb: pass
+cgb mooneye/build/acceptance/timer/tima_reload.gb: pass
+cgb mooneye/build/acceptance/timer/tima_write_reloading.gb: pass
+cgb mooneye/build/acceptance/timer/tma_write_reloading.gb: pass
+cgb mooneye/build/emulator-only/mbc1/bits_bank1.gb: pass
+cgb mooneye/build/emulator-only/mbc1/bits_bank2.gb: pass
+cgb mooneye/build/emulator-only/mbc1/bits_mode.gb: pass
+cgb mooneye/build/emulator-only/mbc1/bits_ramg.gb: pass
+cgb mooneye/build/emulator-only/mbc1/multicart_rom_8Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc1/ram_256kb.gb: pass
+cgb mooneye/build/emulator-only/mbc1/ram_64kb.gb: pass
+cgb mooneye/build/emulator-only/mbc1/rom_16Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc1/rom_1Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc1/rom_2Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc1/rom_4Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc1/rom_512kb.gb: pass
+cgb mooneye/build/emulator-only/mbc1/rom_8Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc2/bits_ramg.gb: pass
+cgb mooneye/build/emulator-only/mbc2/bits_romb.gb: pass
+cgb mooneye/build/emulator-only/mbc2/bits_unused.gb: pass
+cgb mooneye/build/emulator-only/mbc2/ram.gb: pass
+cgb mooneye/build/emulator-only/mbc2/rom_1Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc2/rom_2Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc2/rom_512kb.gb: pass
+cgb mooneye/build/emulator-only/mbc5/rom_16Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc5/rom_1Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc5/rom_2Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc5/rom_32Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc5/rom_4Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc5/rom_512kb.gb: pass
+cgb mooneye/build/emulator-only/mbc5/rom_64Mb.gb: pass
+cgb mooneye/build/emulator-only/mbc5/rom_8Mb.gb: pass
+cgb mooneye/build/misc/bits/unused_hwio-C.gb: pass
+cgb mooneye/build/misc/boot_div-A.gb: fail: the test reported a failure
+cgb mooneye/build/misc/boot_div-cgb0.gb: fail: the test reported a failure
+cgb mooneye/build/misc/boot_div-cgbABCDE.gb: fail: the test reported a failure
+cgb mooneye/build/misc/boot_hwio-C.gb: pass
+cgb mooneye/build/misc/boot_regs-A.gb: fail: the test reported a failure
+cgb mooneye/build/misc/boot_regs-cgb.gb: pass
+cgb mooneye/build/misc/ppu/vblank_stat_intr-C.gb: pass
+dmg blargg/cpu_instrs/cpu_instrs.gb: pass
+dmg blargg/instr_timing/instr_timing.gb: pass
+dmg blargg/mem_timing-2/mem_timing.gb: pass
+dmg blargg/mem_timing/mem_timing.gb: pass
+dmg blargg/oam_bug/oam_bug.gb: pass
+dmg mooneye/build/acceptance/add_sp_e_timing.gb: pass
+dmg mooneye/build/acceptance/bits/mem_oam.gb: pass
+dmg mooneye/build/acceptance/bits/reg_f.gb: pass
+dmg mooneye/build/acceptance/bits/unused_hwio-GS.gb: pass
+dmg mooneye/build/acceptance/boot_div-S.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_div-dmg0.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_div-dmgABCmgb.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_div2-S.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_hwio-S.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_hwio-dmg0.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_hwio-dmgABCmgb.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_regs-dmg0.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_regs-dmgABC.gb: pass
+dmg mooneye/build/acceptance/boot_regs-mgb.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_regs-sgb.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/boot_regs-sgb2.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/call_cc_timing.gb: pass
+dmg mooneye/build/acceptance/call_cc_timing2.gb: pass
+dmg mooneye/build/acceptance/call_timing.gb: pass
+dmg mooneye/build/acceptance/call_timing2.gb: pass
+dmg mooneye/build/acceptance/di_timing-GS.gb: pass
+dmg mooneye/build/acceptance/div_timing.gb: pass
+dmg mooneye/build/acceptance/ei_sequence.gb: pass
+dmg mooneye/build/acceptance/ei_timing.gb: pass
+dmg mooneye/build/acceptance/halt_ime0_ei.gb: pass
+dmg mooneye/build/acceptance/halt_ime0_nointr_timing.gb: pass
+dmg mooneye/build/acceptance/halt_ime1_timing.gb: pass
+dmg mooneye/build/acceptance/halt_ime1_timing2-GS.gb: pass
+dmg mooneye/build/acceptance/if_ie_registers.gb: pass
+dmg mooneye/build/acceptance/instr/daa.gb: pass
+dmg mooneye/build/acceptance/interrupts/ie_push.gb: pass
+dmg mooneye/build/acceptance/intr_timing.gb: pass
+dmg mooneye/build/acceptance/jp_cc_timing.gb: pass
+dmg mooneye/build/acceptance/jp_timing.gb: pass
+dmg mooneye/build/acceptance/ld_hl_sp_e_timing.gb: pass
+dmg mooneye/build/acceptance/oam_dma/basic.gb: pass
+dmg mooneye/build/acceptance/oam_dma/reg_read.gb: pass
+dmg mooneye/build/acceptance/oam_dma/sources-GS.gb: pass
+dmg mooneye/build/acceptance/oam_dma_restart.gb: pass
+dmg mooneye/build/acceptance/oam_dma_start.gb: pass
+dmg mooneye/build/acceptance/oam_dma_timing.gb: pass
+dmg mooneye/build/acceptance/pop_timing.gb: pass
+dmg mooneye/build/acceptance/ppu/hblank_ly_scx_timing-GS.gb: pass
+dmg mooneye/build/acceptance/ppu/intr_1_2_timing-GS.gb: pass
+dmg mooneye/build/acceptance/ppu/intr_2_0_timing.gb: pass
+dmg mooneye/build/acceptance/ppu/intr_2_mode0_timing.gb: pass
+dmg mooneye/build/acceptance/ppu/intr_2_mode0_timing_sprites.gb: pass
+dmg mooneye/build/acceptance/ppu/intr_2_mode3_timing.gb: pass
+dmg mooneye/build/acceptance/ppu/intr_2_oam_ok_timing.gb: pass
+dmg mooneye/build/acceptance/ppu/lcdon_timing-GS.gb: pass
+dmg mooneye/build/acceptance/ppu/lcdon_write_timing-GS.gb: pass
+dmg mooneye/build/acceptance/ppu/stat_irq_blocking.gb: pass
+dmg mooneye/build/acceptance/ppu/stat_lyc_onoff.gb: pass
+dmg mooneye/build/acceptance/ppu/vblank_stat_intr-GS.gb: pass
+dmg mooneye/build/acceptance/push_timing.gb: pass
+dmg mooneye/build/acceptance/rapid_di_ei.gb: pass
+dmg mooneye/build/acceptance/ret_cc_timing.gb: pass
+dmg mooneye/build/acceptance/ret_timing.gb: pass
+dmg mooneye/build/acceptance/reti_intr_timing.gb: pass
+dmg mooneye/build/acceptance/reti_timing.gb: pass
+dmg mooneye/build/acceptance/rst_timing.gb: pass
+dmg mooneye/build/acceptance/serial/boot_sclk_align-dmgABCmgb.gb: fail: the test reported a failure
+dmg mooneye/build/acceptance/timer/div_write.gb: pass
+dmg mooneye/build/acceptance/timer/rapid_toggle.gb: pass
+dmg mooneye/build/acceptance/timer/tim00.gb: pass
+dmg mooneye/build/acceptance/timer/tim00_div_trigger.gb: pass
+dmg mooneye/build/acceptance/timer/tim01.gb: pass
+dmg mooneye/build/acceptance/timer/tim01_div_trigger.gb: pass
+dmg mooneye/build/acceptance/timer/tim10.gb: pass
+dmg mooneye/build/acceptance/timer/tim10_div_trigger.gb: pass
+dmg mooneye/build/acceptance/timer/tim11.gb: pass
+dmg mooneye/build/acceptance/timer/tim11_div_trigger.gb: pass
+dmg mooneye/build/acceptance/timer/tima_reload.gb: pass
+dmg mooneye/build/acceptance/timer/tima_write_reloading.gb: pass
+dmg mooneye/build/acceptance/timer/tma_write_reloading.gb: pass
+dmg mooneye/build/emulator-only/mbc1/bits_bank1.gb: pass
+dmg mooneye/build/emulator-only/mbc1/bits_bank2.gb: pass
+dmg mooneye/build/emulator-only/mbc1/bits_mode.gb: pass
+dmg mooneye/build/emulator-only/mbc1/bits_ramg.gb: pass
+dmg mooneye/build/emulator-only/mbc1/multicart_rom_8Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc1/ram_256kb.gb: pass
+dmg mooneye/build/emulator-only/mbc1/ram_64kb.gb: pass
+dmg mooneye/build/emulator-only/mbc1/rom_16Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc1/rom_1Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc1/rom_2Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc1/rom_4Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc1/rom_512kb.gb: pass
+dmg mooneye/build/emulator-only/mbc1/rom_8Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc2/bits_ramg.gb: pass
+dmg mooneye/build/emulator-only/mbc2/bits_romb.gb: pass
+dmg mooneye/build/emulator-only/mbc2/bits_unused.gb: pass
+dmg mooneye/build/emulator-only/mbc2/ram.gb: pass
+dmg mooneye/build/emulator-only/mbc2/rom_1Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc2/rom_2Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc2/rom_512kb.gb: pass
+dmg mooneye/build/emulator-only/mbc5/rom_16Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc5/rom_1Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc5/rom_2Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc5/rom_32Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc5/rom_4Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc5/rom_512kb.gb: pass
+dmg mooneye/build/emulator-only/mbc5/rom_64Mb.gb: pass
+dmg mooneye/build/emulator-only/mbc5/rom_8Mb.gb: pass
+dmg mooneye/build/misc/bits/unused_hwio-C.gb: fail: the test reported a failure
+dmg mooneye/build/misc/boot_div-A.gb: fail: the test reported a failure
+dmg mooneye/build/misc/boot_div-cgb0.gb: fail: the test reported a failure
+dmg mooneye/build/misc/boot_div-cgbABCDE.gb: fail: the test reported a failure
+dmg mooneye/build/misc/boot_hwio-C.gb: fail: the test reported a failure
+dmg mooneye/build/misc/boot_regs-A.gb: fail: the test reported a failure
+dmg mooneye/build/misc/boot_regs-cgb.gb: fail: the test reported a failure
+dmg mooneye/build/misc/ppu/vblank_stat_intr-C.gb: fail: the test reported a failure

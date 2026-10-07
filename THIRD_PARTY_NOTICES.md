@@ -68,6 +68,15 @@ this repository.
   `TestROMs/src/` carries the notices; `TestROMs/README.md` lists the versions.
 - hUGEDriver (public domain) is fetched at a pinned commit by its ROM's build, not kept here.
 
+## Accuracy test ROMs
+
+- Projects: [Blargg's test ROMs](https://github.com/retrio/gb-test-roms) and the
+  [Mooneye Test Suite](https://github.com/Gekkio/mooneye-test-suite) (MIT), assembled with
+  [WLA DX](https://github.com/vhelin/wla-dx), at the commits
+  [game-boy-test-roms](https://github.com/c-sp/game-boy-test-roms) v7.0 uses.
+- Usage: `Scripts/test-accuracy-roms.sh` fetches and builds them at run time to check the core's
+  results. None of them is committed here or ships in the app.
+
 ## In the app
 
 Settings > Acknowledgements lists each project whose code ships in the app. SameBoy's and

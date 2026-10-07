@@ -91,7 +91,12 @@ Done: SameBoy 1.0.3 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest 
 first launch, then pinned per Build; Open SameBoy boot ROMs incl. cgb_boot_fast; Skip Boot Logo:
 Quick Play always, library via inheritable setting (default shows logo); Optional capability
 protocols: rumble and boot skipping implemented, rewind, cheats, memory access, RTC, link cable,
-camera and printer declared, and a missing one is a failed cast.
+camera and printer declared, and a missing one is a failed cast. Accuracy test ROMs: Blargg's
+tests and the Mooneye Test Suite run through the bridge on DMG-B and CGB-E in CI whenever the core
+or bridge changes, against recorded results; every test for those models passes except Mooneye's
+boot_div, boot_hwio and boot_sclk_align, likely because SameBoy's open boot ROMs don't hand off on
+the same cycle as Nintendo's. Screenshot suites (dmg-acid2, cgb-acid2, Mealybug Tearoom, Blargg's
+halt_bug, interrupt_time and sound tests) and SameSuite remain.
 
 ### Persistence / storage
 
