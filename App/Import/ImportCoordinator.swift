@@ -29,7 +29,7 @@ final class ImportCoordinator {
 extension UTType {
     static let gameBoyROM = UTType(importedAs: "com.thisjustin816.emulator.rom.gb", conformingTo: .data)
     static let gameBoyColorROM = UTType(importedAs: "com.thisjustin816.emulator.rom.gbc", conformingTo: .data)
-    static let gameBoySave = UTType(filenameExtension: "sav") ?? .data
+    static let gameBoySave = UTType(importedAs: "com.thisjustin816.emulator.save", conformingTo: .data)
     static let ipsPatch = UTType(importedAs: "com.thisjustin816.emulator.patch.ips", conformingTo: .data)
     static let bpsPatch = UTType(importedAs: "com.thisjustin816.emulator.patch.bps", conformingTo: .data)
 
@@ -38,6 +38,8 @@ extension UTType {
     /// resolves for each extension is accepted too.
     static let romFileTypes = withResolvedTypes([.gameBoyROM, .gameBoyColorROM], extensions: ["gb", "gbc"])
     static let patchFileTypes = withResolvedTypes([.ipsPatch, .bpsPatch], extensions: ["ips", "bps"])
+    /// Battery saves: `.sav`, and `.srm` as RetroArch names them.
+    static let saveFileTypes = withResolvedTypes([.gameBoySave], extensions: ["sav", "srm"])
 
     private static func withResolvedTypes(_ own: [UTType], extensions: [String]) -> [UTType] {
         var types = own
