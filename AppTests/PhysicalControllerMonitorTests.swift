@@ -53,7 +53,11 @@ final class PhysicalControllerMonitorTests: XCTestCase {
         let handler = try XCTUnwrap(pad.buttonMenu.pressedChangedHandler)
         handler(pad.buttonMenu, 1, true)
         handler(pad.buttonMenu, 0, false)
-        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        // Each change reaches the main actor in its own Task, which a busy runner can run late.
+        let deadline = Date().addingTimeInterval(2)
+        while menuChanges.count < 3, Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        }
         XCTAssertEqual(menuChanges, [false, true, false])
         XCTAssertFalse(input.start)
     }
