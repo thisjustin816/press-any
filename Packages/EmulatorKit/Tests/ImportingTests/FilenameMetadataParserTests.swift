@@ -257,6 +257,41 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(FilenameMetadataParser.parse(filename: "Game Jam Entry 2026-10-04.gb").suggestedBuildName, "2026-10-04")
     }
 
+    func testAVersionWordMidNameBecomesTheVersionAndTheWordsAfterItTheVariant() {
+        let hyphenated = FilenameMetadataParser.parse(filename: "Serve-Sisters-Coop-v5-Stability.gbc")
+        XCTAssertEqual(hyphenated.suggestedTitle, "Serve Sisters Coop")
+        XCTAssertEqual(hyphenated.buildMetadata.versionString, "5")
+        XCTAssertEqual(hyphenated.buildMetadata.status, "Stability")
+        XCTAssertEqual(hyphenated.suggestedBuildName, "v5 · Stability")
+        XCTAssertEqual(hyphenated.releaseKind, .development)
+
+        let underscored = FilenameMetadataParser.parse(filename: "Match_Land_v1.2_beta.gb")
+        XCTAssertEqual(underscored.suggestedTitle, "Match Land")
+        XCTAssertEqual(underscored.buildMetadata.versionString, "1.2")
+        XCTAssertEqual(underscored.buildMetadata.status, "Beta")
+
+        // With spaces in the name, hyphens belong to the title.
+        let spaced = FilenameMetadataParser.parse(filename: "R-Type DX v2 demo.gb")
+        XCTAssertEqual(spaced.suggestedTitle, "R-Type DX")
+        XCTAssertEqual(spaced.buildMetadata.versionString, "2")
+        XCTAssertEqual(spaced.buildMetadata.status, "Demo")
+
+        // The shared-file UI tests' ROM.
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "gbdk450-rev-v1.0.gb").suggestedBuildName, "v1.0")
+
+        // A dotted version needs no "v"; an all-lowercase name is capitalized.
+        let bare = FilenameMetadataParser.parse(filename: "match-land-live-0.3.0+live1.gb")
+        XCTAssertEqual(bare.suggestedTitle, "Match Land Live")
+        XCTAssertEqual(bare.buildMetadata.versionString, "0.3.0+live1")
+        XCTAssertNil(bare.buildMetadata.status)
+        XCTAssertEqual(bare.suggestedBuildName, "v0.3.0+live1")
+
+        for filename in ["Pac-Man.gb", "Serve-Sisters-Coop.gbc", "v2.gb", "Movie-vs-Book.gb", "Mega-Man-2.gb", "1.5.gb"] {
+            XCTAssertNil(FilenameMetadataParser.parse(filename: filename).buildMetadata.versionString, filename)
+        }
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Pac-Man.gb").suggestedTitle, "Pac-Man")
+    }
+
     func testNumbersThatAreNotDatesStayInTheTitle() {
         for filename in ["20261006.gb", "Tetris 19891399.gb", "Score_12345678.gb"] {
             XCTAssertNil(FilenameMetadataParser.parse(filename: filename).buildMetadata.versionString, filename)

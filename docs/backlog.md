@@ -196,7 +196,8 @@ re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Pr
 (development releases default to both; ROM hacks default Preferred only); Toolchain
 findings in Import Review and Quick Play promotion; Files over a size limit for their kind
 (ROM, patch, save, artwork, variable map) refused before they are read or staged; only regular
-files staged.
+files staged. Review suggests the Game holding a Build with the same header title, and a
+mid-name "v5" or "0.3.0" word in a hyphenated or underscored filename becomes the version.
 
 ### Game/Build restructuring
 

@@ -54,8 +54,9 @@ final class ImportReviewViewModel: ObservableObject {
         setArtwork: ((UUID, Data, String) throws -> Void)? = nil
     ) {
         self.analysis = analysis
-        // Games holding the release's No-Intro family come first, so a choice among them is at hand.
-        let family = Set(analysis.familyGameIDs)
+        // Games holding the release's No-Intro family, or a Build with its header title, come first,
+        // so a choice among them is at hand.
+        let family = Set(analysis.familyGameIDs + analysis.headerTitleGameIDs)
         self.games = games.sorted {
             if family.contains($0.id) != family.contains($1.id) { return family.contains($0.id) }
             return $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
@@ -76,9 +77,18 @@ final class ImportReviewViewModel: ObservableObject {
 
         let initialDestination: Destination
         // A family split across Games is the player's choice; a title match mustn't make it for them.
-        let titleMatch = analysis.familyGameIDs.count > 1
-            ? nil
-            : GameMatcher.matchingGameID(for: analysis.filenameMetadata, headerTitle: analysis.header.title, in: games)
+        // A Game title match and a Build sharing the ROM's header title must agree, or neither is
+        // suggested.
+        var titleMatch: UUID?
+        if analysis.familyGameIDs.count <= 1 {
+            let byTitle = GameMatcher.matchingGameID(for: analysis.filenameMetadata, headerTitle: analysis.header.title, in: games)
+            let byHeader = analysis.headerTitleGameIDs.count == 1 ? analysis.headerTitleGameIDs[0] : nil
+            if let byTitle, let byHeader, byTitle != byHeader {
+                titleMatch = nil
+            } else {
+                titleMatch = byTitle ?? byHeader
+            }
+        }
         if let suggested = analysis.suggestedGameID ?? titleMatch {
             initialDestination = .existing(suggested)
         } else {

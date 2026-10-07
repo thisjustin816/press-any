@@ -8,7 +8,8 @@ final class SharedFileUITests: XCTestCase {
     private let colorROM = "gbdk450-dual.gbc"
     private let gameTitle = "Shared Test Game"
     /// An untagged file's Build is named for the day it's added.
-    private let baseBuildName = Date.now.formatted(Date.ISO8601FormatStyle(timeZone: .current).year().month().day())
+    // Import Review reads the version from the filename.
+    private let baseBuildName = "v1.0"
 
     private func start() {
         continueAfterFailure = false
