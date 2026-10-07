@@ -133,6 +133,7 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
             lock.withLock { _ = deletions.removeValue(forKey: purged.id) }
             for game in stash.games { if let artwork = game.artworkAssetID { candidates.insert(artwork) } }
             for build in stash.builds {
+                builds.purgeSaveDeclarations(buildID: build.id)
                 candidates.insert(build.imageAssetID)
                 if let recipe = recipes.all.first(where: { $0.resultBuildID == build.id }) {
                     candidates.formUnion(recipe.items.map(\.patchAssetID))

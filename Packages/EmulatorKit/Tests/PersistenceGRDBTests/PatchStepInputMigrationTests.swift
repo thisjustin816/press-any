@@ -33,7 +33,7 @@ struct PatchStepInputMigrationTests {
             #expect(!rows.isEmpty)
             #expect(rows.allSatisfy { $0["expected_input_sha256"] as String? == nil })
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchOne(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid DESC LIMIT 1") == "v1-v13-patch-step-inputs")
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").contains("v1-v13-patch-step-inputs"))
         }
         #expect(try database.makeRepositories().patchRecipes.fetchPatchRecipe(resultBuildID: fixture.patchedBuild.id) == fixture.recipe)
     }

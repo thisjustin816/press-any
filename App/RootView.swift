@@ -88,7 +88,8 @@ struct RootView: View {
                     container: container,
                     onPlay: { context in launch(context, container: container) },
                     onQuickPlay: { request in quickPlay(request, container: container) },
-                    onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) }
+                    onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) },
+                    onImportFiles: { urls in urls.forEach { receiveSharedFile($0, opensImportReview: true) } }
                 )
             } else {
                 ContentUnavailableView {
@@ -226,6 +227,10 @@ struct RootView: View {
             ), presenting: riskyLaunch) { risky in
                 Button("Play with a Copy") { chooseSave(for: risky, newSave: false) }
                 Button("Start a New Save") { chooseSave(for: risky, newSave: true) }
+                if risky.canDeclareCompatibility {
+                    Button("Always Use Saves Between These Builds") { alwaysUseSaves(for: risky) }
+                        .accessibilityIdentifier("launch.alwaysUseSaves")
+                }
                 Button("Use “\(risky.profileName)” Anyway", role: .destructive) {
                     riskyLaunch = nil
                     if let container = bootstrap.container { launch(risky.context, container: container, checkSave: false) }
@@ -255,10 +260,14 @@ struct RootView: View {
         showsWelcome = true
     }
 
-    private func receiveSharedFile(_ url: URL) {
+    private func receiveSharedFile(_ url: URL, opensImportReview: Bool = false) {
         guard let container = bootstrap.container else { return }
         do {
-            queuedSharedFiles.append(contentsOf: try container.sharedFileInbox.receiveAll(url).map { .file($0) })
+            queuedSharedFiles.append(contentsOf: try container.sharedFileInbox.receiveAll(url).map { file in
+                var file = file
+                file.opensImportReview = opensImportReview
+                return .file(file)
+            })
         } catch {
             // Reported when nothing else is on screen, as a file would be shown.
             queuedSharedFiles.append(.failure(error.localizedDescription))
@@ -466,6 +475,17 @@ struct RootView: View {
             launch(context, container: container, checkSave: false)
         } catch {
             errorMessage = "Could not make the save: \(error.localizedDescription)"
+        }
+    }
+
+    private func alwaysUseSaves(for risky: RiskyLaunch) {
+        riskyLaunch = nil
+        guard let container = bootstrap.container, let writer = risky.assessment.writtenBy else { return }
+        do {
+            let context = try container.chooseSaveForBuild.playSharingSaves(risky.context, writtenByBuildID: writer.id)
+            launch(context, container: container, checkSave: false)
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -679,30 +699,4 @@ private extension ControllerTheme {
 private struct DamagedSaveLaunch {
     let context: LaunchContext
     let profileName: String
-}
-
-private struct RiskyLaunch {
-    let context: LaunchContext
-    let assessment: SaveCompatibilityAssessment
-    let profileName: String
-
-    var message: String {
-        var lines = ["“\(profileName)” was last saved by \(assessment.writtenBy?.displayName ?? "another Build")."]
-        for risk in assessment.risks {
-            switch risk {
-            case .gbStudio:
-                lines.append("A GB Studio game can lay out its saved data differently from one Build to the next, even with the same GB Studio version.")
-            case .differentTools(let writtenWith, let playingWith):
-                lines.append("That Build was made with \(Self.list(writtenWith)); this one with \(Self.list(playingWith)).")
-            case .differentSaveHardware:
-                lines.append("The two Builds declare different save hardware in their cartridge headers.")
-            }
-        }
-        lines.append("A copy keeps the original save safe.")
-        return lines.joined(separator: " ")
-    }
-
-    private static func list(_ tools: [String]) -> String {
-        tools.isEmpty ? "unrecognized tools" : tools.formatted(.list(type: .and))
-    }
 }

@@ -100,6 +100,10 @@ and they're listed flat, with a subtle "copied from" note rather than a tree. Co
 can deliberately share one. A Build remembers its preferred profile and falls back to the Game's
 default.
 
+Each profile records the Build that last wrote its battery save. Save compatibility declarations
+belong to a symmetric pair of Builds, so they apply to every profile played between that pair.
+They leave save states scoped to their exact Build.
+
 There is no rolling battery-save history. Isolation comes from duplicating profiles. A profile
 can carry only narrow playthrough settings (cheats, RTC offset, rewind where it makes sense; all
 v1.1), never a full fifth settings layer.
@@ -172,8 +176,11 @@ changes the library; review shows what will happen; commit is all or nothing.
 
 ### Sources and safety
 
-- The file picker, and Share Sheet / Open In for `.gb`, `.gbc`, `.ips`, `.bps`, `.sav` and `.srm`. The document
-  types are registered in Info.plist with `LSHandlerRank = Owner`. Each keeps
+- Import File in the library's + menu, and Share Sheet / Open In, for `.gb`, `.gbc`, `.ips`,
+  `.bps`, `.sav`, `.srm` and `.zip`. Import File picks one or more files and handles each as if
+  it had been shared, except that a ROM goes straight to Import Review instead of offering Quick
+  Play first. The ROM, patch and save document types are registered in Info.plist with
+  `LSHandlerRank = Owner`, and zip at Alternate. Each keeps
   `CFBundleTypeRole = Viewer`: opening stages a copy for play or import, so it needs no Editor
   role. The extension mappings stay in `UTImportedTypeDeclarations`; Press Any does not own
   these formats and does not export their types.
@@ -360,6 +367,10 @@ promotion and Open Patch.
   Merely opening the review changes nothing. A failed operation refreshes the remaining list;
   completed groups stay merged and can be reviewed in the library.
 - A Build's menu has Mark as Base Build and Unmark as Base Build.
+- Save compatibility declarations follow the original Build IDs through Move in Make Separate
+  Game and Merge into Another Game, including when the pair ends up in separate Games. A Copy
+  gets no declarations. Deleting either Build hides its declarations; restoring it from Recently
+  Deleted brings them back while the other Build is live. Purging either Build removes the pair.
 
 ## Patching
 
@@ -405,21 +416,34 @@ promotion and Open Patch.
 ### Build switching and compatibility
 
 Each profile records which Build last wrote its save. Launching a Build with a save another Build
-wrote checks the pair. It's risky when either Build was made with GB Studio, when detection names
-different tools or engine versions, or when the headers declare different save hardware (bytes
-0x147 and 0x149). A risky launch asks: Play with a Copy, Start a New Save, Use "<profile>" Anyway,
-or Cancel. A copy or a new save becomes that Build's default, so it doesn't ask again. A save with
-no recorded writer, or a check that fails, never blocks play: detection can add caution but never
-proves two saves compatible.
+wrote checks the pair. A Shares Saves declaration skips the prompt. A Doesn’t Share Saves declaration always
+asks, even when the inferred checks would pass. With no declaration, it's risky when either
+Build was made with GB Studio, when detection names different tools or engine versions, or when
+the headers declare different save hardware (bytes 0x147 and 0x149).
+
+A different region or language adds a reason to the same prompt when both Builds have a region
+recorded. Regions differ only when their lists share no entry, so a "USA, Europe" save on a
+"USA" Build doesn't count, and World matches every region; languages compare the same way. The reason names both releases: "This save was last written by the Japan release.
+This Build is the USA release." A language difference is compared only when both languages are
+recorded and names them in the reason. A save with no recorded writer, or either Build with no
+region, never raises this reason. A Shares Saves declaration clears it with the other risks.
+
+A risky launch asks: Play with a Copy, Start a New Save, Always Use Saves Between These Builds,
+Use "<profile>" Anyway, or Cancel. Always Use Saves Between These Builds records Shares Saves
+for the pair and launches with the same profile; it's available when the two Builds belong to
+the same Game. Use Anyway applies to that launch alone. A copy or a new save becomes that
+Build's default. A save with no recorded writer, or an inferred check that fails, never blocks
+play. Detection adds caution and never proves two saves compatible.
+
+Build Details has a Save Compatibility section listing this Build's declarations by the other
+Build's current name and Shares Saves or Doesn't. Add Declaration picks another Build of the
+same Game and sets either choice, replacing any declaration for that pair. Swipe left on a
+declaration to remove it and return to inferred checks. Declarations work in both directions.
 
 A Build can keep variable maps (Attach Variable Map): GB Studio's `game_globals.i` or `globals.i`,
 an RGBDS `.sym` or a GBDK `.noi`, stored immutably on that exact Build and listed in Technical
 Info. They're kept for the GB Studio save migration in v1.1, which must be version gated and never
 claims reliability from just an old ROM, old save and new ROM.
-
-v1 adds declared save compatibility between Builds (known to share, known not to), used by this
-check, and a warning when a Build of another region or language launches a profile, since many
-games' saves don't carry across languages.
 
 ## Save states and lifecycle
 
@@ -606,7 +630,8 @@ picture. A connected controller still hides the touch controls.
   frame itself follows the setting.
 - **Screen Colors** (System, Game or Build) is a different setting on each system, and only the
   one for the system at hand shows: in Game Boy or Game Boy Color settings, and in the Settings
-  of a Game, a Build or the open game. App Settings doesn't show it.
+  of a Game, a Build or the open game. App Settings doesn't show it, and a choice made there in
+  an earlier version became that system's setting.
   - Game Boy games choose their four shades, each named for the Game Boy screen it looks like:
     Green (Game Boy, the default), Olive (Pocket), Teal (Light) or Black & White.
   - Game Boy Color games choose how their colors are adjusted for a modern screen: Balanced (the
