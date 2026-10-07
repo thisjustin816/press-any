@@ -570,7 +570,7 @@ picture. A connected controller still hides the touch controls.
   inputs, including per-app mappings. Press Any declares Extended Gamepad support.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
-  Controls with a Controller is on by default.
+  Controls, under With a Controller, is on by default.
 - An unexpected disconnect pauses the game, releases held controller input, restores the chosen
   touch layout and shows a notice.
 - Touch Haptics: Off, Light (default) or Medium, off while a controller is in use.
