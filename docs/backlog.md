@@ -219,7 +219,7 @@ files staged.
 |---|---|---|---|---|
 | partial | Import-Review-style inheritance step (artwork, docs, tags, compatible profiles; deselectable) on promote/merge | v1 (mvp says merge "with review") | Q83/Q84 | review sheet copies artwork and chosen Save Profiles; docs and tags don't exist yet |
 | missing | Lightweight Build timeline (versions, hashes, parents, notes, import/activation history) | v1 | prod "Game/Build restructuring" |  |
-| missing | Build comparison (changed bytes/ranges, size, banks, header) | v1 | dec 5 |  |
+| partial | Build comparison (changed bytes/ranges, size, banks, header) | v1 | dec 5 | the comparison engine and its tests are in Importing; the Build Details screen remains |
 
 Done: Make Separate Game: Move/Copy, default Move, Build UUID/blob preserved, Build-scoped data
 follows; Merge into Game: Move/Copy, lineage/recipes remapped; Same image already in target: Copy
