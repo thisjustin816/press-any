@@ -19,6 +19,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Touch input works with acceptable latency.
 - [ ] With Playtiles selected and the physical overlay aligned, press left/right/up/down slightly off-center: each stays straight. Deliberate diagonals and sliding back to straight directions still work.
 - [ ] From Files and a browser's downloaded-file share sheet, open `.gb`, `.gbc`, `.ips` and `.bps` in the app (use More if needed). ROMs offer Quick Play or Import Review; patches require a Game and base Build. Cancelling leaves the sender's file and library unchanged. While gameplay is open, the shared file waits until the game and its session sheet close.
+- [ ] Install this build alongside another emulator (Manic EMU or Delta). Tap a legal `.gb` in Files and record which app opens, then use Share > Press Any (More if needed). Confirm Quick Play and Import Review both work, and cancellation preserves the source. Repeat sharing with `.gbc`, `.ips` and `.bps`; patches ask for a Game and base Build. Record the iPhone/iOS version, both app versions and each result below. With two claiming apps the default is iOS's choice; Owner rank is not a guarantee.
 - [ ] With a Bluetooth controller, the D-pad and left thumbstick both move in all eight directions; slight stick drift does nothing. The controller's A and B are Game Boy A and B, Menu or X is START, Options or Y is SELECT, and the shoulders do nothing. On a PlayStation controller, Circle is A, Cross is B, Triangle is START and Square is SELECT. Disconnect while holding a direction: no button sticks, the touch controls return and the game pauses with a notice. Repeat with a paused game: it stays paused.
 - [ ] In iOS Settings > General > Game Controller, change a global button mapping and invert the left stick's vertical axis: the game follows both. Add a customization specifically for Press Any and verify it applies only here. Restore the default mapping after the check.
 - [ ] Cartridge rumble routes correctly to controller/phone where supported.
@@ -80,3 +81,22 @@ Verify with a user-supplied legal ROM:
 - [ ] On both layouts, in Classic and Dark, the D-pad, A, B, SELECT and START look raised like the menu button, lit along their top edges. A, B, SELECT and START sink when pressed; the Game Boy D-pad tips instead, its held arm shading toward the end with no hard edge, diagonals included. On Playtiles the alignment guide also looks raised, lit along its top edge with a shadow below. Pausing from the menu shows Resume centered on the game picture on both layouts, clear of the guide and controls.
 - [ ] A game without artwork shows its placeholder cartridge filling most of the library tile and sitting cleanly in the list row's thumbnail, in both themes.
 - [ ] Files shows a Press Any folder under On My iPhone. Export ROM on a Build and Export Save on a profile with a save each add a file to Press Any › Exports, a patched Build's ROM matches its Technical Info hash, and exporting again adds a numbered copy. Opening a ROM from that folder still offers Quick Play or Import.
+
+## Files handler verification
+
+`SharedFileTests.testAppRegistersTheFileTypesUsedByItsPickers` checks the built app's plist:
+each `.gb`, `.gbc`, `.ips` and `.bps` mapping has Owner rank and Viewer role, the matching ROM
+document includes the public identifiers cited in `product.md`, and none of these extensions is
+exported. Run with `make test` on macOS. Package tests do not run this hosted app test.
+
+The reported player observation is that tapping a ROM in Files opens Manic EMU. Verification
+with the Owner declarations is pending on a physical iPhone; no device result is recorded yet.
+
+| Observation | Result |
+|---|---|
+| iPhone model / iOS version | Pending |
+| Press Any build / other emulator and version | Pending |
+| `.gb` tap in Files: app opened | Pending; chosen by iOS when both apps claim the type |
+| Share > Press Any: `.gb` Quick Play / Import Review / cancel | Pending |
+| Share > Press Any: `.gbc` Quick Play / Import Review / cancel | Pending |
+| Share > Press Any: `.ips` / `.bps` Game and base Build / cancel | Pending |
