@@ -37,9 +37,8 @@ migrating later.
    Files folder they land in come first, as they don't depend on the schema.
 7. Display and play feel: Fast Forward hold or toggle, slow motion, rewind, and the
    DMG/GBC/SGB model override.
-8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
-   profiles and remapping, landscape and the layout editor, external
-   display, and the curated shader library.
+8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, landscape and
+   the layout editor, external display, and the curated shader library.
 9. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
 
 ## Known bugs
@@ -376,14 +375,13 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | first connected used; selectPlayerOne() has no UI |
-| partial | Named reusable controller profiles, remapping, App/System/Game/Build inheritance | v1 | iOS Game Controller customizations supported through logical inputs and declared Extended Gamepad support; in-app profiles, remapping and inheritance remain |
 | missing | Controller hotkey combos and menu navigation | v1 | "Open Menu" is a mappable input with no default button, and Home is never taken |
 | missing | Rumble routing override Phone / Controller / Both / Off | v1 |  |
 | missing | Separate phone and controller intensity | v1 |  |
 
 Done: Apple GameController input (extendedGamepad), D-pad and left thumbstick with a radial dead
 zone and eight equal sectors; A and B by the controller's letters, Menu = START, Options or L1 =
-SELECT; iOS controller customizations, including per-app mappings; Connected controllers use Game
+SELECT; iOS controller customizations, including per-app ones, are the only button mapping; Connected controllers use Game
 Boy and follow Orientation even with Playtiles chosen; Disconnect releases input, restores the
 chosen layout, pauses and shows a notice without restarting; A controller hides the touch
 controls, a touch brings them back until its next button press, and Settings can keep them;
@@ -535,7 +533,7 @@ Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filename
 | missing | Reduce Motion support | v1 | none |
 | partial | Large/configurable touch targets | v1 | hit areas extend 10-12 pt beyond drawn controls; not configurable |
 | missing | One-handed layouts | v1 | none |
-| missing | Fully remappable controls; controller navigation | v1 | none |
+| missing | Controller navigation | v1 | none; button remapping is iOS's Game Controller settings |
 
 Done: Good contrast / color-independent states; haptics never sole feedback.
 

@@ -566,9 +566,10 @@ picture. A connected controller still hides the touch controls.
   controllers. The D-pad and left thumbstick both drive the Game Boy D-pad; the stick has a radial
   dead zone of 25% and eight equal direction sectors. The controller's A and B buttons are Game Boy
   A and B; Menu is START, and Options or the left shoulder is SELECT.
-- iOS Settings > General > Game Controller customizations apply, including per-app mappings,
-  and are how a player swaps A and B to Game Boy positions; Press Any has no button mapping of its
-  own. It declares Extended Gamepad support, which iOS needs for per-app customizations.
+- Button mapping belongs to iOS: Settings > General > Game Controller customizations apply,
+  including per-app ones, and are how a player swaps A and B to Game Boy positions. Press Any has
+  no button mapping of its own and won't add one. It declares Extended Gamepad support, which iOS
+  needs for per-app customizations.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls, under With a Controller, is on by default.
@@ -576,8 +577,7 @@ picture. A connected controller still hides the touch controls.
   touch layout and shows a notice.
 - Touch Haptics: Off, Light (default) or Medium, off while a controller is in use.
 - Cartridge rumble goes to the controller when it can, the phone otherwise.
-- v1: named controller profiles per controller type with the usual inheritance; choosing Player
-  1 among several controllers (Player 2 is reserved for link play); Phone, Controller, Both or Off
+- v1: choosing Player 1 among several controllers (Player 2 is reserved for link play); Phone, Controller, Both or Off
   rumble routing with separate intensities.
 
 ### Quick Actions (v1)
@@ -769,8 +769,8 @@ access (C617.1) for cleaning stale temporary files.
 ### Accessibility
 
 Dynamic Type in the normal interface, good contrast and status that doesn't rely on color, Reduce
-Motion, large and configurable touch targets, one-handed layouts, remappable controls, controller
-navigation where practical, sensible VoiceOver labels, and haptics never as the only feedback.
+Motion, large and configurable touch targets, one-handed layouts, controller remapping through iOS's Game
+Controller settings, controller navigation where practical, sensible VoiceOver labels, and haptics never as the only feedback.
 Narrated gameplay isn't a v1 requirement.
 
 ### Performance
