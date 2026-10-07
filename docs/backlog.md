@@ -181,6 +181,7 @@ altering a ROM.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
+| partial | Files default-open handling with another emulator installed | v1 | Owner/Viewer declarations for .gb/.gbc/.ips/.bps; cited Delta, Provenance, SameBoy and RetroArch ROM identifiers accepted (see product.md, Shared files); hosted app test covers rank, role, extensions and identifiers; physical-iPhone tap and Share > Press Any checks pending in mvp-verification.md; iOS chooses the default between claiming apps |
 | missing | ZIP + 7z (libarchive) with archive safety (depth/ratio limits, traversal, password detect) | v1.1 |  |
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path only repairs the blob |
@@ -188,7 +189,9 @@ altering a ROM.
 | missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1.1 |  |
 | missing | Multiple ROMs attached to one Game in one flow | v1.1 |  |
 
-Done: Share Sheet / Open In for ROMs and patches, with the Quick Play or Import choice on open;
+Done: Share Sheet / Open In for ROMs and patches, with the Quick Play or Import choice on open
+and a Game/base Build choice for patches; Owner rank with Viewer copy imports, imported format
+declarations only, and compatibility identifiers from the public plists cited in product.md;
 Analyze -> ImportPlan -> Review -> transactional Commit; Game artwork from Photos or Files in
 Import Review; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,

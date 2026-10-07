@@ -153,7 +153,10 @@ changes the library; review shows what will happen; commit is all or nothing.
 ### Sources and safety
 
 - The file picker, and Share Sheet / Open In for `.gb`, `.gbc`, `.ips` and `.bps`. The document
-  types are registered in Info.plist.
+  types are registered in Info.plist with `LSHandlerRank = Owner`. Each keeps
+  `CFBundleTypeRole = Viewer`: opening stages a copy for play or import, so it needs no Editor
+  role. The extension mappings stay in `UTImportedTypeDeclarations`; Press Any does not own
+  these formats and does not export their types.
 - Every picked or shared file is untrusted. Its size is checked before it's read, against a limit
   for its kind: 8 MB for a ROM (the most a header can declare), 16 MB for a patch, 4 MB for a
   battery save (TPP1 cartridges can declare 2 MB of RAM), 20 MB for artwork and 4 MB for a
@@ -651,6 +654,23 @@ exposes them; custom border editing is later.
 - v1.1: lightweight Undo for recent structural changes.
 
 ## Shared files
+
+- Press Any claims `.gb`, `.gbc`, `.ips` and `.bps` as an Owner handler. iOS has no user setting
+  for a default app per file type. When two installed apps claim a type, iOS chooses which opens
+  on a tap in Files; Owner rank does not guarantee Press Any wins. Share > Press Any (under More
+  if needed) explicitly sends the file here.
+- ROM document types also accept the identifiers in the public emulator plists below, so
+  Press Any remains a handler when iOS resolves an extension to one of those types. Delta's
+  current plist maps both `.gb` and `.gbc` to its `.game.gbc` identifier; it declares no separate
+  `.game.gb`. No dedicated IPS/BPS identifiers were verified in these plists, so patches keep
+  Press Any's imported identifiers only.
+
+| Public Info.plist source | `.gb` identifier | `.gbc` identifier |
+|---|---|---|
+| [Delta](https://github.com/rileytestut/Delta/blob/c1d3d068e019e6493eed45654569db3cc5beb86a/Delta/Supporting%20Files/Info.plist) | `com.rileytestut.delta.game.gbc` | `com.rileytestut.delta.game.gbc` |
+| [Provenance](https://github.com/Provenance-Emu/Provenance/blob/975f004a1e7a9a1b13db7d5c4899510a6fd866ae/Provenance/Provenance-AppStore-Info.plist) | `com.provenance.rom.gb` | `com.provenance.rom.gbc` |
+| [SameBoy](https://github.com/LIJI32/SameBoy/blob/c458e7c5d2d350fb37a1931c40da9f758d28d240/iOS/Info.plist) | `com.github.liji32.sameboy.gb` | `com.github.liji32.sameboy.gbc` |
+| [RetroArch](https://github.com/libretro/RetroArch/blob/2a515ab854de947bd3dad625c66e145a9d1a400b/pkg/apple/iOS/Info.plist) | `com.retroarch.gb` | `com.retroarch.gbc` |
 
 - A shared ROM offers Quick Play or Import to Library. A shared patch opens Open Patch, which
   needs a Game and a base Build.
