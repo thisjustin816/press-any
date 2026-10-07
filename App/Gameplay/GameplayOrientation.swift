@@ -5,14 +5,16 @@ import UIKit
 enum GameplayOrientation {
     private(set) static var supported: UIInterfaceOrientationMask = .portrait
 
-    /// The library, sheets and Playtiles, which fits a portrait phone, stay portrait; otherwise
-    /// the Orientation setting decides.
+    /// The library and sheets stay portrait. Gameplay follows Orientation when its active layout
+    /// is Game Boy, including the controller override of Playtiles.
     static func mask(
         style: TouchControlStyle?,
         orientation: ScreenOrientation = .automatic,
+        controllerConnected: Bool = false,
         coveredBySheet: Bool
     ) -> UIInterfaceOrientationMask {
-        guard style == .gameBoy, !coveredBySheet else { return .portrait }
+        guard style?.forGameplay(controllerConnected: controllerConnected) == .gameBoy,
+              !coveredBySheet else { return .portrait }
         return switch orientation {
         case .automatic: [.portrait, .landscapeLeft, .landscapeRight]
         case .portrait: .portrait

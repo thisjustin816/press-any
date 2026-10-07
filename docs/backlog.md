@@ -58,7 +58,7 @@ Open items in each area are in the table, finished ones on the line under it.
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | none |
 | partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | none |
-| partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
+| partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
 | missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow already seeds from `TestROMs/` |
 
@@ -376,14 +376,19 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | first connected used; selectPlayerOne() has no UI |
-| missing | Named reusable controller profiles, remapping, App/System/Game/Build inheritance | v1 | fixed mapping (Select = Options or L1) |
+| partial | Named reusable controller profiles, remapping, App/System/Game/Build inheritance | v1 | iOS Game Controller customizations supported through logical inputs and declared Extended Gamepad support; in-app profiles, remapping and inheritance remain |
 | missing | Controller hotkey combos and menu navigation | v1 | "Open Menu" is a mappable input with no default button, and Home is never taken |
 | missing | Rumble routing override Phone / Controller / Both / Off | v1 |  |
 | missing | Separate phone and controller intensity | v1 |  |
 
-Done: Apple GameController input (extendedGamepad); Unexpected disconnect pauses, reveals touch
-controls, shows notice; A controller hides the touch controls, a touch brings them back until its
-next button press, and Settings can keep them; Cartridge rumble routed controller-first, phone fallback.
+Done: Apple GameController input (extendedGamepad), D-pad and left thumbstick with a radial dead
+zone and eight equal sectors; Positional A/B mapping (right/bottom), Menu = START, Options or L1 =
+SELECT; iOS controller customizations, including per-app mappings; Connected controllers use Game
+Boy and follow Orientation even with Playtiles chosen; Disconnect releases input, restores the
+chosen layout and shows a notice without restarting or pausing; A controller hides the touch
+controls, a touch brings them back until its next button press, and Settings can keep them;
+Cartridge rumble routed controller-first, phone fallback. Physical-device customization checks
+remain in mvp-verification.md.
 
 ### Quick Actions
 

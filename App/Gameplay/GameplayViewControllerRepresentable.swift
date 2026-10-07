@@ -13,6 +13,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let soundMode: SoundMode
     let hidesTouchControlsWithController: Bool
     let touchHaptics: TouchHaptics
+    let controllerMonitor: PhysicalControllerMonitor
     /// A sheet is open over the game, which pauses it.
     var isCoveredBySheet = false
     /// Set once to close the game the normal way, saving first.
@@ -40,7 +41,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             tapGameForMenu: tapGameForMenu,
             soundMode: soundMode,
             hidesTouchControlsWithController: hidesTouchControlsWithController,
-            touchHaptics: touchHaptics
+            touchHaptics: touchHaptics,
+            controllerMonitor: controllerMonitor
         )
         controller.onClose = onClose
         controller.onAddToLibrary = onAddToLibrary

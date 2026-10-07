@@ -1,14 +1,16 @@
+import Combine
 import EmulationCore
 import GameController
+import GameplayInput
 import UIKit
 
 @MainActor
-final class PhysicalControllerMonitor {
+final class PhysicalControllerMonitor: ObservableObject {
     var onInputChanged: ((EmulatorInputState) -> Void)?
     var onConnectionChanged: ((Bool) -> Void)?
     var onUnexpectedDisconnect: (() -> Void)?
 
-    private(set) var activeController: GCController?
+    @Published private(set) var activeController: GCController?
 
     /// Whether a controller drives the game, so the touch controls hide.
     var isConnected: Bool { activeController != nil || ScreenshotScene.simulatesGamepad }
@@ -88,16 +90,19 @@ final class PhysicalControllerMonitor {
     }
 
     private func publish(from controller: GCController) {
-        guard let pad = controller.extendedGamepad else { return }
-        onInputChanged?(EmulatorInputState(
-            up: pad.dpad.up.isPressed,
-            down: pad.dpad.down.isPressed,
-            left: pad.dpad.left.isPressed,
-            right: pad.dpad.right.isPressed,
-            a: pad.buttonA.isPressed,
-            b: pad.buttonB.isPressed,
-            start: pad.buttonMenu.isPressed,
-            select: pad.buttonOptions?.isPressed == true || pad.leftShoulder.isPressed
+        guard activeController === controller, let pad = controller.extendedGamepad else { return }
+        onInputChanged?(GamepadInputMapping.input(
+            dpad: .init(
+                up: pad.dpad.up.isPressed, down: pad.dpad.down.isPressed,
+                left: pad.dpad.left.isPressed, right: pad.dpad.right.isPressed
+            ),
+            leftStickX: pad.leftThumbstick.xAxis.value,
+            leftStickY: pad.leftThumbstick.yAxis.value,
+            rightFaceButton: pad.buttonB.isPressed,
+            bottomFaceButton: pad.buttonA.isPressed,
+            menu: pad.buttonMenu.isPressed,
+            options: pad.buttonOptions?.isPressed == true,
+            leftShoulder: pad.leftShoulder.isPressed
         ))
     }
 }

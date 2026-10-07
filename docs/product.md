@@ -406,6 +406,10 @@ fresh build.
 Settings > Controller Layout (App, System, Game or Build; Game Boy by default) picks one of two
 built-in layouts. Each also decides where the game picture goes.
 
+A connected controller uses Game Boy while it drives the game, even when Playtiles is chosen,
+so the picture and Orientation setting fit playing without the physical overlay. Disconnecting
+restores the chosen layout without restarting or pausing the game.
+
 - **Game Boy** follows an original DMG-01's front panel, measured from Evan-Amos's public-domain
   photograph (`File:Game-Boy-FL.jpg` on Wikimedia Commons) and scaled to its 90 mm width. The
   D-pad (22.9 mm) and A and B (10.8 mm) are drawn at the hardware's size, about 6.1 points per
@@ -462,9 +466,10 @@ Gameplay with the Game Boy layout turns to landscape, following Settings > Displ
 Automatic (the default, turning with the phone within its rotation lock), Portrait, or Landscape,
 which turns the game at once even with the phone held upright and follows it between the two
 sideways directions. Orientation inherits App, System, Game and Build, and a change from the game's
-Settings sheet applies when the sheet closes. Playtiles, which fits a portrait phone, the library
+Settings sheet applies when the sheet closes. Playtiles without a connected controller, the library
 and every sheet stay portrait whatever it says; closing a game held sideways returns to a portrait
-library.
+library. With a controller connected, the Game Boy layout follows Orientation even if Playtiles
+is the chosen layout.
 
 Landscape uses the Game Boy Advance (AGB-001) arrangement whichever portrait layout is chosen: the
 picture centered in its bezel at Screen Scaling's size, the D-pad on the left, A and B on the right,
@@ -551,11 +556,16 @@ picture. A connected controller still hides the touch controls.
 ### Controllers, haptics and rumble
 
 - Apple's GameController framework: Xbox, PlayStation, Switch-compatible, MFi and generic
-  controllers.
+  controllers. The D-pad and left thumbstick both drive the Game Boy D-pad; the stick has a radial
+  dead zone of 25% and eight equal direction sectors. Game Boy A is the right face button and B
+  is the bottom face button; Menu is START, and Options or the left shoulder is SELECT.
+- iOS Settings > General > Game Controller customizations apply through the controller's logical
+  inputs, including per-app mappings. Press Any declares Extended Gamepad support.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls with a Controller is on by default.
-- An unexpected disconnect pauses, shows the touch controls and a notice.
+- An unexpected disconnect releases held controller input, restores the chosen touch layout and
+  shows a notice. A running game keeps running, and a paused game stays paused.
 - Touch Haptics: Off, Light (default) or Medium, off while a controller is in use.
 - Cartridge rumble goes to the controller when it can, the phone otherwise.
 - v1: named controller profiles per controller type with the usual inheritance; choosing Player

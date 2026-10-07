@@ -28,6 +28,7 @@ final class AppBootstrap: ObservableObject {
 @MainActor
 struct RootView: View {
     @ObservedObject var bootstrap: AppBootstrap
+    @StateObject private var controllerMonitor = PhysicalControllerMonitor()
     @State private var gameplay: GameplayPresentation?
     @State private var errorMessage: String?
     @State private var pendingResume: PreparedLaunch?
@@ -112,6 +113,7 @@ struct RootView: View {
                 soundMode: bootstrap.container?.soundMode() ?? .followSilentSwitch,
                 hidesTouchControlsWithController: bootstrap.container?.hidesTouchControlsWithController() ?? true,
                 touchHaptics: bootstrap.container?.touchHaptics() ?? .light,
+                controllerMonitor: controllerMonitor,
                 isCoveredBySheet: sharedFile != nil || showsGameplaySettings,
                 closeRequested: closesGameForSharedQuickPlay,
                 onClose: { endGameplay(presentation) },
@@ -241,6 +243,7 @@ struct RootView: View {
         GameplayOrientation.mask(
             style: gameplay?.display.controlStyle,
             orientation: gameplay?.display.orientation ?? .automatic,
+            controllerConnected: controllerMonitor.isConnected,
             coveredBySheet: showsGameplaySettings || sharedFile != nil || sharedFileError != nil
         )
     }

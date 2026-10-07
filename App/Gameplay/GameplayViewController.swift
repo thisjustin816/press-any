@@ -111,7 +111,14 @@ final class GameplayViewController: UIViewController {
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        GameplayOrientation.mask(style: controlStyle, orientation: orientation, coveredBySheet: coveredBySheet)
+        GameplayOrientation.mask(
+            style: controlStyle, orientation: orientation,
+            controllerConnected: controllerMonitor.isConnected, coveredBySheet: coveredBySheet
+        )
+    }
+
+    private var effectiveControlStyle: TouchControlStyle {
+        controlStyle.forGameplay(controllerConnected: controllerMonitor.isConnected)
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
@@ -405,7 +412,7 @@ final class GameplayViewController: UIViewController {
     }
 
     private func configureInput() {
-        touchControls.style = controlStyle
+        touchControls.style = effectiveControlStyle
         touchControls.scaling = screenScaling
         touchControls.theme = controllerTheme
         touchControls.pictureOpensMenu = tapGameForMenu
@@ -422,20 +429,27 @@ final class GameplayViewController: UIViewController {
         controllerMonitor.onConnectionChanged = { [weak self] connected in
             guard let self else { return }
             self.touchControlsRevealed = false
+            self.updateControlStyle()
             self.updateTouchControls(controllerConnected: connected)
             self.rumble.setController(self.controllerMonitor.activeController)
         }
         controllerMonitor.onUnexpectedDisconnect = { [weak self] in
             guard let self else { return }
-            self.pauseGameplay()
             self.touchControlsRevealed = false
             self.updateTouchControls(controllerConnected: false)
             self.input.resetController()
-            self.showTransientMessage("Controller disconnected. Game paused.")
+            self.showTransientMessage("Controller disconnected.")
         }
 
         updateTouchControls(controllerConnected: controllerMonitor.isConnected)
         rumble.setController(controllerMonitor.activeController)
+    }
+
+    private func updateControlStyle() {
+        guard touchControls.style != effectiveControlStyle else { return }
+        touchControls.cancelInput()
+        touchControls.style = effectiveControlStyle
+        setNeedsUpdateOfSupportedInterfaceOrientations()
     }
 
     /// With a controller connected the touch controls hide, unless Settings keeps them or a touch
@@ -537,7 +551,7 @@ final class GameplayViewController: UIViewController {
         self.lcdFilter = lcdFilter
         self.frameBlending = frameBlending
         // The touch controls lay out again and report the new layout, which moves the picture.
-        touchControls.style = controlStyle
+        updateControlStyle()
         touchControls.scaling = screenScaling
         renderer?.scaling = screenScaling
         renderer?.lcdFilter = lcdFilter

@@ -1,31 +1,69 @@
 import EmulationCore
 import EmulatorDomain
 import GameController
+import GameplayInput
 import XCTest
 @testable import PressAny
 
-/// MVP test 14: losing the controller mid-game pauses it and brings the touch controls back.
 @MainActor
 final class ControllerDisconnectTests: XCTestCase {
-    func testDisconnectingTheControllerPausesAndShowsTouchControls() throws {
+    func testDisconnectingRestoresPlaytilesAndReleasesInputWithoutPausing() {
         let runtime = FakeRuntime()
         let monitor = PhysicalControllerMonitor()
-        let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: .always, controllerMonitor: monitor)
+        let gameplay = GameplayViewController(
+            runtime: runtime, autoResumePolicy: .always, controlStyle: .playtiles,
+            orientation: .landscape, controllerMonitor: monitor
+        )
         gameplay.loadViewIfNeeded()
 
         let controller = GCController.withExtendedGamepad()
         monitor.selectPlayerOne(controller)
         XCTAssertFalse(gameplay.showsTouchControls, "a connected controller hides the touch controls")
+        XCTAssertEqual(gameplay.touchControlStyle, .gameBoy)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .landscape)
+        monitor.onInputChanged?(.init(a: true, right: true))
+        XCTAssertTrue(gameplay.heldInput.a)
+        let pauses = runtime.pauseCount
 
         NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: controller)
         // The monitor observes on the main queue; let it deliver if it didn't run inline.
         let deadline = Date().addingTimeInterval(2)
-        while !gameplay.isShowingPaused, Date() < deadline {
+        while monitor.isConnected, Date() < deadline {
             RunLoop.main.run(until: Date().addingTimeInterval(0.01))
         }
 
+        XCTAssertFalse(monitor.isConnected)
+        XCTAssertFalse(gameplay.isShowingPaused)
+        XCTAssertTrue(gameplay.isRunningFrames)
+        XCTAssertEqual(runtime.pauseCount, pauses)
+        XCTAssertEqual(runtime.stopCount, 0)
+        XCTAssertEqual(gameplay.heldInput, .init())
+        XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+        XCTAssertTrue(gameplay.showsTouchControls)
+    }
+
+    func testDisconnectingKeepsAnAlreadyPausedGamePaused() {
+        let runtime = FakeRuntime()
+        let monitor = PhysicalControllerMonitor()
+        let gameplay = GameplayViewController(
+            runtime: runtime, autoResumePolicy: .always, controlStyle: .playtiles,
+            controllerMonitor: monitor
+        )
+        gameplay.loadViewIfNeeded()
+        let controller = GCController.withExtendedGamepad()
+        monitor.selectPlayerOne(controller)
+        _ = gameplay.prepareGameMenu()
+        let pauses = runtime.pauseCount
+
+        NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: controller)
+
+        XCTAssertFalse(monitor.isConnected)
         XCTAssertTrue(gameplay.isShowingPaused)
-        XCTAssertTrue(runtime.pauseCount > 0, "the emulator itself is paused")
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertEqual(runtime.pauseCount, pauses)
+        XCTAssertEqual(runtime.stopCount, 0)
+        XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
         XCTAssertTrue(gameplay.showsTouchControls)
     }
 }
@@ -68,8 +106,10 @@ final class TouchControlRevealTests: XCTestCase {
 private final class FakeRuntime: GameplayRuntime, @unchecked Sendable {
     private let lock = NSLock()
     private var pauses = 0
+    private var stops = 0
 
     var pauseCount: Int { lock.withLock { pauses } }
+    var stopCount: Int { lock.withLock { stops } }
     var currentFrame: EmulatorVideoFrame? { nil }
     var playtimeSeconds: Double { 0 }
 
@@ -85,7 +125,7 @@ private final class FakeRuntime: GameplayRuntime, @unchecked Sendable {
     func resume() throws {}
     func background() throws {}
     func foreground(policy: AutoResumePolicy) throws -> Bool { true }
-    func stop(createAutoState: Bool) throws {}
-    func stop(createAutoState: Bool, discardUnsaved: Bool) throws {}
+    func stop(createAutoState: Bool) throws { lock.withLock { stops += 1 } }
+    func stop(createAutoState: Bool, discardUnsaved: Bool) throws { lock.withLock { stops += 1 } }
     func flushBatteryIfChanged() throws -> Bool { false }
 }
