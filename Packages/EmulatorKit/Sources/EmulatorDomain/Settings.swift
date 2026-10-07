@@ -93,6 +93,14 @@ public enum SoundMode: String, Codable, Sendable, CaseIterable {
     case alwaysOn
     /// Never plays, and leaves other apps' audio playing.
     case alwaysOff
+
+    public var displayName: String {
+        switch self {
+        case .followSilentSwitch: "Follow Silent Switch"
+        case .alwaysOn: "Always On"
+        case .alwaysOff: "Always Off"
+        }
+    }
 }
 
 public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {
