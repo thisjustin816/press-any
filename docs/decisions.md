@@ -6,8 +6,11 @@ specs where they conflict; update the spec it touches in the same change.
 ## 2026-10-07: Lit edges on the controls, and the D-pad tips
 
 Every raised control now has light along the inside of its top edge and shade along its bottom,
-so it reads as a shaped part rather than a flat fill, as the menu button's lettering does. A
-pressed control loses the light and its top edge shades the face instead.
+so it reads as a shaped part rather than a flat fill, as the menu button's lettering does. The
+edges run deeper on bigger controls, up to 3 points. SELECT and START are rubber pills, rounded
+across their height, so their faces shade more from top to bottom, and the Playtiles labels are
+pressed into them with a line of shade above each letter. A pressed control loses the light and
+its top edge shades the face instead.
 
 The Game Boy D-pad no longer sinks or turns a held arm a darker flat shade, which drew two hard
 steps across the cross. As SameBoy's iOS app does, the pad stays raised and tips: the held arm's
