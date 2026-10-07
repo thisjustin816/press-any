@@ -1,5 +1,6 @@
 import EmulatorDomain
 import Foundation
+import GameIdentity
 import Importing
 import UIKit
 import XCTest
@@ -188,42 +189,57 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertTrue(review.markAsPreferred)
     }
 
-    func testAnExistingBaseIsReplacedOnlyByANewerHomebrewRelease() throws {
+    func testANoIntroBaseStaysAndAHomebrewBaseMovesToTheNewestBuild() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         let container = try AppContainer(rootURL: root)
-        let coordinator = ImportCoordinator(
-            analyzer: container.importAnalyzer,
-            committer: container.importCommitter,
-            assetStore: container.fileStore
-        )
         var byte: UInt8 = 0
-        func review(_ filename: String, games: [Game]) throws -> ImportReviewViewModel {
+        func image() -> Data {
             byte += 1
             var bytes = Data(repeating: 0, count: 0x8000)
             bytes[0x200] = byte
+            return bytes
+        }
+        let retailImages = [image(), image()]
+        let dumps = zip(["Example (USA)", "Example (USA) (Rev 1)"], retailImages).map { name, bytes in
+            KnownDump(name: name, system: .gameBoy, title: "Example", region: "USA", languages: "En",
+                parent: name == "Example (USA)" ? nil : "Example (USA)",
+                files: [KnownDumpFile(sha1: SHA1Digest.data(bytes), size: Int64(bytes.count))])
+        }
+        let index = try KnownDumpIndex(catalog: KnownDumpCatalog(source: "synthetic", generated: "", systems: [], games: dumps))
+        let coordinator = ImportCoordinator(
+            analyzer: ROMImportAnalyzer(builds: container.repositories.builds, games: container.repositories.games,
+                assetStore: container.fileStore, knownDumps: index),
+            committer: container.importCommitter,
+            assetStore: container.fileStore
+        )
+        func review(_ filename: String, _ bytes: Data, games: [Game]) throws -> ImportReviewViewModel {
             let file = root.appendingPathComponent(filename)
             try bytes.write(to: file)
             return ImportReviewViewModel(
                 analysis: try coordinator.analyzeROM(at: file),
                 games: games,
                 coordinator: coordinator,
-                existingBuilds: { container.builds(in: $0) }
+                existingBuilds: { container.builds(in: $0) },
+                knownDumps: index
             )
         }
 
-        let retail = try review("Example (USA).gb", games: []).commit()
+        let retail = try review("Example (USA).gb", retailImages[0], games: []).commit()
         XCTAssertTrue(retail.build.isBase, "a new Game's first Build is its Base")
-        for filename in ["Example (USA) (Rev 1).gb", "Example (USA) (Beta).gb"] {
-            let other = try review(filename, games: [retail.game])
-            XCTAssertEqual(other.destination, .existing(retail.game.id))
-            XCTAssertFalse(other.markAsBase, "\(filename) leaves the clean Base alone")
-            XCTAssertTrue(other.markAsPreferred)
-        }
+        let revision = try review("Example (USA) (Rev 1).gb", retailImages[1], games: [retail.game])
+        XCTAssertEqual(revision.destination, .existing(retail.game.id))
+        XCTAssertFalse(revision.markAsBase, "a No-Intro revision leaves the clean Base alone")
+        let unknown = try review("Example v9.gb", image(), games: [retail.game])
+        unknown.destination = .existing(retail.game.id)
+        unknown.destinationChanged()
+        XCTAssertFalse(unknown.markAsBase, "an unknown file doesn't replace a No-Intro Base")
 
-        let homebrew = try review("Homebrew v1.2.gb", games: []).commit()
-        XCTAssertFalse(try review("Homebrew v1.1.gb", games: [homebrew.game]).markAsBase, "an older release")
-        XCTAssertTrue(try review("Homebrew v1.10.gb", games: [homebrew.game]).markAsBase, "a newer release")
-        XCTAssertTrue(try review("Homebrew 2026-10-06.gb", games: [homebrew.game]).markAsBase, "a dated release sorts after v1")
+        let homebrew = try review("Homebrew v1.2.gb", image(), games: []).commit()
+        let games = [retail.game, homebrew.game]
+        XCTAssertFalse(try review("Homebrew v1.1.gb", image(), games: games).markAsBase, "an older release")
+        XCTAssertTrue(try review("Homebrew v1.10.gb", image(), games: games).markAsBase, "a newer release")
+        XCTAssertTrue(try review("Homebrew 2026-10-06.gb", image(), games: games).markAsBase, "a dated release sorts after v1")
+        XCTAssertTrue(try review("Homebrew (Beta).gb", image(), games: games).markAsBase, "an unversioned build is the newest")
     }
 }

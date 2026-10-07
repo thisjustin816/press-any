@@ -202,9 +202,10 @@ changes the library; review shows what will happen; commit is all or nothing.
   Preexisting titles without recorded provenance also stay protected during import; Suggest Names
   lets the player opt them into regional title proposals.
 - **Roles.** Other new Builds default to Preferred. A Build defaults to Base when the Game has none,
-  unless it's a ROM hack. Where the Game has a Base, only a newer homebrew release defaults to
-  replacing it: one whose version or date sorts after the Base's, or any versioned file when the
-  Base has none. A retail revision or a beta leaves a clean Base alone. ROM hacks and
+  unless it's a ROM hack. Where the Game has a Base, a No-Intro release leaves it alone, and so
+  does anything arriving where a No-Intro release is the Base. Any other file is a homebrew or
+  development build, and the newest is the Base: it replaces the Base unless its version or date
+  sorts before the Base's. ROM hacks and
   patch-created Builds are Preferred but not Base. A ROM explicitly matched as a hack or another
   Build starts without a Base mark. A role the player sets stays when the destination changes.
 - **Metadata.** Region, language, revision and version fill from the filename (see Naming) and a
