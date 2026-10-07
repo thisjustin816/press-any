@@ -285,13 +285,18 @@ promotion and Open Patch.
 - In a name joined by hyphens or underscores, a "v5" or "v1.2" word mid-name becomes the version
   and the words after it the status: "Serve-Sisters-Coop-v5-Stability" is "Serve Sisters Coop",
   version 5, status Stability. A dotted number needs no "v": "match-land-live-0.3.0+live1" is
-  "Match Land Live", version 0.3.0+live1, with an all-lowercase name capitalized. A lone "v2" is
-  never the whole title.
+  "Match Land Live", version 0.3.0+live1, with an all-lowercase name capitalized and words such as
+  DX and SGB kept in capitals. Underscored or hyphenated numbers after a "v" word are its dotted
+  parts: "mole_mania_dx_v1_3" is "Mole Mania DX", version 1.3. A lone "v2" is never the whole
+  title.
 - A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version,
   shown as "2026-10-06" and sorted by date; the words after it become the status. Only a valid
   eight-digit or hyphenated date counts, and never as the whole title.
 - A file with no version tags is named for the day it's added, "2026-10-06", then the time for a
   second one the same day. A hack with nothing else to name it is "Hack".
+- A patch's Build is named by its title, followed by any version or other tag: "Mole Mania DX
+  v1.3". When the patch's title is the Game's own, only the tag remains, so "Example (Rev 1)"
+  applied to Example is "Rev 1".
 - A suggested name that repeats one already in the Game gains the day ("v1.0 · Oct 6"), then the
   time, then a number. A name the player typed is left alone. A Build sharing its name with
   another shows its date and time in the list.

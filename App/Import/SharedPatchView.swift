@@ -13,9 +13,9 @@ struct SharedPatchView: View {
     @State private var gameID: UUID?
     @State private var buildID: UUID?
     @State private var displayName = ""
-    /// The name suggested from the patch filename, and the last suggestion shown, so choosing a Game
-    /// can add a date to a clashing name without overwriting one the player typed.
-    @State private var filenameBuildName = ""
+    /// The patch filename's naming, and the last suggestion shown, so choosing a Game can rename
+    /// the Build to suit it without overwriting a name the player typed.
+    @State private var naming: FilenameMetadata?
     @State private var suggestedBuildName = ""
     @State private var region = ""
     @State private var language = ""
@@ -90,6 +90,7 @@ struct SharedPatchView: View {
             }
             .task {
                 let naming = FilenameMetadataParser.parse(filename: file.originalFilename)
+                self.naming = naming
                 let metadata = BuildNaming.patchMetadata(for: naming)
                 region = metadata.region ?? ""
                 language = metadata.language ?? ""
@@ -101,9 +102,8 @@ struct SharedPatchView: View {
                 translation = metadata.translation ?? ""
                 status = metadata.status ?? ""
                 unknownGroups = naming.unknownGroups
-                filenameBuildName = BuildNaming.patchBuildName(for: naming)
-                displayName = filenameBuildName
-                suggestedBuildName = filenameBuildName
+                displayName = BuildNaming.patchBuildName(for: naming)
+                suggestedBuildName = displayName
                 do {
                     games = try container.repositories.games.fetchGames().sorted {
                         $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
@@ -116,9 +116,12 @@ struct SharedPatchView: View {
                 buildID = nil
                 builds = []
                 defer {
-                    if displayName == suggestedBuildName {
+                    if displayName == suggestedBuildName, let naming {
                         suggestedBuildName = BuildNaming.distinctName(
-                            filenameBuildName,
+                            BuildNaming.patchBuildName(
+                                for: naming,
+                                gameTitle: games.first(where: { $0.id == selected })?.primaryTitle
+                            ),
                             existing: builds.map(\.displayName),
                             addedAt: .now
                         )

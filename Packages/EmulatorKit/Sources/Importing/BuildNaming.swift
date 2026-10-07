@@ -37,10 +37,14 @@ public enum BuildNaming {
     }
 
     /// The Build name a patch's filename suggests. A patch makes a variant, so the parser's generic
-    /// names for an untagged file, "Original" and "Hack", give way to the patch's own title.
-    public static func patchBuildName(for naming: FilenameMetadata) -> String {
-        guard ["Original", "Hack"].contains(naming.suggestedBuildName) else { return naming.suggestedBuildName }
-        return naming.buildMetadata.hackTitle ?? naming.suggestedTitle
+    /// names for an untagged file, "Original" and "Hack", give way to the patch's own title. A
+    /// version or other tag follows the title, "Mole Mania DX v1.3", unless the title is the Game's
+    /// own: "Example (Rev 1)" applied to Example is "Rev 1".
+    public static func patchBuildName(for naming: FilenameMetadata, gameTitle: String? = nil) -> String {
+        let title = naming.buildMetadata.hackTitle ?? naming.suggestedTitle
+        guard !["Original", "Hack"].contains(naming.suggestedBuildName) else { return title }
+        if let gameTitle, GameMatcher.normalized(gameTitle) == GameMatcher.normalized(title) { return naming.suggestedBuildName }
+        return "\(title) \(naming.suggestedBuildName)"
     }
 
     /// The metadata a patch's filename gives the Build it makes. A patch with no hack title in its

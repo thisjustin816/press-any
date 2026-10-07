@@ -103,7 +103,17 @@ final class BuildNamingTests: XCTestCase {
         XCTAssertEqual(hack.suggestedBuildName, "Hack")
         XCTAssertEqual(BuildNaming.patchBuildName(for: hack), "DX")
         XCTAssertEqual(BuildNaming.patchBuildName(for: FilenameMetadataParser.parse(filename: "Translation.ips")), "Translation")
-        XCTAssertEqual(BuildNaming.patchBuildName(for: FilenameMetadataParser.parse(filename: "Example (Rev 1).bps")), "Rev 1")
+        let revision = FilenameMetadataParser.parse(filename: "Example (Rev 1).bps")
+        XCTAssertEqual(BuildNaming.patchBuildName(for: revision, gameTitle: "Example"), "Rev 1")
+        XCTAssertEqual(BuildNaming.patchBuildName(for: revision), "Example Rev 1")
+    }
+
+    func testAVersionedPatchKeepsItsTitleInTheBuildName() {
+        let naming = FilenameMetadataParser.parse(filename: "mole_mania_dx_v1_3.bps")
+        XCTAssertEqual(naming.suggestedTitle, "Mole Mania DX")
+        XCTAssertEqual(naming.buildMetadata.versionString, "1.3")
+        XCTAssertNil(naming.buildMetadata.status)
+        XCTAssertEqual(BuildNaming.patchBuildName(for: naming, gameTitle: "Mole Mania"), "Mole Mania DX v1.3")
     }
 
     private func name(_ name: String, existing: [String]) -> String {
