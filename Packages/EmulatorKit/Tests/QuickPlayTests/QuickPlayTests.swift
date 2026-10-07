@@ -831,6 +831,8 @@ private struct InsertRefusingStates: SaveStateRepository {
         try inner.fetchSaveStates(buildID: buildID, saveProfileID: saveProfileID)
     }
     func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState] { try inner.fetchSaveStates(saveProfileID: saveProfileID) }
+    func fetchSaveState(id: UUID) throws -> SaveState? { try inner.fetchSaveState(id: id) }
+    func renameSaveState(id: UUID, label: String?) throws { try inner.renameSaveState(id: id, label: label) }
     func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {}
     func deleteSaveState(id: UUID) throws { try inner.deleteSaveState(id: id) }
 }

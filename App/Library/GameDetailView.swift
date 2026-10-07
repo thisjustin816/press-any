@@ -38,6 +38,7 @@ struct GameDetailView: View {
     @State private var technicalInfo: Build?
     @State private var pendingReplacement: PendingReplacement?
     @State private var badgeTarget: SaveProfile?
+    @State private var statesProfile: SaveProfile?
     @State private var badgeText = ""
     @State private var renamingBuild: Build?
     @State private var buildName = ""
@@ -269,6 +270,9 @@ struct GameDetailView: View {
             .sheet(item: $technicalInfo) { build in
                 BuildTechnicalInfoView(build: build, container: container)
             }
+            .sheet(item: $statesProfile) { profile in
+                SaveStatesView(profile: profile, container: container)
+            }
             .sheet(isPresented: $showMerge) {
                 MergeGameSheet(
                     source: model.game,
@@ -370,6 +374,7 @@ struct GameDetailView: View {
         case .game: "Delete This Game?"
         case .build: "Delete This Build?"
         case .saveProfile, nil: "Delete This Save Profile?"
+        case .saveState: "Delete This Save State?"
         }
     }
 
@@ -512,6 +517,7 @@ struct GameDetailView: View {
                 badgeText = profile.badge ?? ""
                 badgeTarget = profile
             }
+            Button("Save States…") { statesProfile = profile }
             Divider()
             Button("Delete…", role: .destructive) { model.requestDeletion(of: profile) }
         }

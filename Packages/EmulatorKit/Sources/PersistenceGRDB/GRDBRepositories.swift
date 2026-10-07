@@ -276,6 +276,25 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
         }
     }
 
+    public func fetchSaveState(id: UUID) throws -> SaveState? {
+        try read { db in
+            try SaveStateRecord.fetchOne(
+                db,
+                sql: "SELECT * FROM save_states WHERE id = ? AND deletion_id IS NULL",
+                arguments: [PersistenceCodec.uuid(id)]
+            )?.domain()
+        }
+    }
+
+    public func renameSaveState(id: UUID, label: String?) throws {
+        try write { db in
+            try db.execute(
+                sql: "UPDATE save_states SET label = ? WHERE id = ? AND deletion_id IS NULL",
+                arguments: [label, PersistenceCodec.uuid(id)]
+            )
+        }
+    }
+
     public func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {
         try write { db in
             try db.execute(

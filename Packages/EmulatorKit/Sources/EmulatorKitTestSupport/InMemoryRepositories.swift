@@ -133,6 +133,10 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
         lock.withLock { values.values.filter { $0.saveProfileID == saveProfileID }.sorted { $0.createdAt > $1.createdAt } }
     }
 
+    public func fetchSaveState(id: UUID) throws -> SaveState? { lock.withLock { values[id] } }
+
+    public func renameSaveState(id: UUID, label: String?) throws { lock.withLock { values[id]?.label = label } }
+
     public func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {
         lock.withLock {
             for state in values.values where state.buildID == buildID && state.saveProfileID == fromSaveProfileID {
