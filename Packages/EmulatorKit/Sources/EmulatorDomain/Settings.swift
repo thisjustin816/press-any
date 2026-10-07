@@ -54,6 +54,10 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case screenScaling
     /// `LCDFilter`, unset means `.off`. Independent of the picture’s scaling.
     case lcdFilter
+    /// `ColorCorrection`, unset means `.balanced`.
+    case colorCorrection = "colorCorrection"
+    /// `DMGPalette`, unset means `.grey`.
+    case dmgPalette = "dmgPalette"
     /// `FrameBlending`, unset means `.off`.
     case frameBlending
     /// `FastForwardSpeed`, unset means `.x2`.
@@ -108,6 +112,48 @@ public enum LCDFilter: String, Codable, Sendable, CaseIterable {
         case .off: "Off"
         case .lcd1x: "LCD 1×"
         case .lcd3x: "LCD 3×"
+        }
+    }
+}
+
+public enum ColorCorrection: String, Codable, Sendable, CaseIterable {
+    case off = "off"
+    case accurate = "accurate"
+    case balanced = "balanced"
+    case boostContrast = "boostContrast"
+    case reduceContrast = "reduceContrast"
+    case lowContrast = "lowContrast"
+
+    public static let defaultValue: Self = .balanced
+    public static let explanation = "Adjusts colors in Game Boy Color games."
+
+    public var displayName: String {
+        switch self {
+        case .off: "Off"
+        case .accurate: "Accurate"
+        case .balanced: "Balanced"
+        case .boostContrast: "Boost Contrast"
+        case .reduceContrast: "Reduce Contrast"
+        case .lowContrast: "Low Contrast"
+        }
+    }
+}
+
+public enum DMGPalette: String, Codable, Sendable, CaseIterable {
+    case grey = "grey"
+    case dmgGreen = "dmgGreen"
+    case pocket = "pocket"
+    case light = "light"
+
+    public static let defaultValue: Self = .grey
+    public static let explanation = "Changes the four shades in original Game Boy games."
+
+    public var displayName: String {
+        switch self {
+        case .grey: "Grey"
+        case .dmgGreen: "DMG Green"
+        case .pocket: "Pocket"
+        case .light: "Light"
         }
     }
 }

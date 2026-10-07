@@ -41,7 +41,7 @@ final class SameBoyAdapterTests: XCTestCase {
         XCTAssertTrue(try core.skipBootAnimation(), "an already finished boot reports finished")
     }
 
-    private static func requireGeneratedBootROMs() throws {
+    static func requireGeneratedBootROMs() throws {
         let directory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("../../Sources/SameBoyAdapter/Resources/BootROMs")

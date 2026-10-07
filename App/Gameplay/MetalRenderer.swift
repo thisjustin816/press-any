@@ -58,7 +58,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         view.delegate = self
     }
 
-    func submit(_ frame: EmulatorVideoFrame, to view: MTKView) {
+    func submit(_ frame: EmulatorVideoFrame, to view: MTKView, replacesHistory: Bool = false) {
+        if replacesHistory { heldFrames = 0 }
         ensureTextures(width: frame.width, height: frame.height)
         guard !textures.isEmpty else { return }
         newest = (newest + 1) % textures.count

@@ -109,6 +109,35 @@ final class SettingsResolverTests: XCTestCase {
         ), .lcd3x)
     }
 
+    func testColorCorrectionAndPaletteInheritIndependentlyThroughEveryScope() throws {
+        let store = InMemorySettingsStore()
+        let resolver = SettingsResolver(store: store)
+        let gameID = UUID(), buildID = UUID()
+        let correctionKey = SettingKey.colorCorrection.rawValue
+        let paletteKey = SettingKey.dmgPalette.rawValue
+        let scopes: [SettingsScope] = [.app, .system(.gameBoy), .game(gameID), .build(buildID)]
+        let corrections: [ColorCorrection] = [.off, .accurate, .boostContrast, .lowContrast]
+        let palettes: [DMGPalette] = [.grey, .dmgGreen, .pocket, .light]
+        for index in scopes.indices {
+            try store.set(corrections[index], key: correctionKey, scope: scopes[index])
+            try store.set(palettes[index], key: paletteKey, scope: scopes[index])
+        }
+        for index in scopes.indices.reversed() {
+            XCTAssertEqual(try resolver.decode(ColorCorrection.self, key: correctionKey,
+                                              system: .gameBoy, gameID: gameID, buildID: buildID), corrections[index])
+            XCTAssertEqual(try resolver.decode(DMGPalette.self, key: paletteKey,
+                                              system: .gameBoy, gameID: gameID, buildID: buildID), palettes[index])
+            XCTAssertEqual(try resolver.resolve(key: correctionKey, system: .gameBoy,
+                                               gameID: gameID, buildID: buildID)?.source, scopes[index])
+            try store.removeValue(key: correctionKey, scope: scopes[index])
+            XCTAssertEqual(try resolver.decode(DMGPalette.self, key: paletteKey,
+                                              system: .gameBoy, gameID: gameID, buildID: buildID), palettes[index])
+            try store.removeValue(key: paletteKey, scope: scopes[index])
+        }
+        XCTAssertNil(try resolver.decode(ColorCorrection.self, key: correctionKey, system: .gameBoy))
+        XCTAssertNil(try resolver.decode(DMGPalette.self, key: paletteKey, system: .gameBoy))
+    }
+
     func testRemovingAllOverridesReturnsNil() throws {
         let store = InMemorySettingsStore()
         let resolver = SettingsResolver(store: store)

@@ -15,6 +15,22 @@ typedef enum {
     SB_MODEL_CGB,
 } SBModel;
 
+typedef enum {
+    SB_COLOR_CORRECTION_OFF,
+    SB_COLOR_CORRECTION_ACCURATE,
+    SB_COLOR_CORRECTION_BALANCED,
+    SB_COLOR_CORRECTION_BOOST_CONTRAST,
+    SB_COLOR_CORRECTION_REDUCE_CONTRAST,
+    SB_COLOR_CORRECTION_LOW_CONTRAST,
+} SBColorCorrection;
+
+typedef enum {
+    SB_DMG_PALETTE_GREY,
+    SB_DMG_PALETTE_DMG,
+    SB_DMG_PALETTE_MGB,
+    SB_DMG_PALETTE_GBL,
+} SBDMGPalette;
+
 typedef struct {
     bool up;
     bool down;
@@ -52,6 +68,10 @@ bool SBSkipBootROM(SBInstance *instance, const uint8_t *fast_boot_rom, size_t fa
 
 void SBSetInput(SBInstance *instance, SBInputState input);
 SBFrameView SBRunFrame(SBInstance *instance);
+void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode);
+void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette);
+/// Renders a temporary frame, restoring gameplay state and suppressing audio and rumble.
+bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame);
 size_t SBDrainAudio(SBInstance *instance, SBStereoSample *output, size_t max_frames);
 double SBConsumeRumbleAmplitude(SBInstance *instance);
 

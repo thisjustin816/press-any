@@ -456,6 +456,8 @@ struct RootView: View {
                     orientation: container.orientation(for: launch.context),
                     screenScaling: container.screenScaling(for: launch.context),
                     lcdFilter: container.lcdFilter(for: launch.context),
+                    colorCorrection: container.colorCorrection(for: launch.context),
+                    dmgPalette: container.dmgPalette(for: launch.context),
                     frameBlending: container.frameBlending(for: launch.context),
                     fastForwardSpeed: container.fastForwardSpeed(for: launch.context),
                     fastForwardAudio: container.fastForwardAudio(for: launch.context)

@@ -320,6 +320,22 @@ final class AppContainer {
         ScreenshotScene.lcdFilterOverride ?? launchSetting(LCDFilter.self, .lcdFilter, for: context) ?? .off
     }
 
+    func colorCorrection(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ColorCorrection {
+        launchSetting(ColorCorrection.self, .colorCorrection, system: system, gameID: gameID, buildID: buildID) ?? .defaultValue
+    }
+
+    func colorCorrection(for context: LaunchContext) -> ColorCorrection {
+        launchSetting(ColorCorrection.self, .colorCorrection, for: context) ?? .defaultValue
+    }
+
+    func dmgPalette(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> DMGPalette {
+        launchSetting(DMGPalette.self, .dmgPalette, system: system, gameID: gameID, buildID: buildID) ?? .defaultValue
+    }
+
+    func dmgPalette(for context: LaunchContext) -> DMGPalette {
+        launchSetting(DMGPalette.self, .dmgPalette, for: context) ?? .defaultValue
+    }
+
     /// A Game's Builds, for suggesting a new one's name and roles. Unreadable means none.
     func builds(in gameID: UUID) -> [Build] {
         (try? repositories.builds.fetchBuilds(gameID: gameID)) ?? []
@@ -379,6 +395,8 @@ final class AppContainer {
             orientation: orientation(system: target.system, gameID: target.gameID, buildID: target.buildID),
             screenScaling: screenScaling(system: target.system, gameID: target.gameID, buildID: target.buildID),
             lcdFilter: lcdFilter(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            colorCorrection: colorCorrection(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            dmgPalette: dmgPalette(system: target.system, gameID: target.gameID, buildID: target.buildID),
             frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID),
             fastForwardSpeed: fastForwardSpeed(system: target.system, gameID: target.gameID, buildID: target.buildID),
             fastForwardAudio: fastForwardAudio(system: target.system, gameID: target.gameID, buildID: target.buildID)
@@ -469,6 +487,8 @@ struct GameplayDisplaySettings: Equatable {
     var orientation: ScreenOrientation = .automatic
     var screenScaling: ScreenScaling
     var lcdFilter: LCDFilter
+    var colorCorrection: ColorCorrection
+    var dmgPalette: DMGPalette
     var frameBlending: FrameBlending
     var fastForwardSpeed: FastForwardSpeed
     var fastForwardAudio: FastForwardAudio

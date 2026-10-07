@@ -502,6 +502,12 @@ picture. A connected controller still hides the touch controls.
   back to Fill when not even one whole multiple fits. Fill draws as large as the frame allows at
   10:9, sampling each pixel flat and blending only across its edges. On the Game Boy layout the
   frame itself follows the setting.
+- **Color Correction** (inheritable, Balanced by default) adjusts Game Boy Color colors: Off,
+  Accurate, Balanced, Boost Contrast, Reduce Contrast or Low Contrast. Accurate uses SameBoy's
+  Modern Accurate mode; Balanced uses Modern Balanced, its iOS default.
+- **DMG Palette** (inheritable, Grey by default) changes the four shades in original Game Boy
+  games: Grey, DMG Green, Pocket or Light. Both color settings change the open picture at once,
+  including behind a paused Settings sheet, and stay applied through reset and state loads.
 - **LCD filter**: LCD 1× and LCD 3×, the first of the display effects.
 - **Frame Blending** (inheritable, Off by default): Blend averages each frame with the one before,
   as the slow LCD does, so a sprite drawn on alternate frames stays steady; LCD Ghosting weights
@@ -516,8 +522,8 @@ picture. A connected controller still hides the touch controls.
   comparison (LCD1x, LCD3x and pixel-transparency variants are candidates; PT-SkyWalker541 is a
   candidate to audit), downloaded from pinned, license-checked sources with hashes and preserved
   licenses; independent inheritance of pipeline components and parameters; named presets; live
-  switching from Quick Actions; a system-authentic default with raw pixels a tap away; GBC color
-  correction and DMG palettes. Arbitrary `.slang` import is later.
+  switching from Quick Actions; a system-authentic default with raw pixels a tap away. Arbitrary
+  `.slang` import is later.
 
 ### Sound
 
@@ -570,8 +576,8 @@ explicit overrides, the UI shows where an inherited value comes from, and Reset 
 clears an override. The System level covers Game Boy and Game Boy Color. Save Profiles get only
 the narrow playthrough overrides above. Sound is app-wide.
 
-Inheritable today: controller layout, Orientation, Screen Scaling, LCD filter, Frame Blending, Fast Forward
-Speed and Audio, Resume Games and Skip Boot Logo. App-wide: Controller Theme, Sound, Tap Game for
+Inheritable today: controller layout, Orientation, Screen Scaling, Color Correction, DMG Palette,
+LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games and Skip Boot Logo. App-wide: Controller Theme, Sound, Tap Game for
 Menu, Touch Haptics and Hide Touch Controls with a Controller. Settings groups them under
 Controls, Display, Sound and Playing.
 

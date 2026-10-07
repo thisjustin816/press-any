@@ -33,6 +33,7 @@ struct SBInstance {
     _Atomic uint64_t rumble_bits;
     bool vblank;
     bool has_run; // Whether any emulation has run since the image was loaded or reset.
+    bool previewing;
 };
 
 static uint32_t sb_encode_bgra(GB_gameboy_t *gb, uint8_t r, uint8_t g, uint8_t b)
@@ -44,7 +45,7 @@ static uint32_t sb_encode_bgra(GB_gameboy_t *gb, uint8_t r, uint8_t g, uint8_t b
 static void sb_audio_callback(GB_gameboy_t *gb, GB_sample_t *sample)
 {
     SBInstance *instance = GB_get_user_data(gb);
-    if (!instance || !sample) return;
+    if (!instance || !sample || instance->previewing) return;
 
     size_t write = atomic_load_explicit(&instance->audio_write, memory_order_relaxed);
     size_t next = (write + 1u) % SB_AUDIO_CAPACITY;
@@ -58,7 +59,7 @@ static void sb_audio_callback(GB_gameboy_t *gb, GB_sample_t *sample)
 static void sb_rumble_callback(GB_gameboy_t *gb, double amplitude)
 {
     SBInstance *instance = GB_get_user_data(gb);
-    if (!instance) return;
+    if (!instance || instance->previewing) return;
 
     uint64_t bits = 0;
     memcpy(&bits, &amplitude, sizeof(bits));
@@ -227,6 +228,57 @@ SBFrameView SBRunFrame(SBInstance *instance)
         .pixels = instance->pixels,
         .emulated_nanoseconds = sb_ticks_to_nanoseconds(instance->gb, ticks),
     };
+}
+
+void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode)
+{
+    if (!instance || !instance->gb) return;
+    GB_color_correction_mode_t correction;
+    switch (mode) {
+        case SB_COLOR_CORRECTION_OFF: correction = GB_COLOR_CORRECTION_DISABLED; break;
+        case SB_COLOR_CORRECTION_ACCURATE: correction = GB_COLOR_CORRECTION_MODERN_ACCURATE; break;
+        case SB_COLOR_CORRECTION_BALANCED: correction = GB_COLOR_CORRECTION_MODERN_BALANCED; break;
+        case SB_COLOR_CORRECTION_BOOST_CONTRAST: correction = GB_COLOR_CORRECTION_MODERN_BOOST_CONTRAST; break;
+        case SB_COLOR_CORRECTION_REDUCE_CONTRAST: correction = GB_COLOR_CORRECTION_REDUCE_CONTRAST; break;
+        case SB_COLOR_CORRECTION_LOW_CONTRAST: correction = GB_COLOR_CORRECTION_LOW_CONTRAST; break;
+        default: return;
+    }
+    GB_set_color_correction_mode(instance->gb, correction);
+}
+
+void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette)
+{
+    if (!instance || !instance->gb) return;
+    const GB_palette_t *colors;
+    switch (palette) {
+        case SB_DMG_PALETTE_GREY: colors = &GB_PALETTE_GREY; break;
+        case SB_DMG_PALETTE_DMG: colors = &GB_PALETTE_DMG; break;
+        case SB_DMG_PALETTE_MGB: colors = &GB_PALETTE_MGB; break;
+        case SB_DMG_PALETTE_GBL: colors = &GB_PALETTE_GBL; break;
+        default: return;
+    }
+    GB_set_palette(instance->gb, colors);
+}
+
+bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame)
+{
+    if (!instance || !frame) return false;
+    size_t size = SBStateSize(instance);
+    uint8_t *state = malloc(size);
+    if (!state) return false;
+    if (!SBSaveState(instance, state, size)) {
+        free(state);
+        return false;
+    }
+    bool has_run = instance->has_run;
+    instance->previewing = true;
+    *frame = SBRunFrame(instance);
+    instance->previewing = false;
+    bool restored = SBLoadState(instance, state, size);
+    instance->has_run = has_run;
+    free(state);
+    frame->emulated_nanoseconds = 0;
+    return restored;
 }
 
 size_t SBDrainAudio(SBInstance *instance, SBStereoSample *output, size_t max_frames)

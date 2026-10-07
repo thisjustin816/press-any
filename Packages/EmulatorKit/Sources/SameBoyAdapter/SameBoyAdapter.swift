@@ -13,15 +13,19 @@ public enum SameBoyAdapterError: Error, Equatable {
     case batterySaveFailed
     case stateSaveFailed
     case stateLoadFailed
+    case frameRefreshFailed
 }
 
-public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability {
+public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability {
     public let descriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
     public let supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
     public let stateSerializationVersion = "sameboy-bess-v1"
 
     private var instance: OpaquePointer?
     private var loadedSystem: GameSystem?
+    private var hasFrame = false
+    public private(set) var colorCorrection: ColorCorrection = .defaultValue
+    public private(set) var dmgPalette: DMGPalette = .defaultValue
 
     public init() {}
 
@@ -46,6 +50,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             throw SameBoyAdapterError.instanceCreationFailed
         }
         instance = created
+        hasFrame = false
 
         do {
             let bootROM = try Self.loadBootROM(for: system)
@@ -58,6 +63,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
                 SBLoadROM(created, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
             }
             guard romLoaded else { throw SameBoyAdapterError.romLoadFailed }
+            applyDisplaySettings(to: created)
             loadedSystem = system
         } catch {
             SBDestroy(created)
@@ -99,7 +105,11 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         bridgeInput.select = input.select
         SBSetInput(instance, bridgeInput)
 
-        let frame = SBRunFrame(instance)
+        hasFrame = true
+        return try videoFrame(SBRunFrame(instance))
+    }
+
+    private func videoFrame(_ frame: SBFrameView) throws -> EmulatorVideoFrame {
         guard let pixels = frame.pixels else { throw SameBoyAdapterError.romNotLoaded }
         let byteCount = Int(frame.width) * Int(frame.height) * MemoryLayout<UInt32>.size
         return EmulatorVideoFrame(
@@ -126,6 +136,37 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     public func reset() throws {
         guard let instance else { throw SameBoyAdapterError.romNotLoaded }
         SBReset(instance)
+        hasFrame = false
+    }
+
+    public func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
+        self.colorCorrection = colorCorrection
+        self.dmgPalette = dmgPalette
+        guard let instance else { return nil }
+        applyDisplaySettings(to: instance)
+        guard hasFrame else { return nil }
+        var frame = SBFrameView()
+        guard SBRefreshFrame(instance, &frame) else { throw SameBoyAdapterError.frameRefreshFailed }
+        return try videoFrame(frame)
+    }
+
+    private func applyDisplaySettings(to instance: OpaquePointer) {
+        let correction: SBColorCorrection = switch colorCorrection {
+        case .off: SB_COLOR_CORRECTION_OFF
+        case .accurate: SB_COLOR_CORRECTION_ACCURATE
+        case .balanced: SB_COLOR_CORRECTION_BALANCED
+        case .boostContrast: SB_COLOR_CORRECTION_BOOST_CONTRAST
+        case .reduceContrast: SB_COLOR_CORRECTION_REDUCE_CONTRAST
+        case .lowContrast: SB_COLOR_CORRECTION_LOW_CONTRAST
+        }
+        let palette: SBDMGPalette = switch dmgPalette {
+        case .grey: SB_DMG_PALETTE_GREY
+        case .dmgGreen: SB_DMG_PALETTE_DMG
+        case .pocket: SB_DMG_PALETTE_MGB
+        case .light: SB_DMG_PALETTE_GBL
+        }
+        SBSetColorCorrection(instance, correction)
+        SBSetDMGPalette(instance, palette)
     }
 
     public func serializeState() throws -> Data {

@@ -144,6 +144,16 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         try worker.perform { $0.setSpeed(speed) }
     }
 
+    @discardableResult
+    public func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
+        let worker = try activeWorker(requireRunning: false)
+        let frame = try worker.perform { core in
+            try (core as? any DisplaySettingsCapability)?.setDisplaySettings(colorCorrection: colorCorrection, dmgPalette: dmgPalette)
+        }
+        if let frame { lock.withLock { latestFrame = frame } }
+        return frame
+    }
+
     public func consumeRumbleAmplitude() throws -> Double {
         let worker = try activeWorker(requireRunning: false)
         return try worker.perform { core in

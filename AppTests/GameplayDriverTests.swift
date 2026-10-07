@@ -47,6 +47,7 @@ private final class BlockingSaveRuntime: GameplayRuntime, @unchecked Sendable {
 
     func drainAudio(maxFrames: Int) throws -> [StereoSample] { [] }
     func setSpeed(_ speed: EmulationSpeed) throws {}
+    func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? { nil }
     func consumeRumbleAmplitude() throws -> Double { 0 }
     func pause() throws {}
     func resume() throws {}

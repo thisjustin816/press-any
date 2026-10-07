@@ -15,6 +15,7 @@ protocol GameplayRuntime: AnyObject {
     func stepFrame(input: EmulatorInputState) throws -> EmulatorVideoFrame
     func drainAudio(maxFrames: Int) throws -> [StereoSample]
     func setSpeed(_ speed: EmulationSpeed) throws
+    func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame?
     func consumeRumbleAmplitude() throws -> Double
 
     func pause() throws
