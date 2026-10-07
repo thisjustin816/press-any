@@ -58,7 +58,7 @@ Open items in each area are in the table, finished ones on the line under it.
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | none |
 | partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | none |
-| missing | Landscape gameplay | v1 | TouchControlLayout is portrait-only |
+| partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
 | missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow already seeds from `TestROMs/` |
 

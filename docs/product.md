@@ -31,7 +31,8 @@ change. There is no separate decision log.
 - Light and Dark appearance.
 - TestFlight first, then the App Store. The App Store release may be paid up front or unlock
   features with in-app purchase; the project's own source stays Apache-2.0 (`LICENSE`).
-- The app is locked to portrait until the landscape layout (v1).
+- The library, Game Details, Settings and every sheet are portrait. Gameplay also turns to
+  landscape (see Landscape).
 
 v1 is core-complete: the library model, saves and states, rewind and Fast Forward, rumble,
 patching, custom layouts with Delta and Manic skin import, curated
@@ -435,7 +436,7 @@ Touch: a sliding D-pad with natural diagonals, sliding between A and B, and A+B 
 controller layout keeps the name Game Boy because it describes the hardware it recreates; the
 App Store name, keywords and icon carry no Nintendo trademarks.
 
-v1: landscape gameplay; a lightweight layout editor (screen and control position and size,
+v1: a lightweight layout editor (screen and control position and size,
 opacity, touch areas, separate portrait and landscape, a few control styles, saved presets),
 opened from the game with the frame frozen for alignment and offering Save for This Game or Update
 Shared Preset; Minimal, Fullscreen and one-handed presets; Delta and Manic skin import into the
@@ -449,6 +450,26 @@ v1.1: when the chosen layout fits a physical controller over the bottom of the s
 does (and any later layout like it), the whole app moves into the top part of the screen that
 stays visible: the library, Game Details, Settings, sheets and menus fit above the controller, and
 its buttons move a focus through them, so the app can be used without taking the controller off.
+
+### Landscape
+
+Gameplay with the Game Boy layout turns to landscape, following Settings > Display > Orientation:
+Automatic (the default, turning with the phone within its rotation lock), Portrait, or Landscape,
+which turns the game at once even with the phone held upright and follows it between the two
+sideways directions. Orientation inherits App, System, Game and Build, and a change from the game's
+Settings sheet applies when the sheet closes. Playtiles, which fits a portrait phone, the library
+and every sheet stay portrait whatever it says; closing a game held sideways returns to a portrait
+library.
+
+Landscape uses the Game Boy Advance (AGB-001) arrangement whichever portrait layout is chosen: the
+picture centered in its bezel at Screen Scaling's size, the D-pad on the left, A and B on the right,
+and the Press Any button below the picture, where the Game Boy Advance prints its name. START and
+SELECT are the Game Boy Advance's small round buttons, START above SELECT, right of the D-pad's
+center and below it, each named on a recessed plate slanting down to the right beside it, placed
+from a front photograph of an AGB-001; a tap on the plate counts. The D-pad and A and B keep the
+Game Boy layout's sizes and drawing, and every control clears the phone's safe areas. Rotating
+releases held input and keeps the game running or paused as it was, with Resume centered on the
+picture. A connected controller still hides the touch controls.
 
 ### Game menu
 
@@ -544,7 +565,7 @@ explicit overrides, the UI shows where an inherited value comes from, and Reset 
 clears an override. The System level covers Game Boy and Game Boy Color. Save Profiles get only
 the narrow playthrough overrides above. Sound is app-wide.
 
-Inheritable today: controller layout, Screen Scaling, LCD filter, Frame Blending, Fast Forward
+Inheritable today: controller layout, Orientation, Screen Scaling, LCD filter, Frame Blending, Fast Forward
 Speed and Audio, Resume Games and Skip Boot Logo. App-wide: Controller Theme, Sound, Tap Game for
 Menu, Touch Haptics and Hide Touch Controls with a Controller. Settings groups them under
 Controls, Display, Sound and Playing.

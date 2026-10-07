@@ -293,6 +293,15 @@ final class AppContainer {
     }
 
     /// The game picture's scaling for a launch. Unset or unreadable means integer scaling.
+    /// Unset or unreadable means following the phone.
+    func orientation(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ScreenOrientation {
+        launchSetting(ScreenOrientation.self, .orientation, system: system, gameID: gameID, buildID: buildID) ?? .automatic
+    }
+
+    func orientation(for context: LaunchContext) -> ScreenOrientation {
+        launchSetting(ScreenOrientation.self, .orientation, for: context) ?? .automatic
+    }
+
     func screenScaling(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ScreenScaling {
         launchSetting(ScreenScaling.self, .screenScaling, system: system, gameID: gameID, buildID: buildID) ?? .integer
     }
@@ -367,6 +376,7 @@ final class AppContainer {
     func gameplayDisplay(for target: GameplaySettingsTarget) -> GameplayDisplaySettings {
         GameplayDisplaySettings(
             controlStyle: controllerStyle(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            orientation: orientation(system: target.system, gameID: target.gameID, buildID: target.buildID),
             screenScaling: screenScaling(system: target.system, gameID: target.gameID, buildID: target.buildID),
             lcdFilter: lcdFilter(system: target.system, gameID: target.gameID, buildID: target.buildID),
             frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID),
@@ -456,6 +466,7 @@ struct GameplaySettingsTarget {
 /// The settings an open game applies as they change.
 struct GameplayDisplaySettings: Equatable {
     var controlStyle: TouchControlStyle
+    var orientation: ScreenOrientation = .automatic
     var screenScaling: ScreenScaling
     var lcdFilter: LCDFilter
     var frameBlending: FrameBlending
