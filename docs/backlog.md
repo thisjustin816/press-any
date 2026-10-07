@@ -194,7 +194,8 @@ Analyze -> ImportPlan -> Review -> transactional Commit; Game artwork from Photo
 Import Review; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
 re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Preferred suggestions
-(development releases default to both; ROM hacks default Preferred only); Toolchain
+(a file No-Intro doesn't know defaults to both unless its version is older than the Base's;
+No-Intro releases keep an existing Base; ROM hacks default Preferred only); Toolchain
 findings in Import Review and Quick Play promotion; Files over a size limit for their kind
 (ROM, patch, save, artwork, variable map) refused before they are read or staged; only regular
 files staged. Review suggests the Game holding a Build with the same header title, and a

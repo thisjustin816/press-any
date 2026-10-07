@@ -105,7 +105,9 @@ final class ImportReviewViewModel: ObservableObject {
             initialDestination = .newGame
         }
         destination = initialDestination
-        markAsBase = Self.suggestedBase(for: analysis, destination: initialDestination, existingBuilds: existingBuilds)
+        markAsBase = Self.suggestedBase(
+            for: analysis, destination: initialDestination, existingBuilds: existingBuilds, knownDumps: knownDumps
+        )
         markAsPreferred = true
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
             ? analysis.header.title
@@ -166,7 +168,7 @@ final class ImportReviewViewModel: ObservableObject {
         }
         // Like the name, a role the player set stays; only an untouched suggestion follows the Game.
         let baseSuggestion = baseGameReference != nil ? false
-            : Self.suggestedBase(for: analysis, destination: destination, existingBuilds: existingBuilds)
+            : Self.suggestedBase(for: analysis, destination: destination, existingBuilds: existingBuilds, knownDumps: knownDumps)
         if markAsBase == previousBaseSuggestion { markAsBase = baseSuggestion }
         previousBaseSuggestion = baseSuggestion
         refreshIdentityProposals()
@@ -249,7 +251,9 @@ final class ImportReviewViewModel: ObservableObject {
         baseGameReference = nil
         baseTitle = analysis.filenameMetadata.buildMetadata.baseTitle ?? ""
         matchedAsHack = true
-        markAsBase = Self.suggestedBase(for: analysis, destination: destination, existingBuilds: existingBuilds)
+        markAsBase = Self.suggestedBase(
+            for: analysis, destination: destination, existingBuilds: existingBuilds, knownDumps: knownDumps
+        )
         previousBaseSuggestion = markAsBase
     }
 
@@ -350,20 +354,25 @@ final class ImportReviewViewModel: ObservableObject {
         coordinator.discard(analysis)
     }
 
-    /// A missing Base or a recorded base family suggests a clean Base. Otherwise, only a newer
-    /// homebrew version or date suggests replacing the Base.
+    /// A missing Base or a recorded base family suggests a clean Base. A No-Intro release, or any
+    /// file arriving where a No-Intro release is the Base, leaves that Base alone. Anything else is a
+    /// homebrew or development build, and the newest one is the Base, so it replaces the Base unless
+    /// its version sorts before the Base's.
     private static func suggestedBase(
         for analysis: ROMImportAnalysis,
         destination: Destination,
-        existingBuilds: (UUID) -> [Build]
+        existingBuilds: (UUID) -> [Build],
+        knownDumps: KnownDumpIndex?
     ) -> Bool {
         guard analysis.filenameMetadata.releaseKind != .romHack else { return false }
         if case .existing(let id) = destination, analysis.baseLineageGameIDs.contains(id) { return true }
         guard case .existing(let gameID) = destination,
               let base = existingBuilds(gameID).first(where: \.isBase) else { return true }
-        guard let key = BuildImportMetadata(analysis: analysis).versionSortKey else { return false }
-        guard let baseKey = base.versionSortKey else { return true }
-        return key > baseKey
+        guard analysis.knownDump == nil,
+              base.imageSHA1.flatMap({ knownDumps?.dump(sha1: $0) }) == nil else { return false }
+        guard let key = BuildImportMetadata(analysis: analysis).versionSortKey,
+              let baseKey = base.versionSortKey else { return true }
+        return key >= baseKey
     }
 
     private var reviewedMetadata: BuildImportMetadata {
