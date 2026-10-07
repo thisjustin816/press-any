@@ -202,7 +202,8 @@ final class SharedFileTests: XCTestCase {
             XCTAssertEqual(tags["public.filename-extension"] as? [String], suffixes)
             XCTAssertTrue(type.conforms(to: .data))
         }
-        let zip = try XCTUnwrap(documents.first { ($0["LSItemContentTypes"] as? [String])?.contains("public.zip-archive") == true })
+        let zip = try XCTUnwrap(documents.first { ($0["LSItemContentTypes"] as? [String])?.contains("com.pkware.zip-archive") == true },
+                                "Files types a .zip as com.pkware.zip-archive")
         XCTAssertEqual(zip["LSHandlerRank"] as? String, "Alternate", "other zips keep opening where they did")
         let exported = Bundle.main.infoDictionary?["UTExportedTypeDeclarations"] as? [[String: Any]] ?? []
         for declaration in exported {
