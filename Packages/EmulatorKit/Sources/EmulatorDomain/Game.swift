@@ -18,6 +18,7 @@ public struct Game: Identifiable, Codable, Equatable, Sendable {
     public var primaryTitle: String
     public var aliases: [String]
     public var hasPlayerTitle: Bool
+    public var isFavorite: Bool
     public let systemFamily: String
     public var preferredBuildID: UUID?
     public var preferredSaveProfileID: UUID?
@@ -33,6 +34,7 @@ public struct Game: Identifiable, Codable, Equatable, Sendable {
         systemFamily: String,
         aliases: [String] = [],
         hasPlayerTitle: Bool = false,
+        isFavorite: Bool = false,
         preferredBuildID: UUID? = nil,
         preferredSaveProfileID: UUID? = nil,
         artworkAssetID: UUID? = nil,
@@ -44,6 +46,7 @@ public struct Game: Identifiable, Codable, Equatable, Sendable {
         self.primaryTitle = primaryTitle
         self.aliases = aliases
         self.hasPlayerTitle = hasPlayerTitle
+        self.isFavorite = isFavorite
         self.systemFamily = systemFamily
         self.preferredBuildID = preferredBuildID
         self.preferredSaveProfileID = preferredSaveProfileID
@@ -61,6 +64,7 @@ public struct Game: Identifiable, Codable, Equatable, Sendable {
             systemFamily: try values.decode(String.self, forKey: .systemFamily),
             aliases: try values.decodeIfPresent([String].self, forKey: .aliases) ?? [],
             hasPlayerTitle: try values.decodeIfPresent(Bool.self, forKey: .hasPlayerTitle) ?? true,
+            isFavorite: try values.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false,
             preferredBuildID: try values.decodeIfPresent(UUID.self, forKey: .preferredBuildID),
             preferredSaveProfileID: try values.decodeIfPresent(UUID.self, forKey: .preferredSaveProfileID),
             artworkAssetID: try values.decodeIfPresent(UUID.self, forKey: .artworkAssetID),

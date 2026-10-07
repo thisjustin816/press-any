@@ -54,15 +54,17 @@ public final class EmulationSession: @unchecked Sendable {
     private let stateService: SaveStateService
     private let settings: SettingsResolver?
     private let launchHistory: SessionLaunchHistory?
+    private let transactions: any LibraryTransactionRunner
     private var lastCheckpointNanoseconds: UInt64 = 0
 
     private let lock = NSLock()
+    private let playtimeRecordingLock = NSLock()
     private var _state: EmulationSessionState = .idle
     private var worker: SessionWorker?
     private var activeContext: LaunchContext?
     private var sessionEmulatedNanoseconds: UInt64 = 0
     private var basePlaytimeSeconds: Double = 0
-    /// Session time already added to the profile, and whether this session has been counted.
+    /// Session time already added to the Build and profile, and whether this session has been counted.
     private var recordedNanoseconds: UInt64 = 0
     private var sessionCounted = false
     private let now: @Sendable () -> Date
@@ -105,6 +107,7 @@ public final class EmulationSession: @unchecked Sendable {
         )
         self.settings = settings
         self.launchHistory = launchHistory
+        self.transactions = transactions
         self.batteryCheckIntervalNanoseconds = UInt64(batteryCheckInterval * 1_000_000_000)
     }
 
@@ -545,24 +548,30 @@ public final class EmulationSession: @unchecked Sendable {
         }
     }
 
-    /// Adds the time played since the last call to the profile, counts the session once, and
-    /// stamps lastPlayedAt. modifiedAt is left alone: it marks battery writes, which decide
-    /// whether an Auto State is still safe to restore.
+    /// Records the same played time for the Build and profile. The profile's modifiedAt marks
+    /// battery writes and stays unchanged so Auto State eligibility is preserved.
     private func recordPlaytime() throws {
-        let (_, context, _) = try snapshotActive()
-        let (unrecorded, firstRecord) = lock.withLock { () -> (UInt64, Bool) in
-            let delta = sessionEmulatedNanoseconds &- recordedNanoseconds
-            recordedNanoseconds = sessionEmulatedNanoseconds
-            defer { sessionCounted = true }
-            return (delta, !sessionCounted)
+        try playtimeRecordingLock.withLock {
+            let (_, context, _) = try snapshotActive()
+            let (played, recorded, firstRecord) = lock.withLock {
+                (sessionEmulatedNanoseconds, recordedNanoseconds, !sessionCounted)
+            }
+            let seconds = Double(played &- recorded) / 1_000_000_000
+            try transactions.run { [builds, profiles, now] in
+                guard var profile = try profiles.fetchSaveProfile(id: context.saveProfileID) else {
+                    throw EmulationSessionError.saveProfileNotFound(context.saveProfileID)
+                }
+                try builds.addPlaytime(buildID: context.buildID, seconds: seconds)
+                profile.totalPlaytimeSeconds += seconds
+                if firstRecord { profile.sessionCount += 1 }
+                profile.lastPlayedAt = now()
+                try profiles.updateSaveProfile(profile)
+            }
+            lock.withLock {
+                recordedNanoseconds = played
+                sessionCounted = true
+            }
         }
-        guard var profile = try profiles.fetchSaveProfile(id: context.saveProfileID) else {
-            throw EmulationSessionError.saveProfileNotFound(context.saveProfileID)
-        }
-        profile.totalPlaytimeSeconds += Double(unrecorded) / 1_000_000_000
-        if firstRecord { profile.sessionCount += 1 }
-        profile.lastPlayedAt = now()
-        try profiles.updateSaveProfile(profile)
     }
 
     private func snapshotActive() throws -> (SessionWorker, LaunchContext, Bool) {

@@ -214,7 +214,24 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
     }
 
     public func updateBuildMetadata(_ build: Build) throws {
-        try write { db in try BuildRecord(build).update(db) }
+        try write { db in
+            let columns = try db.columns(in: BuildRecord.databaseTableName).map(\.name)
+                .filter {
+                    $0 != "total_playtime_seconds" && $0 != "deletion_id"
+                        && ($0 != "rom_sha1" || build.imageSHA1 != nil)
+                }
+            try BuildRecord(build).update(db, columns: columns)
+        }
+    }
+
+    public func addPlaytime(buildID: UUID, seconds: Double) throws {
+        try write { db in
+            try db.execute(
+                sql: "UPDATE builds SET total_playtime_seconds = total_playtime_seconds + ? WHERE id = ? AND deletion_id IS NULL",
+                arguments: [seconds, PersistenceCodec.uuid(buildID)]
+            )
+            guard db.changesCount == 1 else { throw BuildOperationError.buildNotFound(buildID) }
+        }
     }
 
     public func moveBuild(id: UUID, toGameID: UUID) throws {

@@ -9,6 +9,7 @@ final class LibraryViewModel: ObservableObject {
     /// Each Game's system, from the Build it plays.
     @Published private(set) var systems: [UUID: GameSystem] = [:]
     @Published var searchText = ""
+    @Published var favoritesOnly = false
     @Published private(set) var errorMessage: String?
 
     private let gameRepository: any GameRepository
@@ -33,7 +34,7 @@ final class LibraryViewModel: ObservableObject {
     }
 
     var visibleGames: [Game] {
-        let sorted = games.sorted {
+        let sorted = games.filter { !favoritesOnly || $0.isFavorite }.sorted {
             $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
         }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -64,6 +65,17 @@ final class LibraryViewModel: ObservableObject {
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
         } catch BuildOperationError.invalidGameTitle {
             report("A Game title can't be blank.")
+        } catch {
+            report(error.localizedDescription)
+        }
+    }
+
+    func toggleFavorite(_ game: Game) {
+        do {
+            let current = try gameRepository.fetchGame(id: game.id)
+            try buildOperations.setFavorite(gameID: game.id, isFavorite: !(current?.isFavorite ?? game.isFavorite))
+            reload()
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
         } catch {
             report(error.localizedDescription)
         }
