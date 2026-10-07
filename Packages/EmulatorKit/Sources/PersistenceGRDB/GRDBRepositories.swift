@@ -56,8 +56,17 @@ public final class GRDBGameRepository: GameRepository, GRDBRepositoryBacking, @u
 
     public func updateGame(_ game: Game) throws {
         try write { db in
-            try GameRecord(game).update(db)
-            try Self.saveAliases(game, db: db)
+            let previous = try GameRecord.fetchOne(db, key: PersistenceCodec.uuid(game.id))
+            var updated = game
+            if previous?.primaryTitle != game.primaryTitle {
+                try MetadataProvenanceSQL.recordPlayerOverride(field: .title, value: game.primaryTitle,
+                    ownerID: game.id, ownerTable: "games", at: game.modifiedAt, db: db)
+                updated.hasPlayerTitle = true
+            } else if let title = try MetadataProvenanceSQL.fetch(ownerID: game.id, ownerTable: "games", db: db).first {
+                updated.hasPlayerTitle = title.source == .player
+            }
+            try GameRecord(updated).update(db)
+            try Self.saveAliases(updated, db: db)
         }
     }
 
@@ -215,6 +224,12 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
 
     public func updateBuildMetadata(_ build: Build) throws {
         try write { db in
+            if let previous = try BuildRecord.fetchOne(db, key: PersistenceCodec.uuid(build.id))?.domain() {
+                for field in MetadataField.allCases where field != .title && field.value(in: previous) != field.value(in: build) {
+                    try MetadataProvenanceSQL.recordPlayerOverride(field: field, value: field.value(in: build),
+                        ownerID: build.id, ownerTable: "builds", at: build.modifiedAt, db: db)
+                }
+            }
             let columns = try db.columns(in: BuildRecord.databaseTableName).map(\.name)
                 .filter {
                     $0 != "total_playtime_seconds" && $0 != "deletion_id"

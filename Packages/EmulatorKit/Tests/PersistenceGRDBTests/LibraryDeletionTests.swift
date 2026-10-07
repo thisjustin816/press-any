@@ -7,6 +7,33 @@ import Testing
 
 @Suite("Recently Deleted in GRDB")
 struct LibraryDeletionTests {
+    @Test("provenance hides and restores with owners, then cascades on purge")
+    func metadataProvenanceLifecycle() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let title = MetadataProvenance(field: .title, source: .player, providedValue: "Offered Game", recordedAt: now)
+        let name = MetadataProvenance(field: .displayName, source: .filename, confidence: .medium,
+            providedValue: "Offered Build", recordedAt: now)
+        try repositories.games.saveMetadataProvenance(title, ownerID: fixture.game.id)
+        try repositories.builds.saveMetadataProvenance(name, ownerID: fixture.build.id)
+        let deleted = deletion(fixture, records: LibraryRecordSet(gameIDs: [fixture.game.id],
+            buildIDs: [fixture.build.id, fixture.patchedBuild.id], saveProfileIDs: [fixture.profile.id], saveStateIDs: [fixture.state.id]))
+        try repositories.deletions.insertDeletion(deleted)
+        #expect(try repositories.games.fetchMetadataProvenance(ownerID: fixture.game.id).isEmpty)
+        #expect(try repositories.builds.fetchMetadataProvenance(ownerID: fixture.build.id).isEmpty)
+        #expect(try database.writer.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM game_metadata_provenance") } == 1)
+        #expect(try database.writer.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_metadata_provenance") } == 1)
+        try repositories.deletions.restoreDeletion(id: deleted.id)
+        #expect(try repositories.games.fetchMetadataProvenance(ownerID: fixture.game.id) == [title])
+        #expect(try repositories.builds.fetchMetadataProvenance(ownerID: fixture.build.id) == [name])
+        try repositories.deletions.insertDeletion(deleted)
+        _ = try repositories.deletions.purgeDeletion(id: deleted.id, at: now)
+        #expect(try database.writer.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM game_metadata_provenance") } == 0)
+        #expect(try database.writer.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_metadata_provenance") } == 0)
+    }
+
     @Test("either deleted Build hides declarations; restore brings them back only while the other exists",
         arguments: [false, true])
     func saveDeclarationsThroughDeletion(deleteFirst: Bool) throws {

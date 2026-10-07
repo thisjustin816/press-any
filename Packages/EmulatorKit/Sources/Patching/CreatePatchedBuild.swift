@@ -34,6 +34,8 @@ public struct CreatePatchedBuild: Sendable {
         public let isBase: Bool
         public let makePreferred: Bool
         public let metadata: BuildImportMetadata
+        public let suggestedDisplayName: String?
+        public let gameTitle: String?
 
         public init(
             gameID: UUID,
@@ -42,7 +44,9 @@ public struct CreatePatchedBuild: Sendable {
             displayName: String,
             isBase: Bool = false,
             makePreferred: Bool = true,
-            metadata: BuildImportMetadata = BuildImportMetadata()
+            metadata: BuildImportMetadata = BuildImportMetadata(),
+            suggestedDisplayName: String? = nil,
+            gameTitle: String? = nil
         ) {
             self.gameID = gameID
             self.baseBuildID = baseBuildID
@@ -51,6 +55,8 @@ public struct CreatePatchedBuild: Sendable {
             self.isBase = isBase
             self.makePreferred = makePreferred
             self.metadata = metadata
+            self.suggestedDisplayName = suggestedDisplayName
+            self.gameTitle = gameTitle
         }
 
         public init(
@@ -60,7 +66,9 @@ public struct CreatePatchedBuild: Sendable {
             displayName: String,
             isBase: Bool = false,
             makePreferred: Bool = true,
-            metadata: BuildImportMetadata = BuildImportMetadata()
+            metadata: BuildImportMetadata = BuildImportMetadata(),
+            suggestedDisplayName: String? = nil,
+            gameTitle: String? = nil
         ) {
             self.init(
                 gameID: gameID,
@@ -69,7 +77,9 @@ public struct CreatePatchedBuild: Sendable {
                 displayName: displayName,
                 isBase: isBase,
                 makePreferred: makePreferred,
-                metadata: metadata
+                metadata: metadata,
+                suggestedDisplayName: suggestedDisplayName,
+                gameTitle: gameTitle
             )
         }
     }
@@ -239,12 +249,26 @@ public struct CreatePatchedBuild: Sendable {
                     for asset in assetsToInsert { try assets.insertAsset(asset) }
                     if existingGenerated == nil { try assets.insertAsset(generatedAsset) }
                     try builds.insertBuild(build)
+                    let provenance = PatchMetadataProvenance(input: input, gameTitle: game.primaryTitle)
+                    let inheritedTitle = try games.fetchMetadataProvenance(ownerID: game.id).first { $0.field == .title }
+                    for row in provenance.buildRows(build: build, game: game, inheritedTitle: inheritedTitle, at: timestamp) {
+                        try builds.saveMetadataProvenance(row, ownerID: build.id)
+                    }
                     try recipes.insertPatchRecipe(recipe)
-                    if input.makePreferred {
+                    if input.makePreferred || input.gameTitle != nil {
                         var updatedGame = game
-                        updatedGame.preferredBuildID = build.id
+                        if input.makePreferred { updatedGame.preferredBuildID = build.id }
+                        if let title = input.gameTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+                            updatedGame.addAliases([updatedGame.primaryTitle])
+                            updatedGame.primaryTitle = title
+                            updatedGame.hasPlayerTitle = provenance.titleRow(value: title, previous: inheritedTitle, at: timestamp).source == .player
+                        }
                         updatedGame.modifiedAt = timestamp
                         try games.updateGame(updatedGame)
+                        if input.gameTitle != nil, updatedGame.primaryTitle != game.primaryTitle {
+                            try games.saveMetadataProvenance(
+                                provenance.titleRow(value: updatedGame.primaryTitle, previous: inheritedTitle, at: timestamp), ownerID: game.id)
+                        }
                     }
                     for report in reports {
                         try toolchainReports.saveReport(report, buildID: build.id, detectedAt: timestamp)

@@ -194,11 +194,12 @@ final class ImportReviewViewModel: ObservableObject {
             markAsPreferred: markAsPreferred,
             metadata: reviewedMetadata,
             proposedGameTitle: acceptProposedTitle ? offeredGameTitle : nil,
-            proposedGameTitleIsPlayers: acceptProposedTitle && proposedHackTitle != nil,
-            hasPlayerTitle: analysis.filenameMetadata.releaseKind == .romHack
-                || (baseGameReference != nil && matchedAsHack)
-                || gameTitle.trimmingCharacters(in: .whitespacesAndNewlines) != analysis.filenameMetadata.suggestedTitle,
-            baseGameReference: baseGameReference
+            proposedGameTitleIsPlayers: acceptProposedTitle && proposedHackTitle != nil
+                && reviewedMetadata.hackTitle != (analysis.filenameMetadata.buildMetadata.hackTitle ?? analysis.filenameMetadata.suggestedTitle),
+            hasPlayerTitle: gameTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                != (analysis.filenameMetadata.suggestedTitle.isEmpty ? analysis.header.title : analysis.filenameMetadata.suggestedTitle),
+            baseGameReference: baseGameReference,
+            suggestedBuildDisplayName: suggestedBuildName
         )
     }
 

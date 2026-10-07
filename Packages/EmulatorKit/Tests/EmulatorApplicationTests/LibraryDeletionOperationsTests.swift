@@ -3,6 +3,7 @@ import EmulatorApplication
 import EmulatorDomain
 import EmulatorKitTestSupport
 import Foundation
+import Testing
 import XCTest
 
 final class LibraryDeletionOperationsTests: XCTestCase {
@@ -286,5 +287,31 @@ private struct Library {
             games: games, builds: builds, profiles: saveProfiles, states: states, recipes: recipes,
             deletions: deletions, assetStore: store, transactions: PassthroughTransactionRunner(), now: { clock.now }
         )
+    }
+}
+
+@Suite("In-memory metadata lifecycle")
+struct InMemoryMetadataLifecycleTests {
+    @Test("deleted owners hide provenance, restoration recovers it, and purge removes it")
+    func deletion() throws {
+        let library = try Library()
+        let title = MetadataProvenance(field: .title, source: .filename, confidence: .low,
+            providedValue: "Offered", recordedAt: library.clock.now)
+        let name = MetadataProvenance(field: .displayName, source: .patch, confidence: .high,
+            providedValue: "Patched", recordedAt: library.clock.now)
+        try library.games.saveMetadataProvenance(title, ownerID: library.game.id)
+        try library.builds.saveMetadataProvenance(name, ownerID: library.patched.id)
+        let deleted = try library.operations.delete(library.operations.planGameDeletion(gameID: library.game.id))
+        #expect(try library.games.fetchMetadataProvenance(ownerID: library.game.id).isEmpty)
+        #expect(try library.builds.fetchMetadataProvenance(ownerID: library.patched.id).isEmpty)
+        try library.operations.restore(deletionID: deleted.id)
+        #expect(try library.games.fetchMetadataProvenance(ownerID: library.game.id) == [title])
+        #expect(try library.builds.fetchMetadataProvenance(ownerID: library.patched.id) == [name])
+        let again = try library.operations.delete(library.operations.planGameDeletion(gameID: library.game.id))
+        _ = try library.deletions.purgeDeletion(id: again.id, at: library.clock.now)
+        try library.games.insertGame(library.game)
+        try library.builds.insertBuild(library.patched)
+        #expect(try library.games.fetchMetadataProvenance(ownerID: library.game.id).isEmpty)
+        #expect(try library.builds.fetchMetadataProvenance(ownerID: library.patched.id).isEmpty)
     }
 }

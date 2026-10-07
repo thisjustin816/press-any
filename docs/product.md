@@ -51,8 +51,9 @@ versions, regional and revision variants, and Builds moving in or out. It has a 
 title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its
 own name; the base game's title stays as lineage. A hack that becomes an existing Game's
 Preferred Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title:
-Mole Mania DX"), on by default. Accepting it keeps the old title as an alias and makes the new
-one the player's. Moving that hack out with Make Separate Game, which suggests the hack's title for
+Mole Mania DX"), on by default. Accepting it keeps the old title as an alias and records the
+filename or patch as the new title's source. Editing the title records a player override.
+Moving that hack out with Make Separate Game, which suggests the hack's title for
 the new Game, gives the original Game back the title the hack was made from, as long as it still
 holds it as an alias; a copy leaves the title alone. A patch without hack tags offers its title only when it adds words without
 digits to the Game's.
@@ -64,8 +65,8 @@ in Game Details' menu or a Game's long-press menu in the library, keeps the form
 alias and records the player's title choice.
 
 A Game stores whether it is a favorite. Merging Games keeps the survivor a favorite if either
-was, and Make Separate Game carries the source Game's favorite state. v1 adds metadata
-provenance; tags, collections, documents and typed artwork follow in v1.1.
+was, and Make Separate Game carries the source Game's favorite state. Game titles and Build
+metadata keep provenance. Tags, collections, documents and typed artwork follow in v1.1.
 
 ### Build
 
@@ -293,9 +294,15 @@ every region. Unlisted tags sort after listed ones. These preferences supply sug
 only after confirmation in review. Existing titles with no recorded provenance stay protected
 during import. The player can opt into the order by accepting a regional title in Suggest Names.
 
-Filenames are evidence, not truth. Parsed values keep their source, the player's corrections win,
-and identity and bytes never change. The same rules name Builds in Import Review, Quick Play
-promotion and Open Patch.
+Filenames are evidence, not truth. Import Review, Quick Play promotion and Open Patch record the
+source of Game titles and Build names, region, language, revision, version, base title, hack title,
+author, translation and status. Each recorded field keeps the value its source offered and the time
+it was recorded. No-Intro values have high confidence; filename and patch values keep the parser's
+confidence.
+ROM-header fallbacks and patch filenames have their own sources. Review edits and later player
+corrections use the player source and retain the earlier offered value. A Game's title is protected
+as the player's exactly when its recorded source is player. Existing fields without a row have no
+recorded provenance. Identity and bytes never change.
 
 - Region and language groups, "Rev 1" or "Rev A" (a retail revision), "v1.2" and "Version 1.2"
   are recognized. A dotted "Rev 0.2.0" is a homebrew version. Versions keep a semver suffix such
@@ -341,15 +348,17 @@ promotion and Open Patch.
 - v1.1: Rename File to Canonical Name as an explicit action; bulk rename later.
 - v1.1: artwork by region and patch review offering the Game's other regional Build when a patch
   expects it.
-- Metadata provenance with a Metadata Details view, quiet provider refreshes that never overwrite
-  the player's values, and Build version ordering from semantic versions, build numbers and dates.
+- A Metadata Details view and quiet provider refreshes that preserve the player's values. Metadata
+  provenance is stored; the view and refreshes remain planned. Build version ordering from semantic
+  versions, build numbers and dates is also planned.
 
 ## Restructuring Games
 
 - **Make Separate Game** promotes a Build to its own Game, by Move (default) or Copy, without
   re-importing. Build-scoped data (states, recipes, toolchain reports, variable maps, settings,
-  notes and playtime) always follows the Build. A review sheet chooses the Game-level things: it
-  offers copies of the Game's artwork and Save Profiles, selecting the artwork and the profiles
+  notes, playtime and metadata provenance) always follows the Build. Copies keep copies of its
+  provenance rows, and merges keep the surviving Game's title provenance. A review sheet chooses
+  the Game-level things: it offers copies of the Game's artwork and Save Profiles, selecting the artwork and the profiles
   the Build plays or last wrote. Copies get their own files. The promoted Build plays its copy of
   the profile it played, and its states move to those copies, keeping their save times so Auto
   States still resume. The new Game records Split From, which survives the source Game's deletion.

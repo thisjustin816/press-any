@@ -7,6 +7,7 @@ import Foundation
 
 public final class InMemoryGameRepository: GameRepository, @unchecked Sendable {
     private let lock = NSLock()
+    private var provenance: [UUID: [MetadataField: MetadataProvenance]] = [:]
     private var values: [UUID: Game]
 
     public init(_ games: [Game] = []) {
@@ -25,14 +26,52 @@ public final class InMemoryGameRepository: GameRepository, @unchecked Sendable {
     }
 
     public func insertGame(_ game: Game) throws { lock.withLock { values[game.id] = game } }
-    public func updateGame(_ game: Game) throws { lock.withLock { values[game.id] = game } }
-    public func deleteGame(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+    public func updateGame(_ game: Game) throws {
+        lock.withLock {
+            var updated = game
+            if values[game.id]?.primaryTitle != game.primaryTitle {
+                let previous = provenance[game.id]?[.title]
+                provenance[game.id, default: [:]][.title] = previous?.playerOverride(recordedAt: game.modifiedAt)
+                    ?? MetadataProvenance(field: .title, source: .player, providedValue: game.primaryTitle, recordedAt: game.modifiedAt)
+                updated.hasPlayerTitle = true
+            } else if let title = provenance[game.id]?[.title] {
+                updated.hasPlayerTitle = title.source == .player
+            }
+            values[game.id] = updated
+        }
+    }
+
+    public func fetchMetadataProvenance(ownerID: UUID) throws -> [MetadataProvenance] {
+        lock.withLock {
+            guard values[ownerID] != nil else { return [] }
+            return (provenance[ownerID] ?? [:]).values.sorted { $0.field.rawValue < $1.field.rawValue }
+        }
+    }
+
+    public func saveMetadataProvenance(_ row: MetadataProvenance, ownerID: UUID) throws {
+        try lock.withLock {
+            guard values[ownerID] != nil else { throw BuildOperationError.gameNotFound(ownerID) }
+            guard row.field == .title else { throw InMemoryRepositoryError.invalidMetadataField(row.field) }
+            provenance[ownerID, default: [:]][row.field] = row
+            values[ownerID]?.hasPlayerTitle = row.source == .player
+        }
+    }
+
+    func hideGame(id: UUID) { _ = lock.withLock { values.removeValue(forKey: id) } }
+    func purgeMetadata(gameID: UUID) { _ = lock.withLock { provenance.removeValue(forKey: gameID) } }
+    public func deleteGame(id: UUID) throws {
+        lock.withLock {
+            values.removeValue(forKey: id)
+            provenance.removeValue(forKey: id)
+        }
+    }
 
     var all: [Game] { lock.withLock { Array(values.values) } }
 }
 
 public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable {
     private let lock = NSLock()
+    private var provenance: [UUID: [MetadataField: MetadataProvenance]] = [:]
     private var values: [UUID: Build]
     private var declarations: [BuildSaveDeclaration] = []
 
@@ -83,11 +122,34 @@ public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable
     public func insertBuild(_ build: Build) throws { lock.withLock { values[build.id] = build } }
     public func updateBuildMetadata(_ build: Build) throws {
         lock.withLock {
+            if let previous = values[build.id] {
+                for field in MetadataField.allCases where field != .title && field.value(in: previous) != field.value(in: build) {
+                    provenance[build.id, default: [:]][field] = provenance[build.id]?[field]?.playerOverride(recordedAt: build.modifiedAt)
+                        ?? MetadataProvenance(field: field, source: .player, providedValue: field.value(in: build), recordedAt: build.modifiedAt)
+                }
+            }
             var updated = build
             updated.totalPlaytimeSeconds = values[build.id]?.totalPlaytimeSeconds ?? build.totalPlaytimeSeconds
             values[build.id] = updated
         }
     }
+
+    public func fetchMetadataProvenance(ownerID: UUID) throws -> [MetadataProvenance] {
+        lock.withLock {
+            guard values[ownerID] != nil else { return [] }
+            return (provenance[ownerID] ?? [:]).values.sorted { $0.field.rawValue < $1.field.rawValue }
+        }
+    }
+
+    public func saveMetadataProvenance(_ row: MetadataProvenance, ownerID: UUID) throws {
+        try lock.withLock {
+            guard values[ownerID] != nil else { throw BuildOperationError.buildNotFound(ownerID) }
+            guard row.field != .title else { throw InMemoryRepositoryError.invalidMetadataField(row.field) }
+            provenance[ownerID, default: [:]][row.field] = row
+        }
+    }
+
+    func purgeMetadata(buildID: UUID) { _ = lock.withLock { provenance.removeValue(forKey: buildID) } }
 
     public func addPlaytime(buildID: UUID, seconds: Double) throws {
         try lock.withLock {
@@ -325,4 +387,5 @@ public final class InMemorySettingsStore: SettingsStore, @unchecked Sendable {
 
 public enum InMemoryRepositoryError: Error, Equatable {
     case duplicateRelativePath(String)
+    case invalidMetadataField(MetadataField)
 }

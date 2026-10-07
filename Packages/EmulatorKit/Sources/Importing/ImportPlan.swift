@@ -81,12 +81,12 @@ public struct ROMImportPlan: Equatable, Sendable {
     public let analysis: ROMImportAnalysis
     public let disposition: ROMImportDisposition
     public let buildDisplayName: String
+    public let suggestedBuildDisplayName: String
     public let markAsBase: Bool
     public let markAsPreferred: Bool
     public let metadata: BuildImportMetadata
     public let proposedGameTitle: String?
-    /// The player chose `proposedGameTitle` in review, as with a hack's own title, so it replaces
-    /// even a title they set before and becomes theirs.
+    /// The player edited the proposed title, so it replaces even a title they set before.
     public let proposedGameTitleIsPlayers: Bool
     public let hasPlayerTitle: Bool
     public let baseGameReference: BaseGameReference?
@@ -101,14 +101,18 @@ public struct ROMImportPlan: Equatable, Sendable {
         proposedGameTitle: String? = nil,
         proposedGameTitleIsPlayers: Bool = false,
         hasPlayerTitle: Bool = false,
-        baseGameReference: BaseGameReference? = nil
+        baseGameReference: BaseGameReference? = nil,
+        suggestedBuildDisplayName: String? = nil
     ) {
         self.analysis = analysis
         self.disposition = disposition
         self.buildDisplayName = buildDisplayName
+        self.suggestedBuildDisplayName = suggestedBuildDisplayName ?? analysis.filenameMetadata.suggestedBuildName
         self.markAsBase = markAsBase
         self.markAsPreferred = markAsPreferred
-        self.metadata = metadata ?? BuildImportMetadata(analysis: analysis)
+        var suggestedMetadata = BuildImportMetadata(analysis: analysis)
+        if let baseGameReference { suggestedMetadata.baseTitle = baseGameReference.title }
+        self.metadata = metadata ?? suggestedMetadata
         self.proposedGameTitle = proposedGameTitle
         self.proposedGameTitleIsPlayers = proposedGameTitleIsPlayers
         self.hasPlayerTitle = hasPlayerTitle

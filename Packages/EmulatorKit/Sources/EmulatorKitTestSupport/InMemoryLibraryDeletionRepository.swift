@@ -46,7 +46,7 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
         let records = deletion.records
         var stash = Stash()
         for id in records.gameIDs {
-            if let game = try games.fetchGame(id: id) { stash.games.append(game); try games.deleteGame(id: id) }
+            if let game = try games.fetchGame(id: id) { stash.games.append(game); games.hideGame(id: id) }
         }
         for id in records.buildIDs {
             if let build = try builds.fetchBuild(id: id) { stash.builds.append(build); builds.removeBuild(id: id) }
@@ -131,9 +131,13 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
         for purged in purgedDeletions {
             guard let stash = lock.withLock({ stashes.removeValue(forKey: purged.id) }) else { continue }
             lock.withLock { _ = deletions.removeValue(forKey: purged.id) }
-            for game in stash.games { if let artwork = game.artworkAssetID { candidates.insert(artwork) } }
+            for game in stash.games {
+                games.purgeMetadata(gameID: game.id)
+                if let artwork = game.artworkAssetID { candidates.insert(artwork) }
+            }
             for build in stash.builds {
                 builds.purgeSaveDeclarations(buildID: build.id)
+                builds.purgeMetadata(buildID: build.id)
                 candidates.insert(build.imageAssetID)
                 if let recipe = recipes.all.first(where: { $0.resultBuildID == build.id }) {
                     candidates.formUnion(recipe.items.map(\.patchAssetID))

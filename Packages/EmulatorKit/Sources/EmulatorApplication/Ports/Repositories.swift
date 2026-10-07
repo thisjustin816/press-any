@@ -1,7 +1,7 @@
 import Foundation
 import EmulatorDomain
 
-public protocol GameRepository: Sendable {
+public protocol GameRepository: MetadataProvenanceRepository {
     func fetchGame(id: UUID) throws -> Game?
     func fetchGames() throws -> [Game]
     func insertGame(_ game: Game) throws
@@ -9,7 +9,7 @@ public protocol GameRepository: Sendable {
     func deleteGame(id: UUID) throws
 }
 
-public protocol BuildRepository: Sendable {
+public protocol BuildRepository: MetadataProvenanceRepository {
     /// Declarations with both Builds live, including a pair separated by a Game move.
     func fetchSaveDeclarations(buildID: UUID) throws -> [BuildSaveDeclaration]
     /// Sets or replaces the pair's declaration. Both Builds must be live in the same Game.
@@ -28,6 +28,7 @@ public protocol BuildRepository: Sendable {
     func setImageSHA1(buildID: UUID, sha1: String) throws
     func insertBuild(_ build: Build) throws
     /// Updates presentation and preferences, leaving accumulated playtime intact.
+    /// Changes to tracked presentation fields record player overrides.
     func updateBuildMetadata(_ build: Build) throws
     func addPlaytime(buildID: UUID, seconds: Double) throws
     func moveBuild(id: UUID, toGameID: UUID) throws

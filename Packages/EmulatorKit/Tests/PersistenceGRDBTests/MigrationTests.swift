@@ -6,6 +6,34 @@ import Testing
 
 @Suite("GRDB migrations")
 struct MigrationTests {
+    @Test("provenance upgrade preserves every populated table and adds no rows", arguments: [false, true])
+    func metadataProvenanceUpgrade(includingDeletedRecords: Bool) throws {
+        let database = try AppDatabase.inMemory()
+        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v11-save-compatibility")
+        let fixture = try legacyFixture(in: database, includingDeletedRecords: includingDeletedRecords)
+        try database.writer.write { db in
+            let declaration = BuildSaveDeclaration(between: fixture.build.id, and: fixture.patchedBuild.id, compatibility: .sharesSaves)
+            try db.execute(sql: "INSERT INTO build_save_declarations VALUES (?, ?, ?)",
+                arguments: [PersistenceCodec.uuid(declaration.firstBuildID), PersistenceCodec.uuid(declaration.secondBuildID), "sharesSaves"])
+        }
+        let before = try database.writer.read { db in
+            let tables = try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'grdb_migrations' ORDER BY name")
+            return try tables.map { table in (table, try Row.fetchAll(db, sql: "SELECT * FROM \(table) ORDER BY rowid")) }
+        }
+        #expect(before.count == 14)
+        #expect(before.allSatisfy { !$0.1.isEmpty })
+        try database.migrate()
+        try database.writer.read { db throws -> Void in
+            for (table, rows) in before {
+                #expect(try Row.fetchAll(db, sql: "SELECT * FROM \(table) ORDER BY rowid") == rows)
+            }
+            #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM game_metadata_provenance") == 0)
+            #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_metadata_provenance") == 0)
+            #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").last == "v1-v14-metadata-provenance")
+        }
+    }
+
     @Test("library-model and save compatibility upgrades preserve every populated table",
         arguments: ["v1-v9-game-identity", "v1-v10-library-model"], [false, true])
     func libraryModelUpgrade(from migration: String, includingDeletedRecords: Bool) throws {
@@ -34,8 +62,8 @@ struct MigrationTests {
                 #expect(upgraded == rows, "migration changed existing rows in \(table)")
             }
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(3) == [
-                "v1-v9-game-identity", "v1-v10-library-model", "v1-v11-save-compatibility",
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(4) == [
+                "v1-v9-game-identity", "v1-v10-library-model", "v1-v11-save-compatibility", "v1-v14-metadata-provenance",
             ])
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_save_declarations") == 0)
         }

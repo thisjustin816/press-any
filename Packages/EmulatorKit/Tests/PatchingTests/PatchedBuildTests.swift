@@ -3,6 +3,8 @@ import EmulatorApplication
 import EmulatorDomain
 import EmulatorKitTestSupport
 import Foundation
+import Importing
+import Testing
 import XCTest
 @testable import Patching
 
@@ -515,5 +517,50 @@ extension PatchedBuildTests {
             gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patch)], displayName: "Hack"
         ))
         XCTAssertEqual(build.system, .gameBoyColor)
+    }
+}
+
+@Suite("Patch metadata provenance")
+struct PatchMetadataProvenanceTests {
+    @Test("patch names and metadata keep their source, including the adopted Game title")
+    func patchFields() throws {
+        let harness = try PatchBuildHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.root) }
+        let patch = harness.external.appendingPathComponent("Test - Test Plus (USA) (En) (Rev A) [Hack] [Author: Hacker] [Translation: Spanish] [v1.2] [Beta].ips")
+        try singleByteIPS(offset: 1, value: 0x58).write(to: patch)
+        let naming = FilenameMetadataParser.parse(filename: patch.lastPathComponent)
+        let displayName = BuildNaming.patchBuildName(for: naming, gameTitle: "Test")
+        let build = try harness.creator.execute(.init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id,
+            patchURLs: [patch], displayName: displayName, metadata: BuildNaming.patchMetadata(for: naming), gameTitle: "Test Plus"))
+        let rows = try harness.builds.fetchMetadataProvenance(ownerID: build.id)
+        #expect(rows.count == 10)
+        #expect(rows.allSatisfy { $0.source == .patch && $0.confidence == .high && $0.providedValue == $0.field.value(in: build) })
+        let title = try #require(try harness.games.fetchMetadataProvenance(ownerID: harness.gameID).first)
+        #expect(title.source == .patch)
+        #expect(title.providedValue == "Test Plus")
+        #expect(try harness.games.fetchGame(id: harness.gameID)?.hasPlayerTitle == false)
+        #expect(try harness.games.fetchGame(id: harness.gameID)?.aliases.contains("Test") == true)
+    }
+
+    @Test("patch review edits keep the patch's offered name and values")
+    func patchReviewEdits() throws {
+        let harness = try PatchBuildHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.root) }
+        let patch = harness.external.appendingPathComponent("Test Plus (USA) [v1.2].ips")
+        try singleByteIPS(offset: 1, value: 0x58).write(to: patch)
+        let naming = FilenameMetadataParser.parse(filename: patch.lastPathComponent)
+        var metadata = BuildNaming.patchMetadata(for: naming)
+        metadata.region = "Europe"
+        let build = try harness.creator.execute(.init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id,
+            patchURLs: [patch], displayName: "My Patch", metadata: metadata))
+        let rows = try harness.builds.fetchMetadataProvenance(ownerID: build.id)
+        let name = try #require(rows.first { $0.field == .displayName })
+        #expect(name.source == .player)
+        #expect(name.providedValue == "Test Plus v1.2")
+        let region = try #require(rows.first { $0.field == .region })
+        #expect(region.source == .player)
+        #expect(region.confidence == nil)
+        #expect(region.providedValue == "USA")
+        #expect(rows.first { $0.field == .hackTitle }?.source == .patch)
     }
 }
