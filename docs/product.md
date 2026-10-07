@@ -192,6 +192,8 @@ changes the library; review shows what will happen; commit is all or nothing.
   A higher-ranked release offers the better title and Preferred mark in review; each can be
   declined before Import confirms them. Ties keep the existing choice. A player-set title is
   never replaced, and changing the setting doesn't rename or change Preferred in existing Games.
+  Preexisting titles without recorded provenance also stay protected during import; Suggest Names
+  lets the player opt them into regional title proposals.
 - **Roles.** Other new Builds default to Preferred. A Build defaults to Base when the Game has none,
   unless it's a ROM hack. Where the Game has a Base, only a newer homebrew release defaults to
   replacing it: one whose version or date sorts after the Base's, or any versioned file when the
@@ -248,6 +250,7 @@ No-Intro in Acknowledgements anyway, with the data's date.
   family membership are looked up from the bundle when needed. Family titles are kept as searchable
   Game aliases when a release joins, and explicit Match Game choices keep base-game lineage even
   without the ROM. Refreshing the data never renames a Game or replaces a player's title.
+  Suggest Names can offer the best regional title among releases already held by the Game.
 - A known dump takes its canonical name ahead of the filename, and a Game created from one is
   titled by its regional title. The original filename is always kept.
 - A Build's Technical Info shows Verified (with the dump's name), Bad Dump, Modified (patched from
@@ -259,8 +262,8 @@ Settings > Library > Regions and Languages starts with USA, Europe, Japan. Both 
 reordered, added to or cleared; languages break a region tie, starting with En, Fr, De, Es, It, Ja.
 A release listing several regions or languages uses its best-ranked tag; World is available in
 every region. Unlisted tags sort after listed ones. These preferences supply suggestions applied
-only after confirmation in review. Existing titles with no recorded provenance are preserved
-conservatively.
+only after confirmation in review. Existing titles with no recorded provenance stay protected
+during import. The player can opt into the order by accepting a regional title in Suggest Names.
 
 Filenames are evidence, not truth. Parsed values keep their source, the player's corrections win,
 and identity and bytes never change. The same rules name Builds in Import Review, Quick Play
@@ -278,9 +281,20 @@ promotion and Open Patch.
 - A suggested name that repeats one already in the Game gains the day ("v1.0 · Oct 6"), then the
   time, then a number. A name the player typed is left alone. A Build sharing its name with
   another shows its date and time in the list.
-- Suggest Build Names, in the library's view menu, offers these names for Builds whose names look
-  generated: URL escapes, the bare source filename, repeats, or the generic "Original" and "Hack".
-  Nothing is renamed until the player chooses Rename.
+- Suggest Names, in the library's view menu, shows Game title suggestions above Build names.
+  A Game with No-Intro releases gets a title suggestion when its best-ranked release under the
+  app's region and language order has a different title. This uses the same selection as Import
+  Review, including stable ties; missing Build region or language fields use the matched release's
+  data. It includes protected titles because choosing Rename is an explicit opt-in. Games without
+  a No-Intro release get no title suggestion.
+  Each row shows the current title, proposed title and release region. Accepting the proposed
+  title keeps the old title as an alias and leaves the Game following the order, so later imports
+  can offer regional title proposals again. An edited title is the player's and stays protected;
+  skipping leaves the Game unchanged. Preferred Builds are untouched.
+  Build names still use the import naming rules for names that look generated: URL escapes, the
+  bare source filename, repeats, or the generic "Original" and "Hack". Both kinds can be accepted,
+  edited or skipped; nothing changes until Rename. With neither kind to suggest, review says
+  Game titles and Build names look right.
 
 ### Planned (v1)
 

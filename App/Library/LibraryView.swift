@@ -24,7 +24,7 @@ struct LibraryView: View {
     @State private var pendingFileAction: FileAction = .importROM
     @State private var importReview: ImportReviewPresentation?
     @State private var showSettings = false
-    @State private var showBuildNameReview = false
+    @State private var showNameReview = false
     @State private var showFamilyMergeReview = false
     @State private var showSaveChooser = false
     @State private var chosenQuickPlaySave: UUID?
@@ -115,9 +115,9 @@ struct LibraryView: View {
                         }
                         Section {
                             Button {
-                                showBuildNameReview = true
+                                showNameReview = true
                             } label: {
-                                Label("Suggest Build Names…", systemImage: "character.cursor.ibeam")
+                                Label("Suggest Names…", systemImage: "character.cursor.ibeam")
                             }
                             Button("Suggest Game Merges…", systemImage: "arrow.triangle.merge") {
                                 showFamilyMergeReview = true
@@ -208,8 +208,8 @@ struct LibraryView: View {
             .sheet(isPresented: $showFamilyMergeReview) {
                 FamilyMergeReviewView(container: container)
             }
-            .sheet(isPresented: $showBuildNameReview) {
-                BuildNameReviewView(container: container)
+            .sheet(isPresented: $showNameReview) {
+                NameReviewView(container: container)
             }
             .sheet(isPresented: $showSettings) {
                 AppSettingsView(

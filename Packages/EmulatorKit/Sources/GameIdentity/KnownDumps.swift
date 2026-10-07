@@ -89,6 +89,10 @@ public struct KnownDump: Codable, Equatable, Sendable {
             files: try container.decode([KnownDumpFile].self, forKey: .files)
         )
     }
+
+    public func releaseTitle(for build: Build) -> ReleaseTitle {
+        ReleaseTitle(title: title, region: build.region ?? region, language: build.language ?? languages)
+    }
 }
 
 /// The bundled file: where the data came from and every known game.

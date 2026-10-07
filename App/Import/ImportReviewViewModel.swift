@@ -260,24 +260,13 @@ final class ImportReviewViewModel: ObservableObject {
             } else if let current = releases.first {
                 preferred = releasePreference.prefers(region: region, language: language, overRegion: current.0.region, overLanguage: current.0.language)
             }
-            let ordered = releases.sorted {
-                if ($0.1.title == game.primaryTitle) != ($1.1.title == game.primaryTitle) { return $0.1.title == game.primaryTitle }
-                return $0.0.createdAt < $1.0.createdAt
-            }
-            if let first = ordered.first {
-                var bestTitle = first.1.title
-                var bestRegion = first.0.region, bestLanguage = first.0.language
-                for (build, dump) in ordered.dropFirst() {
-                    if releasePreference.prefers(region: build.region, language: build.language, overRegion: bestRegion, overLanguage: bestLanguage) {
-                        bestTitle = dump.title
-                        bestRegion = build.region
-                        bestLanguage = build.language
-                    }
-                }
-                if releasePreference.prefers(region: region, language: language, overRegion: bestRegion, overLanguage: bestLanguage) {
-                    bestTitle = incoming.title
-                }
-                if !game.hasPlayerTitle, bestTitle != game.primaryTitle { proposedTitle = bestTitle }
+            if !releases.isEmpty, !game.hasPlayerTitle {
+                let titles = releases.sorted {
+                    ($0.0.createdAt, $0.0.id.uuidString) < ($1.0.createdAt, $1.0.id.uuidString)
+                }.map { $0.1.releaseTitle(for: $0.0) }
+                    + [ReleaseTitle(title: incoming.title, region: region, language: language)]
+                if let best = releasePreference.preferredTitle(among: titles, currentTitle: game.primaryTitle),
+                   best.title != game.primaryTitle { proposedTitle = best.title }
             }
         }
         if markAsPreferred == previousPreferredSuggestion { markAsPreferred = preferred }

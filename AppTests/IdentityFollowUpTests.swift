@@ -8,6 +8,68 @@ import XCTest
 
 @MainActor
 final class IdentityFollowUpTests: XCTestCase {
+    func testEditingBatchSuggestionBackToCurrentTitleProtectsIt() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanUp() }
+        let japan = try fixture.review(1).commit()
+        let usa = try fixture.review(0)
+        usa.acceptProposedTitle = false
+        _ = try usa.commit()
+        let model = NameReviewViewModel(games: fixture.container.repositories.games, builds: fixture.container.repositories.builds,
+            assets: fixture.container.repositories.assets, index: fixture.index, preference: ReleasePreference(),
+            operations: fixture.container.buildOperations)
+        model.load()
+        XCTAssertEqual(model.gameItems.count, 1)
+        model.gameItems[0].title = japan.game.primaryTitle
+        XCTAssertTrue(model.apply())
+        let game = try XCTUnwrap(fixture.container.repositories.games.fetchGame(id: japan.game.id))
+        XCTAssertEqual(game.primaryTitle, japan.game.primaryTitle)
+        XCTAssertTrue(game.hasPlayerTitle)
+    }
+
+    func testBatchGameTitlesAcceptEditAndSkipWithoutChangingPreferredBuilds() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanUp() }
+        let japan = try fixture.review(1).commit()
+        try fixture.container.buildOperations.renameGame(gameID: japan.game.id, title: japan.game.primaryTitle)
+        let usaReview = try fixture.review(0)
+        XCTAssertNil(usaReview.proposedTitle, "preexisting or player titles stay protected during import")
+        let usa = try usaReview.commit()
+        let edited = try fixture.container.buildOperations.promoteBuild(buildID: usa.build.id, title: "Edited Regional", mode: .copy)
+        let skipped = try fixture.container.buildOperations.promoteBuild(buildID: usa.build.id, title: "Skipped Regional", mode: .copy)
+        let before = try fixture.container.repositories.games.fetchGames()
+        let model = NameReviewViewModel(games: fixture.container.repositories.games, builds: fixture.container.repositories.builds,
+            assets: fixture.container.repositories.assets, index: fixture.index, preference: ReleasePreference(),
+            operations: fixture.container.buildOperations)
+        model.load()
+        XCTAssertNil(model.errorMessage)
+        XCTAssertEqual(model.gameItems.count, 3)
+        XCTAssertEqual(try fixture.container.repositories.games.fetchGames(), before)
+        let editedIndex = try XCTUnwrap(model.gameItems.firstIndex { $0.id == edited.id })
+        model.gameItems[editedIndex].title = "  My Crystal  "
+        let skippedIndex = try XCTUnwrap(model.gameItems.firstIndex { $0.id == skipped.id })
+        model.gameItems[skippedIndex].accepted = false
+        for index in model.buildItems.indices { model.buildItems[index].accepted = false }
+        XCTAssertTrue(model.apply())
+
+        let accepted = try XCTUnwrap(fixture.container.repositories.games.fetchGame(id: japan.game.id))
+        XCTAssertEqual(accepted.primaryTitle, "Crystal")
+        XCTAssertTrue(accepted.aliases.contains(japan.game.primaryTitle))
+        XCTAssertFalse(accepted.hasPlayerTitle)
+        let player = try XCTUnwrap(fixture.container.repositories.games.fetchGame(id: edited.id))
+        XCTAssertEqual(player.primaryTitle, "My Crystal")
+        XCTAssertTrue(player.aliases.contains(edited.primaryTitle))
+        XCTAssertTrue(player.hasPlayerTitle)
+        XCTAssertEqual(try fixture.container.repositories.games.fetchGame(id: skipped.id), before.first { $0.id == skipped.id })
+        for game in before {
+            XCTAssertEqual(try fixture.container.repositories.games.fetchGame(id: game.id)?.preferredBuildID, game.preferredBuildID)
+        }
+        let later = try fixture.review(2, preference: ReleasePreference(regions: ["Japan", "USA", "Europe"]))
+        later.destination = .existing(accepted.id)
+        later.destinationChanged()
+        XCTAssertEqual(later.proposedTitle, "Pocket Monsters Crystal", "accepting opts into later regional proposals")
+    }
+
     func testBetterRegionProposesTitleAndPreferredOnlyDuringReview() throws {
         let fixture = try Fixture()
         defer { fixture.cleanUp() }

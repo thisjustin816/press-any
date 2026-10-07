@@ -102,13 +102,13 @@ public struct BuildOperations: Sendable {
         try builds.updateBuildMetadata(build)
     }
 
-    public func renameGame(gameID: UUID, title: String) throws {
+    public func renameGame(gameID: UUID, title: String, hasPlayerTitle: Bool = true) throws {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { throw BuildOperationError.invalidGameTitle }
         guard var game = try games.fetchGame(id: gameID) else { throw BuildOperationError.gameNotFound(gameID) }
         game.addAliases([game.primaryTitle])
         game.primaryTitle = title
-        game.hasPlayerTitle = true
+        game.hasPlayerTitle = hasPlayerTitle
         game.modifiedAt = now()
         try games.updateGame(game)
     }
