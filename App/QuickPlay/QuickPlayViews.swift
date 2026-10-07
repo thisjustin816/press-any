@@ -256,10 +256,11 @@ struct QuickPlaySessionsView: View {
             .selectionControls(selection: $selection, available: Set(sessions.map(\.id)), action: "Discard") {
                 batchDiscard = sessions.filter { selection.ids.contains($0.id) }
             }
-            .confirmationDialog("Discard \(batchDiscard?.count ?? 0) \((batchDiscard?.count ?? 0) == 1 ? "Session" : "Sessions")?", isPresented: Binding(
+            // Alerts, not confirmation dialogs: a dialog's popover would point at the whole list.
+            .alert(batchDiscardTitle, isPresented: Binding(
                 get: { batchDiscard != nil },
                 set: { if !$0 { batchDiscard = nil } }
-            ), titleVisibility: .visible, presenting: batchDiscard) { sessions in
+            ), presenting: batchDiscard) { sessions in
                 Button("Discard (\(sessions.count))", role: .destructive) { discardSelected(sessions) }
                 Button("Cancel", role: .cancel) {}
             } message: { _ in
@@ -271,11 +272,12 @@ struct QuickPlaySessionsView: View {
                 }
             }
             .onAppear(perform: reload)
-            .confirmationDialog("Discard this session?", isPresented: Binding(
+            .alert("Discard This Session?", isPresented: Binding(
                 get: { discardTarget != nil },
                 set: { if !$0 { discardTarget = nil } }
-            ), titleVisibility: .visible, presenting: discardTarget) { session in
+            ), presenting: discardTarget) { session in
                 Button("Discard", role: .destructive) { discard(session) }
+                Button("Cancel", role: .cancel) {}
             } message: { _ in
                 Text(QuickPlaySessionView.discardMessage)
             }
@@ -288,6 +290,11 @@ struct QuickPlaySessionsView: View {
                 Text(errorMessage ?? "")
             }
         }
+    }
+
+    private var batchDiscardTitle: String {
+        let count = batchDiscard?.count ?? 0
+        return "Discard \(count) \(count == 1 ? "Session" : "Sessions")?"
     }
 
     private func sessionLabel(_ session: QuickPlaySession) -> some View {
