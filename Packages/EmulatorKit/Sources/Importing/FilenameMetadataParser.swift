@@ -173,8 +173,8 @@ public enum FilenameMetadataParser {
         } else {
             cleanTitle = title
         }
-        // A version word mid-name, as in "Serve-Sisters-Coop-v5-Stability": the words after it
-        // describe the variant.
+        // A version word mid-name, as in "Serve-Sisters-Coop-v5-Stability" or
+        // "match-land-live-0.3.0+live1": the words after it describe the variant.
         if version == nil, let stamp = versionStamp(in: cleanTitle) {
             version = stamp.version
             status = status ?? stamp.variant.map { canonicalStatus($0) ?? $0 }
@@ -271,10 +271,19 @@ public enum FilenameMetadataParser {
         let words = title.split(whereSeparator: { $0 == " " || $0 == "_" || (splitsHyphens && $0 == "-") })
             .map(String.init)
         guard words.count >= 2 else { return nil }
+        // A bare number needs a dot to count, so "Mega Man 2" keeps its 2.
+        let bareVersion = #"^([0-9]+(?:\.[0-9]+){1,3}"# + versionSuffixPattern + #")$"#
         for index in stride(from: words.count - 1, through: 1, by: -1) {
-            guard let value = captures(in: words[index], pattern: #"(?i)^v("# + versionPattern + #")$"#).first else { continue }
+            guard let value = captures(in: words[index], pattern: #"(?i)^v("# + versionPattern + #")$"#).first
+                ?? captures(in: words[index], pattern: bareVersion).first
+            else { continue }
+            var titleWords = Array(words[..<index])
+            // An all-lowercase joined name, as in "match-land-live-0.3.0", reads better capitalized.
+            if title.allSatisfy({ !$0.isUppercase }) {
+                titleWords = titleWords.map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            }
             let variant = words[(index + 1)...].joined(separator: " ")
-            return (words[..<index].joined(separator: " "), value, variant.isEmpty ? nil : variant)
+            return (titleWords.joined(separator: " "), value, variant.isEmpty ? nil : variant)
         }
         return nil
     }

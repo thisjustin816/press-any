@@ -276,7 +276,14 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(spaced.buildMetadata.versionString, "2")
         XCTAssertEqual(spaced.buildMetadata.status, "Demo")
 
-        for filename in ["Pac-Man.gb", "Serve-Sisters-Coop.gbc", "v2.gb", "Movie-vs-Book.gb"] {
+        // A dotted version needs no "v"; an all-lowercase name is capitalized.
+        let bare = FilenameMetadataParser.parse(filename: "match-land-live-0.3.0+live1.gb")
+        XCTAssertEqual(bare.suggestedTitle, "Match Land Live")
+        XCTAssertEqual(bare.buildMetadata.versionString, "0.3.0+live1")
+        XCTAssertNil(bare.buildMetadata.status)
+        XCTAssertEqual(bare.suggestedBuildName, "v0.3.0+live1")
+
+        for filename in ["Pac-Man.gb", "Serve-Sisters-Coop.gbc", "v2.gb", "Movie-vs-Book.gb", "Mega-Man-2.gb", "1.5.gb"] {
             XCTAssertNil(FilenameMetadataParser.parse(filename: filename).buildMetadata.versionString, filename)
         }
         XCTAssertEqual(FilenameMetadataParser.parse(filename: "Pac-Man.gb").suggestedTitle, "Pac-Man")

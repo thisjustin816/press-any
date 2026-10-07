@@ -247,7 +247,9 @@ promotion and Open Patch.
   stay in the title, since "R-Type" and "Mega Man 2" look the same.
 - In a name joined by hyphens or underscores, a "v5" or "v1.2" word mid-name becomes the version
   and the words after it the status: "Serve-Sisters-Coop-v5-Stability" is "Serve Sisters Coop",
-  version 5, status Stability. A lone "v2" is never the whole title.
+  version 5, status Stability. A dotted number needs no "v": "match-land-live-0.3.0+live1" is
+  "Match Land Live", version 0.3.0+live1, with an all-lowercase name capitalized. A lone "v2" is
+  never the whole title.
 - A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version,
   shown as "2026-10-06" and sorted by date; the words after it become the status. Only a valid
   eight-digit or hyphenated date counts, and never as the whole title.
