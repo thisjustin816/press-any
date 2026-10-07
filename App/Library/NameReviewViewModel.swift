@@ -73,7 +73,7 @@ final class NameReviewViewModel: ObservableObject {
         errorMessage = nil
         for item in gameItems where item.accepted {
             let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !title.isEmpty else { continue }
+            guard !title.isEmpty, title != item.suggestion.currentTitle else { continue }
             do {
                 try operations.renameGame(gameID: item.id, title: title, hasPlayerTitle: title != item.suggestion.proposedTitle)
                 renamedGames.insert(item.id)
