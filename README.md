@@ -53,9 +53,8 @@ For TestFlight uploads and App Store screenshots without a Mac, follow `docs/tes
 ## Documentation
 
 - [Privacy policy](PRIVACY.md).
-- `docs/specs/`: the product and MVP specifications, the original decision log, and the
-  decisions approved after it.
-- `docs/decisions.md`: decisions made since, newest first.
+- `docs/product.md`: what the app is and how it behaves, including what v1 still needs.
+- `docs/backlog.md`: what's built and what's left.
 - `docs/acceptance-matrix.md`: the L1-L4 evidence levels CI and device checks use.
 - `docs/ci.md`: what each CI job runs.
 - `docs/NAMING.md`: product, technical and persistent names.

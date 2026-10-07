@@ -371,7 +371,7 @@ final class GameplayViewController: UIViewController {
         }
     }
 
-    /// Quick Play's primary metric (docs/decisions.md): time from choosing the file to the first
+    /// Quick Play's primary metric (docs/product.md): time from choosing the file to the first
     /// frame handed to Metal. The device checklist records this figure.
     private func reportFirstFrame() {
         guard let start = firstFrameClock else { return }
@@ -584,7 +584,7 @@ final class GameplayViewController: UIViewController {
     }
 
     /// Back in front. After a trip to the background, Resume Games decides; after only an
-    /// overlay such as Control Center, the game picks up where it was (docs/decisions.md). A game
+    /// overlay such as Control Center, the game picks up where it was. A game
     /// the player paused stays paused either way.
     func sceneDidActivate() {
         pauseReasons.inactive = false

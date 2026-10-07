@@ -178,7 +178,7 @@ public struct PromoteQuickPlay: Sendable {
                 shortfalls.insert(.resumePointNotMoved)
             }
             // Play on this Build continues what was kept, even when the Build was already in the
-            // library (docs/decisions.md). The Game's default and other Builds stay as they were.
+            // library. The Game's default and other Builds stay as they were.
             do {
                 build = try setDefaultSave(promotedProfile.id, buildID: result.build.id)
             } catch {

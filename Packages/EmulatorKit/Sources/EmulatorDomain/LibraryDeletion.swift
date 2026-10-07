@@ -50,7 +50,7 @@ public struct LibraryDeletion: Identifiable, Equatable, Sendable {
         case saveState
     }
 
-    /// Thirty days (Q90).
+    /// Thirty days.
     public static let retention: TimeInterval = 30 * 24 * 60 * 60
 
     public let id: UUID
@@ -75,7 +75,7 @@ public struct LibraryDeletion: Identifiable, Equatable, Sendable {
 }
 
 /// A record that was purged for good. Tombstones are never removed, so a copy of the library that
-/// was offline when the record went, such as another device's, can't bring it back (Q90).
+/// was offline when the record went, such as another device's, can't bring it back.
 public struct Tombstone: Equatable, Sendable {
     public let recordID: UUID
     public let kind: LibraryRecordKind

@@ -39,7 +39,7 @@ public struct LaunchContext: Hashable, Sendable {
 /// Keys in the settings store. The raw values are stored, so renaming a case must not change them.
 public enum SettingKey: String, Sendable, CaseIterable {
     /// Bool, unset means false. Library launches start past the boot logo when true; Quick Play
-    /// always skips it (docs/decisions.md).
+    /// always skips it.
     case skipBootAnimation
     /// `AutoResumePolicy`, unset means `.always`. Applies when a library game launches with a
     /// resumable Auto State and when the app returns to the foreground mid-session.

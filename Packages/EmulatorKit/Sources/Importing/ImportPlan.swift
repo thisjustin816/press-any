@@ -29,7 +29,7 @@ public struct ROMImportAnalysis: Equatable, Sendable {
     /// The image as No-Intro lists it, which says whether it is a bad copy.
     public let knownFile: KnownDumpFile?
     /// The Games already holding a Build from the dump's family. With exactly one, it is the
-    /// suggested Game; with several, the player chooses (Q157).
+    /// suggested Game; with several, the player chooses.
     public let familyGameIDs: [UUID]
 
     public init(
