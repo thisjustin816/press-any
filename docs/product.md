@@ -585,8 +585,23 @@ the narrow playthrough overrides above. Sound is app-wide.
 Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (from System
 down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games and Skip Boot Logo.
 App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics and Hide Touch Controls with a
-Controller. Settings groups them under
-Controls, Display, Sound and Playing.
+Controller.
+
+App Settings is a short list of pages, like the iPhone's own Settings:
+
+- **Controls**: Controller Layout and Controller Theme; Touch Haptics and Tap Game for Menu under
+  Touch; Hide Touch Controls under With a Controller.
+- **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
+- **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo.
+- **Systems**: Game Boy and Game Boy Color, each opening that system's settings.
+- **Library**: Recently Deleted and Check Library.
+- **About**: How Press Any Works, the Privacy Policy and Acknowledgements.
+
+The settings for a system, a Game, a Build or the open game are one sheet, short enough to sit at
+half height over a paused game. They're grouped under Display (Orientation, Screen Scaling, Screen
+Colors, LCD Filter, Frame Blending), Controls (Controller Layout) and Playing (Fast Forward Speed
+and Audio, Resume Games, Skip Boot Logo). Under each setting's name a note says where its value
+comes from, such as "From Game Boy settings", or that it's set here.
 
 v1 adds automatic DMG, GBC or SGB model selection with overrides at every level (no promise that
 every GBC-only game works in DMG mode), and SGB palettes, borders and enhancements where SameBoy
