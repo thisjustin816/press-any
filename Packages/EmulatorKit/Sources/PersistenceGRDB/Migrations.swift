@@ -38,8 +38,28 @@ extension AppDatabase {
         migrator.registerMigration("v1-v11-save-compatibility") { db in
             try db.execute(sql: V1V11SaveCompatibilitySchema.sql)
         }
+        migrator.registerMigration("v1-v12-system-screen-colors") { db in
+            try db.execute(sql: V1V12SystemScreenColorsSchema.sql)
+        }
         return migrator
     }
+}
+
+/// Screen Colors moved from App Settings to each system's settings: the Game Boy palette to Game
+/// Boy, color correction to Game Boy Color. A value chosen in App Settings before the move becomes
+/// that system's value, unless the system already has one, and leaves App scope, where no screen
+/// shows it anymore.
+enum V1V12SystemScreenColorsSchema {
+    static let sql = """
+    INSERT OR IGNORE INTO settings_overrides (scope_type, scope_id, key, value_json)
+    SELECT 'system', 'gb', key, value_json FROM settings_overrides
+    WHERE scope_type = 'app' AND scope_id = 'app' AND key = 'dmgPalette';
+    INSERT OR IGNORE INTO settings_overrides (scope_type, scope_id, key, value_json)
+    SELECT 'system', 'gbc', key, value_json FROM settings_overrides
+    WHERE scope_type = 'app' AND scope_id = 'app' AND key = 'colorCorrection';
+    DELETE FROM settings_overrides
+    WHERE scope_type = 'app' AND scope_id = 'app' AND key IN ('dmgPalette', 'colorCorrection');
+    """
 }
 
 enum V1V11SaveCompatibilitySchema {
