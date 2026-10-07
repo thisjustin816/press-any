@@ -3,11 +3,21 @@ import EmulatorDomain
 import EmulationCore
 import Foundation
 
-public enum SaveStateServiceError: Error, Equatable {
+public enum SaveStateServiceError: Error, Equatable, LocalizedError {
     case contextMismatch
     case coreMismatch(expected: CoreDescriptor, actual: CoreDescriptor)
     case serializationVersionMismatch(expected: String, actual: String)
     case assetNotFound(UUID)
+    case hashMismatch(assetID: UUID, expected: String, actual: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .hashMismatch:
+            return "This save state is damaged, so it wasn't loaded. The file was kept."
+        default:
+            return nil
+        }
+    }
 }
 
 public struct SaveStateService: Sendable {
@@ -168,11 +178,19 @@ public struct SaveStateService: Sendable {
             )
         }
 
-        guard let asset = try assets.fetchAsset(id: state.stateAssetID) else {
+        guard var asset = try assets.fetchAsset(id: state.stateAssetID) else {
             throw SaveStateServiceError.assetNotFound(state.stateAssetID)
         }
         let url = try assetStore.managedURL(relativePath: asset.relativePath)
         let payload = try assetStore.readData(at: url)
+        let actual = assetStore.hashData(payload)
+        guard actual == asset.contentSHA256 else {
+            if asset.integrityStatus != .corrupt {
+                asset.integrityStatus = .corrupt
+                try? assets.updateMutableAsset(asset)
+            }
+            throw SaveStateServiceError.hashMismatch(assetID: asset.id, expected: asset.contentSHA256, actual: actual)
+        }
         try worker.perform { try $0.deserializeState(payload) }
     }
 

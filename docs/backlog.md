@@ -101,14 +101,16 @@ camera and printer declared, and a missing one is a failed cast.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Verify important assets when read or used | v1 | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers and stale temporary files); saves/states not verified on read |
 | missing | Storage screen by category, source vs disposable, safe cleanup | v1 | none |
 | partial | Automatic cleanup of disposable data only | v1 | expired Quick Play sessions and staged copies left by interrupted imports removed at launch (AppContainer init); no generated-cache eviction under pressure |
 | partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | Check Library Files runs the orphan sweep on demand; in-flight protection and GC coordination remain |
 
-Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed
-collision-safe relative paths; Source-asset dedup; Source vs userData vs cache vs temporary classes;
-Atomic save/state writes; Transactional commit, no orphaned permanent asset on failure.
+Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed collision-
+safe relative paths; Source-asset dedup; Source vs userData vs cache vs temporary classes; Atomic
+save/state writes; Transactional commit, no orphaned permanent asset on failure; Verify important
+assets when read or used: launch rehashes the ROM and patches, battery saves and save states are
+checked against their recorded SHA-256 before they reach the core, and Check Library Files rehashes
+ROMs and patches on demand.
 
 ### Domain model
 

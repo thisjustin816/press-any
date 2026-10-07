@@ -113,6 +113,11 @@ status. Source assets are irreplaceable; generated patched ROMs are rebuildable 
 - Atomic writes use `F_FULLFSYNC` where available and sync the directory after the rename.
 - The battery save is written whenever the game changes it, checked at most every five seconds of
   play, on its own queue so writes don't disturb frame pacing.
+- Battery saves and save states are checked against their recorded SHA-256 before they reach the
+  core, hashing the bytes already read. A mismatched battery save stops the launch, and a
+  mismatched state isn't loaded, so the game boots from its battery save and says the resume point
+  was kept. Either file is marked corrupt and left untouched: loading a damaged save would let the
+  next flush write it back as the player's save.
 - Launch rehashes the ROM and patches it's about to use. Settings > Check Library Files rehashes
   every ROM and patch on demand, marks damaged ones, reports missing files, and removes files
   nothing uses and temporary files an interrupted write left over ten minutes ago. It runs only
