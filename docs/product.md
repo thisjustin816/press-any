@@ -34,7 +34,7 @@ change. There is no separate decision log.
 - The app is locked to portrait until the landscape layout (v1).
 
 v1 is core-complete: the library model, saves and states, rewind and Fast Forward, rumble,
-patching, cheats and memory tools, custom layouts with Delta and Manic skin import, curated
+patching, custom layouts with Delta and Manic skin import, curated
 shaders, Bluetooth controllers, automatic artwork, AirPlay and external displays, safe archive
 imports and Quick Play. iCloud and the Community Catalog also target v1, but either can move to
 v1.1 after an explicit review if it's the only thing holding up a stable emulator.
@@ -365,8 +365,7 @@ games' saves don't carry across languages.
   unless the player had paused it; after the background, Resume Games decides.
 - One emulator session at a time.
 - v1: Quick Save, configurable fixed slots, naming states when saving, configurable cleanup with
-  pinned states exempt, states recording their cheat configuration and offering to restore it,
-  a separate crash-recovery checkpoint with Recover Session or Start Normally (no automatic crash
+  pinned states exempt, a separate crash-recovery checkpoint with Recover Session or Start Normally (no automatic crash
   loops; a force-quit gives no final callback), returning to the previous game after a relaunch,
   and switching Build or profile from the game through the compatibility check and a relaunch.
 
@@ -611,7 +610,7 @@ or groups a Game and never proves two saves compatible.
 
 ## Planned v1 areas
 
-### Cheats and memory tools
+### Cheats and memory tools (v1.1)
 
 Cheat management (add, remove, enable, disable, keep) in Game Genie, GameShark and the formats
 SameBoy supports; a pluggable cheat database keyed to verified ROMs, adding selectively and never
@@ -732,7 +731,8 @@ silently. The default shader must hold full speed on the slowest supported devic
 
 ## v1.1 and later
 
-- **v1.1:** the app's screens fitting above a controller that covers the bottom of the screen, as
+- **v1.1:** cheats and memory tools (above), with states recording their cheat configuration and
+  offering to restore it; the app's screens fitting above a controller that covers the bottom of the screen, as
   with Playtiles, and navigable with its buttons; link cable (local first, then nearby; not built on Multipeer Connectivity), GB Studio
   save migration, Game Boy Camera and Printer, RAR, skin authoring beyond the editor, video and GIF
   capture framed like a Game Boy, `.gbproject` import and export, better ROM comparison and BPS

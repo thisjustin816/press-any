@@ -38,7 +38,7 @@ migrating later.
 7. Display and play feel: GBC color correction, DMG palettes, Fast Forward hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
 8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
-   profiles and remapping, landscape and the layout editor, cheats and memory tools, external
+   profiles and remapping, landscape and the layout editor, external
    display, and the curated shader library.
 9. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
 
@@ -261,7 +261,7 @@ states.
 | missing | Configurable fixed slots | v1 |  |
 | partial | Unlimited named states | v1 | a Save Profile's Save States renames and deletes them; Save State doesn't ask for a name |
 | missing | Configurable automatic cleanup; pinned/favorited exempt | v1 |  |
-| missing | State records cheat config; offer Restore Cheat Configuration | v1 |  |
+| missing | State records cheat config; offer Restore Cheat Configuration | v1.1 |  |
 | missing | Per-Save-Profile autoresume override | v1 |  |
 | missing | Separate crash-recovery checkpoint + Recover Session / Start Normally | v1 | SaveStateKind.crashRecovery unused |
 | missing | App relaunch returns to the previous game/session | v1 |  |
@@ -297,14 +297,14 @@ the Build's Auto State; 24 h default retention, expired sessions purged.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Cheat management add/remove/enable/disable/persist; Game Genie/GameShark/SameBoy formats | v1 | no CheatCapability |
-| missing | Pluggable verified-ROM cheat database, selective add, never auto-enable | v1 |  |
-| missing | Cheat groups/categories + search | v1 |  |
-| missing | Cheat search: exact/unknown/changed/unchanged/inc/dec/delta/greater/less, signed/unsigned 8/16-bit, hex | v1 |  |
-| missing | Result actions: edit, freeze, watch, create cheat, copy address | v1 |  |
-| missing | Named search sessions within current emulation session | v1 |  |
-| missing | Memory Watch list + optional Developer HUD + short history/min/max/graph | v1 |  |
-| missing | Immediate Developer Mode memory writes with Undo Last Write, frozen indication | v1 |  |
+| missing | Cheat management add/remove/enable/disable/persist; Game Genie/GameShark/SameBoy formats | v1.1 | no CheatCapability |
+| missing | Pluggable verified-ROM cheat database, selective add, never auto-enable | v1.1 |  |
+| missing | Cheat groups/categories + search | v1.1 |  |
+| missing | Cheat search: exact/unknown/changed/unchanged/inc/dec/delta/greater/less, signed/unsigned 8/16-bit, hex | v1.1 |  |
+| missing | Result actions: edit, freeze, watch, create cheat, copy address | v1.1 |  |
+| missing | Named search sessions within current emulation session | v1.1 |  |
+| missing | Memory Watch list + optional Developer HUD + short history/min/max/graph | v1.1 |  |
+| missing | Immediate Developer Mode memory writes with Undo Last Write, frozen indication | v1.1 |  |
 | missing | Frame advance + frame counter (bindable) | v1 |  |
 | missing | Full debugger/disassembler/VRAM viewer | later |  |
 
