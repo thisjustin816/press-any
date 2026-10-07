@@ -172,6 +172,18 @@ final class SharedFileUITests: XCTestCase {
         }
         expect(recipient, message: "Press Any is a system share destination for \(filename)", timeout: 30)
         recipient.tap()
+        // The simulator sometimes drops the tap on the share sheet, which stays open, and sometimes
+        // hands the file over without bringing Press Any forward. A dropped tap sent nothing, so
+        // tapping again can't share the file twice; otherwise the app only needs bringing forward,
+        // and the caller's next check confirms the file arrived.
+        for _ in 0..<2 {
+            if app.wait(for: .runningForeground, timeout: 15) { return }
+            if recipient.exists, recipient.isHittable {
+                recipient.tap()
+            } else {
+                app.activate()
+            }
+        }
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15), "iOS hands the file to Press Any")
     }
 
