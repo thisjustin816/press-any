@@ -266,6 +266,20 @@ public final class EmulationSession: @unchecked Sendable {
         try worker.perform { $0.setSpeed(speed) }
     }
 
+    @discardableResult
+    public func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
+        let (worker, context, _) = try snapshotActive()
+        let frame = try worker.perform { core in
+            try (core as? any DisplaySettingsCapability)?.setDisplaySettings(colorCorrection: colorCorrection, dmgPalette: dmgPalette)
+        }
+        if let frame {
+            lock.withLock {
+                if activeContext == context { latestFrame = frame }
+            }
+        }
+        return frame
+    }
+
     public func consumeRumbleAmplitude() throws -> Double {
         let (worker, _, _) = try snapshotActive()
         return try worker.perform { core in

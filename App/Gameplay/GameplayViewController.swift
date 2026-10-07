@@ -32,6 +32,8 @@ final class GameplayViewController: UIViewController {
     private var halted = false
     private var controlStyle: TouchControlStyle
     private var lcdFilter: LCDFilter
+    private var colorCorrection: ColorCorrection
+    private var dmgPalette: DMGPalette
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
     private var fastForwardAudio: FastForwardAudio
@@ -67,6 +69,8 @@ final class GameplayViewController: UIViewController {
         controlStyle: TouchControlStyle = .gameBoy,
         screenScaling: ScreenScaling = .integer,
         lcdFilter: LCDFilter = .off,
+        colorCorrection: ColorCorrection = .defaultValue,
+        dmgPalette: DMGPalette = .defaultValue,
         frameBlending: FrameBlending = .off,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted,
@@ -81,6 +85,8 @@ final class GameplayViewController: UIViewController {
         self.controllerMonitor = controllerMonitor
         self.controlStyle = controlStyle
         self.lcdFilter = lcdFilter
+        self.colorCorrection = colorCorrection
+        self.dmgPalette = dmgPalette
         self.frameBlending = frameBlending
         self.fastForwardSpeed = fastForwardSpeed
         self.fastForwardAudio = fastForwardAudio
@@ -116,6 +122,7 @@ final class GameplayViewController: UIViewController {
         renderer?.scaling = screenScaling
         renderer?.lcdFilter = lcdFilter
         renderer?.frameBlending = frameBlending
+        applyCoreDisplaySettings()
         applyLayout(touchControls.layout)
         // Audio can be unavailable, during a call for example. The game still runs, silently,
         // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
@@ -486,10 +493,17 @@ final class GameplayViewController: UIViewController {
         controlStyle: TouchControlStyle,
         screenScaling: ScreenScaling,
         lcdFilter: LCDFilter,
+        colorCorrection: ColorCorrection = .defaultValue,
+        dmgPalette: DMGPalette = .defaultValue,
         frameBlending: FrameBlending,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted
     ) {
+        if colorCorrection != self.colorCorrection || dmgPalette != self.dmgPalette {
+            self.colorCorrection = colorCorrection
+            self.dmgPalette = dmgPalette
+            applyCoreDisplaySettings()
+        }
         if fastForwardSpeed != self.fastForwardSpeed || fastForwardAudio != self.fastForwardAudio {
             self.fastForwardSpeed = fastForwardSpeed
             self.fastForwardAudio = fastForwardAudio
@@ -513,6 +527,16 @@ final class GameplayViewController: UIViewController {
     private func toggleFastForward() {
         fastForward.toggle()
         applyEmulationSpeed()
+    }
+
+    private func applyCoreDisplaySettings() {
+        do {
+            if let frame = try runtime.setDisplaySettings(colorCorrection: colorCorrection, dmgPalette: dmgPalette) {
+                renderer?.submit(frame, to: metalView, replacesHistory: true)
+            }
+        } catch {
+            showTransientMessage("Could not update the picture: \(error.localizedDescription)")
+        }
     }
 
     /// Sets the game's speed and what its sound does at that speed.

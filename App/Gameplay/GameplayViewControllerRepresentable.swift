@@ -30,6 +30,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             controlStyle: display.controlStyle,
             screenScaling: display.screenScaling,
             lcdFilter: display.lcdFilter,
+            colorCorrection: display.colorCorrection,
+            dmgPalette: display.dmgPalette,
             frameBlending: display.frameBlending,
             fastForwardSpeed: display.fastForwardSpeed,
             fastForwardAudio: display.fastForwardAudio,
@@ -51,6 +53,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             controlStyle: display.controlStyle,
             screenScaling: display.screenScaling,
             lcdFilter: display.lcdFilter,
+            colorCorrection: display.colorCorrection,
+            dmgPalette: display.dmgPalette,
             frameBlending: display.frameBlending,
             fastForwardSpeed: display.fastForwardSpeed,
             fastForwardAudio: display.fastForwardAudio

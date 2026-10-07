@@ -19,6 +19,28 @@ final class GameplayLifecycleTests: XCTestCase {
         return (gameplay, runtime, monitor)
     }
 
+    func testDisplaySettingsReachTheOpenGameWhileItStaysPaused() {
+        let (gameplay, runtime, _) = makeGameplay()
+        XCTAssertEqual(runtime.displaySettings?.correction, .balanced)
+        XCTAssertEqual(runtime.displaySettings?.palette, .grey)
+        gameplay.setCoveredBySheet(true)
+        let frames = runtime.frames
+        gameplay.applyDisplaySettings(
+            controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
+            colorCorrection: .accurate, dmgPalette: .dmgGreen, frameBlending: .off
+        )
+        XCTAssertEqual(runtime.displaySettings?.correction, .accurate)
+        XCTAssertEqual(runtime.displaySettings?.palette, .dmgGreen)
+        gameplay.applyDisplaySettings(
+            controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
+            colorCorrection: .off, dmgPalette: .pocket, frameBlending: .off
+        )
+        XCTAssertEqual(runtime.displaySettings?.correction, .off)
+        XCTAssertEqual(runtime.displaySettings?.palette, .pocket)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertEqual(runtime.frames, frames)
+    }
+
     func testAnOverlayPausesTheGameAndItPicksUpAfterward() {
         let (gameplay, runtime, _) = makeGameplay(policy: .never)
         XCTAssertTrue(gameplay.isRunningFrames)
@@ -223,6 +245,8 @@ private final class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     private var foregroundCount = 0
     private var failed = false
     private var frameCount = 0
+    private var displayOptions: (correction: ColorCorrection, palette: DMGPalette)?
+    var displaySettings: (correction: ColorCorrection, palette: DMGPalette)? { lock.withLock { displayOptions } }
     struct NotRunning: Error {}
 
     var backgrounds: Int { lock.withLock { backgroundCount } }
@@ -245,6 +269,10 @@ private final class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
 
     func drainAudio(maxFrames: Int) throws -> [StereoSample] { [] }
     func setSpeed(_ speed: EmulationSpeed) throws {}
+    func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
+        lock.withLock { displayOptions = (colorCorrection, dmgPalette) }
+        return nil
+    }
     func consumeRumbleAmplitude() throws -> Double { 0 }
     func pause() throws { lock.withLock { paused = true } }
     func resume() throws { lock.withLock { paused = false } }

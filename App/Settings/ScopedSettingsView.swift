@@ -44,6 +44,22 @@ struct ScopedSettingsView: View {
                     context: context
                 )
                 InheritableSettingRow(
+                    title: "Color Correction",
+                    key: .colorCorrection,
+                    defaultValue: ColorCorrection.defaultValue,
+                    options: ColorCorrection.allCases.map { ($0, $0.displayName) },
+                    context: context,
+                    explanation: ColorCorrection.explanation
+                )
+                InheritableSettingRow(
+                    title: "DMG Palette",
+                    key: .dmgPalette,
+                    defaultValue: DMGPalette.defaultValue,
+                    options: DMGPalette.allCases.map { ($0, $0.displayName) },
+                    context: context,
+                    explanation: DMGPalette.explanation
+                )
+                InheritableSettingRow(
                     title: "LCD Filter",
                     key: .lcdFilter,
                     defaultValue: LCDFilter.off,
@@ -131,6 +147,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     let defaultValue: Value
     let options: [(Value, String)]
     let context: InheritableSettingContext
+    var explanation: String? = nil
 
     @State private var choice: Choice = .inherit
     @State private var inherited: ResolvedSetting?
@@ -146,6 +163,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
             }
         } footer: {
             Text(errorMessage ?? footer)
+            if let explanation { Text(explanation) }
         }
         .onAppear(perform: load)
         .onChange(of: choice) { _, newValue in save(newValue) }

@@ -43,8 +43,8 @@ migrating later (D "Library backend first").
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
    Files folder they land in come first, as they don't depend on the schema.
-7. Display and play feel: GBC color correction, DMG palettes, Fast Forward hold or toggle, slow
-   motion, rewind, and the DMG/GBC/SGB model override.
+7. Display and play feel: Fast Forward hold or toggle, slow motion, rewind, and the
+   DMG/GBC/SGB model override.
 8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
    profiles and remapping, landscape and the layout editor, cheats and memory tools, external
    display, and the curated shader library.
@@ -349,8 +349,6 @@ Done: Pause / Resume from menu with paused overlay.
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
 | partial | Adaptive presentation on high-refresh displays | v1 | Q95 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; thermal or Low Power Mode rate changes not handled |
-| missing | GB/GBC color correction | v1 | dec 23 |  |
-| missing | DMG palettes / system-authentic default look; raw pixels available | v1 | Q108 | SameBoy default output only |
 | partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1 | prod "Rendering and shaders"; later 9 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
 | partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1 | Q105/Q106/Q107 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v1 | dec 23 |  |
@@ -359,7 +357,10 @@ Done: Pause / Resume from menu with paused overlay.
 
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
 Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable; Frame
-Blending Off (default) / Blend / LCD Ghosting, inheritable.
+Blending Off (default) / Blend / LCD Ghosting, inheritable; GBC Color Correction Off / Accurate /
+Balanced (default) / Boost Contrast / Reduce Contrast / Low Contrast; DMG Palette Grey (default) /
+DMG Green / Pocket / Light. Both color settings inherit App → System → Game → Build, update the
+open picture from Settings, and survive reset and state loads.
 
 ### Layouts, skins, touch
 

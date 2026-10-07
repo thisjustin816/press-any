@@ -24,6 +24,12 @@ public protocol RumbleCapability: AnyObject {
     func consumeRumbleAmplitude() -> Double
 }
 
+public protocol DisplaySettingsCapability: AnyObject {
+    /// Applies the display settings and returns a refreshed picture without advancing gameplay.
+    /// Before the first frame, there is no picture to refresh.
+    func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame?
+}
+
 /// A core that can start a freshly loaded image past its boot animation.
 public protocol BootSkippingCapability: AnyObject {
     /// Runs the boot sequence to its hand-off without presenting it. Returns false if the boot
