@@ -9,9 +9,15 @@ struct ControllerPalette {
     let bezelTop: UIColor
     let bezelBottom: UIColor
     let dpad: UIColor
+    /// A pressed Playtiles D-pad circle.
     let dpadPressed: UIColor
-    /// The shallow dip at the D-pad's center.
+    /// The shallow dip at the D-pad's center and the arrows pressed into its arms.
     let dpadDimple: UIColor
+    /// The shade at the end of a pressed Game Boy D-pad arm, fading out toward the center.
+    let dpadTilt: UIColor
+    /// The light along a raised control's top edge and the shade along its bottom.
+    let edgeLight: UIColor
+    let edgeShade: UIColor
     /// The channel A and B sit in on the Game Boy layout.
     let groove: UIColor
     /// The Playtiles alignment guide, raised from the body as a ledge to fit the controller against:
@@ -48,6 +54,9 @@ struct ControllerPalette {
             dpad: rgb(48, 48, 50),
             dpadPressed: rgb(30, 30, 32),
             dpadDimple: rgb(38, 38, 40),
+            dpadTilt: UIColor.black.withAlphaComponent(0.5),
+            edgeLight: UIColor.white.withAlphaComponent(0.3),
+            edgeShade: UIColor.black.withAlphaComponent(0.35),
             groove: rgb(170, 168, 165),
             guide: rgb(208, 207, 204),
             guideShadow: rgb(146, 144, 141),
@@ -76,6 +85,9 @@ struct ControllerPalette {
             dpad: rgb(70, 70, 75),
             dpadPressed: rgb(96, 96, 102),
             dpadDimple: rgb(58, 58, 62),
+            dpadTilt: UIColor.black.withAlphaComponent(0.55),
+            edgeLight: UIColor.white.withAlphaComponent(0.16),
+            edgeShade: UIColor.black.withAlphaComponent(0.45),
             // Lighter than the body, so the channel behind A and B reads as a tray.
             groove: rgb(46, 46, 50),
             guide: rgb(52, 52, 57),

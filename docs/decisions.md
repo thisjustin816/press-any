@@ -3,6 +3,18 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-07: Lit edges on the controls, and the D-pad tips
+
+Every raised control now has light along the inside of its top edge and shade along its bottom,
+so it reads as a shaped part rather than a flat fill, as the menu button's lettering does. A
+pressed control loses the light and its top edge shades the face instead.
+
+The Game Boy D-pad no longer sinks or turns a held arm a darker flat shade, which drew two hard
+steps across the cross. As SameBoy's iOS app does, the pad stays raised and tips: the held arm's
+end goes into shade that fades out toward the center. Each arm has an arrow pressed into it, and
+the dip at the center is lit as a hollow. This replaces the D-pad sentence in "Raised controls,
+and Resume sits on the picture".
+
 ## 2026-10-07: A welcome screen until the onboarding exists
 
 The first launch shows one welcome screen ahead of the library: what the app is, how the library,
