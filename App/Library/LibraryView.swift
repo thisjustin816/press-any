@@ -447,9 +447,9 @@ private struct GameArtworkView: View {
 }
 
 /// A DMG Game Pak from the front, 57 by 65.5 mm, after a photograph of one: the app's name in
-/// capitals in the raised plaque, as GAME BOY is on the cartridge, short grip ridges beside it,
-/// the lock notch at the top right, the framed label recess, and the arrow pointing into the slot.
-/// Drawn in millimeters.
+/// capitals pressed into the raised plaque, as GAME BOY is on the cartridge, short grip ridges
+/// beside it, the lock notch at the top right, the framed label recess, and the arrow pointing
+/// into the slot. Drawn in millimeters.
 private struct CartridgeIcon: View {
     let system: GameSystem
     let title: String
@@ -473,12 +473,7 @@ private struct CartridgeIcon: View {
                 Capsule()
                     .path(in: rect(9, 2, 40, 8.5))
                     .stroke(.background.opacity(0.3), lineWidth: max(0.5 * mm, 0.5))
-                Text(AppBrand.displayName.uppercased())
-                    .font(Font(AppBrand.Wordmark.font(size: 5 * mm)))
-                    .foregroundStyle(.background.opacity(0.3))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .frame(width: 34 * mm)
+                PlaqueLettering(mm: mm)
                     .position(x: 29 * mm, y: 6.25 * mm)
                 Path { path in
                     let ridges = [(1.8, 2.6), (1.8, 4.6), (1.8, 6.6), (1.8, 8.6), (50.8, 4.6), (50.8, 6.6), (50.8, 8.6)]
@@ -515,6 +510,45 @@ private struct CartridgeIcon: View {
         }
         .aspectRatio(57 / 65.5, contentMode: .fit)
         .accessibilityHidden(true)
+    }
+}
+
+/// The app's name in capitals, pressed into the cartridge's plaque the way the wordmark is pressed
+/// into the controller's menu button. Lit from above, each letter's top edge shades a band of the
+/// recess floor, and its bottom edge catches the light in a line below.
+private struct PlaqueLettering: View {
+    let mm: CGFloat
+
+    var body: some View {
+        let depth = 0.25 * mm
+        ZStack {
+            letters
+                .foregroundStyle(.background.opacity(0.3))
+            letters
+                .foregroundStyle(.black.opacity(0.3))
+                .mask { cutout(letters, removing: letters.offset(y: depth)) }
+            letters
+                .offset(y: depth)
+                .foregroundStyle(.white.opacity(0.2))
+                .mask { cutout(letters.offset(y: depth), removing: letters) }
+        }
+    }
+
+    private var letters: some View {
+        Text(AppBrand.displayName.uppercased())
+            .font(Font(AppBrand.Wordmark.font(size: 5 * mm)))
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(width: 34 * mm)
+    }
+
+    /// `shape` minus `removed`, as a mask.
+    private func cutout(_ shape: some View, removing removed: some View) -> some View {
+        ZStack {
+            shape
+            removed.blendMode(.destinationOut)
+        }
+        .compositingGroup()
     }
 }
 

@@ -68,7 +68,8 @@
 			</array>
 		</dict>
 		<!-- Alternate, not Owner: Press Any reads the ROMs, patches and saves in a zip, but other
-		     zips should keep opening where they did. -->
+		     zips should keep opening where they did. Files types a .zip as com.pkware.zip-archive;
+		     listing only public.zip-archive left Press Any out of the share sheet. -->
 		<dict>
 			<key>CFBundleTypeName</key>
 			<string>Zip Archive</string>
@@ -78,6 +79,7 @@
 			<string>Alternate</string>
 			<key>LSItemContentTypes</key>
 			<array>
+				<string>com.pkware.zip-archive</string>
 				<string>public.zip-archive</string>
 			</array>
 		</dict>

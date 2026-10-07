@@ -772,7 +772,8 @@ exposes them; custom border editing is later.
 
 - A shared zip, the way ROM hacks and homebrew are downloaded, opens each ROM, patch and save
   inside it in turn, as if each were shared on its own; readmes, folders and macOS metadata are
-  skipped. Zip is registered at Alternate rank, so other zips keep opening where they did. The
+  skipped. Zip is registered at Alternate rank, so other zips keep opening where they did. It lists
+  `com.pkware.zip-archive`, the type Files gives a .zip, as well as `public.zip-archive`. The
   zip is read in memory and never kept: at most 32 MB, its entries stored or deflated, each held
   to its own kind's size limit before it's inflated and checked against its CRC32. Encrypted,
   Zip64 and damaged archives are refused.
