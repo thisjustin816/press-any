@@ -51,8 +51,8 @@ versions, regional and revision variants, and Builds moving in or out. It has a 
 title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its
 own name; the base game's title stays as lineage. A hack that becomes an existing Game's
 Preferred Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title:
-Mole Mania DX"), on by default. Accepting it keeps the old title as an alias and records the
-filename or patch as the new title's source. Editing the title records a player override.
+Mole Mania DX"), on by default. Accepting it keeps the old title as an alias and makes the new
+one the player's, so regional title proposals leave it alone.
 Moving that hack out with Make Separate Game, which suggests the hack's title for
 the new Game, gives the original Game back the title the hack was made from, as long as it still
 holds it as an alias; a copy leaves the title alone. A patch without hack tags offers its title only when it adds words without
@@ -294,15 +294,15 @@ every region. Unlisted tags sort after listed ones. These preferences supply sug
 only after confirmation in review. Existing titles with no recorded provenance stay protected
 during import. The player can opt into the order by accepting a regional title in Suggest Names.
 
-Filenames are evidence, not truth. Import Review, Quick Play promotion and Open Patch record the
-source of Game titles and Build names, region, language, revision, version, base title, hack title,
-author, translation and status. Each recorded field keeps the value its source offered and the time
-it was recorded. No-Intro values have high confidence; filename and patch values keep the parser's
-confidence.
-ROM-header fallbacks and patch filenames have their own sources. Review edits and later player
-corrections use the player source and retain the earlier offered value. A Game's title is protected
-as the player's exactly when its recorded source is player. Existing fields without a row have no
-recorded provenance. Identity and bytes never change.
+Filenames are evidence, not truth. The same rules name Builds in Import Review, Quick Play promotion
+and Open Patch, and each records the source of Game titles and Build names, region, language,
+revision, version, base title, hack title, author, translation and status. Each recorded field keeps
+the value its source offered and the time it was recorded. No-Intro values have high confidence;
+filename and patch values keep the parser's confidence. ROM-header fallbacks and patch filenames
+have their own sources. Review edits and later player corrections use the player source and retain
+the earlier offered value. A Game's title is protected as the player's exactly when its recorded
+source is player. Existing fields without a row have no recorded provenance. Identity and bytes
+never change.
 
 - Region and language groups, "Rev 1" or "Rev A" (a retail revision), "v1.2" and "Version 1.2"
   are recognized. A dotted "Rev 0.2.0" is a homebrew version. Versions keep a semver suffix such

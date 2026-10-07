@@ -138,7 +138,9 @@ public struct BuildOperations: Sendable {
         }
     }
 
-    public func renameBuild(buildID: UUID, displayName: String) throws {
+    /// A name the player typed is theirs; one accepted unchanged from a suggestion keeps the
+    /// suggestion's source.
+    public func renameBuild(buildID: UUID, displayName: String, source: MetadataSource = .player) throws {
         let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { throw BuildOperationError.invalidBuildName }
         guard var build = try builds.fetchBuild(id: buildID) else {
@@ -147,7 +149,14 @@ public struct BuildOperations: Sendable {
         guard build.displayName != name else { return }
         build.displayName = name
         build.modifiedAt = now()
-        try builds.updateBuildMetadata(build)
+        let updated = build
+        try transactions.run { [builds] in
+            try builds.updateBuildMetadata(updated)
+            if source != .player {
+                try builds.saveMetadataProvenance(MetadataProvenance(field: .displayName, source: source,
+                    providedValue: name, recordedAt: updated.modifiedAt), ownerID: buildID)
+            }
+        }
     }
 
     /// Marks or unmarks an imported Build as the clean original that patches start from. Marking
@@ -226,9 +235,11 @@ public struct BuildOperations: Sendable {
                 modifiedAt: timestamp
             )
             try games.insertGame(newGame)
-            let offeredTitle = try games.fetchMetadataProvenance(ownerID: sourceBuild.gameID).first { $0.field == .title }
+            // The sheet offers the hack's title, or the Build's name.
+            let offeredTitle = try builds.fetchMetadataProvenance(ownerID: sourceBuild.id).first { $0.field == .hackTitle }
             try games.saveMetadataProvenance(MetadataProvenance(field: .title, source: .player,
-                providedValue: offeredTitle?.providedValue ?? sourceGame?.primaryTitle ?? title, recordedAt: timestamp), ownerID: newGame.id)
+                providedValue: offeredTitle?.providedValue ?? sourceBuild.hackTitle ?? sourceBuild.displayName,
+                recordedAt: timestamp), ownerID: newGame.id)
 
             let promoted: Build
             switch mode {

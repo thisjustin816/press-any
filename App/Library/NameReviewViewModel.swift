@@ -86,7 +86,8 @@ final class NameReviewViewModel: ObservableObject {
             let name = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !name.isEmpty, name != item.suggestion.currentName else { continue }
             do {
-                try operations.renameBuild(buildID: item.id, displayName: name)
+                try operations.renameBuild(buildID: item.id, displayName: name,
+                    source: name == item.suggestion.suggestedName ? .filename : .player)
                 renamedBuilds.insert(item.id)
             } catch {
                 errorMessage = "Couldn’t rename “\(item.suggestion.currentName)”: \(error.localizedDescription)"

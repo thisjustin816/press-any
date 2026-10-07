@@ -522,7 +522,7 @@ extension PatchedBuildTests {
 
 @Suite("Patch metadata provenance")
 struct PatchMetadataProvenanceTests {
-    @Test("patch names and metadata keep their source, including the adopted Game title")
+    @Test("patch names and metadata keep their source, and an adopted Game title is the player's")
     func patchFields() throws {
         let harness = try PatchBuildHarness.make()
         defer { try? FileManager.default.removeItem(at: harness.root) }
@@ -536,9 +536,9 @@ struct PatchMetadataProvenanceTests {
         #expect(rows.count == 10)
         #expect(rows.allSatisfy { $0.source == .patch && $0.confidence == .high && $0.providedValue == $0.field.value(in: build) })
         let title = try #require(try harness.games.fetchMetadataProvenance(ownerID: harness.gameID).first)
-        #expect(title.source == .patch)
+        #expect(title.source == .player, "an adopted hack title is the player's")
         #expect(title.providedValue == "Test Plus")
-        #expect(try harness.games.fetchGame(id: harness.gameID)?.hasPlayerTitle == false)
+        #expect(try harness.games.fetchGame(id: harness.gameID)?.hasPlayerTitle == true)
         #expect(try harness.games.fetchGame(id: harness.gameID)?.aliases.contains("Test") == true)
     }
 

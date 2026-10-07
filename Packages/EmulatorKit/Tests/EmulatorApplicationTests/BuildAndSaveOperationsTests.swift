@@ -110,6 +110,21 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         }
     }
 
+    func testRenameBuildKeepsAnAcceptedSuggestionsSource() throws {
+        let harness = try Harness.make()
+        let operations = harness.buildOperations()
+
+        try operations.renameBuild(buildID: harness.baseBuild.id, displayName: "Suggested", source: .filename)
+        var row = try XCTUnwrap(harness.builds.fetchMetadataProvenance(ownerID: harness.baseBuild.id).first { $0.field == .displayName })
+        XCTAssertEqual(row.source, .filename)
+        XCTAssertEqual(row.providedValue, "Suggested")
+
+        try operations.renameBuild(buildID: harness.baseBuild.id, displayName: "Typed")
+        row = try XCTUnwrap(harness.builds.fetchMetadataProvenance(ownerID: harness.baseBuild.id).first { $0.field == .displayName })
+        XCTAssertEqual(row.source, .player)
+        XCTAssertEqual(row.providedValue, "Suggested")
+    }
+
     func testDuplicateSaveProfileCopiesBytesThenDiverges() throws {
         let harness = try Harness.make()
         let source = try harness.createProfile(name: "Main", battery: Data([1, 2, 3]))
@@ -221,6 +236,9 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         let newGame = try operations.promoteBuild(buildID: second.id, title: "Standalone Hack", mode: .move)
 
         XCTAssertEqual(try harness.builds.fetchBuild(id: second.id)?.gameID, newGame.id)
+        let title = try XCTUnwrap(harness.games.fetchMetadataProvenance(ownerID: newGame.id).first { $0.field == .title })
+        XCTAssertEqual(title.source, .player)
+        XCTAssertEqual(title.providedValue, second.hackTitle ?? second.displayName, "the sheet offers the Build's own title")
         let oldGame = try XCTUnwrap(harness.games.fetchGame(id: harness.game.id))
         XCTAssertEqual(oldGame.preferredBuildID, harness.baseBuild.id)
         XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.game.id).count, 1)

@@ -48,7 +48,7 @@ struct PatchMetadataProvenance {
             return previous?.playerOverride(recordedAt: date)
                 ?? MetadataProvenance(field: .title, source: .player, providedValue: offered ?? value, recordedAt: date)
         }
-        return MetadataProvenance(field: .title, source: .patch,
-            confidence: naming.first.map { MetadataConfidence($0.confidence) }, providedValue: offered, recordedAt: date)
+        // Adopting a hack's title makes it the player's, so regional title proposals leave it.
+        return MetadataProvenance(field: .title, source: .player, providedValue: offered, recordedAt: date)
     }
 }
