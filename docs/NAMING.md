@@ -25,6 +25,14 @@ charcoal on light backgrounds and gray on dark ones:
 | Letters | `#323235` | `#808086` |
 | Accent letter | `#962C64` | `#A43E74` |
 
+In the library's title and on the welcome screen, the letters shade from lighter at the top to
+darker at the bottom, like the face of the controller's menu button, around those colors:
+
+| | Light | Dark |
+|---|---|---|
+| Letters | `#55555A` to `#202022` | `#9C9CA2` to `#6C6C72` |
+| Accent letter | `#B34680` to `#7C1E50` | `#BC568C` to `#8C2E60` |
+
 `AppBrand.Wordmark` in `App/AppBrand.swift` is its one definition, built from the display name:
 `WordmarkView` shows it in SwiftUI (the library's title), and the on-screen controller presses it
 into the menu button at the bottom, in the controller theme's colors with a darker shade under
