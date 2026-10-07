@@ -100,8 +100,8 @@ final class PhysicalControllerMonitor: ObservableObject {
             ),
             leftStickX: pad.leftThumbstick.xAxis.value,
             leftStickY: pad.leftThumbstick.yAxis.value,
-            rightFaceButton: pad.buttonB.isPressed,
-            bottomFaceButton: pad.buttonA.isPressed,
+            buttonA: pad.buttonA.isPressed,
+            buttonB: pad.buttonB.isPressed,
             menu: pad.buttonMenu.isPressed,
             options: pad.buttonOptions?.isPressed == true,
             leftShoulder: pad.leftShoulder.isPressed

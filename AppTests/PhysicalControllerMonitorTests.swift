@@ -12,9 +12,9 @@ final class PhysicalControllerMonitorTests: XCTestCase {
         XCTAssertTrue(profiles.contains { $0["ProfileName"] == "ExtendedGamepad" })
     }
 
-    func testLogicalRightAndBottomButtonsMapToGameBoyAAndB() throws {
-        try assertInput(.init(a: true)) { $0.buttonB.setValue(1) }
-        try assertInput(.init(b: true)) { $0.buttonA.setValue(1) }
+    func testTheControllersAAndBButtonsAreGameBoyAAndB() throws {
+        try assertInput(.init(a: true)) { $0.buttonA.setValue(1) }
+        try assertInput(.init(b: true)) { $0.buttonB.setValue(1) }
         try assertInput(.init(a: true, b: true)) {
             $0.buttonB.setValue(1)
             $0.buttonA.setValue(1)
@@ -80,7 +80,7 @@ final class PhysicalControllerMonitorTests: XCTestCase {
         NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: old)
 
         XCTAssertTrue(monitor.activeController === replacement)
-        XCTAssertEqual(lastInput, .init(a: true))
+        XCTAssertEqual(lastInput, .init(b: true))
     }
 
     private func assertInput(

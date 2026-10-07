@@ -18,12 +18,14 @@ public enum GamepadInputMapping {
         }
     }
 
+    /// A and B follow the controller's own A and B, after any remapping in iOS Settings > General >
+    /// Game Controller, so a player who wants Game Boy positions sets that up there.
     public static func input(
         dpad: EmulatorInputState = .init(),
         leftStickX: Float = 0,
         leftStickY: Float = 0,
-        rightFaceButton: Bool = false,
-        bottomFaceButton: Bool = false,
+        buttonA: Bool = false,
+        buttonB: Bool = false,
         menu: Bool = false,
         options: Bool = false,
         leftShoulder: Bool = false
@@ -32,7 +34,7 @@ public enum GamepadInputMapping {
         return EmulatorInputState(
             up: dpad.up || stick.up, down: dpad.down || stick.down,
             left: dpad.left || stick.left, right: dpad.right || stick.right,
-            a: rightFaceButton, b: bottomFaceButton,
+            a: buttonA, b: buttonB,
             start: menu, select: options || leftShoulder
         )
     }

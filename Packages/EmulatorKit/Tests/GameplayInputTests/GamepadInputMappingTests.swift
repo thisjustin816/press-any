@@ -39,10 +39,10 @@ final class GamepadInputMappingTests: XCTestCase {
         XCTAssertEqual(GamepadInputMapping.input(), .init())
     }
 
-    func testFaceButtonsFollowTheirPositions() {
-        XCTAssertEqual(GamepadInputMapping.input(rightFaceButton: true), .init(a: true))
-        XCTAssertEqual(GamepadInputMapping.input(bottomFaceButton: true), .init(b: true))
-        XCTAssertEqual(GamepadInputMapping.input(rightFaceButton: true, bottomFaceButton: true), .init(a: true, b: true))
+    func testFaceButtonsFollowTheirLetters() {
+        XCTAssertEqual(GamepadInputMapping.input(buttonA: true), .init(a: true))
+        XCTAssertEqual(GamepadInputMapping.input(buttonB: true), .init(b: true))
+        XCTAssertEqual(GamepadInputMapping.input(buttonA: true, buttonB: true), .init(a: true, b: true))
     }
 
     func testMenuIsStartAndEitherOptionsOrLeftShoulderIsSelect() {

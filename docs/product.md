@@ -564,10 +564,11 @@ picture. A connected controller still hides the touch controls.
 
 - Apple's GameController framework: Xbox, PlayStation, Switch-compatible, MFi and generic
   controllers. The D-pad and left thumbstick both drive the Game Boy D-pad; the stick has a radial
-  dead zone of 25% and eight equal direction sectors. Game Boy A is the right face button and B
-  is the bottom face button; Menu is START, and Options or the left shoulder is SELECT.
-- iOS Settings > General > Game Controller customizations apply through the controller's logical
-  inputs, including per-app mappings. Press Any declares Extended Gamepad support.
+  dead zone of 25% and eight equal direction sectors. The controller's A and B buttons are Game Boy
+  A and B; Menu is START, and Options or the left shoulder is SELECT.
+- iOS Settings > General > Game Controller customizations apply, including per-app mappings,
+  and are how a player swaps A and B to Game Boy positions; Press Any has no button mapping of its
+  own. It declares Extended Gamepad support, which iOS needs for per-app customizations.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls, under With a Controller, is on by default.
