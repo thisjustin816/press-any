@@ -229,6 +229,7 @@ struct RootView: View {
     private var gameplayOrientations: UIInterfaceOrientationMask {
         GameplayOrientation.mask(
             style: gameplay?.display.controlStyle,
+            orientation: gameplay?.display.orientation ?? .automatic,
             coveredBySheet: showsGameplaySettings || sharedFile != nil || sharedFileError != nil
         )
     }
@@ -416,6 +417,7 @@ struct RootView: View {
                 settings: container.gameplaySettingsTarget(for: launch.context),
                 display: GameplayDisplaySettings(
                     controlStyle: container.controllerStyle(for: launch.context),
+                    orientation: container.orientation(for: launch.context),
                     screenScaling: container.screenScaling(for: launch.context),
                     lcdFilter: container.lcdFilter(for: launch.context),
                     frameBlending: container.frameBlending(for: launch.context),

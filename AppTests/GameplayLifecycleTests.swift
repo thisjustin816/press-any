@@ -25,6 +25,16 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(GameplayOrientation.mask(style: .playtiles, coveredBySheet: false), .portrait)
         XCTAssertEqual(GameplayOrientation.mask(style: nil, coveredBySheet: false), .portrait, "the library")
         XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, coveredBySheet: true), .portrait)
+        XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, orientation: .portrait, coveredBySheet: false), .portrait)
+        XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, orientation: .landscape, coveredBySheet: false), .landscape)
+        XCTAssertEqual(
+            GameplayOrientation.mask(style: .playtiles, orientation: .landscape, coveredBySheet: false), .portrait,
+            "Playtiles fits a portrait phone whatever the setting says"
+        )
+        XCTAssertEqual(
+            GameplayOrientation.mask(style: .gameBoy, orientation: .landscape, coveredBySheet: true), .portrait,
+            "sheets stay portrait"
+        )
 
         defer { GameplayOrientation.update(.portrait) }
         let delegate = AppDelegate()
@@ -41,6 +51,10 @@ final class GameplayLifecycleTests: XCTestCase {
         gameplay.setCoveredBySheet(true)
         XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
         gameplay.setCoveredBySheet(false)
+        gameplay.applyDisplaySettings(controlStyle: .gameBoy, orientation: .landscape, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .landscape, "Orientation set to Landscape applies at once")
+        gameplay.applyDisplaySettings(controlStyle: .gameBoy, orientation: .portrait, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
         gameplay.applyDisplaySettings(controlStyle: .playtiles, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
         XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
     }

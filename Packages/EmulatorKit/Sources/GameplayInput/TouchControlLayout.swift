@@ -9,6 +9,16 @@ public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
     case playtiles
 }
 
+/// Which way gameplay may face. Raw values are stored in settings. Layouts made for a portrait
+/// phone, such as Playtiles, stay portrait whatever this says.
+public enum ScreenOrientation: String, Codable, Sendable, CaseIterable {
+    /// Follows the phone as it turns, within iOS's rotation lock.
+    case automatic
+    case portrait
+    /// Either landscape direction, following the phone between them.
+    case landscape
+}
+
 /// How the game picture is scaled into its frame. Raw values are stored in settings.
 public enum ScreenScaling: String, Codable, Sendable, CaseIterable {
     /// The largest whole number of device pixels per Game Boy pixel, so every pixel is the same size.

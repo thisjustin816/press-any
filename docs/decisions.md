@@ -20,6 +20,11 @@ still chooses Integer or Fill. Rotating releases held touch input and keeps the 
 paused as it was, with Resume centered on the picture. A connected controller still hides the
 touch controls.
 
+Settings > Orientation chooses Automatic (the default, following the phone within its rotation
+lock), Portrait or Landscape. Landscape allows either sideways direction and turns the game at
+once even with the phone held upright. It inherits App, System, Game and Build like the other
+display settings, and Playtiles stays portrait whatever it says.
+
 This replaces the temporary portrait lock from October 5. Gameplay needs a comfortable landscape
 layout before a public build; management screens and Playtiles keep their portrait layouts.
 

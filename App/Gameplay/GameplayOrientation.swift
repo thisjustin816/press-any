@@ -5,8 +5,19 @@ import UIKit
 enum GameplayOrientation {
     private(set) static var supported: UIInterfaceOrientationMask = .portrait
 
-    static func mask(style: TouchControlStyle?, coveredBySheet: Bool) -> UIInterfaceOrientationMask {
-        style == .gameBoy && !coveredBySheet ? [.portrait, .landscapeLeft, .landscapeRight] : .portrait
+    /// The library, sheets and Playtiles, which fits a portrait phone, stay portrait; otherwise
+    /// the Orientation setting decides.
+    static func mask(
+        style: TouchControlStyle?,
+        orientation: ScreenOrientation = .automatic,
+        coveredBySheet: Bool
+    ) -> UIInterfaceOrientationMask {
+        guard style == .gameBoy, !coveredBySheet else { return .portrait }
+        return switch orientation {
+        case .automatic: [.portrait, .landscapeLeft, .landscapeRight]
+        case .portrait: .portrait
+        case .landscape: .landscape
+        }
     }
 
     static func update(_ mask: UIInterfaceOrientationMask) {
@@ -18,10 +29,17 @@ enum GameplayOrientation {
             var presented = root
             while let next = presented.presentedViewController { presented = next }
             presented.setNeedsUpdateOfSupportedInterfaceOrientations()
-            // Enabling landscape leaves rotation to iOS, including its rotation lock. A sheet or
-            // the library must return to portrait even when the phone is still held sideways.
-            if mask == .portrait, scene.interfaceOrientation.isLandscape {
-                scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+            // Allowing a direction leaves rotation to iOS, including its rotation lock. A direction
+            // no longer allowed is left at once: a sheet or the library returns to portrait even
+            // with the phone held sideways, and a game set to Landscape turns even when held upright.
+            let current: UIInterfaceOrientationMask = switch scene.interfaceOrientation {
+            case .landscapeLeft: .landscapeLeft
+            case .landscapeRight: .landscapeRight
+            case .portraitUpsideDown: .portraitUpsideDown
+            default: .portrait
+            }
+            if !mask.contains(current) {
+                scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask))
             }
         }
     }

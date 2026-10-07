@@ -31,6 +31,7 @@ final class GameplayViewController: UIViewController {
     /// Set once an emulation error has stopped the game for good.
     private var halted = false
     private var controlStyle: TouchControlStyle
+    private var orientation: ScreenOrientation
     private var lcdFilter: LCDFilter
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
@@ -65,6 +66,7 @@ final class GameplayViewController: UIViewController {
         launchMessage: String? = nil,
         firstFrameClock: UInt64? = nil,
         controlStyle: TouchControlStyle = .gameBoy,
+        orientation: ScreenOrientation = .automatic,
         screenScaling: ScreenScaling = .integer,
         lcdFilter: LCDFilter = .off,
         frameBlending: FrameBlending = .off,
@@ -80,6 +82,7 @@ final class GameplayViewController: UIViewController {
         self.runtime = runtime
         self.controllerMonitor = controllerMonitor
         self.controlStyle = controlStyle
+        self.orientation = orientation
         self.lcdFilter = lcdFilter
         self.frameBlending = frameBlending
         self.fastForwardSpeed = fastForwardSpeed
@@ -102,7 +105,7 @@ final class GameplayViewController: UIViewController {
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        GameplayOrientation.mask(style: controlStyle, coveredBySheet: coveredBySheet)
+        GameplayOrientation.mask(style: controlStyle, orientation: orientation, coveredBySheet: coveredBySheet)
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
@@ -497,12 +500,17 @@ final class GameplayViewController: UIViewController {
     /// with them, so the player sees each change behind the sheet.
     func applyDisplaySettings(
         controlStyle: TouchControlStyle,
+        orientation: ScreenOrientation = .automatic,
         screenScaling: ScreenScaling,
         lcdFilter: LCDFilter,
         frameBlending: FrameBlending,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted
     ) {
+        if orientation != self.orientation {
+            self.orientation = orientation
+            setNeedsUpdateOfSupportedInterfaceOrientations()
+        }
         if fastForwardSpeed != self.fastForwardSpeed || fastForwardAudio != self.fastForwardAudio {
             self.fastForwardSpeed = fastForwardSpeed
             self.fastForwardAudio = fastForwardAudio
