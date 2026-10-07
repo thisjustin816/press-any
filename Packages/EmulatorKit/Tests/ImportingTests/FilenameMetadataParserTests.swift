@@ -276,6 +276,9 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(spaced.buildMetadata.versionString, "2")
         XCTAssertEqual(spaced.buildMetadata.status, "Demo")
 
+        // The shared-file UI tests' ROM.
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "gbdk450-rev-v1.0.gb").suggestedBuildName, "v1.0")
+
         // A dotted version needs no "v"; an all-lowercase name is capitalized.
         let bare = FilenameMetadataParser.parse(filename: "match-land-live-0.3.0+live1.gb")
         XCTAssertEqual(bare.suggestedTitle, "Match Land Live")
