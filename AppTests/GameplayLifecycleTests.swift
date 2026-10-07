@@ -41,6 +41,26 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(runtime.frames, frames)
     }
 
+    func testTheGameMenuChangesSoundWhileTheGameStaysPaused() throws {
+        let (gameplay, _, _) = makeGameplay()
+        var saved: [SoundMode] = []
+        gameplay.onSoundModeChange = { saved.append($0) }
+        func soundMenu() throws -> UIMenu {
+            try XCTUnwrap(gameplay.prepareGameMenu().compactMap { $0 as? UIMenu }.first { $0.title == "Sound" })
+        }
+        func selected(_ menu: UIMenu) -> [String] {
+            menu.children.compactMap { $0 as? UIAction }.filter { $0.state == .on }.map(\.title)
+        }
+        let menu = try soundMenu()
+        XCTAssertEqual(menu.children.map(\.title), ["Follow Silent Switch", "Always On", "Always Off"])
+        XCTAssertEqual(selected(menu), ["Follow Silent Switch"])
+        gameplay.setSoundMode(.alwaysOff)
+        gameplay.setSoundMode(.alwaysOff)
+        XCTAssertEqual(saved, [.alwaysOff], "choosing the current mode again saves nothing")
+        XCTAssertEqual(selected(try soundMenu()), ["Always Off"])
+        XCTAssertFalse(gameplay.isRunningFrames)
+    }
+
     func testOnlyGameBoyGameplayAllowsBothLandscapeOrientations() {
         let gameplayMask: UIInterfaceOrientationMask = [.portrait, .landscapeLeft, .landscapeRight]
         XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, coveredBySheet: false), gameplayMask)
