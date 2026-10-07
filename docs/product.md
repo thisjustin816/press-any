@@ -621,7 +621,8 @@ picture. A connected controller still hides the touch controls.
   frame itself follows the setting.
 - **Screen Colors** (System, Game or Build) is a different setting on each system, and only the
   one for the system at hand shows: in Game Boy or Game Boy Color settings, and in the Settings
-  of a Game, a Build or the open game. App Settings doesn't show it.
+  of a Game, a Build or the open game. App Settings doesn't show it, and a choice made there in
+  an earlier version became that system's setting.
   - Game Boy games choose their four shades, each named for the Game Boy screen it looks like:
     Green (Game Boy, the default), Olive (Pocket), Teal (Light) or Black & White.
   - Game Boy Color games choose how their colors are adjusted for a modern screen: Balanced (the
