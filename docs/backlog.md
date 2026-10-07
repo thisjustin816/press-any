@@ -375,7 +375,7 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | first connected used; selectPlayerOne() has no UI |
-| missing | Controller hotkey combos and menu navigation | v1 | "Open Menu" is a mappable input with no default button, and Home is never taken |
+| missing | Controller hotkey combos and menu navigation | v1 | Menu stays START, so opening the game menu from a controller needs a fixed combo, not a user mapping; Home is never taken |
 | missing | Rumble routing override Phone / Controller / Both / Off | v1 |  |
 | missing | Separate phone and controller intensity | v1 |  |
 
