@@ -171,27 +171,36 @@ beta information and may require Apple's beta review.
 
 ## 7. Release a beta
 
-Every `main` upload reaches the internal group on its own. A GitHub release sends a build further:
-the **Release** workflow (`.github/workflows/release.yml`) runs when a release is published.
+Every `main` upload reaches the internal group on its own. A GitHub release sends a build further,
+through the **Release** workflow (`.github/workflows/release.yml`).
+
+Set up once:
 
 1. In App Store Connect, create an **External Testing** group with a public link and fill in
    **Test Information** (beta description, feedback email, contact details). Beta App Review
    needs them before it accepts a build.
 2. In GitHub, add a repository variable (**Settings → Secrets and variables → Actions →
    Variables**) named `TESTFLIGHT_PUBLIC_GROUP`, set to that group's name.
-3. Publish a release whose tag is the version with a beta suffix, such as `v0.2.0-beta.1`, on a
-   commit on `main`, and mark it **Set as a pre-release**.
 
-The workflow finds the release's build, the nearest `testflight/<build>` tag at or before its
-commit, adds it to the group and submits it for Beta App Review. Testers get it once Apple
-approves it: the first build of a version can take a day, and later ones are often quicker. Its
-What to Test is the release's description. A release published with an empty description gets one
-written for it: the changes since the previous release, beta or stable. A release whose commit
-isn't on `main` is refused, since it would run that commit's scripts with the API key.
+Then open **Actions → Release → Run workflow** on `main` and choose **beta**. The run tags
+`main`'s newest TestFlight upload with the next beta tag for the version in `project.yml`, such as
+`v0.1.0-beta.1` and then `v0.1.0-beta.2`, publishes the pre-release, adds the build to the group
+and submits it for Beta App Review. It refuses a build that's already released. Testers get it once
+Apple approves it: the first build of a version can take a day, and later ones are often quicker.
 
-A stable release, without the pre-release mark and tagged like `v1.0.0`, gets the changes since the
-previous stable release as its description and names the build to submit. Submitting it to the App
-Store is still done by hand in App Store Connect.
+**Notes** becomes the build's What to Test. Left empty, it's the changes since the previous
+release, beta or stable. The release's description on GitHub is the same text, followed by the
+public group's join link.
+
+A release published by hand works too: tag a commit on `main` with the version and a beta suffix
+and mark it **Set as a pre-release**. Its build is the nearest `testflight/<build>` tag at or
+before its commit, and an empty description gets one written for it. A release whose commit isn't
+on `main` is refused, since it would run that commit's scripts with the API key.
+
+Choosing **stable** tags the newest upload `v<version>`, such as `v0.1.0`, with the changes since
+the previous stable release as its description, and names the build to submit. A version is
+released as stable once; raise `MARKETING_VERSION` for the next. Submitting it to the App Store is
+still done by hand in App Store Connect.
 
 ## 8. Download screenshots for App Store Connect
 

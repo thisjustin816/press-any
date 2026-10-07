@@ -1,12 +1,27 @@
 name: Release
-run-name: Release ${{ github.event.release.tag_name }}
+run-name: Release ${{ github.event.release.tag_name || inputs.kind }}
 
-# A published GitHub release ships the TestFlight build of its commit. A pre-release (a beta) goes
-# to the public TestFlight group; a stable release is for the App Store, which is submitted by hand
-# for now. Every main upload already reaches the internal group on its own.
+# A GitHub release ships the TestFlight build of its commit. A pre-release (a beta) goes to the
+# public TestFlight group; a stable release is for the App Store, which is submitted by hand for
+# now. Every main upload already reaches the internal group on its own.
+#
+# Run workflow publishes the release too: it tags main's newest TestFlight upload with the next
+# version tag and ships it in the same run. A release made with the workflow's own token doesn't
+# start other workflows, so the published-release trigger covers only releases published by hand.
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: A beta goes to the public TestFlight group; stable names the build for the App Store
+        type: choice
+        options: [beta, stable]
+        default: beta
+      notes:
+        description: What to Test. Leave empty for the changes since the previous release
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -16,17 +31,106 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TAG: ${{ github.event.release.tag_name }}
+  # The public group's join link, added to the description of each beta release this workflow writes.
+  PUBLIC_LINK: https://testflight.apple.com/join/Csv8kc87
 
 jobs:
-  # Kept apart from the App Store Connect secrets because it needs write access.
-  notes:
-    name: Fill an empty release description
-    if: ${{ !github.event.release.body }}
+  publish:
+    name: Tag main's newest upload and publish the release
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Refuse a branch other than main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run the release from main; it runs this branch's scripts with the API key."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      # The version comes from the uploaded commit, in case main has raised it since.
+      - name: Choose the tag
+        id: tag
+        env:
+          KIND: ${{ inputs.kind }}
+        run: |
+          upload="$(git describe --tags --abbrev=0 --match 'testflight/*' HEAD)" ||
+            { echo "::error::main has no TestFlight upload yet."; exit 1; }
+          commit="$(git rev-list -n 1 "$upload")"
+          version="$(git show "$commit:project.yml" | sed -n 's/^ *MARKETING_VERSION: *"\{0,1\}\([0-9.]*\)"\{0,1\} *$/\1/p' | head -n 1)"
+          if [[ $version =~ ^[0-9]+\.[0-9]+$ ]]; then version="$version.0"; fi
+          if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Couldn't read MARKETING_VERSION from project.yml at $upload."
+            exit 1
+          fi
+          if [[ $KIND == beta ]]; then
+            released="$(git tag --points-at "$commit" --list 'v*-*' | head -n 1)"
+            last="$(git tag --list "v$version-beta.*" | sed 's/.*-beta\.//' | sort -n | tail -n 1)"
+            tag="v$version-beta.$((${last:-0} + 1))"
+          else
+            released="$(git tag --points-at "$commit" --list 'v*' | grep -v -- - | head -n 1 || true)"
+            tag="v$version"
+            if [[ -z $released ]] && git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "::error::$tag is already released. Raise MARKETING_VERSION in project.yml for a new one."
+              exit 1
+            fi
+          fi
+          if [[ -n $released ]]; then
+            echo "::error::Build ${upload#testflight/}, main's newest upload, is already released as $released."
+            exit 1
+          fi
+          {
+            echo "tag=$tag"
+            echo "commit=$commit"
+          } >>"$GITHUB_OUTPUT"
+          echo "Releasing build ${upload#testflight/} as $tag." | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Write the description
+        env:
+          KIND: ${{ inputs.kind }}
+          NOTES: ${{ inputs.notes }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          COMMIT: ${{ steps.tag.outputs.commit }}
+        run: |
+          git tag "$TAG" "$COMMIT"
+          if [[ -n $NOTES ]]; then
+            printf '%s\n' "$NOTES" >"$RUNNER_TEMP/notes.txt"
+          else
+            kind=()
+            if [[ $KIND == beta ]]; then kind=(--beta); fi
+            ./Scripts/testflight-release.py notes --tag "$TAG" "${kind[@]}" --output "$RUNNER_TEMP/notes.txt" >/dev/null
+          fi
+          if [[ $KIND == beta ]]; then
+            printf '\nJoin the beta on TestFlight: %s\n' "$PUBLIC_LINK" >>"$RUNNER_TEMP/notes.txt"
+          fi
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KIND: ${{ inputs.kind }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          COMMIT: ${{ steps.tag.outputs.commit }}
+        run: |
+          prerelease=()
+          if [[ $KIND == beta ]]; then prerelease=(--prerelease); fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$COMMIT" --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/notes.txt" "${prerelease[@]}"
+
+  # Kept apart from the App Store Connect secrets because it needs write access.
+  notes:
+    name: Fill an empty release description
+    if: github.event_name == 'release' && !github.event.release.body
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -42,17 +146,28 @@ jobs:
           kind=()
           if [[ $BETA == true ]]; then kind=(--beta); fi
           ./Scripts/testflight-release.py notes --tag "$TAG" "${kind[@]}" --output "$RUNNER_TEMP/notes.txt" >/dev/null
+          if [[ $BETA == true ]]; then
+            printf '\nJoin the beta on TestFlight: %s\n' "$PUBLIC_LINK" >>"$RUNNER_TEMP/notes.txt"
+          fi
           gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -F "body=@$RUNNER_TEMP/notes.txt" >/dev/null
 
+  # After publish when the workflow is run by hand, on its own for a published release. A skipped
+  # publish doesn't skip it; a failed one does.
   beta:
     name: Give the public TestFlight group the build
-    if: github.event.release.prerelease
+    needs: publish
+    if: >-
+      !cancelled() && !failure() && (
+        (github.event_name == 'workflow_dispatch' && inputs.kind == 'beta') ||
+        (github.event_name == 'release' && github.event.release.prerelease))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      TAG: ${{ needs.publish.outputs.tag || github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: refs/tags/${{ github.event.release.tag_name }}
+          ref: refs/tags/${{ env.TAG }}
           fetch-depth: 0
           persist-credentials: false
       # The release runs this commit's scripts with the signing key, so only main's history may.
@@ -63,7 +178,7 @@ jobs:
             { echo "::error::$TAG isn't on main, so it isn't released."; exit 1; }
       - name: Write What to Test
         env:
-          BODY: ${{ github.event.release.body }}
+          BODY: ${{ github.event_name == 'workflow_dispatch' && inputs.notes || github.event.release.body }}
         run: |
           if [[ -n $BODY ]]; then
             printf '%s\n' "$BODY" >"$RUNNER_TEMP/notes.txt"
@@ -86,13 +201,19 @@ jobs:
 
   stable:
     name: Name the build for the App Store
-    if: ${{ !github.event.release.prerelease }}
+    needs: publish
+    if: >-
+      !cancelled() && !failure() && (
+        (github.event_name == 'workflow_dispatch' && inputs.kind == 'stable') ||
+        (github.event_name == 'release' && !github.event.release.prerelease))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      TAG: ${{ needs.publish.outputs.tag || github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: refs/tags/${{ github.event.release.tag_name }}
+          ref: refs/tags/${{ env.TAG }}
           fetch-depth: 0
           persist-credentials: false
       - run: |
