@@ -71,10 +71,7 @@ extension BatchDeletionPlan {
         if !dependentNames.isEmpty {
             parts.append("Patched Builds go too: \(dependentNames.formatted(.list(type: .and))).")
         }
-        let emptiedNames = Array(Set(items.flatMap { $0.plan.emptiedGames.map(\.primaryTitle) })).sorted()
-        if items.contains(where: { $0.target.kind == .build }) && emptiedNames.isEmpty {
-            parts.append("Games left without Builds go too, with their Save Profiles.")
-        }
+        let emptiedNames = emptiedGames.map(\.primaryTitle).sorted()
         if !emptiedNames.isEmpty {
             parts.append("Games left without Builds go too, with their Save Profiles: \(emptiedNames.formatted(.list(type: .and))).")
         }
@@ -83,5 +80,16 @@ extension BatchDeletionPlan {
             parts += skipped.map { "\($0.title): \($0.reason)" }
         }
         return parts.joined(separator: "\n\n")
+    }
+}
+
+extension BatchDeletionResult {
+    /// What failed while deleting, each item named. The confirmation already listed what planning
+    /// skipped, so those aren't repeated.
+    func failureMessage(after batch: BatchDeletionPlan) -> String? {
+        let announced = Set(batch.skipped.map(\.target))
+        let failures = skipped.filter { !announced.contains($0.target) }
+        guard !failures.isEmpty else { return nil }
+        return failures.map { "\($0.title): \($0.reason)" }.joined(separator: "\n\n")
     }
 }

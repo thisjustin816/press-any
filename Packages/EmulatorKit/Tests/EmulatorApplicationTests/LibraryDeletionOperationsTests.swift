@@ -49,6 +49,24 @@ final class LibraryDeletionOperationsTests: XCTestCase {
         XCTAssertEqual(result.deleted.last?.records.gameIDs, [library.game.id])
     }
 
+    func testBatchPlanNamesAGameOnlyWhenTheSelectionTakesEveryBuild() throws {
+        let library = try Library()
+        let independent = Build(
+            id: UUID(), gameID: library.game.id, system: .gameBoy, displayName: "Independent",
+            imageAssetID: library.base.imageAssetID, imageSHA256: String(repeating: "c", count: 64),
+            sourceKind: .importedImage, createdAt: library.base.createdAt, modifiedAt: library.base.createdAt
+        )
+        try library.builds.insertBuild(independent)
+        let some = library.operations.planDeletion(of: [.init(kind: .build, id: library.base.id)])
+        XCTAssertTrue(some.emptiedGames.isEmpty, "Independent stays, so the Game does")
+        let every = library.operations.planDeletion(of: [
+            .init(kind: .build, id: library.base.id),
+            .init(kind: .build, id: independent.id)
+        ])
+        XCTAssertTrue(every.items.allSatisfy { $0.plan.emptiedGames.isEmpty }, "neither Build is the last alone")
+        XCTAssertEqual(every.emptiedGames.map(\.id), [library.game.id])
+    }
+
     func testBatchDeleteRechecksAnItemDeletedAfterConfirmationWasPlanned() throws {
         let library = try Library()
         let batch = library.operations.planDeletion(of: [.init(kind: .saveProfile, id: library.profile.id)])

@@ -91,7 +91,7 @@ final class SaveStatesViewModel: ObservableObject {
         reload()
         selection.ids = Set(result.skipped.map { $0.target.id }).intersection(Set(states.map(\.id)))
         NotificationCenter.default.post(name: .libraryDidChange, object: nil)
-        if !result.skipped.isEmpty { errorMessage = result.skipped.map(\.reason).joined(separator: "\n\n") }
+        if let message = result.failureMessage(after: batch) { errorMessage = message }
     }
 
     func requestDeletion(of state: SaveState) {

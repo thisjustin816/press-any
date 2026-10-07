@@ -26,6 +26,9 @@ public struct BatchDeletionPlan: Sendable {
 
     public let items: [Item]
     public let skipped: [BatchDeletionFailure]
+    /// Games the selected Builds leave with none, which go too. Planned one at a time, each Build
+    /// only empties its Game when it's the last, so these are counted across the whole selection.
+    public let emptiedGames: [Game]
     public var count: Int { items.count + skipped.count }
 }
 
@@ -51,7 +54,23 @@ extension LibraryDeletionOperations {
                 skipped.append(failure(target, title: deletionTitle(for: target), error: error))
             }
         }
-        return BatchDeletionPlan(items: items, skipped: skipped)
+        return BatchDeletionPlan(items: items, skipped: skipped, emptiedGames: emptiedGames(by: items))
+    }
+
+    private func emptiedGames(by items: [BatchDeletionPlan.Item]) -> [Game] {
+        let buildItems = items.filter { $0.target.kind == .build }
+        let deletedIDs = Set(buildItems.flatMap(\.plan.records.buildIDs))
+        var gameIDs: [UUID] = []
+        for item in buildItems {
+            for gameID in [item.plan.gameID] + item.plan.dependentBuilds.map(\.gameID) where !gameIDs.contains(gameID) {
+                gameIDs.append(gameID)
+            }
+        }
+        return gameIDs.compactMap { gameID in
+            guard let remaining = try? builds.fetchBuilds(gameID: gameID),
+                  remaining.allSatisfy({ deletedIDs.contains($0.id) }) else { return nil }
+            return try? games.fetchGame(id: gameID)
+        }
     }
 
     public func delete(_ batch: BatchDeletionPlan) -> BatchDeletionResult {

@@ -61,7 +61,7 @@ struct RecentlyDeletedView: View {
             Button("Delete Now (\(ids.count))", role: .destructive) { purgeSelected(ids) }
             Button("Cancel", role: .cancel) {}
         } message: { _ in
-            Text("They and everything that went with them are removed for good. This can't be undone.")
+            Text("They and everything that went with them are removed for good. This can’t be undone.")
         }
         .alert("Delete Now?", isPresented: Binding(
             get: { purgeTarget != nil },
@@ -157,12 +157,12 @@ struct RecentlyDeletedView: View {
 
     private func restoreSelected() {
         let result = operations.restore(deletionIDs: selectedIDs)
-        finishBatch(result, title: "Couldn't Restore \(result.skipped.count) Items")
+        finishBatch(result, title: "Couldn’t Restore \(result.skipped.count) \(result.skipped.count == 1 ? "Item" : "Items")")
     }
 
     private func purgeSelected(_ ids: [UUID]) {
         let result = operations.purge(deletionIDs: ids)
-        finishBatch(result, title: "Couldn't Delete \(result.skipped.count) Items")
+        finishBatch(result, title: "Couldn’t Delete \(result.skipped.count) \(result.skipped.count == 1 ? "Item" : "Items")")
     }
 
     private func finishBatch(_ result: BatchRecoveryResult, title: String) {

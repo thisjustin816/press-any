@@ -49,7 +49,7 @@ final class LibraryViewModel: ObservableObject {
         reload()
         selection.ids = Set(result.skipped.map { $0.target.id }).intersection(Set(visibleGames.map(\.id)))
         NotificationCenter.default.post(name: .libraryDidChange, object: nil)
-        if !result.skipped.isEmpty { report(result.skipped.map(\.reason).joined(separator: "\n\n")) }
+        if let message = result.failureMessage(after: batch) { report(message) }
     }
 
     func system(of game: Game) -> GameSystem {

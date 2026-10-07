@@ -37,8 +37,8 @@ public struct DeletionPlan: Equatable, Sendable {
 /// Deletes Games, Builds, Save Profiles and save states into Recently Deleted, restores them, and
 /// purges them after `LibraryDeletion.retention`.
 public struct LibraryDeletionOperations: Sendable {
-    private let games: any GameRepository
-    private let builds: any BuildRepository
+    let games: any GameRepository
+    let builds: any BuildRepository
     private let profiles: any SaveProfileRepository
     private let states: any SaveStateRepository
     private let recipes: any PatchRecipeRepository
@@ -269,11 +269,11 @@ public struct LibraryDeletionOperations: Sendable {
                 return "\(build.displayName) in \(game.primaryTitle)"
             }
             let one = names.count == 1
-            return "\(names.formatted(.list(type: .and))) \(one ? "is" : "are") patched from this Game's Builds and can't be rebuilt without them. Delete \(one ? "it" : "them") first, or merge the Games."
+            return "\(names.formatted(.list(type: .and))) \(one ? "is" : "are") patched from this Game’s Builds and can’t be rebuilt without them. Delete \(one ? "it" : "them") first, or merge the Games."
         case LibraryDeletionError.gameIsDeleted(let id):
             return "Its Game, \(holder(id, \.gameIDs)), is in Recently Deleted too. Restore that first."
         case LibraryDeletionError.baseBuildIsDeleted(let id):
-            return "It's patched from \(holder(id, \.buildIDs)), which is in Recently Deleted too. Restore that first."
+            return "It’s patched from \(holder(id, \.buildIDs)), which is in Recently Deleted too. Restore that first."
         case LibraryDeletionError.saveProfileIsDeleted(let id):
             return "Its Save Profile, \(holder(id, \.saveProfileIDs)), is in Recently Deleted too. Restore that first."
         case LibraryDeletionError.buildIsDeleted(let id):

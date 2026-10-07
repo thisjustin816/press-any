@@ -263,7 +263,7 @@ struct QuickPlaySessionsView: View {
                 Button("Discard (\(sessions.count))", role: .destructive) { discardSelected(sessions) }
                 Button("Cancel", role: .cancel) {}
             } message: { _ in
-                Text("Their saves and progress are deleted. Library saves they copied from are not affected. This can't be undone.")
+                Text("Their saves and progress are deleted. Library saves they copied from are not affected. This can’t be undone.")
             }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
