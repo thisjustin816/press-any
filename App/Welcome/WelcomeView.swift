@@ -13,7 +13,7 @@ struct WelcomeView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     WordmarkView(size: 34)
                         .accessibilityLabel(AppBrand.displayName)
-                    Text("A Game Boy and Game Boy Color player for the games you bring.")
+                    Text("A Game Boy and Game Boy Color player.")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                 }
@@ -37,7 +37,7 @@ struct WelcomeView: View {
                 }
 
                 if onDone != nil {
-                    Text("You can read this again in Settings.")
+                    Text("Find this again in Settings.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -85,12 +85,12 @@ struct WelcomeView: View {
         Topic(
             symbol: "externaldrive",
             title: "Saves",
-            text: "Each game keeps its saves in Save Profiles, written as you play. Open a game again and it picks up where you left off."
+            text: "Each game keeps its saves in Save Profiles, written as you play. By default, a game opens again where you left off."
         ),
         Topic(
             symbol: "play.circle",
             title: "Quick Play",
-            text: "Tap + and Quick Play ROM to play a file without adding it to the library. The session is kept for later under Quick Play Sessions, and Add to Library in the game menu keeps the game for good."
+            text: "Tap + and Quick Play ROM to play a file without adding it to the library. The session is kept for later under Quick Play Sessions, and Add to Library in the game menu adds it to the library."
         ),
         Topic(
             symbol: "gamecontroller",
