@@ -27,6 +27,10 @@ final class ImportReviewViewModel: ObservableObject {
     @Published var translation: String
     @Published var status: String
     @Published private(set) var errorMessage: String?
+    /// Cover art chosen in review, already checked and downscaled, set on the Game after import.
+    @Published private(set) var artwork: (data: Data, fileExtension: String)?
+    /// Set when the ROM imported but its chosen artwork couldn't be saved.
+    @Published private(set) var artworkFailure: String?
 
     let analysis: ROMImportAnalysis
     let games: [Game]
@@ -35,6 +39,8 @@ final class ImportReviewViewModel: ObservableObject {
     /// A Game's Builds: a suggested name that repeats one gains the date it was added, and an
     /// existing Base decides whether the new Build should replace it.
     private let existingBuilds: (UUID) -> [Build]
+    /// Sets a Game's artwork. Without it, review doesn't offer artwork.
+    private let setArtwork: ((UUID, Data, String) throws -> Void)?
     /// The last name suggested, so changing the destination replaces it unless the player edited it.
     private var suggestedBuildName: String
     /// The destination the roles were last suggested for.
@@ -44,7 +50,8 @@ final class ImportReviewViewModel: ObservableObject {
         analysis: ROMImportAnalysis,
         games: [Game],
         coordinator: ImportCoordinator,
-        existingBuilds: @escaping (UUID) -> [Build] = { _ in [] }
+        existingBuilds: @escaping (UUID) -> [Build] = { _ in [] },
+        setArtwork: ((UUID, Data, String) throws -> Void)? = nil
     ) {
         self.analysis = analysis
         // Games holding the release's No-Intro family, or a Build with its header title, come first,
@@ -56,6 +63,7 @@ final class ImportReviewViewModel: ObservableObject {
         }
         self.coordinator = coordinator
         self.existingBuilds = existingBuilds
+        self.setArtwork = setArtwork
         let metadata = BuildImportMetadata(analysis: analysis)
         region = metadata.region ?? ""
         language = metadata.language ?? ""
@@ -180,14 +188,60 @@ final class ImportReviewViewModel: ObservableObject {
     }
 
     func commit() throws -> ROMImportResult {
+        let result: ROMImportResult
         do {
-            let result = try coordinator.committer.commit(plan)
+            result = try coordinator.committer.commit(plan)
             errorMessage = nil
-            return result
         } catch {
             errorMessage = error.localizedDescription
             throw error
         }
+        // The ROM is in the library now, so a failure here is reported without undoing the import.
+        if canChooseArtwork, let artwork, let setArtwork {
+            do {
+                try setArtwork(result.build.gameID, artwork.data, artwork.fileExtension)
+            } catch {
+                artworkFailure = error.localizedDescription
+            }
+        }
+        return result
+    }
+
+    /// Artwork applies to the Game the ROM lands in, so an exact duplicate, which changes nothing,
+    /// doesn't offer it.
+    var canChooseArtwork: Bool { setArtwork != nil && !isExactDuplicate }
+
+    /// Whether the destination Game already has artwork that the chosen image would replace.
+    var replacesArtwork: Bool {
+        guard case .existing(let gameID) = destination else { return false }
+        return games.first { $0.id == gameID }?.artworkAssetID != nil
+    }
+
+    /// Checks and downscales a picked image now, so an unreadable one is refused in review rather
+    /// than after the ROM is imported.
+    func chooseArtwork(_ data: Data, fileExtension: String) {
+        do {
+            try ImportSizeLimit.artwork.check(byteCount: Int64(data.count))
+            artwork = try ArtworkImage.downscaled(data, fileExtension: fileExtension)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func chooseArtwork(fileAt url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            try ImportSizeLimit.artwork.check(fileAt: url)
+            chooseArtwork(try Data(contentsOf: url), fileExtension: url.pathExtension.isEmpty ? "img" : url.pathExtension)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func removeArtwork() {
+        artwork = nil
     }
 
     func report(_ error: Error) {

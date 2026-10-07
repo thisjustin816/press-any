@@ -189,7 +189,8 @@ altering a ROM.
 | missing | Multiple ROMs attached to one Game in one flow | v1.1 |  |
 
 Done: Share Sheet / Open In for ROMs and patches, with the Quick Play or Import choice on open;
-Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
+Analyze -> ImportPlan -> Review -> transactional Commit; Game artwork from Photos or Files in
+Import Review; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
 re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Preferred suggestions
 (development releases default to both; ROM hacks default Preferred only); Toolchain

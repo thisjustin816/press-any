@@ -312,7 +312,8 @@ struct LibraryView: View {
                     analysis: analysis,
                     games: model.games,
                     coordinator: importCoordinator,
-                    existingBuilds: { container.builds(in: $0) }
+                    existingBuilds: { container.builds(in: $0) },
+                    setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) }
                 )
                 importReview = ImportReviewPresentation(model: reviewModel)
             } catch {

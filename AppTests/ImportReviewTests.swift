@@ -1,6 +1,7 @@
 import EmulatorDomain
 import Foundation
 import Importing
+import UIKit
 import XCTest
 @testable import PressAny
 
@@ -34,6 +35,48 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertNil(build.revision)
         XCTAssertEqual(build.versionString, "2.0")
         XCTAssertEqual(build.versionSortKey, BuildImportMetadata(versionString: "2.0").versionSortKey)
+    }
+
+    func testArtworkChosenInReviewIsSetOnTheNewGame() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let file = root.appendingPathComponent("Artwork Example.gb")
+        try Data(repeating: 0, count: 0x8000).write(to: file)
+        let coordinator = ImportCoordinator(analyzer: container.importAnalyzer, committer: container.importCommitter, assetStore: container.fileStore)
+        let review = ImportReviewViewModel(
+            analysis: try coordinator.analyzeROM(at: file),
+            games: [],
+            coordinator: coordinator,
+            setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) }
+        )
+        XCTAssertTrue(review.canChooseArtwork)
+
+        review.chooseArtwork(Data("not an image".utf8), fileExtension: "png")
+        XCTAssertNil(review.artwork, "an unreadable image is refused in review")
+        XCTAssertNotNil(review.errorMessage)
+
+        let png = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).pngData { context in
+            UIColor.green.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
+        }
+        review.chooseArtwork(png, fileExtension: "png")
+        XCTAssertNotNil(review.artwork)
+        XCTAssertNil(review.errorMessage)
+
+        let result = try review.commit()
+        XCTAssertNil(review.artworkFailure)
+        let game = try XCTUnwrap(container.repositories.games.fetchGame(id: result.build.gameID))
+        XCTAssertNotNil(game.artworkAssetID)
+
+        // The same ROM again changes nothing, so review doesn't offer artwork for it.
+        let duplicate = ImportReviewViewModel(
+            analysis: try coordinator.analyzeROM(at: file),
+            games: [game],
+            coordinator: coordinator,
+            setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) }
+        )
+        XCTAssertFalse(duplicate.canChooseArtwork)
     }
 
     func testDevelopmentAndHackNamesSuggestDifferentBaseRolesAndBothPreferTheNewBuild() throws {

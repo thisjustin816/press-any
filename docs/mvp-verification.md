@@ -49,6 +49,7 @@ Verify with a user-supplied legal ROM:
 - [ ] A library game shows the boot logo by default; with Settings > Skip Boot Logo on, it opens on the game.
 - [ ] Move a Build to its own Game and merge it back; Build identity and data remain intact.
 - [ ] Make Separate Game shows a review with the Build's own Save Profiles and the artwork selected; the new Game gets copies, shows Split From, and the original Game is unchanged.
+- [ ] In Import Review for a new Game, choose artwork from Photos, then replace it from Files: the preview changes, and after Import the library tile and the Game show it. Choose a file that isn't an image: review refuses it and the import still works. Add a Build to a Game that has artwork without choosing any: its artwork stays.
 - [ ] Import a homebrew ROM (GB Studio, GBDK or RGBDS); Import Review and the Build's Technical Info show what it was made with.
 - [ ] Import a second build of a homebrew game whose filename differs from the first, such as "Game-v5-Stability.gbc"; Import Review suggests adding it to the first Game and reads version 5, status Stability.
 - [ ] Play Build A of a homebrew Game, then launch Build B, made with different tools, with the same save; the warning appears, and Play with a Copy leaves the original save unchanged.
