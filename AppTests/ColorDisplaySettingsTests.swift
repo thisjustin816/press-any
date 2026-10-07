@@ -20,9 +20,9 @@ final class ColorDisplaySettingsTests: XCTestCase {
         let context = LaunchContext(gameID: result.build.gameID, buildID: result.build.id, saveProfileID: UUID())
         let target = try XCTUnwrap(container.gameplaySettingsTarget(for: context))
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
-        XCTAssertEqual(container.dmgPalette(for: context), .grey)
+        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
         XCTAssertEqual(container.colorCorrection(system: .gameBoyColor), .balanced)
-        XCTAssertEqual(container.dmgPalette(system: .gameBoy), .grey)
+        XCTAssertEqual(container.dmgPalette(system: .gameBoy), .dmgGreen)
         let store = container.repositories.settings
         let correctionKey = SettingKey.colorCorrection.rawValue
         let paletteKey = SettingKey.dmgPalette.rawValue
@@ -50,10 +50,10 @@ final class ColorDisplaySettingsTests: XCTestCase {
             try store.removeValue(key: paletteKey, scope: scope)
         }
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
-        XCTAssertEqual(container.dmgPalette(for: context), .grey)
+        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
         try store.setValueJSON("\"unknown\"", key: correctionKey, scope: .build(context.buildID))
         try store.setValueJSON("\"unknown\"", key: paletteKey, scope: .build(context.buildID))
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
-        XCTAssertEqual(container.dmgPalette(for: context), .grey)
+        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
     }
 }

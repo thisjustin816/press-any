@@ -22,15 +22,15 @@ final class GameplayLifecycleTests: XCTestCase {
     func testDisplaySettingsReachTheOpenGameWhileItStaysPaused() {
         let (gameplay, runtime, _) = makeGameplay()
         XCTAssertEqual(runtime.displaySettings?.correction, .balanced)
-        XCTAssertEqual(runtime.displaySettings?.palette, .grey)
+        XCTAssertEqual(runtime.displaySettings?.palette, .dmgGreen)
         gameplay.setCoveredBySheet(true)
         let frames = runtime.frames
         gameplay.applyDisplaySettings(
             controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
-            colorCorrection: .accurate, dmgPalette: .dmgGreen, frameBlending: .off
+            colorCorrection: .accurate, dmgPalette: .light, frameBlending: .off
         )
         XCTAssertEqual(runtime.displaySettings?.correction, .accurate)
-        XCTAssertEqual(runtime.displaySettings?.palette, .dmgGreen)
+        XCTAssertEqual(runtime.displaySettings?.palette, .light)
         gameplay.applyDisplaySettings(
             controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
             colorCorrection: .off, dmgPalette: .pocket, frameBlending: .off
