@@ -329,7 +329,7 @@ final class GameDetailViewModel: ObservableObject {
             let metadata: BuildImportMetadata
             if let first = naming.first, naming.count == 1 {
                 displayName = BuildNaming.distinctName(
-                    BuildNaming.patchBuildName(for: first),
+                    BuildNaming.patchBuildName(for: first, gameTitle: game?.primaryTitle),
                     existing: builds.map(\.displayName),
                     addedAt: .now
                 )
