@@ -11,6 +11,11 @@ on:
     branches: [main]
     paths-ignore: ['docs/**', '**/*.md']
   workflow_dispatch:
+    inputs:
+      share_ui_controls:
+        description: Also run the share-sheet regression controls, which rebuild the app for each
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -23,8 +28,10 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Main's build skips this job: the pull request ran it, and TestFlight waits on this workflow.
   shared-file-ui:
     name: Shared ROM and patch UI flows
+    if: github.event_name != 'push'
     runs-on: macos-26
     timeout-minutes: 45
     steps:
@@ -36,7 +43,9 @@ jobs:
         run: brew install xcodegen rgbds
       - name: Bootstrap (boot ROMs and Xcode project)
         run: make bootstrap
-      - name: Share-sheet UI tests and refresh/menu regression controls
+      - name: Share-sheet UI tests
+        env:
+          SHARE_UI_CONTROLS: ${{ inputs.share_ui_controls && '1' || '0' }}
         run: make test-share-ui
       - name: Export UI attachments
         if: always()
@@ -58,11 +67,14 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  simulator:
-    name: Xcode simulator build and tests
+  # The app, package and Release archive checks share one runner, since the account runs only a
+  # few macOS jobs at once. The package tests and the archive run even when the app's build or
+  # tests failed, so one push reports each kind of failure.
+  build-and-test:
+    name: Xcode build, tests and Release archive
     # The Makefile targets the iPhone 17 Pro simulator, which needs the Xcode 26 runner image.
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -76,6 +88,7 @@ jobs:
       - name: Install XcodeGen and RGBDS
         run: brew install xcodegen rgbds
       - name: Bootstrap (boot ROMs and Xcode project)
+        id: bootstrap
         run: make bootstrap
       - name: Build
         run: |
@@ -83,73 +96,24 @@ jobs:
           make build 2>&1 | tee build.log
       - name: Check the privacy manifest in the built app
         run: ./Scripts/verify-privacy-manifest.sh
-      - name: Test
+      - name: App tests
         run: |
           set -o pipefail
           make test 2>&1 | tee test.log
-      # xcodebuild prints thousands of long command lines, so the failure is hard to find in
-      # the raw log. Repeat only the diagnostics, once, at the end.
-      - name: Summarize failures
-        if: failure()
-        run: |
-          {
-            echo '### Xcode diagnostics'
-            echo '```'
-            grep -hE ' error: |✘|BUILD FAILED|TEST FAILED|\*\* .* FAILED|Testing failed' build.log test.log 2>/dev/null | sort -u | head -80
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
-
-  # The EmulatorKit tests also run on Linux in ci.yml. Running them here exercises the same code
-  # against Apple's Foundation, which differs from Linux Foundation in Sendable conformances and
-  # file-system behavior.
-  package-tests:
-    name: Package tests on the iOS simulator
-    runs-on: macos-26
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-          submodules: true
-      - name: Show toolchain and package schemes
-        run: |
-          xcodebuild -version
-          (cd Packages/EmulatorKit && xcodebuild -list)
-      # With boot ROMs bundled, the SameBoy adapter tests run the real boot sequence instead of skipping.
-      - name: Install RGBDS
-        run: brew install rgbds
-      - name: Generate boot ROMs
-        run: make bootroms
-      - name: Test
+      # The EmulatorKit tests also run on Linux in ci.yml. Running them here exercises the same
+      # code against Apple's Foundation, which differs from Linux Foundation in Sendable
+      # conformances and file-system behavior. With boot ROMs bundled, the SameBoy adapter tests
+      # run the real boot sequence instead of skipping.
+      - name: Package tests
+        if: ${{ !cancelled() && steps.bootstrap.outcome == 'success' }}
         run: |
           set -o pipefail
-          make test-package-ios 2>&1 | tee test.log
-      - name: Summarize failures
-        if: failure()
-        run: |
-          {
-            echo '### Xcode diagnostics'
-            echo '```'
-            grep -hE ' error: |✘|BUILD FAILED|TEST FAILED|\*\* .* FAILED|Testing failed' test.log 2>/dev/null | sort -u | head -80
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
-
-  # The TestFlight workflow archives in Release for a device, which these simulator Debug builds
-  # don't compile. An unsigned archive here catches a Release-only failure before an upload.
-  release-archive:
-    name: Unsigned Release archive
-    runs-on: macos-26
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-          submodules: true
-      - name: Install XcodeGen and RGBDS
-        run: brew install xcodegen rgbds
-      - name: Bootstrap (boot ROMs and Xcode project)
-        run: make bootstrap
-      - name: Archive
+          make test-package-ios 2>&1 | tee package-test.log
+      # The TestFlight workflow archives in Release for a device, which the simulator Debug build
+      # doesn't compile. Main's build skips this, since TestFlight's signed archive follows it.
+      - name: Unsigned Release archive
+        id: archive
+        if: ${{ !cancelled() && steps.bootstrap.outcome == 'success' && github.event_name != 'push' }}
         run: |
           set -o pipefail
           xcodebuild archive \
@@ -159,13 +123,17 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             2>&1 | tee archive.log
       - name: Check the privacy manifest in the archived app
+        if: ${{ !cancelled() && steps.archive.outcome == 'success' }}
         run: ./Scripts/verify-privacy-manifest.sh "$RUNNER_TEMP/PressAny.xcarchive/Products/Applications/PressAny.app"
+      # xcodebuild prints thousands of long command lines, so the failure is hard to find in
+      # the raw log. Repeat only the diagnostics, once, at the end.
       - name: Summarize failures
         if: failure()
         run: |
           {
             echo '### Xcode diagnostics'
             echo '```'
-            grep -hE ' error: |ARCHIVE FAILED|\*\* .* FAILED' archive.log 2>/dev/null | sort -u | head -80
+            grep -hE ' error: |✘|BUILD FAILED|TEST FAILED|ARCHIVE FAILED|\*\* .* FAILED|Testing failed' \
+              build.log test.log package-test.log archive.log 2>/dev/null | sort -u | head -80
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"

@@ -36,6 +36,13 @@ xcodebuild -project PressAny.xcodeproj -scheme PressAnyShareTests -configuration
   -resultBundlePath "$results/share-ui.xcresult" CODE_SIGNING_ALLOWED=NO test \
   2>&1 | tee "$results/share-ui.log"
 
+# The controls prove that two of the suite's assertions catch the regressions they guard against.
+# Each one rebuilds the app, so they run only when asked.
+if [[ "${SHARE_UI_CONTROLS:-0}" != 1 ]]; then
+  echo "Shared-file UI scenarios passed. SHARE_UI_CONTROLS=1 also runs the regression controls."
+  exit 0
+fi
+
 # A control must fail at its own assertion. The simulator share sheet sometimes stalls before that
 # point, so a failure elsewhere is retried; a pass, or three misses, is a real error.
 run_control() {
