@@ -50,7 +50,7 @@ Open items in each area are in the table, finished ones on the line under it.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | manual TestFlight upload workflow and setup (docs/release.md); App Store listing, review and rights gate not started |
+| partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | TestFlight upload on every main build; a GitHub pre-release adds its build to the public group and submits it for Beta App Review, with notes since the previous release (docs/testflight.md); App Store submission, listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1.1 | none |
 | partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |

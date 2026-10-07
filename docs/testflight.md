@@ -144,7 +144,8 @@ imports the certificate into a temporary keychain, installs the provisioning
 profile, archives the app, verifies its bundled privacy manifest, exports an IPA
 using `Config/ExportOptions-TestFlight.plist` and uploads it with Apple's `altool`.
 It deletes its temporary signing files and keychain when the script exits. It
-does not publish an App Store release or add builds to tester groups. An internal
+does not publish an App Store release or add builds to tester groups; a beta release does that
+(section 7). An internal
 group with **automatic distribution** turned on receives each processed build; other
 groups get a build once it is added to them in App Store Connect.
 
@@ -168,7 +169,31 @@ your iPhone and accept the invitation. Internal testers must be eligible App
 Store Connect users; external testers use **External Testing**, which requires
 beta information and may require Apple's beta review.
 
-## 7. Download screenshots for App Store Connect
+## 7. Release a beta
+
+Every `main` upload reaches the internal group on its own. A GitHub release sends a build further:
+the **Release** workflow (`.github/workflows/release.yml`) runs when a release is published.
+
+1. In App Store Connect, create an **External Testing** group with a public link and fill in
+   **Test Information** (beta description, feedback email, contact details). Beta App Review
+   needs them before it accepts a build.
+2. In GitHub, add a repository variable (**Settings → Secrets and variables → Actions →
+   Variables**) named `TESTFLIGHT_PUBLIC_GROUP`, set to that group's name.
+3. Publish a release whose tag is the version with a beta suffix, such as `v0.2.0-beta.1`, on a
+   commit on `main`, and mark it **Set as a pre-release**.
+
+The workflow finds the release's build, the nearest `testflight/<build>` tag at or before its
+commit, adds it to the group and submits it for Beta App Review. Testers get it once Apple
+approves it: the first build of a version can take a day, and later ones are often quicker. Its
+What to Test is the release's description. A release published with an empty description gets one
+written for it: the changes since the previous release, beta or stable. A release whose commit
+isn't on `main` is refused, since it would run that commit's scripts with the API key.
+
+A stable release, without the pre-release mark and tagged like `v1.0.0`, gets the changes since the
+previous stable release as its description and names the build to submit. Submitting it to the App
+Store is still done by hand in App Store Connect.
+
+## 8. Download screenshots for App Store Connect
 
 Open **Actions → Screenshots → Run workflow** and choose:
 
