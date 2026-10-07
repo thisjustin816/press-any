@@ -508,12 +508,17 @@ picture. A connected controller still hides the touch controls.
   back to Fill when not even one whole multiple fits. Fill draws as large as the frame allows at
   10:9, sampling each pixel flat and blending only across its edges. On the Game Boy layout the
   frame itself follows the setting.
-- **Color Correction** (inheritable, Balanced by default) adjusts Game Boy Color colors: Off,
-  Accurate, Balanced, Boost Contrast, Reduce Contrast or Low Contrast. Accurate uses SameBoy's
-  Modern Accurate mode; Balanced uses Modern Balanced, its iOS default.
-- **DMG Palette** (inheritable, Grey by default) changes the four shades in original Game Boy
-  games: Grey, DMG Green, Pocket or Light. Both color settings change the open picture at once,
-  including behind a paused Settings sheet, and stay applied through reset and state loads.
+- **Screen Colors** (System, Game or Build) is a different setting on each system, and only the
+  one for the system at hand shows: in Game Boy or Game Boy Color settings, and in the Settings
+  of a Game, a Build or the open game. App Settings doesn't show it.
+  - Game Boy games choose their four shades, each named for the Game Boy screen it looks like:
+    Green (Game Boy, the default), Olive (Pocket), Teal (Light) or Black & White.
+  - Game Boy Color games choose how their colors are adjusted for a modern screen: Balanced (the
+    default, SameBoy's Modern Balanced), Accurate (Modern Accurate), Boost Contrast, Reduce
+    Contrast, Low Contrast, or Original, which shows the colors as the game stores them.
+
+  Both change the open picture at once, including behind a paused Settings sheet, and stay
+  applied through reset and state loads.
 - **LCD filter**: LCD 1× and LCD 3×, the first of the display effects.
 - **Frame Blending** (inheritable, Off by default): Blend averages each frame with the one before,
   as the slow LCD does, so a sprite drawn on alternate frames stays steady; LCD Ghosting weights
@@ -539,7 +544,8 @@ picture. A connected controller still hides the touch controls.
   0.5% fast or slow to track clock drift. The game's speed never changes for the sound. Sound more
   than three times the target behind is skipped. The app asks for 10 ms hardware buffers.
 - **Sound** (app-wide): Follow Silent Switch by default, Always On, or Always Off, which mutes the
-  game but leaves other apps' audio alone.
+  game but leaves other apps' audio alone. It's in App Settings and in the game menu, where a
+  change applies to the open game at once and becomes the app-wide setting.
 - Genuine audio interruptions pause; route changes are handled without restarting.
 
 ### Speed
@@ -587,10 +593,26 @@ explicit overrides, the UI shows where an inherited value comes from, and Reset 
 clears an override. The System level covers Game Boy and Game Boy Color. Save Profiles get only
 the narrow playthrough overrides above. Sound is app-wide.
 
-Inheritable today: controller layout, Orientation, Screen Scaling, Color Correction, DMG Palette,
-LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games and Skip Boot Logo. App-wide: Controller Theme, Sound, Tap Game for
-Menu, Touch Haptics and Hide Touch Controls with a Controller. Settings groups them under
-Controls, Display, Sound and Playing.
+Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (from System
+down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games and Skip Boot Logo.
+App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics and Hide Touch Controls with a
+Controller.
+
+App Settings is a short list of pages, like the iPhone's own Settings:
+
+- **Controls**: Controller Layout and Controller Theme; Touch Haptics and Tap Game for Menu under
+  Touch; Hide Touch Controls under With a Controller.
+- **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
+- **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo.
+- **Systems**: Game Boy and Game Boy Color, each opening that system's settings.
+- **Library**: Recently Deleted and Check Library.
+- **About**: How Press Any Works, the Privacy Policy and Acknowledgements.
+
+The settings for a system, a Game, a Build or the open game are one sheet, short enough to sit at
+half height over a paused game. They're grouped under Display (Orientation, Screen Scaling, Screen
+Colors, LCD Filter, Frame Blending), Controls (Controller Layout) and Playing (Fast Forward Speed
+and Audio, Resume Games, Skip Boot Logo). Under each setting's name a note says where its value
+comes from, such as "From Game Boy settings", or that it's set here.
 
 v1 adds automatic DMG, GBC or SGB model selection with overrides at every level (no promise that
 every GBC-only game works in DMG mode), and SGB palettes, borders and enhancements where SameBoy

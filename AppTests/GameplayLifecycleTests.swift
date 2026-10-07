@@ -23,15 +23,15 @@ final class GameplayLifecycleTests: XCTestCase {
     func testDisplaySettingsReachTheOpenGameWhileItStaysPaused() {
         let (gameplay, runtime, _) = makeGameplay()
         XCTAssertEqual(runtime.displaySettings?.correction, .balanced)
-        XCTAssertEqual(runtime.displaySettings?.palette, .grey)
+        XCTAssertEqual(runtime.displaySettings?.palette, .dmgGreen)
         gameplay.setCoveredBySheet(true)
         let frames = runtime.frames
         gameplay.applyDisplaySettings(
             controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
-            colorCorrection: .accurate, dmgPalette: .dmgGreen, frameBlending: .off
+            colorCorrection: .accurate, dmgPalette: .light, frameBlending: .off
         )
         XCTAssertEqual(runtime.displaySettings?.correction, .accurate)
-        XCTAssertEqual(runtime.displaySettings?.palette, .dmgGreen)
+        XCTAssertEqual(runtime.displaySettings?.palette, .light)
         gameplay.applyDisplaySettings(
             controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
             colorCorrection: .off, dmgPalette: .pocket, frameBlending: .off
@@ -40,6 +40,26 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(runtime.displaySettings?.palette, .pocket)
         XCTAssertFalse(gameplay.isRunningFrames)
         XCTAssertEqual(runtime.frames, frames)
+    }
+
+    func testTheGameMenuChangesSoundWhileTheGameStaysPaused() throws {
+        let (gameplay, _, _) = makeGameplay()
+        var saved: [SoundMode] = []
+        gameplay.onSoundModeChange = { saved.append($0) }
+        func soundMenu() throws -> UIMenu {
+            try XCTUnwrap(gameplay.prepareGameMenu().compactMap { $0 as? UIMenu }.first { $0.title == "Sound" })
+        }
+        func selected(_ menu: UIMenu) -> [String] {
+            menu.children.compactMap { $0 as? UIAction }.filter { $0.state == .on }.map(\.title)
+        }
+        let menu = try soundMenu()
+        XCTAssertEqual(menu.children.map(\.title), ["Follow Silent Switch", "Always On", "Always Off"])
+        XCTAssertEqual(selected(menu), ["Follow Silent Switch"])
+        gameplay.setSoundMode(.alwaysOff)
+        gameplay.setSoundMode(.alwaysOff)
+        XCTAssertEqual(saved, [.alwaysOff], "choosing the current mode again saves nothing")
+        XCTAssertEqual(selected(try soundMenu()), ["Always Off"])
+        XCTAssertFalse(gameplay.isRunningFrames)
     }
 
     func testOnlyGameBoyGameplayAllowsBothLandscapeOrientations() {

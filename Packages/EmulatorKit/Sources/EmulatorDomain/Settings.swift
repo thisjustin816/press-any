@@ -56,7 +56,7 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case lcdFilter
     /// `ColorCorrection`, unset means `.balanced`.
     case colorCorrection = "colorCorrection"
-    /// `DMGPalette`, unset means `.grey`.
+    /// `DMGPalette`, unset means `.dmgGreen`.
     case dmgPalette = "dmgPalette"
     /// `FrameBlending`, unset means `.off`.
     case frameBlending
@@ -93,6 +93,14 @@ public enum SoundMode: String, Codable, Sendable, CaseIterable {
     case alwaysOn
     /// Never plays, and leaves other apps' audio playing.
     case alwaysOff
+
+    public var displayName: String {
+        switch self {
+        case .followSilentSwitch: "Follow Silent Switch"
+        case .alwaysOn: "Always On"
+        case .alwaysOff: "Always Off"
+        }
+    }
 }
 
 public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {
@@ -117,43 +125,43 @@ public enum LCDFilter: String, Codable, Sendable, CaseIterable {
 }
 
 public enum ColorCorrection: String, Codable, Sendable, CaseIterable {
-    case off = "off"
-    case accurate = "accurate"
     case balanced = "balanced"
+    case accurate = "accurate"
     case boostContrast = "boostContrast"
     case reduceContrast = "reduceContrast"
     case lowContrast = "lowContrast"
+    case off = "off"
 
     public static let defaultValue: Self = .balanced
-    public static let explanation = "Adjusts colors in Game Boy Color games."
+    public static let explanation = "Adjusts Game Boy Color colors for a modern screen. Original shows them as the game stores them."
 
     public var displayName: String {
         switch self {
-        case .off: "Off"
-        case .accurate: "Accurate"
         case .balanced: "Balanced"
+        case .accurate: "Accurate"
         case .boostContrast: "Boost Contrast"
         case .reduceContrast: "Reduce Contrast"
         case .lowContrast: "Low Contrast"
+        case .off: "Original"
         }
     }
 }
 
 public enum DMGPalette: String, Codable, Sendable, CaseIterable {
-    case grey = "grey"
     case dmgGreen = "dmgGreen"
     case pocket = "pocket"
     case light = "light"
+    case grey = "grey"
 
-    public static let defaultValue: Self = .grey
-    public static let explanation = "Changes the four shades in original Game Boy games."
+    public static let defaultValue: Self = .dmgGreen
+    public static let explanation = "The four shades of an original Game Boy game, named for the Game Boy screen each looks like."
 
     public var displayName: String {
         switch self {
-        case .grey: "Grey"
-        case .dmgGreen: "DMG Green"
-        case .pocket: "Pocket"
-        case .light: "Light"
+        case .dmgGreen: "Green (Game Boy)"
+        case .pocket: "Olive (Pocket)"
+        case .light: "Teal (Light)"
+        case .grey: "Black & White"
         }
     }
 }

@@ -408,6 +408,11 @@ final class AppContainer {
         appSetting(SoundMode.self, .soundMode) ?? .followSilentSwitch
     }
 
+    /// Saves the app-wide Sound setting, as the game menu does.
+    func setSoundMode(_ mode: SoundMode) throws {
+        try repositories.settings.set(mode, key: SettingKey.soundMode.rawValue, scope: .app)
+    }
+
     /// App-wide. Unset or unreadable means matching Light or Dark Mode.
     func controllerTheme() -> ControllerTheme {
         appSetting(ControllerTheme.self, .controllerTheme) ?? .matchSystem

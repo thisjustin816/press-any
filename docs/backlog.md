@@ -343,10 +343,10 @@ Done: Pause / Resume from menu with paused overlay.
 
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
 Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable; Frame
-Blending Off (default) / Blend / LCD Ghosting, inheritable; GBC Color Correction Off / Accurate /
-Balanced (default) / Boost Contrast / Reduce Contrast / Low Contrast; DMG Palette Grey (default) /
-DMG Green / Pocket / Light. Both color settings inherit App → System → Game → Build, update the
-open picture from Settings, and survive reset and state loads.
+Blending Off (default) / Blend / LCD Ghosting, inheritable; Screen Colors per system: Game Boy
+Green (default) / Olive / Teal / Black & White, Game Boy Color Balanced (default) / Accurate /
+Boost Contrast / Reduce Contrast / Low Contrast / Original. Both inherit System → Game → Build,
+update the open picture from Settings, and survive reset and state loads.
 
 ### Layouts, skins, touch
 
@@ -546,7 +546,9 @@ Nothing open.
 
 Done: Resolver App -> System -> Game -> Build, only explicit overrides stored, inherited source
 shown, Reset to Inherited; Implemented keys; Settings screens for App, System (Game Boy, Game Boy
-Color), Game and Build.
+Color), Game and Build; App Settings as Controls, Display and Playing pages with Systems, Library
+and About lists, and the scoped sheet grouped the same way with each setting's source under its
+name.
 
 ### SDK / toolchain detection
 

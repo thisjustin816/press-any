@@ -22,85 +22,9 @@ struct ScopedSettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                InheritableSettingRow(
-                    title: "Skip Boot Logo",
-                    key: .skipBootAnimation,
-                    defaultValue: false,
-                    options: [(true, "On"), (false, "Off")],
-                    context: context
-                )
-                InheritableSettingRow(
-                    title: "Controller Layout",
-                    key: .controllerLayout,
-                    defaultValue: TouchControlStyle.gameBoy,
-                    options: [(.gameBoy, "Game Boy"), (.playtiles, "Playtiles")],
-                    context: context
-                )
-                InheritableSettingRow(
-                    title: "Orientation",
-                    key: .orientation,
-                    defaultValue: ScreenOrientation.automatic,
-                    options: [(.automatic, "Automatic"), (.portrait, "Portrait"), (.landscape, "Landscape")],
-                    context: context
-                )
-                InheritableSettingRow(
-                    title: "Screen Scaling",
-                    key: .screenScaling,
-                    defaultValue: ScreenScaling.integer,
-                    options: [(.integer, "Integer"), (.fill, "Fill")],
-                    context: context
-                )
-                InheritableSettingRow(
-                    title: "Color Correction",
-                    key: .colorCorrection,
-                    defaultValue: ColorCorrection.defaultValue,
-                    options: ColorCorrection.allCases.map { ($0, $0.displayName) },
-                    context: context,
-                    explanation: ColorCorrection.explanation
-                )
-                InheritableSettingRow(
-                    title: "DMG Palette",
-                    key: .dmgPalette,
-                    defaultValue: DMGPalette.defaultValue,
-                    options: DMGPalette.allCases.map { ($0, $0.displayName) },
-                    context: context,
-                    explanation: DMGPalette.explanation
-                )
-                InheritableSettingRow(
-                    title: "LCD Filter",
-                    key: .lcdFilter,
-                    defaultValue: LCDFilter.off,
-                    options: LCDFilter.allCases.map { ($0, $0.displayName) },
-                    context: context
-                )
-                InheritableSettingRow(
-                    title: "Frame Blending",
-                    key: .frameBlending,
-                    defaultValue: FrameBlending.off,
-                    options: FrameBlending.allCases.map { ($0, $0.displayName) },
-                    context: context
-                )
-                InheritableSettingRow(
-                    title: "Fast Forward Speed",
-                    key: .fastForwardSpeed,
-                    defaultValue: FastForwardSpeed.x2,
-                    options: FastForwardSpeed.allCases.map { ($0, $0.displayName) },
-                    context: context
-                )
-                InheritableSettingRow(
-                    title: "Fast Forward Audio",
-                    key: .fastForwardAudio,
-                    defaultValue: FastForwardAudio.muted,
-                    options: FastForwardAudio.allCases.map { ($0, $0.displayName) },
-                    context: context
-                )
-                InheritableSettingRow(
-                    title: "Resume Games",
-                    key: .autoResumePolicy,
-                    defaultValue: AutoResumePolicy.always,
-                    options: [(.always, "Always"), (.ask, "Ask"), (.never, "Never")],
-                    context: context
-                )
+                displaySection
+                controlsSection
+                playingSection
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -109,6 +33,112 @@ struct ScopedSettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+
+    // Separate properties keep each section small enough for the compiler to type-check quickly.
+    private var displaySection: some View {
+        Section {
+            InheritableSettingRow(
+                title: "Orientation",
+                key: .orientation,
+                defaultValue: ScreenOrientation.automatic,
+                options: [(.automatic, "Automatic"), (.portrait, "Portrait"), (.landscape, "Landscape")],
+                context: context
+            )
+            InheritableSettingRow(
+                title: "Screen Scaling",
+                key: .screenScaling,
+                defaultValue: ScreenScaling.integer,
+                options: [(.integer, "Integer"), (.fill, "Fill")],
+                context: context
+            )
+            screenColors
+            InheritableSettingRow(
+                title: "LCD Filter",
+                key: .lcdFilter,
+                defaultValue: LCDFilter.off,
+                options: LCDFilter.allCases.map { ($0, $0.displayName) },
+                context: context
+            )
+            InheritableSettingRow(
+                title: "Frame Blending",
+                key: .frameBlending,
+                defaultValue: FrameBlending.off,
+                options: FrameBlending.allCases.map { ($0, $0.displayName) },
+                context: context
+            )
+        } header: {
+            Text("Display")
+        } footer: {
+            Text(system == .gameBoy ? DMGPalette.explanation : ColorCorrection.explanation)
+        }
+    }
+
+    private var controlsSection: some View {
+        Section("Controls") {
+            InheritableSettingRow(
+                title: "Controller Layout",
+                key: .controllerLayout,
+                defaultValue: TouchControlStyle.gameBoy,
+                options: [(.gameBoy, "Game Boy"), (.playtiles, "Playtiles")],
+                context: context
+            )
+        }
+    }
+
+    private var playingSection: some View {
+        Section("Playing") {
+            InheritableSettingRow(
+                title: "Fast Forward Speed",
+                key: .fastForwardSpeed,
+                defaultValue: FastForwardSpeed.x2,
+                options: FastForwardSpeed.allCases.map { ($0, $0.displayName) },
+                context: context
+            )
+            InheritableSettingRow(
+                title: "Fast Forward Audio",
+                key: .fastForwardAudio,
+                defaultValue: FastForwardAudio.muted,
+                options: FastForwardAudio.allCases.map { ($0, $0.displayName) },
+                context: context
+            )
+            InheritableSettingRow(
+                title: "Resume Games",
+                key: .autoResumePolicy,
+                defaultValue: AutoResumePolicy.always,
+                options: [(.always, "Always"), (.ask, "Ask"), (.never, "Never")],
+                context: context
+            )
+            InheritableSettingRow(
+                title: "Skip Boot Logo",
+                key: .skipBootAnimation,
+                defaultValue: false,
+                options: [(true, "On"), (false, "Off")],
+                context: context
+            )
+        }
+    }
+
+    /// Each system has its own Screen Colors, so only the one that applies shows.
+    @ViewBuilder private var screenColors: some View {
+        switch system {
+        case .gameBoy:
+            InheritableSettingRow(
+                title: "Screen Colors",
+                key: .dmgPalette,
+                defaultValue: DMGPalette.defaultValue,
+                options: DMGPalette.allCases.map { ($0, $0.displayName) },
+                context: context
+            )
+        case .gameBoyColor:
+            InheritableSettingRow(
+                title: "Screen Colors",
+                key: .colorCorrection,
+                defaultValue: ColorCorrection.defaultValue,
+                options: ColorCorrection.allCases.map { ($0, $0.displayName) },
+                context: context
+            )
         }
     }
 
@@ -154,23 +184,21 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     let defaultValue: Value
     let options: [(Value, String)]
     let context: InheritableSettingContext
-    var explanation: String? = nil
 
     @State private var choice: Choice = .inherit
     @State private var inherited: ResolvedSetting?
     @State private var errorMessage: String?
 
     var body: some View {
-        Section {
-            Picker(title, selection: $choice) {
-                Text("Inherit (\(label(for: inheritedValue)))").tag(Choice.inherit)
-                ForEach(options.indices, id: \.self) { index in
-                    Text(options[index].1).tag(Choice.value(options[index].0))
-                }
+        Picker(selection: $choice) {
+            Text("Inherit (\(label(for: inheritedValue)))").tag(Choice.inherit)
+            ForEach(options.indices, id: \.self) { index in
+                Text(options[index].1).tag(Choice.value(options[index].0))
             }
-        } footer: {
-            Text(errorMessage ?? footer)
-            if let explanation { Text(explanation) }
+        } label: {
+            Text(title)
+            Text(errorMessage ?? note)
+                .foregroundStyle(errorMessage == nil ? Color.secondary : Color.red)
         }
         .onAppear(perform: load)
         .onChange(of: choice) { _, newValue in save(newValue) }
@@ -180,12 +208,15 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         inherited.flatMap { try? $0.decode(Value.self) } ?? defaultValue
     }
 
-    private var footer: String {
+    /// Where the value comes from, under the setting's title.
+    private var note: String {
+        let source = inherited?.source
         switch choice {
         case .inherit:
-            "Inherited from \(sourceName(inherited?.source))."
+            return source == nil ? "Default" : "From \(sourceName(source))"
         case .value:
-            "Set here. Choose Inherit to use \(label(for: inheritedValue)) from \(sourceName(inherited?.source)) again."
+            let other = label(for: inheritedValue)
+            return source == nil ? "Set here; the default is \(other)" : "Set here, instead of \(other) from \(sourceName(source))"
         }
     }
 

@@ -123,7 +123,8 @@ struct RootView: View {
                         endGameplay(presentation)
                     }
                     : nil,
-                onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true }
+                onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true },
+                onSoundModeChange: { try bootstrap.container?.setSoundMode($0) }
             )
             .ignoresSafeArea()
             // The status bar sits on the controller's body: dark text on Classic, light on Dark.

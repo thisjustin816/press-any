@@ -41,7 +41,7 @@ final class GameplayViewController: UIViewController {
     private var screenScaling: ScreenScaling
     private let controllerTheme: ControllerTheme
     private let tapGameForMenu: Bool
-    private let soundMode: SoundMode
+    private var soundMode: SoundMode
     private let hidesTouchControlsWithController: Bool
     private let touchHaptics: TouchHaptics
     /// Set by a touch while a controller hides the touch controls, and cleared by the controller's
@@ -61,6 +61,8 @@ final class GameplayViewController: UIViewController {
     /// When set, the menu offers Settings, which calls this. The game stays paused under the
     /// settings, which arrive through `applyDisplaySettings` as they change.
     var onOpenSettings: (() -> Void)?
+    /// Saves a Sound choice made from the game menu, which applies it to the game at once.
+    var onSoundModeChange: ((SoundMode) throws -> Void)?
 
     init(
         runtime: any GameplayRuntime,
@@ -298,6 +300,17 @@ final class GameplayViewController: UIViewController {
                 attributes: .disabled
             ) { _ in })
         }
+        elements.append(UIMenu(
+            title: "Sound",
+            subtitle: soundMode.displayName,
+            image: UIImage(systemName: soundMode == .alwaysOff ? "speaker.slash.fill" : "speaker.wave.2.fill"),
+            options: .singleSelection,
+            children: SoundMode.allCases.map { mode in
+                UIAction(title: mode.displayName, state: mode == soundMode ? .on : .off) { [weak self] _ in
+                    self?.setSoundMode(mode)
+                }
+            }
+        ))
         if onOpenSettings != nil {
             elements.append(UIAction(title: "Settings…", image: UIImage(systemName: "gearshape")) { [weak self] _ in
                 self?.onOpenSettings?()
@@ -811,6 +824,18 @@ final class GameplayViewController: UIViewController {
             self?.closeTapped()
         })
         present(alert, animated: true)
+    }
+
+    /// Plays the game's sound the new way at once, and saves it as the app-wide Sound setting.
+    func setSoundMode(_ mode: SoundMode) {
+        guard mode != soundMode else { return }
+        soundMode = mode
+        audio.apply(mode)
+        do {
+            try onSoundModeChange?(mode)
+        } catch {
+            showTransientMessage("Could not save the setting: \(error.localizedDescription)")
+        }
     }
 
     private func showTransientMessage(_ text: String) {
