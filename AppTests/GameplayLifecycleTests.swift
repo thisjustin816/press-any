@@ -157,8 +157,8 @@ final class GameplayLifecycleTests: XCTestCase {
         NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: controller)
 
         XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
-        XCTAssertTrue(gameplay.isRunningFrames)
-        XCTAssertFalse(gameplay.isShowingPaused)
+        XCTAssertFalse(gameplay.isRunningFrames, "losing the controller pauses the game")
+        XCTAssertTrue(gameplay.isShowingPaused)
     }
 
     func testAControllerConnectedBeforeLaunchOverridesPlaytilesEvenWithTouchControlsShown() {
