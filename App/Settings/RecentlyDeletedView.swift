@@ -14,7 +14,47 @@ struct RecentlyDeletedView: View {
     @State private var batchPurge: [UUID]?
     @State private var failure: (title: String, message: String)?
 
+    // Split up so the compiler checks each part on its own; as one expression it timed out.
     var body: some View {
+        content
+            .alert(batchPurgeTitle, isPresented: Binding(
+                get: { batchPurge != nil },
+                set: { if !$0 { batchPurge = nil } }
+            ), presenting: batchPurge) { ids in
+                Button("Delete Now (\(ids.count))", role: .destructive) { purgeSelected(ids) }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("They and everything that went with them are removed for good. This can’t be undone.")
+            }
+            .alert("Delete Now?", isPresented: Binding(
+                get: { purgeTarget != nil },
+                set: { if !$0 { purgeTarget = nil } }
+            ), presenting: purgeTarget) { deletion in
+                Button("Delete \(deletion.title)", role: .destructive) { purge(deletion) }
+                Button("Cancel", role: .cancel) {}
+            } message: { deletion in
+                Text("\(deletion.title) and everything that went with it are removed for good. This can’t be undone.")
+            }
+            .alert(failure?.title ?? "", isPresented: Binding(
+                get: { failure != nil },
+                set: { if !$0 { failure = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(failure?.message ?? "")
+            }
+    }
+
+    private var content: some View {
+        list
+            .navigationTitle("Recently Deleted")
+            .navigationBarTitleDisplayMode(.inline)
+            .environment(\.editMode, .constant(selection.isSelecting ? .active : .inactive))
+            .toolbar { toolbar }
+            .task { reload() }
+    }
+
+    private var list: some View {
         List(selection: selection.isSelecting ? $selection.ids : nil) {
             if !deletions.isEmpty {
                 Section {
@@ -35,51 +75,27 @@ struct RecentlyDeletedView: View {
                 )
             }
         }
-        .navigationTitle("Recently Deleted")
-        .navigationBarTitleDisplayMode(.inline)
-        .environment(\.editMode, .constant(selection.isSelecting ? .active : .inactive))
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(selection.isSelecting ? "Done" : "Select") { selection.toggleMode() }
-                    .disabled(deletions.isEmpty)
-            }
-            if selection.isSelecting {
-                ToolbarItemGroup(placement: .bottomBar) {
-                    Button("Restore (\(selection.ids.count))") { restoreSelected() }
-                        .disabled(selection.ids.isEmpty)
-                    Spacer()
-                    Button("Delete Now (\(selection.ids.count))", role: .destructive) { batchPurge = selectedIDs }
-                        .disabled(selection.ids.isEmpty)
-                }
+    }
+
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button(selection.isSelecting ? "Done" : "Select") { selection.toggleMode() }
+                .disabled(deletions.isEmpty)
+        }
+        if selection.isSelecting {
+            ToolbarItemGroup(placement: .bottomBar) {
+                Button("Restore (\(selection.ids.count))") { restoreSelected() }
+                    .disabled(selection.ids.isEmpty)
+                Spacer()
+                Button("Delete Now (\(selection.ids.count))", role: .destructive) { batchPurge = selectedIDs }
+                    .disabled(selection.ids.isEmpty)
             }
         }
-        .task { reload() }
-        .alert("Delete \(batchPurge?.count ?? 0) \((batchPurge?.count ?? 0) == 1 ? "Item" : "Items") Now?", isPresented: Binding(
-            get: { batchPurge != nil },
-            set: { if !$0 { batchPurge = nil } }
-        ), presenting: batchPurge) { ids in
-            Button("Delete Now (\(ids.count))", role: .destructive) { purgeSelected(ids) }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("They and everything that went with them are removed for good. This can’t be undone.")
-        }
-        .alert("Delete Now?", isPresented: Binding(
-            get: { purgeTarget != nil },
-            set: { if !$0 { purgeTarget = nil } }
-        ), presenting: purgeTarget) { deletion in
-            Button("Delete \(deletion.title)", role: .destructive) { purge(deletion) }
-            Button("Cancel", role: .cancel) {}
-        } message: { deletion in
-            Text("\(deletion.title) and everything that went with it are removed for good. This can’t be undone.")
-        }
-        .alert(failure?.title ?? "", isPresented: Binding(
-            get: { failure != nil },
-            set: { if !$0 { failure = nil } }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(failure?.message ?? "")
-        }
+    }
+
+    private var batchPurgeTitle: String {
+        let count = batchPurge?.count ?? 0
+        return "Delete \(count) \(count == 1 ? "Item" : "Items") Now?"
     }
 
     private func row(_ deletion: LibraryDeletion) -> some View {
