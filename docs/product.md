@@ -51,8 +51,13 @@ versions, regional and revision variants, and Builds moving in or out. It has a 
 title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its
 own name; the base game's title stays as lineage.
 
-v1 adds aliases (indexed for search, including a No-Intro family's regional titles), favorites
-and metadata provenance; tags, collections, documents and typed artwork follow in v1.1.
+A Game keeps alternate titles as aliases in an indexed table, ready for the later FTS5 index.
+Library search already matches them. A No-Intro family's other regional titles become aliases
+when a release joins the Game, so "Pocket Monsters Crystal" finds Pokémon Crystal. Rename Game
+in Game Details keeps the former title as an alias and records the player's title choice.
+
+v1 adds favorites and metadata provenance; tags, collections, documents and typed artwork follow
+in v1.1.
 
 ### Build
 
@@ -173,15 +178,26 @@ changes the library; review shows what will happen; commit is all or nothing.
 - The destination and Build details come first: a new Game or an existing one.
 - **Matching an existing Game.** A known No-Intro dump joins the one Game that already holds a
   Build from its family; with several candidates it's a choice, not a default. Otherwise review
-  suggests a Game whose title matches the file's title, header title or a hack's base title,
+  suggests a Game whose title or alias matches the file's title, header title or a hack's base title,
   ignoring case, punctuation and spacing. Only whole titles match ("Mega Man 2" never joins
   "Mega Man"), and two matching Games suggest neither. An uncertain ROM is never attached silently.
-- **Roles.** Every new Build defaults to Preferred. It defaults to Base when the Game has none,
+- **Match Game.** A ROM with no No-Intro match can be marked as a hack or another Build of a known
+  game. Search the library and bundled No-Intro data, choose the base game, then confirm Import.
+  A recorded base keeps its title, system and, when known, No-Intro family and release even if its
+  ROM isn't in the library. The ROM stays Unknown; this choice never invents an image match or a
+  patch source. Importing a release of that base family later offers the Game and a Base mark in
+  review. Several Games with that lineage leave the destination to the player.
+- **Regional proposals.** For No-Intro releases, the app's region and language order suggests the
+  display title among the Game's releases and whether the arriving Build should be Preferred.
+  A higher-ranked release offers the better title and Preferred mark in review; each can be
+  declined before Import confirms them. Ties keep the existing choice. A player-set title is
+  never replaced, and changing the setting doesn't rename or change Preferred in existing Games.
+- **Roles.** Other new Builds default to Preferred. A Build defaults to Base when the Game has none,
   unless it's a ROM hack. Where the Game has a Base, only a newer homebrew release defaults to
   replacing it: one whose version or date sorts after the Base's, or any versioned file when the
   Base has none. A retail revision or a beta leaves a clean Base alone. ROM hacks and
-  patch-created Builds are Preferred but not Base. A role the player sets stays when the
-  destination changes.
+  patch-created Builds are Preferred but not Base. A ROM explicitly matched as a hack or another
+  Build starts without a Base mark. A role the player sets stays when the destination changes.
 - **Metadata.** Region, language, revision and version fill from the filename (see Naming) and a
   nonzero header revision, and the player can correct or clear them. Unknown tags stay as written.
   Review labels its fields and explains Base Build and a wrong header checksum.
@@ -228,15 +244,23 @@ No-Intro in Acknowledgements anyway, with the data's date.
   automatically, because it bans clients it takes for bots and lifts bans only by email. CI warns
   when the data is more than 90 days old. Signed downloadable updates wait for a host and a
   signing key.
-- Each imported image stores its SHA-1 beside the SHA-256 that stays its identity. Nothing else
-  No-Intro says is stored: dump status, family and regional titles are looked up when needed, so
-  the library never carries stale names.
+- Each imported image stores its SHA-1 beside the SHA-256 that stays its identity. Dump status and
+  family membership are looked up from the bundle when needed. Family titles are kept as searchable
+  Game aliases when a release joins, and explicit Match Game choices keep base-game lineage even
+  without the ROM. Refreshing the data never renames a Game or replaces a player's title.
 - A known dump takes its canonical name ahead of the filename, and a Game created from one is
-  titled by it. The original filename is always kept.
+  titled by its regional title. The original filename is always kept.
 - A Build's Technical Info shows Verified (with the dump's name), Bad Dump, Modified (patched from
   a verified dump) or Unknown. The app never alters a ROM to make it match.
 
 ### Naming rules
+
+Settings > Library > Regions and Languages starts with USA, Europe, Japan. Both lists can be
+reordered, added to or cleared; languages break a region tie, starting with En, Fr, De, Es, It, Ja.
+A release listing several regions or languages uses its best-ranked tag; World is available in
+every region. Unlisted tags sort after listed ones. These preferences supply suggestions applied
+only after confirmation in review. Existing titles with no recorded provenance are preserved
+conservatively.
 
 Filenames are evidence, not truth. Parsed values keep their source, the player's corrections win,
 and identity and bytes never change. The same rules name Builds in Import Review, Quick Play
@@ -263,14 +287,8 @@ promotion and Open Patch.
 - Richer ROM-hack metadata (hack title, author, version from bracket conventions) and a
   normalized filename suggestion, without inventing fields.
 - v1.1: Rename File to Canonical Name as an explicit action; bulk rename later.
-- Match Game for unknown ROMs, including base-game lineage without owning the base ROM, and
-  offering to link the base when it's imported later.
-- Regional releases: a preferred region and language order (USA, Europe, Japan by default) that
-  picks a Game's display title and which regional Build defaults to Preferred; Import Review
-  proposes the better title and the Preferred mark when a higher-ranked region arrives, and the
-  player confirms; nothing renames a Game on its own. Also artwork by region, patch review
-  offering the Game's other regional Build when a patch expects it, and a reviewed suggestion to
-  merge Games already in the library that are one No-Intro family.
+- v1.1: artwork by region and patch review offering the Game's other regional Build when a patch
+  expects it.
 - Metadata provenance with a Metadata Details view, quiet provider refreshes that never overwrite
   the player's values, and Build version ordering from semantic versions, build numbers and dates.
 
@@ -289,6 +307,13 @@ promotion and Open Patch.
   target keeps its artwork unless Use <source>'s Artwork is on. Copy offers the source's artwork
   and profiles. When the target already holds the same image, Copy skips that Build and Move is
   refused, since moving would drop the Build's states or let them cross Builds.
+- **Suggest Game Merges**, in the library's view menu, lists Games whose Builds have image or
+  patch-chain evidence of the same No-Intro family. Review chooses the subset, the Game to keep
+  and its surviving title. Merge confirms moves through Merge into Another Game; lineage,
+  profiles, states and artwork follow that path. The survivor keeps its artwork, or the first
+  available source artwork fills it. Duplicate images are refused before moving a family group.
+  Merely opening the review changes nothing. A failed operation refreshes the remaining list;
+  completed groups stay merged and can be reviewed in the library.
 - A Build's menu has Mark as Base Build and Unmark as Base Build.
 
 ## Patching
@@ -604,8 +629,8 @@ the narrow playthrough overrides above. Sound is app-wide.
 
 Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (from System
 down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games and Skip Boot Logo.
-App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics and Hide Touch Controls with a
-Controller.
+App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics, Hide Touch Controls with a
+Controller, and the region and language order.
 
 App Settings is a short list of pages, like the iPhone's own Settings:
 
@@ -614,7 +639,7 @@ App Settings is a short list of pages, like the iPhone's own Settings:
 - **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
 - **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo.
 - **Systems**: Game Boy and Game Boy Color, each opening that system's settings.
-- **Library**: Recently Deleted and Check Library.
+- **Library**: Regions and Languages, Recently Deleted and Check Library.
 - **About**: How Press Any Works, the Privacy Policy and Acknowledgements.
 
 The settings for a system, a Game, a Build or the open game are one sheet, short enough to sit at
@@ -651,8 +676,8 @@ exposes them; custom border editing is later.
 ## Library
 
 - A square box-art grid (Show Titles on by default, and one column at accessibility text sizes)
-  and a compact list, with search by primary title. Cartridges without artwork take a color per
-  system and print the title on the label.
+  and a compact list, with search by primary title and aliases. Cartridges without artwork take a
+  color per system and print the title on the label.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
   profile. The Build menu groups playing and saves, details, editing, then Make Separate Game.
   Technical Info shows hashes (four groups of 16 on two lines, copied by touch and hold), the

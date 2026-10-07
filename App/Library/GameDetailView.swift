@@ -42,6 +42,8 @@ struct GameDetailView: View {
     @State private var badgeText = ""
     @State private var renamingBuild: Build?
     @State private var buildName = ""
+    @State private var showRenameGame = false
+    @State private var gameTitle = ""
 
     private struct SettingsTarget: Identifiable {
         let id = UUID()
@@ -93,6 +95,7 @@ struct GameDetailView: View {
         List {
             artworkSection
             lineageSection
+            baseGameSection
             playSection
             buildsSection
             profilesSection
@@ -119,6 +122,16 @@ struct GameDetailView: View {
         if let lineage = model.game?.lineage {
             Section {
                 LabeledContent("Split From", value: lineage.sourceTitle)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var baseGameSection: some View {
+        let titles = Array(Set(model.builds.compactMap { $0.baseGameReference?.title })).sorted()
+        if !titles.isEmpty {
+            Section("Base Game") {
+                ForEach(titles, id: \.self) { Text($0) }
             }
         }
     }
@@ -194,6 +207,10 @@ struct GameDetailView: View {
                     )
                 } label: {
                     Label("Game Settings…", systemImage: "gearshape")
+                }
+                Button("Rename Game…") {
+                    gameTitle = model.game?.primaryTitle ?? ""
+                    showRenameGame = true
                 }
                 artworkMenu
                 Button {
@@ -332,6 +349,11 @@ struct GameDetailView: View {
 
     private func withAlerts(_ content: some View) -> some View {
         content
+            .alert("Rename Game", isPresented: $showRenameGame) {
+                TextField("Game Title", text: $gameTitle)
+                Button("Rename") { model.renameGame(to: gameTitle) }
+                Button("Cancel", role: .cancel) {}
+            }
             .alert("Rename Build", isPresented: Binding(
                 get: { renamingBuild != nil },
                 set: { if !$0 { renamingBuild = nil } }

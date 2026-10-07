@@ -160,6 +160,18 @@ final class GameDetailViewModel: ObservableObject {
         perform { try buildOperations.setPreferredBuild(gameID: gameID, buildID: build.id) }
     }
 
+    func renameGame(to title: String) {
+        do {
+            try buildOperations.renameGame(gameID: gameID, title: title)
+            reload()
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+        } catch BuildOperationError.invalidGameTitle {
+            errorMessage = "A Game title can't be blank."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func rename(_ build: Build, to displayName: String) {
         do {
             try buildOperations.renameBuild(buildID: build.id, displayName: displayName)

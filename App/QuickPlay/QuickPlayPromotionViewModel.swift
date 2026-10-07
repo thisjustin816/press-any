@@ -1,3 +1,4 @@
+import EmulatorApplication
 import Combine
 import EmulatorDomain
 import Foundation
@@ -53,7 +54,9 @@ final class QuickPlayPromotionViewModel: ObservableObject {
                 committer: container.importCommitter,
                 assetStore: container.fileStore
             ),
-            existingBuilds: { container.builds(in: $0) }
+            existingBuilds: { container.builds(in: $0) },
+            knownDumps: container.knownDumps,
+            releasePreference: (try? ReleasePreferenceStore(store: container.repositories.settings).load()) ?? ReleasePreference()
         )
     }
 

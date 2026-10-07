@@ -154,6 +154,7 @@ struct ImportArtworkSection: View {
 /// duplicate. Shared by import and Quick Play promotion.
 struct ImportDestinationSection: View {
     @ObservedObject var model: ImportReviewViewModel
+    @State private var showMatchGame = false
 
     var body: some View {
         if model.isExactDuplicate {
@@ -181,6 +182,13 @@ struct ImportDestinationSection: View {
                     TextField("Build Name", text: $model.buildDisplayName)
                         .multilineTextAlignment(.trailing)
                 }
+                if let title = model.proposedTitle {
+                    Toggle("Use Game Title: \(title)", isOn: $model.acceptProposedTitle)
+                }
+                if model.offersBaseLink {
+                    Text("This release matches the recorded base game. Mark it as Base to link it.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 Toggle("Base Build", isOn: $model.markAsBase)
                 if model.destination == .newGame {
                     LabeledContent("Preferred Build", value: "Yes — first Build")
@@ -191,6 +199,19 @@ struct ImportDestinationSection: View {
                 Text("Destination")
             } footer: {
                 Text("A Base Build is the clean, unmodified ROM that patches are applied to. Choosing it replaces this Game’s previous Base Build.")
+            }
+            if model.analysis.knownDump == nil {
+                Section("Match Game") {
+                    Button("Match Game…") { showMatchGame = true }
+                    if let base = model.baseGameReference {
+                        LabeledContent("Base Game", value: base.title)
+                        Toggle("ROM Hack", isOn: $model.matchedAsHack)
+                        Text("The base game is recorded even if its ROM is absent. This ROM is not verified by No-Intro.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        Button("Clear Match", role: .destructive) { model.clearMatch() }
+                    }
+                }
+                .sheet(isPresented: $showMatchGame) { MatchGameView(model: model) }
             }
             Section {
                 metadataField("Region", text: $model.region)
@@ -207,6 +228,8 @@ struct ImportDestinationSection: View {
             } footer: {
                 Text("\(model.namingEvidence). Correct or clear any detail before importing.")
             }
+            .onChange(of: model.region) { _, _ in model.metadataRankingChanged() }
+            .onChange(of: model.language) { _, _ in model.metadataRankingChanged() }
         }
     }
 

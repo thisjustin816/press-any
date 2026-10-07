@@ -44,7 +44,7 @@ public struct ImportCommitter: Sendable {
             guard var build = try builds.fetchBuild(id: buildID) else {
                 throw ImportCommitterError.buildNotFound(buildID)
             }
-            guard let game = try games.fetchGame(id: build.gameID) else {
+            guard var game = try games.fetchGame(id: build.gameID) else {
                 throw ImportCommitterError.gameNotFound(build.gameID)
             }
             guard let asset = try assets.fetchAsset(id: build.imageAssetID) else {
@@ -62,6 +62,12 @@ public struct ImportCommitter: Sendable {
             if build.imageSHA1 == nil, let sha1 = plan.analysis.imageSHA1 {
                 try builds.setImageSHA1(buildID: build.id, sha1: sha1)
                 build.imageSHA1 = sha1
+            }
+            let previousAliases = game.aliases
+            game.addAliases(plan.analysis.familyTitles)
+            if game.aliases != previousAliases {
+                game.modifiedAt = now()
+                try games.updateGame(game)
             }
             return ROMImportResult(
                 game: game,
@@ -110,6 +116,7 @@ public struct ImportCommitter: Sendable {
                         id: makeID(),
                         primaryTitle: title,
                         systemFamily: "gameboy",
+                        hasPlayerTitle: plan.hasPlayerTitle,
                         createdAt: timestamp,
                         modifiedAt: timestamp
                     )
@@ -148,7 +155,8 @@ public struct ImportCommitter: Sendable {
                     revision: plan.metadata.revision,
                     versionString: plan.metadata.versionString,
                     versionSortKey: plan.metadata.versionSortKey,
-                    baseTitle: plan.metadata.baseTitle,
+                    baseGameReference: plan.baseGameReference,
+                    baseTitle: plan.baseGameReference?.title ?? plan.metadata.baseTitle,
                     hackTitle: plan.metadata.hackTitle,
                     author: plan.metadata.author,
                     translation: plan.metadata.translation,
@@ -162,11 +170,17 @@ public struct ImportCommitter: Sendable {
                 }
 
                 var returnedGame = game
+                returnedGame.addAliases(plan.analysis.familyTitles)
+                if let title = plan.proposedGameTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !title.isEmpty, !returnedGame.hasPlayerTitle {
+                    returnedGame.addAliases([returnedGame.primaryTitle])
+                    returnedGame.primaryTitle = title
+                }
                 if createdNewGame || plan.markAsPreferred {
                     returnedGame.preferredBuildID = build.id
-                    returnedGame.modifiedAt = timestamp
-                    try games.updateGame(returnedGame)
                 }
+                returnedGame.modifiedAt = timestamp
+                try games.updateGame(returnedGame)
 
                 return ROMImportResult(
                     game: returnedGame,

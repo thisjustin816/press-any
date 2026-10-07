@@ -12,7 +12,7 @@ struct ImageSHA1Tests {
         let database = try AppDatabase.inMemory()
         try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v7-recently-deleted")
         let repositories = database.makeRepositories()
-        let fixture = try Fixture.create(in: repositories)
+        let fixture = try legacyFixture(in: database)
 
         try database.migrate()
 

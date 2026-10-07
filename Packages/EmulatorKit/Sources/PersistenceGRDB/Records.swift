@@ -50,6 +50,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
 
     var id: String
     var primaryTitle: String
+    var hasPlayerTitle: Bool
     var systemFamily: String
     var preferredBuildID: String?
     var preferredSaveProfileID: String?
@@ -62,6 +63,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
     enum CodingKeys: String, CodingKey {
         case id
         case primaryTitle = "primary_title"
+        case hasPlayerTitle = "has_player_title"
         case systemFamily = "system_family"
         case preferredBuildID = "preferred_build_id"
         case preferredSaveProfileID = "preferred_save_profile_id"
@@ -75,6 +77,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
     init(_ value: Game) {
         id = PersistenceCodec.uuid(value.id)
         primaryTitle = value.primaryTitle
+        hasPlayerTitle = value.hasPlayerTitle
         systemFamily = value.systemFamily
         preferredBuildID = value.preferredBuildID.map(PersistenceCodec.uuid)
         preferredSaveProfileID = value.preferredSaveProfileID.map(PersistenceCodec.uuid)
@@ -85,11 +88,13 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         modifiedAt = PersistenceCodec.date(value.modifiedAt)
     }
 
-    func domain() throws -> Game {
+    func domain(aliases: [String] = []) throws -> Game {
         Game(
             id: try PersistenceCodec.uuid(id),
             primaryTitle: primaryTitle,
             systemFamily: systemFamily,
+            aliases: aliases,
+            hasPlayerTitle: hasPlayerTitle,
             preferredBuildID: try PersistenceCodec.optionalUUID(preferredBuildID),
             preferredSaveProfileID: try PersistenceCodec.optionalUUID(preferredSaveProfileID),
             artworkAssetID: try PersistenceCodec.optionalUUID(artworkAssetID),
@@ -184,6 +189,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
     var revision: String?
     var versionString: String?
     var versionSortKey: String?
+    var baseGameReferenceJSON: String?
     var baseTitle: String?
     var hackTitle: String?
     var author: String?
@@ -208,6 +214,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         case isBase = "is_base"
         case versionString = "version_string"
         case versionSortKey = "version_sort_key"
+        case baseGameReferenceJSON = "base_game_reference_json"
         case baseTitle = "base_title"
         case hackTitle = "hack_title"
         case preferredSaveProfileID = "preferred_save_profile_id"
@@ -236,6 +243,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         container[CodingKeys.revision.rawValue] = revision
         container[CodingKeys.versionString.rawValue] = versionString
         container[CodingKeys.versionSortKey.rawValue] = versionSortKey
+        container[CodingKeys.baseGameReferenceJSON.rawValue] = baseGameReferenceJSON
         container[CodingKeys.baseTitle.rawValue] = baseTitle
         container[CodingKeys.hackTitle.rawValue] = hackTitle
         container[CodingKeys.author.rawValue] = author
@@ -249,7 +257,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         container[CodingKeys.modifiedAt.rawValue] = modifiedAt
     }
 
-    init(_ value: Build) {
+    init(_ value: Build) throws {
         id = PersistenceCodec.uuid(value.id)
         gameID = PersistenceCodec.uuid(value.gameID)
         system = value.system.rawValue
@@ -265,6 +273,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         revision = value.revision
         versionString = value.versionString
         versionSortKey = value.versionSortKey
+        baseGameReferenceJSON = try value.baseGameReference.map { String(decoding: try JSONEncoder().encode($0), as: UTF8.self) }
         baseTitle = value.baseTitle
         hackTitle = value.hackTitle
         author = value.author
@@ -313,6 +322,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
             revision: revision,
             versionString: versionString,
             versionSortKey: versionSortKey,
+            baseGameReference: try baseGameReferenceJSON.map { try JSONDecoder().decode(BaseGameReference.self, from: Data($0.utf8)) },
             baseTitle: baseTitle,
             hackTitle: hackTitle,
             author: author,

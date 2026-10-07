@@ -69,6 +69,7 @@ struct AppSettingsView: View {
 
                 if (libraryDeletion != nil && games != nil) || integrityChecker != nil {
                     Section("Library") {
+                        NavigationLink("Regions and Languages") { ReleasePreferenceView(store: store) }
                         if let libraryDeletion, let games {
                             NavigationLink("Recently Deleted") {
                                 RecentlyDeletedView(operations: libraryDeletion, games: games)

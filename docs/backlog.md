@@ -14,14 +14,12 @@ Library backend first: everything that decides how the library is stored, identi
 safe lands before more play features, so a library built while testing never needs regrouping or
 migrating later.
 
-1. Identity: No-Intro categorization (the bundled data and its generator, hash matching,
-   Verified/Modified/Unknown, parent/clone grouping and merging existing Games that are one
-   family), the regional rows, Match Game for unknown ROMs and lineage without owning the base,
-   and the ROM-hack naming that remains. The license is confirmed, and "No-Intro data" in
-   `docs/product.md` describes the design.
-2. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
-   metadata provenance with Metadata Details, Build notes, per-Build playtime, favorites,
-   declared save compatibility, per-step patch input hashes, and the cross-region save check.
+1. Identity: the ROM-hack naming and metadata-source work that remains. Bundled No-Intro data,
+   hash matching, family grouping, regional proposals, reviewed family merges and Match Game
+   with absent-base lineage are built. "No-Intro data" in `docs/product.md` describes the behavior.
+2. The rest of the data model, in as few schema migrations as possible: metadata provenance with
+   Metadata Details, Build notes, per-Build playtime, favorites, declared save compatibility,
+   per-step patch input hashes, and the cross-region save check. Game aliases and rename are built.
 3. Multi-signal development-build matching, the one import item left in v1.
 4. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
    with cleanup, in-flight protection and verification on read.
@@ -114,9 +112,9 @@ ROMs and patches on demand.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Game aliases/alternate titles (indexed) | v1 | no field; a No-Intro family's regional titles become aliases, so "Pocket Monsters Crystal" finds Pokémon Crystal |
+| done | Game aliases/alternate titles (indexed) | v1 | normalized indexed alias table in one identity migration; family titles added at import; library search matches aliases, including "Pocket Monsters Crystal" for Pokémon Crystal; FTS5 remains separate |
 | partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
-| partial | Presentation-metadata editing (rename Game/Build after creation) | v1 | Rename Build and Suggest Build Names; no Game rename UI |
+| done | Presentation-metadata editing (rename Game/Build after creation) | v1 | Rename Game in Game Details preserves the former title as an alias and protects the player title; Rename Build and Suggest Build Names |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain and sidecars were MVP) | toolchain reports and variable maps done; the rest missing |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1.1 |  |
 | missing | Typed multi-artwork model with primary selection | v1.1 | Game.artworkAssetID is a single image |
@@ -153,7 +151,7 @@ play another Build/Save; Build preferred Save Profile falling back to Game prefe
 |---|---|---|---|
 | missing | SQLite FTS5 live index (aliases, filenames, hack title/author/version, system, region, Build names, tags, doc titles) with title-first ranking | v1 | no FTS table |
 
-Done: Search by primary title.
+Done: Search by primary title and Game aliases.
 
 ### ROM identity, naming, metadata
 
@@ -165,11 +163,11 @@ Done: Search by primary title.
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1.1 | physical renaming is an explicit action |
 | missing | Signed/validated downloadable database updates | v1.1 | needs a host and a signing key; the bundled file already carries its date |
 | partial | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | matched by SHA-1; a known dump takes its canonical name, region, language and revision through the filename parser; status flags such as Aftermarket and Unl are not parsed yet |
-| partial | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | a release suggests the one Game holding its family; several such Games are listed first for the player to choose; the preferred-region title and Preferred proposal remain |
-| missing | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Build Names | v1 |  |
-| missing | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 |  |
-| partial | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | user can pick an existing Game as destination; no lineage-without-base metadata |
-| partial | Multi-signal development-build matching, never silently attach | v1 | only exact hash or explicit target; no heuristics |
+| done | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | one family Game is suggested; several require a choice; regional title and Preferred proposals are confirmed in Import Review |
+| done | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Build Names | v1 | library view-menu review selects Games, survivor and title; confirmation uses the existing merge path, preserving lineage, profiles, states and artwork; overlapping images refused before moving a group |
+| done | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 | Settings > Library > Regions and Languages supports reordering both lists; better regional title and Preferred mark are separate import proposals; ties stay put; player titles and preexisting titles without provenance are protected |
+| done | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | explicit library and bundled No-Intro search in Import Review; records the base title, system and known family/release without a ROM; a later base import offers the destination and Base mark; manual matching leaves verification Unknown |
+| partial | Multi-signal development-build matching, never silently attach | v1 | exact hash/family and whole-title, alias, header or hack-base suggestions exist; broader development signals and confidence ranking remain |
 | missing | Quiet provider metadata refresh never overwriting user overrides | v1.1 |  |
 
 Done: SHA-256 identity for every ROM; Original imported filename preserved permanently; the bundled

@@ -29,6 +29,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v8-image-sha1") { db in
             try db.execute(sql: V1V8ImageSHA1Schema.sql)
         }
+        migrator.registerMigration("v1-v9-game-identity") { db in
+            try db.execute(sql: V1V9GameIdentitySchema.sql)
+        }
         return migrator
     }
 }
@@ -315,4 +318,18 @@ enum MVPV3Schema {
     ALTER TABLE games
     ADD COLUMN lineage_source_title TEXT;
     """#
+}
+
+
+enum V1V9GameIdentitySchema {
+    static let sql = """
+    ALTER TABLE games ADD COLUMN has_player_title INTEGER NOT NULL DEFAULT 1 CHECK (has_player_title IN (0, 1));
+    CREATE TABLE game_aliases (
+        game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+        title TEXT NOT NULL COLLATE NOCASE,
+        PRIMARY KEY (game_id, title)
+    );
+    CREATE INDEX game_aliases_title ON game_aliases(title COLLATE NOCASE);
+    ALTER TABLE builds ADD COLUMN base_game_reference_json TEXT;
+    """
 }

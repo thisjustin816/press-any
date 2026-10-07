@@ -69,7 +69,7 @@ final class KnownDumpImportTests: XCTestCase {
     private func analyze(_ data: Data, named filename: String, target: UUID? = nil) throws -> ROMImportAnalysis {
         let file = root.appendingPathComponent(filename)
         try data.write(to: file)
-        let analyzer = ROMImportAnalyzer(builds: builds, assetStore: store, knownDumps: try index())
+        let analyzer = ROMImportAnalyzer(builds: builds, games: games, assetStore: store, knownDumps: try index())
         return try analyzer.analyzeROM(at: file, targetGameID: target)
     }
 
@@ -90,6 +90,64 @@ final class KnownDumpImportTests: XCTestCase {
             buildDisplayName: analysis.filenameMetadata.suggestedBuildName,
             markAsBase: gameID == nil
         ))
+    }
+
+    func testAReleaseAddsEveryRegionalTitleAsASearchAlias() throws {
+        let red = try commit(try analyze(usa, named: "red.gb"))
+        XCTAssertTrue(red.game.matchesSearch("pocket critters - aka"))
+        XCTAssertTrue(red.game.matchesSearch("Pocket Critters - Rot"))
+        let aka = try commit(try analyze(japan, named: "aka.gb"), into: red.game.id)
+        XCTAssertEqual(aka.game.primaryTitle, red.game.primaryTitle, "joining a family never renames by itself")
+        XCTAssertEqual(Set(aka.game.aliases).count, 3)
+    }
+
+    func testBaseGameLineageExistsWithoutABaseAndOffersTheBaseLater() throws {
+        let index = try index()
+        let reference = index.reference(to: try XCTUnwrap(index.dump(sha1: SHA1Digest.data(usa))))
+        let committer = ImportCommitter(games: games, builds: builds, assets: assets,
+            toolchainReports: InMemoryToolchainReportRepository(), assetStore: store, transactions: PassthroughTransactionRunner())
+        let hack = try committer.commit(ROMImportPlan(
+            analysis: analyze(homebrew, named: "Critters Plus.gb"), disposition: .createGame(title: "Critters Plus"),
+            buildDisplayName: "Hack", markAsBase: false, baseGameReference: reference))
+        XCTAssertNil(hack.build.parentBuildID, "no invented image identity")
+        XCTAssertEqual(hack.build.baseGameReference, reference)
+        XCTAssertFalse(hack.build.isBase)
+        let base = try analyze(usa, named: "base.gb")
+        XCTAssertEqual(base.baseLineageGameIDs, [hack.game.id])
+        XCTAssertEqual(base.suggestedGameID, hack.game.id)
+        let linked = try committer.commit(ROMImportPlan(analysis: base, disposition: .addBuild(gameID: hack.game.id),
+            buildDisplayName: "Original", markAsBase: true, markAsPreferred: false))
+        XCTAssertTrue(linked.build.isBase)
+        XCTAssertEqual(try builds.fetchBuild(id: hack.build.id)?.baseGameReference, reference)
+        XCTAssertEqual(linked.game.primaryTitle, "Critters Plus")
+    }
+
+    func testConfirmedTitleProposalKeepsOldTitleAsAliasAndProtectsPlayerTitle() throws {
+        let first = try commit(try analyze(japan, named: "aka.gb"))
+        let committer = ImportCommitter(games: games, builds: builds, assets: assets,
+            toolchainReports: InMemoryToolchainReportRepository(), assetStore: store, transactions: PassthroughTransactionRunner())
+        let better = try committer.commit(ROMImportPlan(analysis: analyze(usa, named: "red.gb"), disposition: .addBuild(gameID: first.game.id),
+            buildDisplayName: "USA", markAsBase: false, markAsPreferred: true, proposedGameTitle: "Pocket Critters - Red Version"))
+        XCTAssertEqual(better.game.primaryTitle, "Pocket Critters - Red Version")
+        XCTAssertEqual(better.game.preferredBuildID, better.build.id)
+        XCTAssertTrue(better.game.aliases.contains(first.game.primaryTitle))
+        var player = better.game
+        player.primaryTitle = "My Critters"
+        player.hasPlayerTitle = true
+        try games.updateGame(player)
+        let protected = try committer.commit(ROMImportPlan(analysis: analyze(europe, named: "rot.gb"), disposition: .addBuild(gameID: player.id),
+            buildDisplayName: "Europe", markAsBase: false, proposedGameTitle: "Pocket Critters - Rot"))
+        XCTAssertEqual(protected.game.primaryTitle, "My Critters")
+    }
+
+    func testFamilyGroupingUsesImageEvidenceAndDoesNotChangeTheLibrary() throws {
+        let red = try commit(try analyze(usa, named: "red.gb"))
+        let aka = try commit(try analyze(japan, named: "aka.gb"))
+        _ = try commit(try analyze(homebrew, named: "Pocket Critters - Rot.gb"))
+        let suggestions = try FamilyGameSuggester(games: games, builds: builds, index: index()).suggestions()
+        XCTAssertEqual(suggestions.count, 1)
+        XCTAssertEqual(Set(suggestions[0].games.map(\.id)), [red.game.id, aka.game.id])
+        XCTAssertEqual(try games.fetchGames().count, 3, "suggesting does not merge")
     }
 
     func testAKnownDumpTakesItsCanonicalNameAndKeepsTheFilename() throws {

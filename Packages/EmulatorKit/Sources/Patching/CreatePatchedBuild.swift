@@ -206,6 +206,7 @@ public struct CreatePatchedBuild: Sendable {
                 revision: input.metadata.revision,
                 versionString: input.metadata.versionString,
                 versionSortKey: input.metadata.versionSortKey,
+                baseGameReference: baseBuild.baseGameReference,
                 baseTitle: input.metadata.baseTitle ?? game.primaryTitle,
                 hackTitle: input.metadata.hackTitle,
                 author: input.metadata.author,

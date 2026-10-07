@@ -81,7 +81,7 @@ final class AppContainer {
 
         integrityChecker = ManagedAssetIntegrityChecker(assets: repositories.assets, assetStore: fileStore)
         knownDumps = try? KnownDumpIndex.bundled()
-        importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, assetStore: fileStore, knownDumps: knownDumps)
+        importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, games: repositories.games, assetStore: fileStore, knownDumps: knownDumps)
         importCommitter = ImportCommitter(
             games: repositories.games,
             builds: repositories.builds,

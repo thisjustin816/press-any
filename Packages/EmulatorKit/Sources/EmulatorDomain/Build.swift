@@ -49,6 +49,7 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
     public var revision: String?
     public var versionString: String?
     public var versionSortKey: String?
+    public var baseGameReference: BaseGameReference?
     public var baseTitle: String?
     public var hackTitle: String?
     public var author: String?
@@ -75,6 +76,7 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         revision: String? = nil,
         versionString: String? = nil,
         versionSortKey: String? = nil,
+        baseGameReference: BaseGameReference? = nil,
         baseTitle: String? = nil,
         hackTitle: String? = nil,
         author: String? = nil,
@@ -100,6 +102,7 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         self.revision = revision
         self.versionString = versionString
         self.versionSortKey = versionSortKey
+        self.baseGameReference = baseGameReference
         self.baseTitle = baseTitle
         self.hackTitle = hackTitle
         self.author = author

@@ -7,6 +7,28 @@ import Testing
 
 @Suite("GRDB persistence")
 struct PersistenceGRDBTests {
+    @Test("aliases, player titles and lineage without a base round-trip")
+    func identityFields() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        var game = fixture.game
+        game.addAliases(["Pocket Monsters Crystal", "pocket monsters crystal"])
+        game.hasPlayerTitle = true
+        try repositories.games.updateGame(game)
+        let read = try #require(try repositories.games.fetchGame(id: game.id))
+        #expect(read.aliases == ["Pocket Monsters Crystal"])
+        #expect(read.hasPlayerTitle)
+        var build = fixture.build
+        build.baseGameReference = BaseGameReference(title: "Absent Base", system: .gameBoy, familyName: "Absent Base (Japan)")
+        try repositories.builds.updateBuildMetadata(build)
+        #expect(try repositories.builds.fetchBuild(id: build.id)?.baseGameReference == build.baseGameReference)
+        game.aliases = []
+        try repositories.games.updateGame(game)
+        #expect(try repositories.games.fetchGame(id: game.id)?.aliases == [])
+    }
+
     @Test("migration and repositories round-trip MVP entities")
     func roundTrip() throws {
         let database = try AppDatabase.inMemory()

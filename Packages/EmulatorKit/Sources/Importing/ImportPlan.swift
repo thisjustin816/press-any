@@ -31,6 +31,8 @@ public struct ROMImportAnalysis: Equatable, Sendable {
     /// The Games already holding a Build from the dump's family. With exactly one, it is the
     /// suggested Game; with several, the player chooses.
     public let familyGameIDs: [UUID]
+    public let familyTitles: [String]
+    public let baseLineageGameIDs: [UUID]
 
     public init(
         transactionID: UUID,
@@ -46,7 +48,9 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         imageSHA1: String? = nil,
         knownDump: KnownDump? = nil,
         knownFile: KnownDumpFile? = nil,
-        familyGameIDs: [UUID] = []
+        familyGameIDs: [UUID] = [],
+        familyTitles: [String] = [],
+        baseLineageGameIDs: [UUID] = []
     ) {
         self.transactionID = transactionID
         self.stagedURL = stagedURL
@@ -62,6 +66,8 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         self.knownDump = knownDump
         self.knownFile = knownFile
         self.familyGameIDs = familyGameIDs
+        self.familyTitles = familyTitles
+        self.baseLineageGameIDs = baseLineageGameIDs
     }
 }
 
@@ -72,6 +78,9 @@ public struct ROMImportPlan: Equatable, Sendable {
     public let markAsBase: Bool
     public let markAsPreferred: Bool
     public let metadata: BuildImportMetadata
+    public let proposedGameTitle: String?
+    public let hasPlayerTitle: Bool
+    public let baseGameReference: BaseGameReference?
 
     public init(
         analysis: ROMImportAnalysis,
@@ -79,7 +88,10 @@ public struct ROMImportPlan: Equatable, Sendable {
         buildDisplayName: String,
         markAsBase: Bool,
         markAsPreferred: Bool = false,
-        metadata: BuildImportMetadata? = nil
+        metadata: BuildImportMetadata? = nil,
+        proposedGameTitle: String? = nil,
+        hasPlayerTitle: Bool = false,
+        baseGameReference: BaseGameReference? = nil
     ) {
         self.analysis = analysis
         self.disposition = disposition
@@ -87,6 +99,9 @@ public struct ROMImportPlan: Equatable, Sendable {
         self.markAsBase = markAsBase
         self.markAsPreferred = markAsPreferred
         self.metadata = metadata ?? BuildImportMetadata(analysis: analysis)
+        self.proposedGameTitle = proposedGameTitle
+        self.hasPlayerTitle = hasPlayerTitle
+        self.baseGameReference = baseGameReference
     }
 }
 

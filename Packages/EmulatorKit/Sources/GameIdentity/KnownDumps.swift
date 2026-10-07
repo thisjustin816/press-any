@@ -215,6 +215,20 @@ public struct KnownDumpIndex: Sendable {
         return [root] + (clonesByParent[Key(system: root.system, name: root.name)] ?? [])
     }
 
+    public func reference(to dump: KnownDump, libraryGameID: UUID? = nil) -> BaseGameReference {
+        BaseGameReference(title: dump.title, system: dump.system, familyName: dump.parent ?? dump.name, releaseName: dump.name, libraryGameID: libraryGameID)
+    }
+
+    public func search(_ query: String, system: GameSystem? = nil) -> [KnownDump] {
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+        return catalog.games.filter { (system == nil || $0.system == system) && $0.name.localizedStandardContains(query) }
+            .sorted { $0.name < $1.name }
+    }
+
+    public func matches(_ reference: BaseGameReference, familyOf dump: KnownDump) -> Bool {
+        reference.system == dump.system && reference.familyName == (dump.parent ?? dump.name)
+    }
+
     /// Whether the Build is a known image, or patched from one. A patched Build whose result is
     /// itself known, as an official revision made by a patch would be, is Verified.
     /// `sha1` gives a Build's image SHA-1, nil when it isn't known; `lookup` finds each base along
