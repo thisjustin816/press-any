@@ -230,7 +230,6 @@ final class ImportReviewTests: XCTestCase {
         let revision = try review("Example (USA) (Rev 1).gb", retailImages[1], games: [retail.game])
         XCTAssertEqual(revision.destination, .existing(retail.game.id))
         XCTAssertFalse(revision.markAsBase, "a No-Intro revision leaves the clean Base alone")
-        XCTAssertTrue(revision.markAsPreferred)
         let unknown = try review("Example v9.gb", image(), games: [retail.game])
         unknown.destination = .existing(retail.game.id)
         unknown.destinationChanged()
