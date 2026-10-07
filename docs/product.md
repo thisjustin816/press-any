@@ -307,8 +307,8 @@ promotion and Open Patch.
   target keeps its artwork unless Use <source>'s Artwork is on. Copy offers the source's artwork
   and profiles. When the target already holds the same image, Copy skips that Build and Move is
   refused, since moving would drop the Build's states or let them cross Builds.
-- **Suggest Game Merges**, in the library's view menu, lists Games whose Builds have image or
-  patch-chain evidence of the same No-Intro family. Review chooses the subset, the Game to keep
+- **Suggest Game Merges**, in the library's view menu, lists Games whose Builds are images from
+  the same No-Intro family. A hack patched from a release stays out, since it's its own Game. Review chooses the subset, the Game to keep
   and its surviving title. Merge confirms moves through Merge into Another Game; lineage,
   profiles, states and artwork follow that path. The survivor keeps its artwork, or the first
   available source artwork fills it. Duplicate images are refused before moving a family group.

@@ -27,10 +27,12 @@ public struct FamilyGameSuggester: Sendable {
             var seen = Set<String>()
             for build in try builds.fetchBuilds(gameID: game.id) {
                 let verification = index.verification(of: build, sha1: { $0.imageSHA1 }, lookup: { try? builds.fetchBuild(id: $0) })
+                // A patched Build is a hack of the release, kept in its own Game on purpose, so only
+                // the image itself counts as family evidence.
                 let dump: KnownDump
                 switch verification {
-                case .verified(let match), .badDump(let match), .modified(let match): dump = match
-                case .unknown: continue
+                case .verified(let match), .badDump(let match): dump = match
+                case .modified, .unknown: continue
                 }
                 let root = dump.parent ?? dump.name
                 let key = "\(dump.system.rawValue):\(root)"

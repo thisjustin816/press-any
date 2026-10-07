@@ -24,10 +24,16 @@ final class FamilyGameSuggesterTests: XCTestCase {
         try games.insertGame(unknown)
         try builds.insertBuild(Build(id: UUID(), gameID: unknown.id, system: .gameBoy, displayName: "Hack", imageAssetID: UUID(),
             imageSHA256: "unknown", sourceKind: .importedImage, baseGameReference: index.reference(to: gb), createdAt: .now, modifiedAt: .now))
+        // A hack separated into its own Game is patched from the release but isn't one of its releases.
+        let hack = Game(id: UUID(), primaryTitle: "Hack", systemFamily: "gameboy", createdAt: .now, modifiedAt: .now)
+        try games.insertGame(hack)
+        let base = try XCTUnwrap(builds.fetchBuilds(gameID: XCTUnwrap(gbIDs.first)).first)
+        try builds.insertBuild(Build(id: UUID(), gameID: hack.id, system: .gameBoy, displayName: "Patched", imageAssetID: UUID(),
+            imageSHA256: "patched", sourceKind: .patchRecipe, parentBuildID: base.id, createdAt: .now, modifiedAt: .now))
         let groups = try FamilyGameSuggester(games: games, builds: builds, index: index).suggestions()
         XCTAssertEqual(groups.count, 1)
         XCTAssertEqual(groups[0].system, .gameBoy)
         XCTAssertEqual(Set(groups[0].games.map(\.id)), gbIDs)
-        XCTAssertEqual(try games.fetchGames().count, 4)
+        XCTAssertEqual(try games.fetchGames().count, 5)
     }
 }

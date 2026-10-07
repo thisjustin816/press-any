@@ -74,7 +74,11 @@ final class FamilyMergeReviewViewModel: ObservableObject {
                     try operations.mergeGame(sourceGameID: game.id, into: item.survivorID, mode: .move, carryOver: carry)
                     changed = true
                 }
-                try operations.renameGame(gameID: item.survivorID, title: title)
+                // Renaming marks the title as the player's, which ends regional title proposals, so
+                // only a changed title is a rename.
+                if title != current.games.first(where: { $0.id == item.survivorID })?.primaryTitle {
+                    try operations.renameGame(gameID: item.survivorID, title: title)
+                }
             }
             load()
         } catch {
