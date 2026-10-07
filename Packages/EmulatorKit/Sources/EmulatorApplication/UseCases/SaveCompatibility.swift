@@ -68,8 +68,10 @@ public struct AssessSaveCompatibility: Sendable {
         if let writtenRegion = Self.recorded(writer.region), let playingRegion = Self.recorded(playing.region) {
             let writtenLanguage = Self.recorded(writer.language)
             let playingLanguage = Self.recorded(playing.language)
-            let languagesDiffer = writtenLanguage != nil && playingLanguage != nil && writtenLanguage != playingLanguage
-            if writtenRegion != playingRegion || languagesDiffer {
+            let languagesDiffer = writtenLanguage.flatMap { written in
+                playingLanguage.map { !Self.overlap(written, $0) }
+            } ?? false
+            if !Self.overlap(writtenRegion, playingRegion) || languagesDiffer {
                 risks.append(.differentRegionOrLanguage(
                     writtenRegion: writtenRegion, playingRegion: playingRegion,
                     writtenLanguage: writtenLanguage, playingLanguage: playingLanguage
@@ -110,6 +112,18 @@ public struct AssessSaveCompatibility: Sendable {
             .filter { $0.kind == .toolchain || $0.kind == .engine }
             .map { [$0.name, $0.version].compactMap { $0 }.joined(separator: " ") }
             .sorted()
+    }
+
+    /// Whether two region or language lists, as No-Intro writes them ("USA, Europe", "En, Fr"),
+    /// share an entry. World covers every region, so a "USA, Europe" save on a "USA" or "World"
+    /// Build isn't flagged.
+    private static func overlap(_ first: String, _ second: String) -> Bool {
+        func entries(_ list: String) -> Set<String> {
+            Set(list.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
+        }
+        let firstEntries = entries(first)
+        let secondEntries = entries(second)
+        return firstEntries.contains("world") || secondEntries.contains("world") || !firstEntries.isDisjoint(with: secondEntries)
     }
 
     private static func recorded(_ value: String?) -> String? {

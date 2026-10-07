@@ -34,7 +34,7 @@ final class SaveCompatibilityFlowTests: XCTestCase {
         other.saveCompatibility()
         model.reload()
         XCTAssertEqual(model.saveDeclarations.count, 1)
-        XCTAssertEqual(model.saveDeclarations.first?.label, "Doesn't")
+        XCTAssertEqual(model.saveDeclarations.first?.label, "Doesn’t Share Saves")
 
         var renamed = fixture.playing
         renamed.displayName = "Renamed Release"

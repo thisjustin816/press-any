@@ -117,6 +117,18 @@ final class SaveCompatibilityTests: XCTestCase {
         XCTAssertFalse(try fixture.assess(blank, profile).isRisky)
     }
 
+    func testOverlappingRegionAndLanguageListsAreTheSameRelease() throws {
+        let fixture = try Fixture()
+        let usaEurope = try fixture.addBuild(title: "USA EUROPE", region: "USA, Europe", language: "En, Fr")
+        let profile = try fixture.addProfile(writtenBy: usaEurope.id)
+        let usa = try fixture.addBuild(title: "USA", region: "USA", language: "En")
+        let world = try fixture.addBuild(title: "WORLD", region: "World")
+        let japan = try fixture.addBuild(title: "JAPAN", region: "Japan")
+        XCTAssertFalse(try fixture.assess(usa, profile).isRisky, "a shared region and language is the same release")
+        XCTAssertFalse(try fixture.assess(world, profile).isRisky, "World covers every region")
+        XCTAssertTrue(try fixture.assess(japan, profile).isRisky)
+    }
+
     func testASaveIsSafeForTheBuildThatWroteItOrWithNoKnownWriter() throws {
         let fixture = try Fixture()
         let a = try fixture.addBuild(title: "SAFE A", tools: ["GBDK"])

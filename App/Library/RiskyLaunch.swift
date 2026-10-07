@@ -11,7 +11,7 @@ struct RiskyLaunch {
     }
 
     var message: String {
-        var lines = ["\"\(profileName)\" was last saved by \(assessment.writtenBy?.displayName ?? "another Build")."]
+        var lines = ["“\(profileName)” was last saved by \(assessment.writtenBy?.displayName ?? "another Build")."]
         for risk in assessment.risks {
             switch risk {
             case .declaredNonShare:

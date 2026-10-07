@@ -407,13 +407,14 @@ promotion and Open Patch.
 ### Build switching and compatibility
 
 Each profile records which Build last wrote its save. Launching a Build with a save another Build
-wrote checks the pair. A Shares Saves declaration skips the prompt. A Doesn't declaration always
+wrote checks the pair. A Shares Saves declaration skips the prompt. A Doesn’t Share Saves declaration always
 asks, even when the inferred checks would pass. With no declaration, it's risky when either
 Build was made with GB Studio, when detection names different tools or engine versions, or when
 the headers declare different save hardware (bytes 0x147 and 0x149).
 
 A different region or language adds a reason to the same prompt when both Builds have a region
-recorded. The reason names both releases: "This save was last written by the Japan release.
+recorded. Regions differ only when their lists share no entry, so a "USA, Europe" save on a
+"USA" Build doesn't count, and World matches every region; languages compare the same way. The reason names both releases: "This save was last written by the Japan release.
 This Build is the USA release." A language difference is compared only when both languages are
 recorded and names them in the reason. A save with no recorded writer, or either Build with no
 region, never raises this reason. A Shares Saves declaration clears it with the other risks.
