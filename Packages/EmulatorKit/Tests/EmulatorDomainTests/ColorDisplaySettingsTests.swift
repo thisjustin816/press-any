@@ -7,15 +7,15 @@ final class ColorDisplaySettingsTests: XCTestCase {
         XCTAssertEqual(SettingKey.colorCorrection.rawValue, "colorCorrection")
         XCTAssertEqual(SettingKey.dmgPalette.rawValue, "dmgPalette")
         XCTAssertEqual(ColorCorrection.allCases.map(\.rawValue), [
-            "off", "accurate", "balanced", "boostContrast", "reduceContrast", "lowContrast",
+            "balanced", "accurate", "boostContrast", "reduceContrast", "lowContrast", "off",
         ])
-        XCTAssertEqual(DMGPalette.allCases.map(\.rawValue), ["grey", "dmgGreen", "pocket", "light"])
+        XCTAssertEqual(DMGPalette.allCases.map(\.rawValue), ["dmgGreen", "pocket", "light", "grey"])
         XCTAssertEqual(String(data: try JSONEncoder().encode(ColorCorrection.accurate), encoding: .utf8), "\"accurate\"")
         XCTAssertEqual(String(data: try JSONEncoder().encode(DMGPalette.dmgGreen), encoding: .utf8), "\"dmgGreen\"")
     }
 
     func testDisplayDefaults() {
         XCTAssertEqual(ColorCorrection.defaultValue, .balanced)
-        XCTAssertEqual(DMGPalette.defaultValue, .grey)
+        XCTAssertEqual(DMGPalette.defaultValue, .dmgGreen)
     }
 }
