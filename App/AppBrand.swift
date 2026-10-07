@@ -25,6 +25,21 @@ enum AppBrand {
         static var ink: UIColor { UIColor { $0.userInterfaceStyle == .dark ? darkInk : lightInk } }
         static var accent: UIColor { UIColor { $0.userInterfaceStyle == .dark ? darkAccent : lightAccent } }
 
+        /// `WordmarkView` shades the letters from lighter at the top to darker at the bottom, like
+        /// the face of the controller's menu button, around the flat colors above.
+        static var inkTop: UIColor { adaptive(light: rgb(85, 85, 90), dark: rgb(156, 156, 162)) }
+        static var inkBottom: UIColor { adaptive(light: rgb(32, 32, 34), dark: rgb(108, 108, 114)) }
+        static var accentTop: UIColor { adaptive(light: rgb(179, 70, 128), dark: rgb(188, 86, 140)) }
+        static var accentBottom: UIColor { adaptive(light: rgb(124, 30, 80), dark: rgb(140, 46, 96)) }
+
+        private static func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> UIColor {
+            UIColor(red: red / 255, green: green / 255, blue: blue / 255, alpha: 1)
+        }
+
+        private static func adaptive(light: UIColor, dark: UIColor) -> UIColor {
+            UIColor { $0.userInterfaceStyle == .dark ? dark : light }
+        }
+
         /// Letter spacing as a fraction of the point size.
         static let tracking: CGFloat = 0.028
 
@@ -61,14 +76,14 @@ enum AppBrand {
     }
 }
 
-/// The wordmark in SwiftUI, following Light and Dark Mode.
+/// The wordmark in SwiftUI, following Light and Dark Mode, shaded top to bottom.
 struct WordmarkView: View {
     var size: CGFloat = 20
 
     var body: some View {
         let parts = AppBrand.Wordmark.parts
-        let ink = Color(uiColor: AppBrand.Wordmark.ink)
-        let accent = Color(uiColor: AppBrand.Wordmark.accent)
+        let ink = Self.shade(AppBrand.Wordmark.inkTop, AppBrand.Wordmark.inkBottom)
+        let accent = Self.shade(AppBrand.Wordmark.accentTop, AppBrand.Wordmark.accentBottom)
         (Text(parts.lead).foregroundStyle(ink)
             + Text(parts.accent).foregroundStyle(accent)
             + Text(parts.tail).foregroundStyle(ink))
@@ -78,5 +93,9 @@ struct WordmarkView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(AppBrand.displayName)
             .accessibilityAddTraits(.isHeader)
+    }
+
+    private static func shade(_ top: UIColor, _ bottom: UIColor) -> LinearGradient {
+        LinearGradient(colors: [Color(uiColor: top), Color(uiColor: bottom)], startPoint: .top, endPoint: .bottom)
     }
 }
