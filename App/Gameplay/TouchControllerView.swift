@@ -99,8 +99,13 @@ final class TouchControllerView: UIView {
             drawButtonGroove(palette: palette, in: context)
             drawRoundButton(.a, label: "A", active: lastInput.a, palette: palette, in: context)
             drawRoundButton(.b, label: "B", active: lastInput.b, palette: palette, in: context)
-            drawTiltedPill(.select, label: "SELECT", active: lastInput.select, palette: palette, in: context)
-            drawTiltedPill(.start, label: "START", active: lastInput.start, palette: palette, in: context)
+            if layout.labelPlates.isEmpty {
+                drawTiltedPill(.select, label: "SELECT", active: lastInput.select, palette: palette, in: context)
+                drawTiltedPill(.start, label: "START", active: lastInput.start, palette: palette, in: context)
+            } else {
+                drawPlatedButton(.select, label: "SELECT", active: lastInput.select, palette: palette, in: context)
+                drawPlatedButton(.start, label: "START", active: lastInput.start, palette: palette, in: context)
+            }
         case .playtiles:
             if let guide = layout.alignmentGuide { drawAlignmentGuide(guide, palette: palette, in: context) }
             if let dpad = layout.drawnRect(.dpad) { drawCircleDPad(dpad, input: lastInput, palette: palette, in: context) }
@@ -283,6 +288,32 @@ final class TouchControllerView: UIView {
                 .offsetBy(dx: 0, dy: pressed ? Self.pressDepth : 0)
             drawRaised(UIBezierPath(ovalIn: circle), top: lighter(palette.dpad), bottom: palette.dpad, pressedFace: palette.dpadPressed, pressed: pressed, palette: palette, in: context)
         }
+    }
+
+    /// START or SELECT as the Game Boy Advance has them: a small round button, with its name on a
+    /// slanted plate pressed into the body beside it.
+    private func drawPlatedButton(_ control: TouchControl, label: String, active: Bool, palette: ControllerPalette, in context: CGContext) {
+        let layout = resolver.layout
+        guard let button = layout.drawnRect(control), let plate = layout.labelPlates[control] else { return }
+        let plateRect = cgRect(plate)
+        context.saveGState()
+        context.translateBy(x: plateRect.midX, y: plateRect.midY)
+        context.rotate(by: CGFloat(layout.labelPlateTilt))
+        let local = CGRect(x: -plateRect.width / 2, y: -plateRect.height / 2, width: plateRect.width, height: plateRect.height)
+        context.setFillColor(palette.groove.cgColor)
+        context.addPath(UIBezierPath(roundedRect: local, cornerRadius: local.height / 2).cgPath)
+        context.fillPath()
+        let string = NSAttributedString(string: label, attributes: [
+            .font: UIFont.systemFont(ofSize: local.height * 0.62, weight: .heavy),
+            .kern: local.height * 0.08,
+            .foregroundColor: palette.lettering,
+        ])
+        let size = string.size()
+        string.draw(at: CGPoint(x: -size.width / 2, y: -size.height / 2))
+        context.restoreGState()
+
+        let face = cgRect(button).offsetBy(dx: 0, dy: active ? Self.pressDepth : 0)
+        drawRaised(UIBezierPath(ovalIn: face), top: lighter(palette.pill), bottom: palette.pill, pressedFace: palette.pillPressed, pressed: active, palette: palette, in: context)
     }
 
     /// The recessed channel A and B sit in, along the line between them.

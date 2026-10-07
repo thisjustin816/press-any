@@ -10,9 +10,12 @@ the phone's rotation lock. The library, Game Details, Settings and every sheet s
 closing a game held sideways returns to the portrait library. Playtiles stays portrait.
 
 Landscape uses the Game Boy Advance (AGB-001) arrangement regardless of the portrait layout
-choice: the picture centered in its bezel, D-pad on the left, A and B on the right, level START
-above SELECT below the D-pad, and the Press Any menu button below the picture. Controls keep the
-portrait Game Boy's physical sizes and drawing, and clear the phone's safe areas. Screen Scaling
+choice: the picture centered in its bezel, D-pad on the left, A and B on the right, and the Press
+Any menu button below the picture. START and SELECT are the Game Boy Advance's small round
+buttons, START above SELECT, right of the D-pad's center and below it, each with its name on a
+recessed plate slanting down to the right beside it, placed from a front photograph of an AGB-001.
+The D-pad and A and B keep the portrait Game Boy's physical sizes and drawing, and every control
+clears the phone's safe areas. Screen Scaling
 still chooses Integer or Fill. Rotating releases held touch input and keeps the game running or
 paused as it was, with Resume centered on the picture. A connected controller still hides the
 touch controls.

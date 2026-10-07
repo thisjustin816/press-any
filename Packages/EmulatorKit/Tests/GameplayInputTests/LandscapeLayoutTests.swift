@@ -42,7 +42,19 @@ final class LandscapeLayoutTests: XCTestCase {
                     XCTAssertLessThan(layout.a.center.y, layout.b.center.y)
                     XCTAssertLessThan(layout.start.center.y, layout.select.center.y)
                     XCTAssertGreaterThan(layout.start.y, layout.dpadHitArea.y + layout.dpadHitArea.height)
-                    XCTAssertEqual(layout.start.center.x, layout.dpad.center.x, accuracy: 0.001)
+                    // As on a Game Boy Advance: right of the D-pad's center, short of the bezel, and
+                    // START directly above SELECT, each with a name plate to its left.
+                    let startButton = try XCTUnwrap(layout.drawnRect(.start))
+                    let selectButton = try XCTUnwrap(layout.drawnRect(.select))
+                    XCTAssertGreaterThan(startButton.center.x, layout.dpad.center.x)
+                    XCTAssertLessThan(startButton.x + startButton.width, bezel.x)
+                    XCTAssertEqual(startButton.center.x, selectButton.center.x, accuracy: 0.001)
+                    XCTAssertLessThan(startButton.width, layout.drawnRect(.a)!.width)
+                    for (control, button) in [(TouchControl.start, startButton), (.select, selectButton)] {
+                        let plate = try XCTUnwrap(layout.labelPlates[control])
+                        XCTAssertLessThan(plate.center.x, button.center.x)
+                    }
+                    XCTAssertGreaterThan(layout.labelPlateTilt, 0)
                     XCTAssertEqual(layout.selectStartTilt, 0)
                     XCTAssertNil(layout.alignmentGuide)
                     for control in [TouchControl.dpad, .a, .b, .start, .select] {
@@ -66,12 +78,13 @@ final class LandscapeLayoutTests: XCTestCase {
         }
     }
 
-    func testLandscapeReusesPortraitControlSizesAndButtonAngle() throws {
+    func testLandscapeReusesPortraitDPadAndButtonSizesAndAngle() throws {
         for phone in phones {
             let portrait = TouchControlLayout.make(.gameBoy, width: phone.height, height: phone.width)
             let landscape = TouchControlLayout.make(.gameBoy, width: phone.width, height: phone.height,
                                                     safeBottom: phone.bottom, safeLeft: phone.side, safeRight: phone.side)
-            for control in [TouchControl.dpad, .a, .b, .start, .select] {
+            // START and SELECT become the Game Boy Advance's small round buttons instead.
+            for control in [TouchControl.dpad, .a, .b] {
                 let old = try XCTUnwrap(portrait.drawnRect(control)), new = try XCTUnwrap(landscape.drawnRect(control))
                 XCTAssertEqual(new.width, old.width)
                 XCTAssertEqual(new.height, old.height)
