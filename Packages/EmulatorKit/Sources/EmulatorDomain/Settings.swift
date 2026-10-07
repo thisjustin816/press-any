@@ -70,6 +70,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case hideTouchControlsWithController
     /// `TouchHaptics`, unset means `.light`.
     case touchHaptics
+    /// Which way gameplay faces (GameplayInput's `ScreenOrientation`), unset means `automatic`.
+    case orientation
 }
 
 /// How strongly the on-screen controls tap back when pressed. Raw values are stored in settings.

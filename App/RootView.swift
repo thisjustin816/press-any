@@ -78,6 +78,9 @@ struct RootView: View {
             showWelcomeIfNeeded()
         }
         .onOpenURL { receiveSharedFile($0) }
+        .onChange(of: gameplayOrientations, initial: true) { _, mask in
+            GameplayOrientation.update(mask)
+        }
         .onChange(of: pendingResume != nil || riskyLaunch != nil || damagedSave != nil) { _, hasPendingLaunch in
             if !hasPendingLaunch { presentNextSharedFile() }
         }
@@ -231,6 +234,14 @@ struct RootView: View {
                 sharedFileError = nil
                 presentNextSharedFile()
             }
+        )
+    }
+
+    private var gameplayOrientations: UIInterfaceOrientationMask {
+        GameplayOrientation.mask(
+            style: gameplay?.display.controlStyle,
+            orientation: gameplay?.display.orientation ?? .automatic,
+            coveredBySheet: showsGameplaySettings || sharedFile != nil || sharedFileError != nil
         )
     }
 
@@ -442,6 +453,7 @@ struct RootView: View {
                 settings: container.gameplaySettingsTarget(for: launch.context),
                 display: GameplayDisplaySettings(
                     controlStyle: container.controllerStyle(for: launch.context),
+                    orientation: container.orientation(for: launch.context),
                     screenScaling: container.screenScaling(for: launch.context),
                     lcdFilter: container.lcdFilter(for: launch.context),
                     frameBlending: container.frameBlending(for: launch.context),

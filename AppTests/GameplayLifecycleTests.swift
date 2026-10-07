@@ -19,6 +19,79 @@ final class GameplayLifecycleTests: XCTestCase {
         return (gameplay, runtime, monitor)
     }
 
+    func testOnlyGameBoyGameplayAllowsBothLandscapeOrientations() {
+        let gameplayMask: UIInterfaceOrientationMask = [.portrait, .landscapeLeft, .landscapeRight]
+        XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, coveredBySheet: false), gameplayMask)
+        XCTAssertEqual(GameplayOrientation.mask(style: .playtiles, coveredBySheet: false), .portrait)
+        XCTAssertEqual(GameplayOrientation.mask(style: nil, coveredBySheet: false), .portrait, "the library")
+        XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, coveredBySheet: true), .portrait)
+        XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, orientation: .portrait, coveredBySheet: false), .portrait)
+        XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, orientation: .landscape, coveredBySheet: false), .landscape)
+        XCTAssertEqual(
+            GameplayOrientation.mask(style: .playtiles, orientation: .landscape, coveredBySheet: false), .portrait,
+            "Playtiles fits a portrait phone whatever the setting says"
+        )
+        XCTAssertEqual(
+            GameplayOrientation.mask(style: .gameBoy, orientation: .landscape, coveredBySheet: true), .portrait,
+            "sheets stay portrait"
+        )
+
+        defer { GameplayOrientation.update(.portrait) }
+        let delegate = AppDelegate()
+        for mask in [gameplayMask, .portrait] {
+            GameplayOrientation.update(mask)
+            XCTAssertEqual(delegate.application(.shared, supportedInterfaceOrientationsFor: nil), mask)
+        }
+    }
+
+    func testGameplayControllerFollowsLayoutAndSheetOrientationRestrictions() {
+        let (gameplay, _, _) = makeGameplay()
+        XCTAssertTrue(gameplay.supportedInterfaceOrientations.contains(.landscapeLeft))
+        XCTAssertTrue(gameplay.supportedInterfaceOrientations.contains(.landscapeRight))
+        gameplay.setCoveredBySheet(true)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+        gameplay.setCoveredBySheet(false)
+        gameplay.applyDisplaySettings(controlStyle: .gameBoy, orientation: .landscape, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .landscape, "Orientation set to Landscape applies at once")
+        gameplay.applyDisplaySettings(controlStyle: .gameBoy, orientation: .portrait, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+        gameplay.applyDisplaySettings(controlStyle: .playtiles, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+    }
+
+    func testResizingKeepsRunningOrPausedAndCentersResumeOnTheNewPicture() {
+        let (gameplay, runtime, _) = makeGameplay()
+        for paused in [false, true] {
+            if paused { _ = gameplay.prepareGameMenu() }
+            for size in [CGSize(width: 393, height: 852), CGSize(width: 852, height: 393)] {
+                gameplay.view.frame = CGRect(origin: .zero, size: size)
+                gameplay.view.setNeedsLayout()
+                gameplay.view.layoutIfNeeded()
+                gameplay.view.layoutIfNeeded()
+                XCTAssertEqual(gameplay.isRunningFrames, !paused)
+                XCTAssertEqual(gameplay.isShowingPaused, paused)
+                let picture = gameplay.gamePictureFrame
+                let overlay = gameplay.pausedOverlayFrame
+                XCTAssertEqual(overlay.midX, picture.midX, accuracy: 0.5)
+                XCTAssertEqual(overlay.midY, picture.midY, accuracy: 0.5)
+                XCTAssertTrue(picture.contains(overlay))
+            }
+        }
+        XCTAssertFalse(runtime.failedFrame)
+    }
+
+    func testResizingTouchControlsPublishesReleasedInput() {
+        let controls = TouchControllerView(frame: CGRect(x: 0, y: 0, width: 393, height: 852))
+        var published: [EmulatorInputState] = []
+        controls.onInputChanged = { published.append($0) }
+        controls.layoutIfNeeded()
+        published.removeAll()
+        controls.frame.size = CGSize(width: 852, height: 393)
+        controls.setNeedsLayout()
+        controls.layoutIfNeeded()
+        XCTAssertEqual(published, [EmulatorInputState()])
+    }
+
     func testAnOverlayPausesTheGameAndItPicksUpAfterward() {
         let (gameplay, runtime, _) = makeGameplay(policy: .never)
         XCTAssertTrue(gameplay.isRunningFrames)
