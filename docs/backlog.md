@@ -541,7 +541,9 @@ Nothing open.
 
 Done: Resolver App -> System -> Game -> Build, only explicit overrides stored, inherited source
 shown, Reset to Inherited; Implemented keys; Settings screens for App, System (Game Boy, Game Boy
-Color), Game and Build.
+Color), Game and Build; App Settings as Controls, Display and Playing pages with Systems, Library
+and About lists, and the scoped sheet grouped the same way with each setting's source under its
+name.
 
 ### SDK / toolchain detection
 
