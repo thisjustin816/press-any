@@ -152,13 +152,39 @@ final class SharedFileTests: XCTestCase {
     func testAppRegistersTheFileTypesUsedByItsPickers() throws {
         let declarations = try XCTUnwrap(Bundle.main.infoDictionary?["UTImportedTypeDeclarations"] as? [[String: Any]])
         let documents = try XCTUnwrap(Bundle.main.infoDictionary?["CFBundleDocumentTypes"] as? [[String: Any]])
-        let registered = Set(documents.flatMap { $0["LSItemContentTypes"] as? [String] ?? [] })
-        for (type, suffix) in [(UTType.gameBoyROM, "gb"), (.gameBoyColorROM, "gbc"), (.ipsPatch, "ips"), (.bpsPatch, "bps")] {
-            XCTAssertTrue(registered.contains(type.identifier))
+        let expected: [(type: UTType, suffix: String, compatible: [String])] = [
+            (.gameBoyROM, "gb", [
+                "com.rileytestut.delta.game.gbc", "com.provenance.rom.gb",
+                "com.github.liji32.sameboy.gb", "com.retroarch.gb"
+            ]),
+            (.gameBoyColorROM, "gbc", [
+                "com.rileytestut.delta.game.gbc", "com.provenance.rom.gbc",
+                "com.github.liji32.sameboy.gbc", "com.retroarch.gbc"
+            ]),
+            (.ipsPatch, "ips", []),
+            (.bpsPatch, "bps", [])
+        ]
+        for (type, suffix, compatible) in expected {
+            let matchingDocuments = documents.filter {
+                ($0["LSItemContentTypes"] as? [String] ?? []).contains(type.identifier)
+            }
+            XCTAssertEqual(matchingDocuments.count, 1, suffix)
+            let document = try XCTUnwrap(matchingDocuments.first, suffix)
+            XCTAssertEqual(document["LSHandlerRank"] as? String, "Owner", suffix)
+            XCTAssertEqual(document["CFBundleTypeRole"] as? String, "Viewer", suffix)
+            let registered = Set(try XCTUnwrap(document["LSItemContentTypes"] as? [String]))
+            XCTAssertTrue(Set(compatible).isSubset(of: registered), suffix)
             let declaration = try XCTUnwrap(declarations.first { $0["UTTypeIdentifier"] as? String == type.identifier })
             let tags = try XCTUnwrap(declaration["UTTypeTagSpecification"] as? [String: Any])
             XCTAssertEqual(tags["public.filename-extension"] as? [String], [suffix])
             XCTAssertTrue(type.conforms(to: .data))
+        }
+        let exported = Bundle.main.infoDictionary?["UTExportedTypeDeclarations"] as? [[String: Any]] ?? []
+        for declaration in exported {
+            let tags = declaration["UTTypeTagSpecification"] as? [String: Any] ?? [:]
+            let suffixes = tags["public.filename-extension"] as? [String]
+                ?? (tags["public.filename-extension"] as? String).map { [$0] } ?? []
+            XCTAssertTrue(Set(suffixes.map { $0.lowercased() }).isDisjoint(with: expected.map { $0.suffix }))
         }
     }
 
