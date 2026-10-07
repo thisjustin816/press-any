@@ -3,6 +3,15 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-07: A damaged save can still be played
+
+When a launch stops on a battery save that doesn't match its recorded hash, the player chooses
+what happens: Use It Anyway, Start a New Save, or Cancel. The mismatch can also mean the app
+closed between writing the file and recording it, and then the file is the newest good save, so
+refusing it with no way forward would lock the player out of their own progress. Use It Anyway
+first copies the file as found to "<name> before playing", then records it as the profile's save
+and starts the game. The alert also points to Replace Save from File.
+
 ## 2026-10-07: Damaged saves stop launch and stay on disk
 
 Battery saves and save states are checked against their recorded SHA-256 before their bytes
