@@ -52,7 +52,9 @@ title, a system, a preferred Build and a default Save Profile. A promoted hack i
 own name; the base game's title stays as lineage. A hack that becomes an existing Game's
 Preferred Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title:
 Mole Mania DX"), on by default. Accepting it keeps the old title as an alias and makes the new
-one the player's. A patch without hack tags offers its title only when it adds words without
+one the player's. Moving that hack out with Make Separate Game, which suggests the hack's title for
+the new Game, gives the original Game back the title the hack was made from, as long as it still
+holds it as an alias; a copy leaves the title alone. A patch without hack tags offers its title only when it adds words without
 digits to the Game's.
 
 A Game keeps alternate titles as aliases in an indexed table, ready for the later FTS5 index.
