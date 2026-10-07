@@ -172,9 +172,10 @@ public struct ImportCommitter: Sendable {
                 var returnedGame = game
                 returnedGame.addAliases(plan.analysis.familyTitles)
                 if let title = plan.proposedGameTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !title.isEmpty, !returnedGame.hasPlayerTitle {
+                   !title.isEmpty, plan.proposedGameTitleIsPlayers || !returnedGame.hasPlayerTitle {
                     returnedGame.addAliases([returnedGame.primaryTitle])
                     returnedGame.primaryTitle = title
+                    returnedGame.hasPlayerTitle = returnedGame.hasPlayerTitle || plan.proposedGameTitleIsPlayers
                 }
                 if createdNewGame || plan.markAsPreferred {
                     returnedGame.preferredBuildID = build.id

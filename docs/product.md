@@ -49,7 +49,11 @@ crash reporting and usage counts, and Developer Mode.
 A Game is what the player thinks of as the game. It survives ROM replacement, patching, new
 versions, regional and revision variants, and Builds moving in or out. It has a UUID, a primary
 title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its
-own name; the base game's title stays as lineage.
+own name; the base game's title stays as lineage. A hack that becomes an existing Game's
+Preferred Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title:
+Mole Mania DX"), on by default. Accepting it keeps the old title as an alias and makes the new
+one the player's. A patch without hack tags offers its title only when it adds words without
+digits to the Game's.
 
 A Game keeps alternate titles as aliases in an indexed table, ready for the later FTS5 index.
 Library search already matches them. A No-Intro family's other regional titles become aliases
@@ -736,7 +740,9 @@ exposes them; custom border editing is later.
 | [RetroArch](https://github.com/libretro/RetroArch/blob/2a515ab854de947bd3dad625c66e145a9d1a400b/pkg/apple/iOS/Info.plist) | `com.retroarch.gb` | `com.retroarch.gbc` |
 
 - A shared ROM offers Quick Play or Import to Library. A shared patch opens Open Patch, which
-  needs a Game and a base Build.
+  needs a Game and a base Build. A BPS patch records its base ROM's size and CRC32, so Open Patch
+  preselects the Build whose image matches, checking only images of that size. Without one, a
+  Game whose title matches the patch's is preselected with its Base Build.
 - A file shared mid-game opens over the game, which pauses as for the game menu and stays paused
   afterward. Quick Play from that sheet reads "Close Game and Quick Play": the running game closes
   the normal way, saving first, and a Quick Play session still offers Keep for Later before the new
