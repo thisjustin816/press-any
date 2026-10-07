@@ -1,5 +1,8 @@
 import Importing
+import PhotosUI
 import SwiftUI
+import UIKit
+import UniformTypeIdentifiers
 
 struct ImportReviewView: View {
     @ObservedObject var model: ImportReviewViewModel
@@ -7,12 +10,18 @@ struct ImportReviewView: View {
     let onCancel: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    /// The import that succeeded while its artwork couldn't be saved, held until the alert is read.
+    @State private var importedWithoutArtwork: ROMImportResult?
 
     var body: some View {
         NavigationStack {
             Form {
                 // First, as in Quick Play promotion, so choosing an existing Game isn't missed below the ROM details.
                 ImportDestinationSection(model: model)
+
+                if model.canChooseArtwork {
+                    ImportArtworkSection(model: model)
+                }
 
                 Section {
                     LabeledContent("File", value: model.analysis.originalFilename)
@@ -55,8 +64,12 @@ struct ImportReviewView: View {
                     Button("Import") {
                         do {
                             let result = try model.commit()
-                            onImported(result)
-                            dismiss()
+                            if model.artworkFailure == nil {
+                                onImported(result)
+                                dismiss()
+                            } else {
+                                importedWithoutArtwork = result
+                            }
                         } catch {
                             // The model owns the visible error message.
                         }
@@ -66,6 +79,74 @@ struct ImportReviewView: View {
             }
         }
         .interactiveDismissDisabled()
+        .alert(
+            "Imported Without Artwork",
+            isPresented: Binding(get: { importedWithoutArtwork != nil }, set: { if !$0 { finishWithoutArtwork() } })
+        ) {
+            Button("OK") { finishWithoutArtwork() }
+        } message: {
+            Text("The ROM is in your library, but its artwork couldn’t be saved: \(model.artworkFailure ?? ""). You can add it from the Game.")
+        }
+    }
+
+    private func finishWithoutArtwork() {
+        guard let result = importedWithoutArtwork else { return }
+        importedWithoutArtwork = nil
+        onImported(result)
+        dismiss()
+    }
+}
+
+/// Cover art for the Game the ROM lands in, from Photos or Files. It's set once the import
+/// succeeds; the Game's own artwork menu changes it later.
+struct ImportArtworkSection: View {
+    @ObservedObject var model: ImportReviewViewModel
+
+    @State private var photoItem: PhotosPickerItem?
+    @State private var showsFileImporter = false
+
+    var body: some View {
+        Section {
+            if let artwork = model.artwork, let image = UIImage(data: artwork.data) {
+                HStack {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 72, height: 72)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .accessibilityLabel("Chosen artwork")
+                    Spacer()
+                    Button("Remove", role: .destructive) { model.removeArtwork() }
+                }
+            }
+            PhotosPicker(selection: $photoItem, matching: .images) {
+                Label(model.artwork == nil ? "Choose from Photos" : "Replace from Photos", systemImage: "photo")
+            }
+            Button {
+                showsFileImporter = true
+            } label: {
+                Label(model.artwork == nil ? "Choose from Files" : "Replace from Files", systemImage: "folder")
+            }
+        } header: {
+            Text("Artwork")
+        } footer: {
+            if model.replacesArtwork, model.artwork != nil {
+                Text("Replaces this Game’s current artwork.")
+            } else {
+                Text("Optional. Shown on the library tile and the Game.")
+            }
+        }
+        .onChange(of: photoItem) { _, item in
+            guard let item else { return }
+            photoItem = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+                model.chooseArtwork(data, fileExtension: item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg")
+            }
+        }
+        .fileImporter(isPresented: $showsFileImporter, allowedContentTypes: [.image]) { result in
+            if case .success(let url) = result { model.chooseArtwork(fileAt: url) }
+        }
     }
 }
 
