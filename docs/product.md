@@ -176,8 +176,11 @@ changes the library; review shows what will happen; commit is all or nothing.
 
 ### Sources and safety
 
-- The file picker, and Share Sheet / Open In for `.gb`, `.gbc`, `.ips`, `.bps`, `.sav` and `.srm`. The document
-  types are registered in Info.plist with `LSHandlerRank = Owner`. Each keeps
+- Import File in the library's + menu, and Share Sheet / Open In, for `.gb`, `.gbc`, `.ips`,
+  `.bps`, `.sav`, `.srm` and `.zip`. Import File picks one or more files and handles each as if
+  it had been shared, except that a ROM goes straight to Import Review instead of offering Quick
+  Play first. The ROM, patch and save document types are registered in Info.plist with
+  `LSHandlerRank = Owner`, and zip at Alternate. Each keeps
   `CFBundleTypeRole = Viewer`: opening stages a copy for play or import, so it needs no Editor
   role. The extension mappings stay in `UTImportedTypeDeclarations`; Press Any does not own
   these formats and does not export their types.

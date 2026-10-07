@@ -75,17 +75,17 @@ struct WelcomeView: View {
         Topic(
             symbol: "square.grid.2x2",
             title: "Your Library",
-            text: "Tap + and Import ROM, or share a .gb or .gbc file to \(AppBrand.displayName) from Files or another app. The library keeps its own copy, so the original can be moved or deleted."
+            text: "Tap + and Import File, or share a ROM, patch, save or zip to \(AppBrand.displayName) from Files or another app. The library keeps its own copy, so the original can be moved or deleted."
         ),
         Topic(
             symbol: "square.stack.3d.up",
             title: "Games and Builds",
-            text: "Each game holds its Builds: versions, revisions and patched copies. Apply an IPS or BPS patch from a game’s page, or share the patch to \(AppBrand.displayName), and the original Build stays as it was."
+            text: "Each game holds its Builds: versions, revisions and patched copies. Apply an IPS or BPS patch from a game’s page, or open it with Import File or the share sheet. The original Build stays as it was."
         ),
         Topic(
             symbol: "externaldrive",
             title: "Saves",
-            text: "Each game keeps its saves in Save Profiles, written as you play. By default, a game opens again where you left off."
+            text: "Each game keeps its saves in Save Profiles, written as you play. A .sav or .srm file you import becomes a new Save Profile. By default, a game opens again where you left off."
         ),
         Topic(
             symbol: "play.circle",
@@ -114,7 +114,7 @@ struct WelcomeView: View {
 /// automated run, where it would cover the screen a test or screenshot expects.
 enum WelcomeScreen {
     /// Raise this when the content changes enough that everyone should see it again.
-    static let contentVersion = 1
+    static let contentVersion = 2
     static let shownVersionKey = "welcome.shownVersion"
 
     /// An automated run also marks it shown, so a later launch the system starts on its own, such

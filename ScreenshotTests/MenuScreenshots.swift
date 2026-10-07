@@ -17,7 +17,7 @@ final class MenuScreenshots: XCTestCase {
     func test1AddMenu() throws {
         let app = try launch("library")
         app.buttons["library.addMenu"].tap()
-        try expect(app.buttons["Import ROM"], then: "menu-add")
+        try expect(app.buttons["Import File…"], then: "menu-add")
     }
 
     func test2LibraryViewMenu() throws {

@@ -14,6 +14,9 @@ struct SharedFile: Identifiable {
     let url: URL
     let originalFilename: String
     let kind: Kind
+    /// Chosen with Import File, so a ROM goes straight to Import Review instead of offering Quick
+    /// Play first.
+    var opensImportReview = false
 }
 
 enum SharedFileError: LocalizedError {
