@@ -53,8 +53,9 @@ own name; the base game's title stays as lineage.
 
 A Game keeps alternate titles as aliases in an indexed table, ready for the later FTS5 index.
 Library search already matches them. A No-Intro family's other regional titles become aliases
-when a release joins the Game, so "Pocket Monsters Crystal" finds Pokémon Crystal. Rename Game
-in Game Details keeps the former title as an alias and records the player's title choice.
+when a release joins the Game, so "Pocket Monsters Crystal" finds Pokémon Crystal. Rename Game,
+in Game Details' menu or a Game's long-press menu in the library, keeps the former title as an
+alias and records the player's title choice.
 
 v1 adds favorites and metadata provenance; tags, collections, documents and typed artwork follow
 in v1.1.
