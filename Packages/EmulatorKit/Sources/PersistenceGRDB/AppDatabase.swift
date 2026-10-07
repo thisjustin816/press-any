@@ -15,6 +15,9 @@ public final class AppDatabase: @unchecked Sendable {
     public convenience init(url: URL) throws {
         var configuration = Configuration()
         configuration.foreignKeysEnabled = true
+        // A second connection, such as another container's background SHA-1 fill on the same
+        // file, waits for the lock instead of failing with "database is locked".
+        configuration.busyMode = .timeout(5)
         let queue = try DatabaseQueue(path: url.path, configuration: configuration)
         self.init(writer: queue)
     }
