@@ -21,7 +21,7 @@ final class ControllerDisconnectTests: XCTestCase {
         XCTAssertFalse(gameplay.showsTouchControls, "a connected controller hides the touch controls")
         XCTAssertEqual(gameplay.touchControlStyle, .gameBoy)
         XCTAssertEqual(gameplay.supportedInterfaceOrientations, .landscape)
-        monitor.onInputChanged?(.init(a: true, right: true))
+        monitor.onInputChanged?(.init(right: true, a: true))
         XCTAssertTrue(gameplay.heldInput.a)
         let pauses = runtime.pauseCount
 
