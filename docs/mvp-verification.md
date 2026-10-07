@@ -50,6 +50,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Move a Build to its own Game and merge it back; Build identity and data remain intact.
 - [ ] Make Separate Game shows a review with the Build's own Save Profiles and the artwork selected; the new Game gets copies, shows Split From, and the original Game is unchanged.
 - [ ] Import a homebrew ROM (GB Studio, GBDK or RGBDS); Import Review and the Build's Technical Info show what it was made with.
+- [ ] Import a second build of a homebrew game whose filename differs from the first, such as "Game-v5-Stability.gbc"; Import Review suggests adding it to the first Game and reads version 5, status Stability.
 - [ ] Play Build A of a homebrew Game, then launch Build B, made with different tools, with the same save; the warning appears, and Play with a Copy leaves the original save unchanged.
 - [ ] Replace Save from File on a profile with a save asks first and keeps "<name> before import"; on a blank profile it doesn't ask.
 - [ ] Load State shows each state's thumbnail.

@@ -249,6 +249,41 @@ final class ROMImportTests: XCTestCase {
         XCTAssertEqual(try harness.builds.fetchBuilds(gameID: base.game.id).count, 2)
     }
 
+    func testAnotherBuildOfAProjectFindsItsGameByHeaderTitle() throws {
+        let harness = try ImportHarness.make()
+        func importNewGame(title: String, payload: UInt8) throws -> ROMImportResult {
+            let url = try harness.writeExternalROM(TestROM.make(title: title, cgb: true, payloadByte: payload))
+            return try harness.committer.commit(ROMImportPlan(
+                analysis: try harness.analyzer.analyzeROM(at: url, targetGameID: nil),
+                disposition: .createGame(title: title),
+                buildDisplayName: "Master",
+                markAsBase: true
+            ))
+        }
+        let project = try importNewGame(title: "gametitleNIS", payload: 1)
+        _ = try importNewGame(title: "OTHERGAME", payload: 2)
+
+        let next = try harness.writeExternalROM(TestROM.make(title: "gametitleNIS", cgb: true, payloadByte: 3))
+        let analysis = try harness.analyzer.analyzeROM(at: next, targetGameID: nil)
+        XCTAssertEqual(analysis.headerTitleGameIDs, [project.game.id])
+
+        // A header title shared by Builds in two Games suggests neither.
+        _ = try importNewGame(title: "gametitleNIS", payload: 4)
+        let ambiguous = try harness.analyzer.analyzeROM(
+            at: try harness.writeExternalROM(TestROM.make(title: "gametitleNIS", cgb: true, payloadByte: 5)),
+            targetGameID: nil
+        )
+        XCTAssertEqual(ambiguous.headerTitleGameIDs.count, 2)
+
+        // Titles too short to tell projects apart match nothing.
+        _ = try importNewGame(title: "AB", payload: 6)
+        let short = try harness.analyzer.analyzeROM(
+            at: try harness.writeExternalROM(TestROM.make(title: "AB", cgb: true, payloadByte: 7)),
+            targetGameID: nil
+        )
+        XCTAssertEqual(short.headerTitleGameIDs, [])
+    }
+
     func testFailedTransactionRemovesOnlyNewlyCreatedManagedFile() throws {
         let harness = try ImportHarness.make(transactionRunner: FailingTransactionRunner())
         let romURL = try harness.writeExternalROM(TestROM.make(title: "FAIL", cgb: false))

@@ -57,12 +57,37 @@ public struct ROMImportAnalyzer: Sendable {
                 imageSHA1: sha1,
                 knownDump: knownDump,
                 knownFile: knownDumps?.file(sha1: sha1),
-                familyGameIDs: familyGameIDs
+                familyGameIDs: familyGameIDs,
+                headerTitleGameIDs: existing == nil ? try headerTitleGameIDs(of: header.title, excluding: sha256) : []
             )
         } catch {
             try? assetStore.removeIfExists(stagedURL.deletingLastPathComponent())
             throw error
         }
+    }
+
+    /// The Games holding an imported Build whose header title is this one, read from the first
+    /// bytes of each Build's source file. Titles shorter than three letters or digits match nothing.
+    private func headerTitleGameIDs(of title: String, excluding sha256: String) throws -> [UUID] {
+        let key = GameMatcher.normalized(title)
+        guard key.count >= 3 else { return [] }
+        var seen = Set<UUID>()
+        var gameIDs: [UUID] = []
+        for build in try builds.fetchImportedBuilds() where build.imageSHA256 != sha256 {
+            guard let url = try? assetStore.sourceImageURL(sha256: build.imageSHA256),
+                  let otherTitle = Self.headerTitle(at: url),
+                  GameMatcher.normalized(otherTitle) == key,
+                  seen.insert(build.gameID).inserted else { continue }
+            gameIDs.append(build.gameID)
+        }
+        return gameIDs
+    }
+
+    private static func headerTitle(at url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let prefix = try? handle.read(upToCount: 0x150) else { return nil }
+        return try? GBROMHeaderParser.parse(prefix).title
     }
 
     /// The Games already holding a Build from any file of the dump's No-Intro family, bad copies

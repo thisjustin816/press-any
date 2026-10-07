@@ -175,7 +175,10 @@ changes the library; review shows what will happen; commit is all or nothing.
   Build from its family; with several candidates it's a choice, not a default. Otherwise review
   suggests a Game whose title matches the file's title, header title or a hack's base title,
   ignoring case, punctuation and spacing. Only whole titles match ("Mega Man 2" never joins
-  "Mega Man"), and two matching Games suggest neither. An uncertain ROM is never attached silently.
+  "Mega Man"), and two matching Games suggest neither. A ROM whose header title matches a Build
+  already in one Game suggests that Game, since homebrew builds of one project share a header
+  title while their filenames change. When the title and header suggest different Games, neither
+  is suggested. An uncertain ROM is never attached silently.
 - **Roles.** Every new Build defaults to Preferred. It defaults to Base when the Game has none,
   unless it's a ROM hack. Where the Game has a Base, only a newer homebrew release defaults to
   replacing it: one whose version or date sorts after the Base's, or any versioned file when the
@@ -242,6 +245,9 @@ promotion and Open Patch.
   are recognized. A dotted "Rev 0.2.0" is a homebrew version. Versions keep a semver suffix such
   as "-beta.3" and sort by their numeric part. Loose forms such as "r2" or a bare trailing number
   stay in the title, since "R-Type" and "Mega Man 2" look the same.
+- In a name joined by hyphens or underscores, a "v5" or "v1.2" word mid-name becomes the version
+  and the words after it the status: "Serve-Sisters-Coop-v5-Stability" is "Serve Sisters Coop",
+  version 5, status Stability. A lone "v2" is never the whole title.
 - A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version,
   shown as "2026-10-06" and sorted by date; the words after it become the status. Only a valid
   eight-digit or hyphenated date counts, and never as the whole title.
