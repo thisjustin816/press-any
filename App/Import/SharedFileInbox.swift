@@ -6,6 +6,7 @@ struct SharedFile: Identifiable {
     enum Kind {
         case rom
         case patch
+        case save
     }
 
     let id: UUID
@@ -20,7 +21,7 @@ enum SharedFileError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unsupportedFile: "Choose a Game Boy ROM (.gb or .gbc) or a patch (.ips or .bps)."
+        case .unsupportedFile: "Choose a Game Boy ROM (.gb or .gbc), a patch (.ips or .bps) or a save (.sav or .srm)."
         case .notAFile: "Only regular files can be opened. Folders and links aren’t supported."
         }
     }
@@ -51,6 +52,9 @@ final class SharedFileInbox {
         case "ips", "bps":
             kind = .patch
             limit = .patch
+        case "sav", "srm":
+            kind = .save
+            limit = .batterySave
         default:
             throw SharedFileError.unsupportedFile
         }

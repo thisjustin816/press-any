@@ -57,6 +57,18 @@
 		</dict>
 		<dict>
 			<key>CFBundleTypeName</key>
+			<string>Game Boy Save</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.thisjustin816.emulator.save</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
 			<string>IPS Patch</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
@@ -113,6 +125,24 @@
 				<key>public.filename-extension</key>
 				<array>
 					<string>gbc</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.thisjustin816.emulator.save</string>
+			<key>UTTypeDescription</key>
+			<string>Game Boy Save</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sav</string>
+					<string>srm</string>
 				</array>
 			</dict>
 		</dict>

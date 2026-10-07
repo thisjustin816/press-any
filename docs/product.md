@@ -88,7 +88,7 @@ parents, notes, import and activation history) and a Build comparison screen. Th
 ### Save Profile
 
 A Save Profile is a named playthrough with one current battery save, such as Main, Nuzlocke or
-Testing. Profiles can be blank, duplicated, imported from a `.sav`, or promoted from Quick Play,
+Testing. Profiles can be blank, duplicated, imported from a `.sav` or `.srm`, or promoted from Quick Play,
 and they're listed flat, with a subtle "copied from" note rather than a tree. Compatible Builds
 can deliberately share one. A Build remembers its preferred profile and falls back to the Game's
 default.
@@ -165,7 +165,7 @@ changes the library; review shows what will happen; commit is all or nothing.
 
 ### Sources and safety
 
-- The file picker, and Share Sheet / Open In for `.gb`, `.gbc`, `.ips` and `.bps`. The document
+- The file picker, and Share Sheet / Open In for `.gb`, `.gbc`, `.ips`, `.bps`, `.sav` and `.srm`. The document
   types are registered in Info.plist with `LSHandlerRank = Owner`. Each keeps
   `CFBundleTypeRole = Viewer`: opening stages a copy for play or import, so it needs no Editor
   role. The extension mappings stay in `UTImportedTypeDeclarations`; Press Any does not own
@@ -725,7 +725,7 @@ exposes them; custom border editing is later.
 
 ## Shared files
 
-- Press Any claims `.gb`, `.gbc`, `.ips` and `.bps` as an Owner handler. iOS has no user setting
+- Press Any claims `.gb`, `.gbc`, `.ips`, `.bps`, `.sav` and `.srm` as an Owner handler. iOS has no user setting
   for a default app per file type. When two installed apps claim a type, iOS chooses which opens
   on a tap in Files; Owner rank does not guarantee Press Any wins. Share > Press Any (under More
   if needed) explicitly sends the file here.
@@ -745,7 +745,10 @@ exposes them; custom border editing is later.
 - A shared ROM offers Quick Play or Import to Library. A shared patch opens Open Patch, which
   needs a Game and a base Build. A BPS patch records its base ROM's size and CRC32, so Open Patch
   preselects the Build whose image matches, checking only images of that size. Without one, a
-  Game whose title matches the patch's is preselected with its Base Build.
+  Game whose title matches the patch's is preselected with its Base Build. A shared save opens
+  Open Save, which imports it as a new Save Profile in the chosen Game. The Game is preselected
+  when the save is named like exactly one Game's ROM file, as emulators name saves, or when its
+  title matches one Game.
 - A file shared mid-game opens over the game, which pauses as for the game menu and stays paused
   afterward. Quick Play from that sheet reads "Close Game and Quick Play": the running game closes
   the normal way, saving first, and a Quick Play session still offers Keep for Later before the new
