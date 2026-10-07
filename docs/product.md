@@ -441,6 +441,11 @@ accessories such as Playtiles and GameBaby, which are chosen by hand (an identif
 may suggest a preset, never switch to it); optional gestures, off by default; optional Turbo A
 and B, not in the default layout.
 
+v1: when the chosen layout fits a physical controller over the bottom of the screen, as Playtiles
+does (and any later layout like it), the whole app moves into the top part of the screen that
+stays visible: the library, Game Details, Settings, sheets and menus fit above the controller, and
+its buttons move a focus through them, so the app can be used without taking the controller off.
+
 ### Game menu
 
 - The Press Any wordmark at the bottom is a raised button with the wordmark pressed into it, on
