@@ -23,6 +23,41 @@ final class TouchInputResolverTests: XCTestCase {
         XCTAssertFalse(resolver.input.down)
     }
 
+    func testBuiltInDPadAnglesAgreeAcrossStylesAndOrientations() {
+        for style in TouchControlStyle.allCases {
+            for (width, height) in [(375.0, 667.0), (393, 852), (440, 956), (667, 375), (852, 393), (956, 440)] {
+                let layout = TouchControlLayout.make(style, width: width, height: height)
+                for (degrees, horizontal, vertical) in [
+                    (20.0, true, false),
+                    (30.0, true, false),
+                    (33.5, true, false),
+                    (34.0, true, true),
+                    (45.0, true, true),
+                    (56.0, true, true),
+                    (56.5, false, true),
+                    (60.0, false, true),
+                    (70.0, false, true),
+                ] {
+                    for (xSign, ySign) in [(-1.0, -1.0), (1, -1), (-1, 1), (1, 1)] {
+                        let angle = degrees * Double.pi / 180
+                        let radius = layout.dpad.width / 2 * 0.8
+                        let resolver = TouchInputResolver(layout: layout)
+                        resolver.touchBegan(id: 1, point: .init(
+                            x: layout.dpad.center.x + xSign * cos(angle) * radius,
+                            y: layout.dpad.center.y + ySign * sin(angle) * radius
+                        ))
+                        XCTAssertEqual(resolver.input, EmulatorInputState(
+                            up: vertical && ySign < 0,
+                            down: vertical && ySign > 0,
+                            left: horizontal && xSign < 0,
+                            right: horizontal && xSign > 0
+                        ), "\(style), \(width)x\(height), \(degrees)°, signs \(xSign), \(ySign)")
+                    }
+                }
+            }
+        }
+    }
+
     func testPlaytilesCardinalPressesTolerateOffAxisContact() {
         for (width, height) in [(375.0, 667.0), (393, 852), (440, 956)] {
             let layout = TouchControlLayout.make(.playtiles, width: width, height: height)

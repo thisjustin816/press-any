@@ -428,8 +428,7 @@ disconnect.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
   START and SELECT in Game Boy order. A is larger than B, as in the skin, and controls respond
   across both the frame and the artwork. A raised alignment guide marks where the physical overlay
-  sits. Its diagonals need the weaker axis to exceed 65% of the stronger one as well as the center
-  dead zone, which widens the straight directions. The skin's artwork isn't used.
+  sits. The skin's artwork isn't used.
 
 The controls are drawn in code on a controller body behind them. Every control is raised like
 the menu button: a face lit from above, light along the inside of its top edge and shade along its
@@ -448,8 +447,12 @@ D-pad, gray pills, navy lettering); Dark is the same design on a near-black body
 bezel and a lighter channel behind A and B. Match System picks Classic in Light Mode and Dark in
 Dark Mode.
 
-Touch: a sliding D-pad with natural diagonals, sliding between A and B, and A+B together. The
-controller layout keeps the name Game Boy because it describes the hardware it recreates; the
+Touch: a sliding D-pad, sliding between A and B, and A+B together. Game Boy (portrait and
+landscape) and Playtiles share the same direction rule: the weaker axis must exceed 67% of the
+stronger one as well as the center dead zone to count as a diagonal. Away from the dead zone,
+each diagonal spans about 22.5° around a corner (45°), and each cardinal spans about 67.5°.
+The center dead zone stays at 16% of the pad's half-width on each axis.
+The controller layout keeps the name Game Boy because it describes the hardware it recreates; the
 App Store name, keywords and icon carry no Nintendo trademarks.
 
 v1.1: a lightweight layout editor (screen and control position and size,
