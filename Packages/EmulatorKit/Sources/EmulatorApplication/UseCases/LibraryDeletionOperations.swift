@@ -22,7 +22,7 @@ public enum LibraryDeletionError: Error, Equatable {
     case romAlreadyInGame(UUID)
 }
 
-/// What a deletion would take, shown before it happens so nothing goes unannounced (`dec 30`).
+/// What a deletion would take, shown before it happens so nothing goes unannounced.
 public struct DeletionPlan: Equatable, Sendable {
     public let kind: LibraryDeletion.Kind
     public let title: String

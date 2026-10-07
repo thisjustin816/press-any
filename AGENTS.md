@@ -12,18 +12,16 @@ preflight hook block is already present in the turn, follow that block.
 
 ## Source of truth
 
-Read these documents in order:
-
-1. `docs/specs/gb-emulator-mvp.md`
-2. `docs/specs/gb-emulator-product.md`
-3. `docs/specs/gb-emulator-decisions.md`
-4. `docs/specs/gb-emulator-later-decisions.md`, which wins over the three above where they conflict
-5. `docs/decisions.md`, decisions made since, newest first, which wins over all of the above
+`docs/product.md` says what Press Any is and how it behaves, and `docs/backlog.md` tracks what's
+built and what's left. When a decision changes behavior, update the section of `docs/product.md`
+it touches, and the backlog row, in the same change. Describe the app as it is; don't add dated
+decision entries, plans or history, which git already keeps.
 
 `docs/acceptance-matrix.md` defines the L1-L4 evidence levels that CI and the device checks use,
 and `docs/mvp-verification.md` is the device checklist.
 
-If implementation and specification disagree, do not silently redesign the product. Document the conflict and resolve it explicitly.
+If implementation and `docs/product.md` disagree, do not silently redesign the product. Raise the
+conflict and resolve it explicitly.
 
 ## Naming
 
