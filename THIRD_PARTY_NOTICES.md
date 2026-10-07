@@ -72,7 +72,7 @@ this repository.
 
 Settings > Acknowledgements lists each project whose code ships in the app. SameBoy's and
 GRDB.swift's licenses are bundled verbatim from `App/Acknowledgements/`; gbtoolsid, which is in
-the public domain, gets a credit.
+the public domain, and No-Intro get a credit.
 
 ## Updating a dependency
 
