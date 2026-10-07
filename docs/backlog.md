@@ -501,7 +501,8 @@ Files without replacing an earlier export.
 Done: Dependency-aware deletion: the confirmation names patched Builds and emptied Games that go
 too, and a Game can't go while another Game's patch is built from it; Recently Deleted for 30
 days in Settings, with Restore and Delete Now, purged at launch; Delete Game, Build, Save Profile
-and save state from the UI, a save state from its profile's Save States.
+and save state from the UI, a save state from its profile's Save States; swipe to delete on Build,
+Save Profile and save state rows and to discard a Quick Play session, asking first as the menus do.
 
 ### Performance
 

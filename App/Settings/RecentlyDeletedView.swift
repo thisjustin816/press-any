@@ -66,9 +66,7 @@ struct RecentlyDeletedView: View {
             Button("Restore") { restore(deletion) }
                 .tint(.blue)
         }
-        .swipeActions(edge: .trailing) {
-            Button("Delete Now", role: .destructive) { purgeTarget = deletion }
-        }
+        .swipeActions(edge: .trailing) { SwipeDeleteButton(title: "Delete Now") { purgeTarget = deletion } }
         .contextMenu {
             Button("Restore") { restore(deletion) }
             Button("Delete Now", role: .destructive) { purgeTarget = deletion }

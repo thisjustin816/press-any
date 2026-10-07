@@ -701,6 +701,9 @@ exposes them; custom border editing is later.
   days, with Restore and Delete Now, and purged at launch after that.
 - Deletion is dependency-aware: the confirmation names patched Builds and emptied Games that go
   too, and a Game can't go while another Game's patch is built from it.
+- Builds, Save Profiles and save states can also be deleted with a swipe to the left on their
+  rows, and a Quick Play session discarded the same way. The swipe asks first, as the row's
+  menu does. In Recently Deleted, swiping left is Delete Now and swiping right is Restore.
 - A state deleted on its own comes back only once its profile and Build are back. Purging a
   profile or Build for good takes all its states, including ones waiting in another deletion.
 - Purging writes a permanent tombstone so a deleted record can't come back from another device;

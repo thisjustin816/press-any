@@ -89,9 +89,7 @@ struct SaveStatesView: View {
             Button("Rename") { startRenaming(state) }
                 .tint(.blue)
         }
-        .swipeActions(edge: .trailing) {
-            Button("Delete", role: .destructive) { model.requestDeletion(of: state) }
-        }
+        .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: state) } }
         .contextMenu {
             Button("Rename…") { startRenaming(state) }
             Button("Delete…", role: .destructive) { model.requestDeletion(of: state) }
