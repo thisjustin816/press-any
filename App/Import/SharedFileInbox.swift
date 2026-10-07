@@ -1,6 +1,7 @@
 import AssetStorage
 import EmulatorApplication
 import Foundation
+import Importing
 
 struct SharedFile: Identifiable {
     enum Kind {
@@ -18,11 +19,13 @@ struct SharedFile: Identifiable {
 enum SharedFileError: LocalizedError {
     case unsupportedFile
     case notAFile
+    case emptyArchive
 
     var errorDescription: String? {
         switch self {
-        case .unsupportedFile: "Choose a Game Boy ROM (.gb or .gbc), a patch (.ips or .bps) or a save (.sav or .srm)."
+        case .unsupportedFile: "Choose a Game Boy ROM (.gb or .gbc), a patch (.ips or .bps), a save (.sav or .srm), or a zip holding them."
         case .notAFile: "Only regular files can be opened. Folders and links aren’t supported."
+        case .emptyArchive: "This zip has no Game Boy ROM, patch or save in it."
         }
     }
 }
@@ -43,25 +46,61 @@ final class SharedFileInbox {
         // Documents/Inbox; the receipt keeps its own copy, so that one goes whether or not the file
         // is accepted.
         defer { Self.removeIfInInbox(url) }
-        let kind: SharedFile.Kind
-        let limit: ImportSizeLimit
-        switch url.pathExtension.lowercased() {
-        case "gb", "gbc":
-            kind = .rom
-            limit = .rom
-        case "ips", "bps":
-            kind = .patch
-            limit = .patch
-        case "sav", "srm":
-            kind = .save
-            limit = .batterySave
-        default:
-            throw SharedFileError.unsupportedFile
-        }
+        guard let accepted = Self.kind(forExtension: url.pathExtension) else { throw SharedFileError.unsupportedFile }
         let filename = url.lastPathComponent.removingPercentEncoding ?? url.lastPathComponent
         guard !filename.contains("/"), !filename.contains("\\") else { throw SharedFileError.notAFile }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        return try stage(url, filename: filename, kind: accepted.kind, limit: accepted.limit)
+    }
+
+    /// A zip yields each ROM, patch and save inside it, in the archive's order; anything else is a
+    /// single file, as `receive` takes it.
+    func receiveAll(_ url: URL) throws -> [SharedFile] {
+        guard url.pathExtension.lowercased() == "zip" else { return [try receive(url)] }
+        guard url.isFileURL else { throw SharedFileError.notAFile }
+        defer { Self.removeIfInInbox(url) }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        guard attributes[.type] as? FileAttributeType == .typeRegular else { throw SharedFileError.notAFile }
+        try ImportSizeLimit.archive.check(fileAt: url)
+        let staged = try store.stageCopy(from: url, transactionID: UUID())
+        let directory = staged.deletingLastPathComponent()
+        defer { try? store.removeIfExists(directory) }
+        try ImportSizeLimit.archive.check(fileAt: staged)
+        let entries = try ZipArchiveReader.entries(
+            in: Data(contentsOf: staged),
+            extensions: Set(Self.extensions.keys)
+        ) { Self.kind(forExtension: $0)?.limit.bytes ?? 0 }
+        guard !entries.isEmpty else { throw SharedFileError.emptyArchive }
+        var files: [SharedFile] = []
+        do {
+            for entry in entries {
+                guard let accepted = Self.kind(forExtension: (entry.filename as NSString).pathExtension) else { continue }
+                let extracted = directory.appendingPathComponent(UUID().uuidString)
+                try entry.data.write(to: extracted)
+                files.append(try stage(extracted, filename: entry.filename, kind: accepted.kind, limit: accepted.limit))
+            }
+        } catch {
+            files.forEach(discard)
+            throw error
+        }
+        return files
+    }
+
+    private static let extensions: [String: (kind: SharedFile.Kind, limit: ImportSizeLimit)] = [
+        "gb": (.rom, .rom), "gbc": (.rom, .rom),
+        "ips": (.patch, .patch), "bps": (.patch, .patch),
+        "sav": (.save, .batterySave), "srm": (.save, .batterySave),
+    ]
+
+    private static func kind(forExtension fileExtension: String) -> (kind: SharedFile.Kind, limit: ImportSizeLimit)? {
+        extensions[fileExtension.lowercased()]
+    }
+
+    /// Copies a regular file into its own receipt folder under `filename`.
+    private func stage(_ url: URL, filename: String, kind: SharedFile.Kind, limit: ImportSizeLimit) throws -> SharedFile {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         guard attributes[.type] as? FileAttributeType == .typeRegular else { throw SharedFileError.notAFile }
         try limit.check(fileAt: url)

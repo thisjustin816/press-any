@@ -30,7 +30,7 @@ migrating later.
 6. The rest of the v1 core: Quick Save and save state slots, crash recovery, reopening the last
    game, and a fixed controller combo for the game menu.
 
-v1 is a good core experience; everything else waits for v1.1: ZIP, 7z and multi-asset import,
+v1 is a good core experience; everything else waits for v1.1: 7z and multi-asset import,
 artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
 Actions, the DMG/GBC/SGB model override, shaders and the layout editor with skin import,
 screenshots and notes, external displays, tags and collections, iCloud sync once the schema has
@@ -91,7 +91,12 @@ Done: SameBoy 1.0.3 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest 
 first launch, then pinned per Build; Open SameBoy boot ROMs incl. cgb_boot_fast; Skip Boot Logo:
 Quick Play always, library via inheritable setting (default shows logo); Optional capability
 protocols: rumble and boot skipping implemented, rewind, cheats, memory access, RTC, link cable,
-camera and printer declared, and a missing one is a failed cast.
+camera and printer declared, and a missing one is a failed cast. Accuracy test ROMs: Blargg's
+tests and the Mooneye Test Suite run through the bridge on DMG-B and CGB-E in CI whenever the core
+or bridge changes, against recorded results; every test for those models passes except Mooneye's
+boot_div, boot_hwio and boot_sclk_align, likely because SameBoy's open boot ROMs don't hand off on
+the same cycle as Nintendo's. Screenshot suites (dmg-acid2, cgb-acid2, Mealybug Tearoom, Blargg's
+halt_bug, interrupt_time and sound tests) and SameSuite remain.
 
 ### Persistence / storage
 
@@ -180,7 +185,7 @@ altering a ROM.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Files default-open handling with another emulator installed | v1 | Owner/Viewer declarations for .gb/.gbc/.ips/.bps; cited Delta, Provenance, SameBoy and RetroArch ROM identifiers accepted (see product.md, Shared files); hosted app test covers rank, role, extensions and identifiers; physical-iPhone tap and Share > Press Any checks pending in mvp-verification.md; iOS chooses the default between claiming apps |
-| missing | ZIP + 7z (libarchive) with archive safety (depth/ratio limits, traversal, password detect) | v1.1 |  |
+| partial | ZIP + 7z with archive safety (size limits, traversal, password detect) | v1.1 | shared zips open each ROM, patch and save inside, read in memory with the system zlib (stored and deflate, per-kind size limits, CRC checked, encrypted and Zip64 refused); 7z remains |
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path only repairs the blob |
 | missing | Visual artwork comparison (existing/fetched/packaged) in review | v1.1 |  |
