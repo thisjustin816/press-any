@@ -436,6 +436,21 @@ Touch: a sliding D-pad with natural diagonals, sliding between A and B, and A+B 
 controller layout keeps the name Game Boy because it describes the hardware it recreates; the
 App Store name, keywords and icon carry no Nintendo trademarks.
 
+v1: a lightweight layout editor (screen and control position and size,
+opacity, touch areas, separate portrait and landscape, a few control styles, saved presets),
+opened from the game with the frame frozen for alignment and offering Save for This Game or Update
+Shared Preset; Minimal, Fullscreen and one-handed presets; Delta and Manic skin import into the
+native model, keeping the original package, previewing and reporting what isn't supported and
+never mis-mapping a control; layout sharing through Files; per-device calibration for passive
+accessories such as Playtiles and GameBaby, which are chosen by hand (an identifiable accessory
+may suggest a preset, never switch to it); optional gestures, off by default; optional Turbo A
+and B, not in the default layout.
+
+v1.1: when the chosen layout fits a physical controller over the bottom of the screen, as Playtiles
+does (and any later layout like it), the whole app moves into the top part of the screen that
+stays visible: the library, Game Details, Settings, sheets and menus fit above the controller, and
+its buttons move a focus through them, so the app can be used without taking the controller off.
+
 ### Landscape
 
 Gameplay with the Game Boy layout turns to landscape, following Settings > Display > Orientation:
@@ -455,21 +470,6 @@ from a front photograph of an AGB-001; a tap on the plate counts. The D-pad and 
 Game Boy layout's sizes and drawing, and every control clears the phone's safe areas. Rotating
 releases held input and keeps the game running or paused as it was, with Resume centered on the
 picture. A connected controller still hides the touch controls.
-
-v1: a lightweight layout editor (screen and control position and size,
-opacity, touch areas, separate portrait and landscape, a few control styles, saved presets),
-opened from the game with the frame frozen for alignment and offering Save for This Game or Update
-Shared Preset; Minimal, Fullscreen and one-handed presets; Delta and Manic skin import into the
-native model, keeping the original package, previewing and reporting what isn't supported and
-never mis-mapping a control; layout sharing through Files; per-device calibration for passive
-accessories such as Playtiles and GameBaby, which are chosen by hand (an identifiable accessory
-may suggest a preset, never switch to it); optional gestures, off by default; optional Turbo A
-and B, not in the default layout.
-
-v1.1: when the chosen layout fits a physical controller over the bottom of the screen, as Playtiles
-does (and any later layout like it), the whole app moves into the top part of the screen that
-stays visible: the library, Game Details, Settings, sheets and menus fit above the controller, and
-its buttons move a focus through them, so the app can be used without taking the controller off.
 
 ### Game menu
 
