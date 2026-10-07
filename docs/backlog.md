@@ -18,8 +18,8 @@ migrating later.
    hash matching, family grouping, regional proposals, reviewed family merges and Match Game
    with absent-base lineage are built. "No-Intro data" in `docs/product.md` describes the behavior.
 2. The rest of the data model, in as few schema migrations as possible: metadata provenance with
-   Metadata Details, declared save compatibility, per-step patch input hashes, and the cross-region
-   save check. Game aliases, rename, Build notes, per-Build playtime and favorites are built.
+   Metadata Details and per-step patch input hashes. Game aliases, rename, Build notes, per-Build
+   playtime, favorites, declared save compatibility and the cross-region save check are built.
 3. Multi-signal development-build matching, the one import item left in v1.
 4. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
    with cleanup, in-flight protection and verification on read.
@@ -248,8 +248,8 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | GB Studio save migration (version-gated, needs maps) | v1.1 |  |
 | missing | RTC: real time + per-profile manual offset; Developer RTC controls | v1.1 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later |  |
-| missing | Cross-region save check: launching a Build whose region or language differs from the Build that last wrote the profile warns, since many games' saves don't carry across languages | v1 | joins the existing launch check; declared save compatibility can clear it |
-| missing | Declared save compatibility between Builds (known to share, known not to), used by the launch check | v1 | the launch check only infers today (GB Studio, tools, header save hardware) |
+| done | Cross-region save check: launching a Build whose region or language differs from the Build that last wrote the profile warns, since many games' saves don't carry across languages | v1 | same risky-launch prompt names both releases; requires a writer and both regions, compares languages when both are recorded; Shares Saves clears the warning |
+| done | Declared save compatibility between Builds (known to share, known not to), used by the launch check | v1 | symmetric pairs; Always Use Saves Between These Builds records a share and launches; Build Details adds, replaces and swipe-removes either choice; Shares Saves skips the prompt, Doesn't forces it; Move keeps pairs, Copy gets none; Recently Deleted hides and restores them, purge removes them |
 
 Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play
 once changed, at most every five seconds of play and off the frame-pacing queue; Compatible Builds
@@ -258,7 +258,8 @@ blank profile; duplicate profile (bytes copied, ancestry shown); Import .sav int
 or into an existing one after confirming, keeping its old save as "<name> before import";
 Variable maps (GB Studio globals, RGBDS .sym, GBDK .noi) kept on the exact Build; Each profile
 records the Build that last wrote it, and launching another Build warns when the save may not fit
-(GB Studio, different detected tools, different header save hardware); Save Profile badge, one
+(declared non-share, different regions or languages, GB Studio, different detected tools or
+different header save hardware, unless declared to share); Save Profile badge, one
 emoji shown beside its name; Delete a profile, with a confirmation naming it, taking its save and
 states.
 

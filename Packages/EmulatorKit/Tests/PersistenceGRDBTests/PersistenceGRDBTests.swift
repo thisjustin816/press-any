@@ -7,6 +7,85 @@ import Testing
 
 @Suite("GRDB persistence")
 struct PersistenceGRDBTests {
+    @Test("a declaration round-trips once per symmetric pair and rejects invalid pairs")
+    func saveDeclarations() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = root.appendingPathComponent("library.sqlite")
+        let database = try AppDatabase(url: url)
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let a = fixture.build.id, b = fixture.patchedBuild.id
+        let share = BuildSaveDeclaration(between: a, and: b, compatibility: .sharesSaves)
+        #expect(share == BuildSaveDeclaration(between: b, and: a, compatibility: .sharesSaves))
+        try repositories.builds.setSaveCompatibility(between: a, and: b, compatibility: .sharesSaves)
+        let reopened = try AppDatabase(url: url)
+        try reopened.migrate()
+        #expect(try reopened.makeRepositories().builds.fetchSaveDeclarations(buildID: a) == [share])
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: b) == [share])
+        try repositories.builds.setSaveCompatibility(between: b, and: a, compatibility: .doesNotShareSaves)
+        let nonShare = BuildSaveDeclaration(between: a, and: b, compatibility: .doesNotShareSaves)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a) == [nonShare])
+        #expect(throws: TestFailure.expectedRollback) {
+            try repositories.transactions.run {
+                try repositories.builds.setSaveCompatibility(between: a, and: b, compatibility: .sharesSaves)
+                throw TestFailure.expectedRollback
+            }
+        }
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: b) == [nonShare])
+        #expect(throws: SaveDeclarationError.sameBuild) {
+            try repositories.builds.setSaveCompatibility(between: a, and: a, compatibility: .sharesSaves)
+        }
+        let missing = UUID()
+        #expect(throws: BuildOperationError.buildNotFound(missing)) {
+            try repositories.builds.setSaveCompatibility(between: a, and: missing, compatibility: .sharesSaves)
+        }
+        let operations = try Self.operations(repositories)
+        _ = try operations.promoteBuild(buildID: b, title: "Separate", mode: .move)
+        #expect(throws: SaveDeclarationError.differentGames) {
+            try repositories.builds.setSaveCompatibility(between: a, and: b, compatibility: .sharesSaves)
+        }
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a) == [nonShare])
+        try repositories.builds.removeSaveCompatibility(between: b, and: a)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a).isEmpty)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: b).isEmpty)
+    }
+
+    @Test("declarations follow promotion and merge by move, while copies get none")
+    func saveDeclarationsThroughReorganization() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let a = fixture.build.id, b = fixture.patchedBuild.id
+        let declaration = BuildSaveDeclaration(between: a, and: b, compatibility: .sharesSaves)
+        try repositories.builds.setSaveCompatibility(between: a, and: b, compatibility: .sharesSaves)
+        let operations = try Self.operations(repositories)
+        let copied = try operations.promoteBuild(buildID: b, title: "Copy", mode: .copy)
+        let copiedBuild = try #require(try repositories.builds.fetchBuilds(gameID: copied.id).first)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: copiedBuild.id).isEmpty)
+        let separated = try operations.promoteBuild(buildID: b, title: "Moved", mode: .move)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a) == [declaration])
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: b) == [declaration])
+        try operations.mergeGame(sourceGameID: separated.id, into: fixture.game.id, mode: .move)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: b) == [declaration])
+        let target = Game(id: UUID(), primaryTitle: "Target", systemFamily: "gameboy",
+            createdAt: fixture.game.createdAt, modifiedAt: fixture.game.modifiedAt)
+        try repositories.games.insertGame(target)
+        try operations.mergeGame(sourceGameID: fixture.game.id, into: target.id, mode: .copy)
+        for build in try repositories.builds.fetchBuilds(gameID: target.id) {
+            #expect(try repositories.builds.fetchSaveDeclarations(buildID: build.id).isEmpty)
+        }
+        let moveTarget = Game(id: UUID(), primaryTitle: "Move Target", systemFamily: "gameboy",
+            createdAt: fixture.game.createdAt, modifiedAt: fixture.game.modifiedAt)
+        try repositories.games.insertGame(moveTarget)
+        try operations.mergeGame(sourceGameID: fixture.game.id, into: moveTarget.id, mode: .move)
+        #expect(try repositories.games.fetchGame(id: fixture.game.id) == nil)
+        #expect(try repositories.builds.fetchSaveDeclarations(buildID: a) == [declaration])
+    }
+
     @Test("notes and favorites round-trip, and metadata edits keep accumulated Build playtime")
     func buildNotesPlaytimeAndFavorites() throws {
         let database = try AppDatabase.inMemory()

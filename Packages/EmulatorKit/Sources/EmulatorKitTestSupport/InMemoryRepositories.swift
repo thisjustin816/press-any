@@ -34,6 +34,7 @@ public final class InMemoryGameRepository: GameRepository, @unchecked Sendable {
 public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable {
     private let lock = NSLock()
     private var values: [UUID: Build]
+    private var declarations: [BuildSaveDeclaration] = []
 
     public init(_ builds: [Build] = []) {
         values = Dictionary(uniqueKeysWithValues: builds.map { ($0.id, $0) })
@@ -97,6 +98,36 @@ public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable
 
     public func moveBuild(id: UUID, toGameID: UUID) throws {
         lock.withLock { values[id]?.gameID = toGameID }
+    }
+
+    public func fetchSaveDeclarations(buildID: UUID) throws -> [BuildSaveDeclaration] {
+        lock.withLock {
+            declarations.filter {
+                $0.otherBuildID(than: buildID) != nil && values[$0.firstBuildID] != nil && values[$0.secondBuildID] != nil
+            }.sorted {
+                if $0.firstBuildID != $1.firstBuildID { return $0.firstBuildID.uuidString < $1.firstBuildID.uuidString }
+                return $0.secondBuildID.uuidString < $1.secondBuildID.uuidString
+            }
+        }
+    }
+
+    public func setSaveCompatibility(between first: UUID, and second: UUID, compatibility: BuildSaveCompatibility) throws {
+        try lock.withLock {
+            guard first != second else { throw SaveDeclarationError.sameBuild }
+            guard let firstBuild = values[first] else { throw BuildOperationError.buildNotFound(first) }
+            guard let secondBuild = values[second] else { throw BuildOperationError.buildNotFound(second) }
+            guard firstBuild.gameID == secondBuild.gameID else { throw SaveDeclarationError.differentGames }
+            declarations.removeAll { $0.otherBuildID(than: first) == second }
+            declarations.append(BuildSaveDeclaration(between: first, and: second, compatibility: compatibility))
+        }
+    }
+
+    public func removeSaveCompatibility(between first: UUID, and second: UUID) throws {
+        lock.withLock { declarations.removeAll { $0.otherBuildID(than: first) == second } }
+    }
+
+    func purgeSaveDeclarations(buildID: UUID) {
+        lock.withLock { declarations.removeAll { $0.otherBuildID(than: buildID) != nil } }
     }
 
     var all: [Build] { lock.withLock { Array(values.values) } }
