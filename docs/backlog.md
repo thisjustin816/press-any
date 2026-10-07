@@ -17,8 +17,8 @@ migrating later.
 1. Identity: No-Intro categorization (the bundled data and its generator, hash matching,
    Verified/Modified/Unknown, parent/clone grouping and merging existing Games that are one
    family), the regional rows, Match Game for unknown ROMs and lineage without owning the base,
-   and the ROM-hack naming that remains. The license is confirmed and the design is in
-   `docs/superpowers/plans/2026-10-06-no-intro-identity.md`.
+   and the ROM-hack naming that remains. The license is confirmed, and "No-Intro data" in
+   `docs/product.md` describes the design.
 2. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
    metadata provenance with Metadata Details, Build notes, per-Build playtime and the Build
    timeline, typed multi-artwork, documents, tags, collections and favorites, declared save
