@@ -95,7 +95,7 @@ struct WelcomeView: View {
         Topic(
             symbol: "gamecontroller",
             title: "In a Game",
-            text: "Tap \(AppBrand.displayName) on the controller to pause and open the menu: Fast Forward, Save State and Load State, Settings, and Close Game. Bluetooth controllers work too, and the touch controls hide while one is in use."
+            text: "Tap \(AppBrand.displayName) on the controller to pause and open the menu: Fast Forward, Save State and Load State, Settings, and Close Game. A Bluetooth controller's Menu button opens the same menu; press it again to close and resume. The touch controls hide while one is in use."
         ),
         Topic(
             symbol: "folder",

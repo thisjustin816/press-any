@@ -32,6 +32,7 @@ protocol GameplayRuntime: AnyObject {
 /// Library sessions also keep manual save states. Quick Play does not, since nothing in its
 /// sandbox outlives the session unless it is promoted.
 protocol SaveStateRuntime: GameplayRuntime {
+    @discardableResult func saveCrashRecoveryIfDue() throws -> Bool
     func saveManualState(label: String?) throws -> SaveState
     func saveStates() throws -> [SaveState]
     func loadState(_ saveState: SaveState) throws

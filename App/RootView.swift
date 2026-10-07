@@ -12,6 +12,11 @@ final class AppBootstrap: ObservableObject {
     let container: AppContainer?
     let errorDescription: String?
 
+    init(container: AppContainer) {
+        self.container = container
+        errorDescription = nil
+    }
+
     init() {
         do {
             let live = try AppContainer.live()
@@ -32,6 +37,8 @@ struct RootView: View {
     @State private var gameplay: GameplayPresentation?
     @State private var errorMessage: String?
     @State private var pendingResume: PreparedLaunch?
+    @State private var pendingRecovery: PreparedLaunch?
+    @State private var restoredLaunch = false
     @State private var riskyLaunch: RiskyLaunch?
     @State private var damagedSave: DamagedSaveLaunch?
     /// The Quick Play session whose gameplay screen is closing, shown once the cover is gone.
@@ -76,13 +83,14 @@ struct RootView: View {
         }
         .task {
             openScreenshotScene()
+            restoreLastSession()
             showWelcomeIfNeeded()
         }
         .onOpenURL { receiveSharedFile($0) }
         .onChange(of: gameplayOrientations, initial: true) { _, mask in
             GameplayOrientation.update(mask)
         }
-        .onChange(of: pendingResume != nil || riskyLaunch != nil || damagedSave != nil) { _, hasPendingLaunch in
+        .onChange(of: pendingRecovery != nil || pendingResume != nil || riskyLaunch != nil || damagedSave != nil) { _, hasPendingLaunch in
             if !hasPendingLaunch { presentNextSharedFile() }
         }
         .sheet(item: sharedFileBinding(overGameplay: false), onDismiss: finishSharedFile) { file in
@@ -164,6 +172,23 @@ struct RootView: View {
                 .interactiveDismissDisabled()
             }
         }
+        .alert("Recover Session?", isPresented: Binding(
+            get: { pendingRecovery != nil },
+            set: { if !$0 { pendingRecovery = nil } }
+        ), presenting: pendingRecovery) { launch in
+            Button("Recover Session") {
+                pendingRecovery = nil
+                start(launch, resume: true)
+            }
+            Button("Start Normally", role: .cancel) {
+                pendingRecovery = nil
+                do { try bootstrap.container?.startNormallyAfterCrash() }
+                catch { errorMessage = "Could not clear the session: \(error.localizedDescription)" }
+                presentNextSharedFile()
+            }
+        } message: { _ in
+            Text("The app ended while a game was open. Recover Session opens its latest checkpoint. Start Normally opens the library and keeps the checkpoint until that Build starts again.")
+        }
         .alert("Resume where you left off?", isPresented: Binding(
             get: { pendingResume != nil },
             set: { if !$0 { pendingResume = nil } }
@@ -214,7 +239,8 @@ struct RootView: View {
     /// the next launch.
     private func showWelcomeIfNeeded() {
         guard bootstrap.container != nil, WelcomeScreen.showsAtLaunch(),
-              gameplay == nil, sharedFile == nil, queuedSharedFiles.isEmpty else { return }
+              gameplay == nil, pendingRecovery == nil, pendingResume == nil, riskyLaunch == nil, damagedSave == nil,
+              sharedFile == nil, queuedSharedFiles.isEmpty else { return }
         showsWelcome = true
     }
 
@@ -295,7 +321,7 @@ struct RootView: View {
 
     private func presentNextSharedFile() {
         guard endedQuickPlay == nil, closingQuickPlayID == nil,
-              pendingResume == nil, riskyLaunch == nil, damagedSave == nil, errorMessage == nil, sharedFileError == nil,
+              pendingRecovery == nil, pendingResume == nil, riskyLaunch == nil, damagedSave == nil, errorMessage == nil, sharedFileError == nil,
               closingSharedFile == nil, sharedFile == nil, !queuedSharedFiles.isEmpty else { return }
         // A sheet the library or Game Details opened, such as Import Review, may hold work in
         // progress, so the file waits for it to close.
@@ -364,6 +390,24 @@ struct RootView: View {
             pendingResume = prepared
         } else {
             start(prepared, resume: true)
+        }
+    }
+
+    private func restoreLastSession() {
+        guard !restoredLaunch, let container = bootstrap.container else { return }
+        restoredLaunch = true
+        guard ScreenshotScene.current == nil else { return }
+        do {
+            switch try container.launchRestoration() {
+            case .library:
+                break
+            case .recover(let context, let checkpoint):
+                pendingRecovery = container.prepareRecovery(context: context, checkpoint: checkpoint)
+            case .reopen(let context):
+                launch(context, container: container)
+            }
+        } catch {
+            errorMessage = "Could not reopen the session: \(error.localizedDescription)"
         }
     }
 

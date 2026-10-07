@@ -45,12 +45,22 @@ final class GamepadInputMappingTests: XCTestCase {
         XCTAssertEqual(GamepadInputMapping.input(buttonA: true, buttonB: true), .init(a: true, b: true))
     }
 
-    func testMenuOrXIsStartAndOptionsOrYIsSelect() {
-        XCTAssertEqual(GamepadInputMapping.input(menu: true), .init(start: true))
+    func testMenuNeverPressesStartAndFaceButtonsKeepStartAndSelect() {
+        XCTAssertEqual(GamepadInputMapping.input(menu: true), .init())
         XCTAssertEqual(GamepadInputMapping.input(buttonX: true), .init(start: true))
         XCTAssertEqual(GamepadInputMapping.input(options: true), .init(select: true))
         XCTAssertEqual(GamepadInputMapping.input(buttonY: true), .init(select: true))
         XCTAssertEqual(GamepadInputMapping.input(buttonX: true, buttonY: true), .init(start: true, select: true))
+    }
+
+    func testMenuOpensAndClosesWithoutSendingStartAndOnlyOncePerPress() {
+        var menu = GamepadMenuButton()
+        XCTAssertNil(menu.update(isPressed: false, menuIsOpen: false))
+        XCTAssertEqual(menu.update(isPressed: true, menuIsOpen: false), .open)
+        XCTAssertNil(menu.update(isPressed: true, menuIsOpen: true))
+        XCTAssertNil(menu.update(isPressed: false, menuIsOpen: true))
+        XCTAssertEqual(menu.update(isPressed: true, menuIsOpen: true), .closeAndResume)
+        XCTAssertEqual(GamepadInputMapping.input(menu: true), .init())
     }
 
     func testPlayStationPutsAOnCircleAndStartOnTriangle() {
@@ -59,7 +69,7 @@ final class GamepadInputMappingTests: XCTestCase {
         XCTAssertEqual(GamepadInputMapping.input(buttonA: true, isPlayStation: true), .init(b: true))
         XCTAssertEqual(GamepadInputMapping.input(buttonY: true, isPlayStation: true), .init(start: true))
         XCTAssertEqual(GamepadInputMapping.input(buttonX: true, isPlayStation: true), .init(select: true))
-        XCTAssertEqual(GamepadInputMapping.input(menu: true, isPlayStation: true), .init(start: true))
+        XCTAssertEqual(GamepadInputMapping.input(menu: true, isPlayStation: true), .init())
         XCTAssertEqual(GamepadInputMapping.input(options: true, isPlayStation: true), .init(select: true))
     }
 }

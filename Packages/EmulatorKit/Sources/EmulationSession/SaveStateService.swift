@@ -24,6 +24,7 @@ public struct SaveStateService: Sendable {
     private let states: any SaveStateRepository
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
+    private let transactions: any LibraryTransactionRunner
     private let retention: AutoStateRetention
     private let thumbnails: (any FrameImageEncoding)?
     private let now: @Sendable () -> Date
@@ -33,6 +34,7 @@ public struct SaveStateService: Sendable {
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
         retention: AutoStateRetention = .init(),
+        transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
         thumbnails: (any FrameImageEncoding)? = nil,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -40,6 +42,7 @@ public struct SaveStateService: Sendable {
         self.assets = assets
         self.assetStore = assetStore
         self.retention = retention
+        self.transactions = transactions
         self.thumbnails = thumbnails
         self.now = now
     }
@@ -74,7 +77,7 @@ public struct SaveStateService: Sendable {
         )
 
         // A thumbnail is a convenience: one that can't be made leaves the state without it.
-        let thumbnail = frame.flatMap { try? saveThumbnail($0, stateID: stateID, timestamp: timestamp) }
+        let thumbnail = (kind == .crashRecovery ? nil : frame).flatMap { try? saveThumbnail($0, stateID: stateID, timestamp: timestamp) }
 
         let state: SaveState
         do {
@@ -104,7 +107,7 @@ public struct SaveStateService: Sendable {
                     playtimeSeconds: playtimeSeconds,
                     createdAt: timestamp
                 )
-                try states.insertSaveState(state)
+                try insertState(state, context: context)
             } catch {
                 try? assets.deleteAsset(id: assetID)
                 throw error
@@ -121,6 +124,38 @@ public struct SaveStateService: Sendable {
             try? pruneAutoStates(context: context)
         }
         return state
+    }
+
+    private func insertState(_ state: SaveState, context: LaunchContext) throws {
+        guard state.kind == .crashRecovery else {
+            try states.insertSaveState(state)
+            return
+        }
+        let previous = try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
+            .filter { $0.kind == .crashRecovery }
+        // Publishing the checkpoint and retiring its predecessor share a database transaction,
+        // so an interrupted replacement leaves one complete checkpoint referenced.
+        try transactions.run {
+            try states.insertSaveState(state)
+            for old in previous { try states.deleteSaveState(id: old.id) }
+        }
+        for old in previous { discardAssets(of: old) }
+    }
+
+    private func discardAssets(of state: SaveState) {
+        assets.discard(assetID: state.stateAssetID, files: assetStore)
+        assets.discard(assetID: state.screenshotAssetID, files: assetStore)
+    }
+
+    public func removeCrashRecoveryStates(context: LaunchContext, keeping stateID: UUID? = nil) throws {
+        let all = try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
+        for state in all where state.kind == .crashRecovery && state.id != stateID {
+            let asset = try assets.fetchAsset(id: state.stateAssetID)
+            let thumbnail = try state.screenshotAssetID.flatMap { try assets.fetchAsset(id: $0) }
+            try states.deleteSaveState(id: state.id)
+            if let asset { assets.discard(asset, files: assetStore) }
+            if let thumbnail { assets.discard(thumbnail, files: assetStore) }
+        }
     }
 
     /// The state's thumbnail image, or nil when it has none or it can't be read.

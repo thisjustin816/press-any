@@ -21,7 +21,7 @@ change. There is no separate decision log.
 
 ## Platform and releases
 
-- iOS 17 or later, iPhone first. iPad keeps working but gets no special design until later.
+- iOS 17.4 or later, iPhone first. iPad keeps working but gets no special design until later.
 - SameBoy 1.0.3 for GB and GBC, built from its `Core/` only. SameBoy's `iOS/` directory needs
   its author's written permission to ship on the App Store, so none of its code, artwork or
   layouts are used.
@@ -89,8 +89,9 @@ v1.1), never a full fifth settings layer.
 
 A save state belongs to one exact context: Build, Save Profile, image hash, core and state
 serialization version. States never load across Builds, even when the Builds share a battery
-save. Each state keeps a thumbnail of its frame, the time, playtime and an optional name. Manual
-states, lifecycle Auto States and (v1) crash-recovery checkpoints are separate kinds.
+save. Each state records its time and playtime. Manual and Auto States also keep a thumbnail and
+an optional name. Manual states, lifecycle Auto States and crash-recovery checkpoints are separate
+kinds.
 
 ### Patch recipe
 
@@ -355,15 +356,15 @@ games' saves don't carry across languages.
 
 ## Save states and lifecycle
 
-- **Saving and loading.** Taking a state writes the battery save first. Loading or saving stops
-  frames until it finishes. Loading asks first when the game has saved since the battery save was
+- **Saving and loading.** Taking a manual or Auto State writes the battery save first. Manual
+  state actions stop frames until they finish. Loading asks first when the game has saved since the battery save was
   last written, or when the state is older than the profile's save; going ahead keeps the current
   save as "<profile> before loading state". A state that fails partway puts the latest save back
   in the game.
 - **Save States screen.** A profile's menu opens its states on every Build, newest first, with
   picture, Build and date. A state can be renamed (an empty name gives back "Save State" or "Auto
   State") or deleted to Recently Deleted. Loading stays in the game menu, where the Build and
-  profile are already chosen.
+  profile are already chosen. Crash-recovery checkpoints are hidden from both state lists.
 - **Auto State.** Backgrounding, closing and switching sessions write the battery save and an
   Auto State, keeping the last five. Each step is attempted even if an earlier one fails, so the
   Auto State can recover progress a failed battery write lost. A close that fails keeps the game
@@ -372,17 +373,28 @@ games' saves don't carry across languages.
   when the profile's save hasn't been written since; otherwise it boots from the save and keeps
   the state. A SameBoy state carries the cartridge RAM it was taken with, so restoring an older
   one would roll a newer save back. A failed restore boots normally, keeps the state, and says so.
+  If iOS ended the app after a library game went to the background and its Auto State was written,
+  the next launch reopens that Build and Save Profile. A game the player closed does not reopen.
 - **Resume Games** (Always by default; Ask or Never; App, System, Game or Build) decides whether a
-  restorable state is used, offered or ignored, at launch and when returning to the app.
+  restorable Auto State is used, offered or ignored, at launch, on a background-session reopen,
+  and when returning to the app. Crash recovery is a separate, explicit choice.
 - **Pausing.** The game pauses whenever its scene goes inactive and lets go of every held button.
   After only an overlay (Control Center, Notification Center, a call banner) it resumes on its own
-  unless the player had paused it; after the background, Resume Games decides.
+  unless the player had paused it; after the background, Resume Games decides. Backgrounding
+  clears the open-session marker only after the Auto State is written; returning to play marks
+  it open again.
+- **Crash recovery.** During library play, one hidden `SaveStateKind.crashRecovery` checkpoint
+  for the exact Build and Save Profile refreshes about once a minute of play, replacing the
+  previous one in the existing state storage. A successful Auto State or clean close removes it.
+  Starting a library game records an open session; clean close clears it.
+  On the next launch, an open session with a checkpoint offers Recover Session or Start Normally.
+  Recover Session opens that game from the checkpoint. Start Normally opens the library and keeps
+  the checkpoint until the next launch of that Build, when it is removed. A crash never launches
+  a game automatically, including a crash while recovering. Quick Play sessions are not recovered.
 - One emulator session at a time.
 - v1: Quick Save, configurable fixed slots, naming states when saving, configurable cleanup with
-  pinned states exempt, a separate crash-recovery checkpoint with Recover Session or Start Normally (no automatic crash
-  loops; a force-quit gives no final callback), and returning to the previous game after a
-  relaunch. v1.1: switching Build or profile from the game through the compatibility check and a
-  relaunch.
+  pinned states exempt. v1.1: switching Build or profile from the game through the compatibility
+  check and a relaunch.
 
 ## Quick Play
 
@@ -582,9 +594,12 @@ picture. A connected controller still hides the touch controls.
 - Apple's GameController framework: Xbox, PlayStation, Switch-compatible, MFi and generic
   controllers. The D-pad and left thumbstick both drive the Game Boy D-pad; the stick has a radial
   dead zone of 25% and eight equal direction sectors. The controller's A and B buttons are Game Boy
-  A and B; Menu or X is START, and Options or Y is SELECT. A PlayStation controller has no
+  A and B; X is START, and Options or Y is SELECT. A PlayStation controller has no
   lettered buttons, so Circle is A and Cross is B, where a Game Boy has them, Triangle is START
-  and Square is SELECT. The shoulders and triggers are left for Rewind and Fast Forward.
+  and Square is SELECT. Menu opens the game menu; pressing Menu again while it is open closes it
+  and resumes, as Resume does. This works with touch controls hidden and uses no combo. Every
+  Game Boy button keeps a controller button. The shoulders and triggers are left for Rewind and
+  Fast Forward.
 - Button mapping belongs to iOS: Settings > General > Game Controller customizations apply,
   including per-app ones, and are how a player moves any button. Press Any's defaults above are fixed: it has no button
   mapping of its own and won't add one. It declares Extended Gamepad support, which iOS

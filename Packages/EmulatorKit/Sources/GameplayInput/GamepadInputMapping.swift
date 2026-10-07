@@ -20,7 +20,7 @@ public enum GamepadInputMapping {
 
     /// The buttons arrive after any remapping in iOS Settings > General > Game Controller, the only
     /// button mapping there is. A and B follow the controller's letters, and X and Y are START and
-    /// SELECT for controllers whose Menu and Options buttons are hard to reach. A PlayStation
+    /// SELECT. Menu is handled separately as the game menu button. A PlayStation
     /// controller has no lettered buttons, so A is Circle and B is Cross, where a Game Boy has
     /// them, and Triangle is START. The shoulders stay free for Rewind and Fast Forward.
     public static func input(
@@ -41,7 +41,7 @@ public enum GamepadInputMapping {
             left: dpad.left || stick.left, right: dpad.right || stick.right,
             a: isPlayStation ? buttonB : buttonA,
             b: isPlayStation ? buttonA : buttonB,
-            start: menu || (isPlayStation ? buttonY : buttonX),
+            start: isPlayStation ? buttonY : buttonX,
             select: options || (isPlayStation ? buttonX : buttonY)
         )
     }

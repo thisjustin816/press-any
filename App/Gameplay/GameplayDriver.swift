@@ -1,4 +1,5 @@
 import EmulationCore
+import EmulationSession
 import Foundation
 import QuartzCore
 
@@ -176,7 +177,16 @@ final class GameplayDriver: @unchecked Sendable {
             guard let self else { return }
             defer { self.saveStateLock.withLock { self.saveCheckInFlight = false } }
             do {
-                if try self.runtime.flushBatteryIfChanged() { self.lastSaveFailed = false }
+                var wroteSave = false
+                try SessionSaveError.attempting([
+                    {
+                        if let states = self.runtime as? any SaveStateRuntime {
+                            wroteSave = try states.saveCrashRecoveryIfDue()
+                        }
+                    },
+                    { wroteSave = try self.runtime.flushBatteryIfChanged() || wroteSave },
+                ])
+                if wroteSave { self.lastSaveFailed = false }
             } catch {
                 if !self.lastSaveFailed { self.onSaveError?(error) }
                 self.lastSaveFailed = true

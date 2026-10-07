@@ -33,7 +33,7 @@ The product is Press Any; `docs/NAMING.md` is the reference.
 
 ## Non-negotiable architecture
 
-- Minimum deployment target: iOS 17.
+- Minimum deployment target: iOS 17.4.
 - iPhone-first. iPad-specific UX is later work.
 - GB/GBC core: SameBoy 1.0.3. GBA is a later mGBA adapter, not a SameBoy replacement.
 - Library identity is `Game -> Builds -> Save Profiles`; a ROM file is not a Game identity.

@@ -87,7 +87,7 @@ let package = Package(
         .testTarget(name: "ImportingTests", dependencies: ["EmulatorKitTestSupport", "Importing", "AssetStorage", "GameIdentity"]),
         .testTarget(name: "PatchingTests", dependencies: ["EmulatorKitTestSupport", "Patching", "AssetStorage", "EmulatorApplication"]),
         .testTarget(name: "EmulationCoreTests", dependencies: ["EmulationCore", "EmulatorKitTestSupport", "EmulatorApplication"]),
-        .testTarget(name: "EmulationSessionTests", dependencies: ["EmulationSession", "EmulationCore", "EmulatorKitTestSupport", "AssetStorage"]),
+        .testTarget(name: "EmulationSessionTests", dependencies: ["EmulationSession", "EmulationCore", "EmulatorKitTestSupport", "AssetStorage", "PersistenceGRDB"]),
         .testTarget(name: "QuickPlayTests", dependencies: ["QuickPlay", "EmulatorKitTestSupport", "AssetStorage", "Importing"]),
         .testTarget(name: "GameplayInputTests", dependencies: ["GameplayInput", "EmulationCore"]),
         .testTarget(name: "GameplayAudioTests", dependencies: ["GameplayAudio", "EmulationCore"]),

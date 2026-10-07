@@ -541,6 +541,97 @@ extension EmulationSessionTests {
 }
 
 extension EmulationSessionTests {
+    func testCheckpointReplacesItsPredecessorAndNeverAppearsInSaveStates() throws {
+        let harness = try SessionHarness.make()
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        for _ in 0..<3583 { _ = try session.stepFrame() }
+        XCTAssertFalse(try session.saveCrashRecoveryIfDue())
+        _ = try session.stepFrame()
+        XCTAssertTrue(try session.saveCrashRecoveryIfDue())
+        let first = try XCTUnwrap(harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id).first)
+        let firstAsset = try XCTUnwrap(harness.assets.fetchAsset(id: first.stateAssetID))
+        XCTAssertEqual(first.kind, .crashRecovery)
+        XCTAssertTrue(try session.saveStates().isEmpty)
+        for _ in 0..<3584 { _ = try session.stepFrame() }
+        XCTAssertTrue(try session.saveCrashRecoveryIfDue())
+        let states = try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
+        XCTAssertEqual(states.count, 1)
+        XCTAssertGreaterThan(try XCTUnwrap(states.first).playtimeSeconds, first.playtimeSeconds)
+        XCTAssertNil(try harness.assets.fetchAsset(id: first.stateAssetID))
+        XCTAssertFalse(harness.store.fileExists(at: try harness.store.managedURL(relativePath: firstAsset.relativePath)))
+        try session.stop(createAutoState: false, discardUnsaved: true)
+        XCTAssertTrue(try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id).isEmpty)
+    }
+
+    func testAutoStateRemovesCheckpointAndBackgroundClearsOpenMarker() throws {
+        let harness = try SessionHarness.make()
+        let history = SessionLaunchHistory(store: InMemorySettingsStore())
+        let session = harness.makeSession(history: history)
+        try session.start(context: harness.contextA)
+        for _ in 0..<3584 { _ = try session.stepFrame() }
+        XCTAssertTrue(try session.saveCrashRecoveryIfDue())
+        let checkpoint = try XCTUnwrap(harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id).first)
+        XCTAssertEqual(try history.launchAction(checkpoint: checkpoint), .recover(harness.contextA, checkpoint))
+        try session.background()
+        XCTAssertEqual(try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id).map(\.kind), [.auto])
+        XCTAssertEqual(try history.launchAction(checkpoint: nil), .reopen(harness.contextA))
+        try session.resume()
+        XCTAssertEqual(try history.context(), harness.contextA)
+        try session.stop()
+        XCTAssertEqual(try history.launchAction(checkpoint: checkpoint), .library)
+    }
+
+    func testFailedBackgroundAutoStateKeepsTheSessionOpenForRecovery() throws {
+        let harness = try SessionHarness.make()
+        let history = SessionLaunchHistory(store: InMemorySettingsStore())
+        let session = harness.makeSession(history: history)
+        try session.start(context: harness.contextA)
+        for _ in 0..<3584 { _ = try session.stepFrame() }
+        XCTAssertTrue(try session.saveCrashRecoveryIfDue())
+        let checkpoint = try XCTUnwrap(harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id).first)
+        let directory = harness.store.stateURL(stateID: UUID()).deletingLastPathComponent()
+        let moved = directory.appendingPathExtension("kept")
+        try FileManager.default.moveItem(at: directory, to: moved)
+        try Data().write(to: directory)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.moveItem(at: moved, to: directory)
+        }
+        XCTAssertThrowsError(try session.background())
+        XCTAssertEqual(try history.launchAction(checkpoint: checkpoint), .recover(harness.contextA, checkpoint))
+    }
+
+    func testNextLaunchOfBuildRemovesItsCheckpointAcrossProfilesButKeepsOtherBuilds() throws {
+        let harness = try SessionHarness.make()
+        let service = SaveStateService(states: harness.states, assets: harness.assets, assetStore: harness.store)
+        let worker = SessionWorker(core: FakeEmulatorCore())
+        let old = try service.save(worker: worker, context: harness.contextA, kind: .crashRecovery, playtimeSeconds: 60)
+        let otherBuild = try service.save(worker: worker, context: harness.contextB, kind: .crashRecovery, playtimeSeconds: 60)
+        let profile = SaveProfile(id: UUID(), gameID: harness.game.id, displayName: "Other", createdAt: Date(), modifiedAt: Date())
+        try harness.profiles.insertSaveProfile(profile)
+        let context = LaunchContext(gameID: harness.game.id, buildID: harness.buildA.id, saveProfileID: profile.id)
+        try harness.makeSession().start(context: context)
+        XCTAssertNil(try harness.states.fetchSaveState(id: old.id))
+        XCTAssertEqual(try harness.states.fetchSaveState(id: otherBuild.id), otherBuild)
+    }
+
+    func testRecoveryStartsOnlyWhenChosenAndKeepsCheckpointIfRecoveryCrashes() throws {
+        let harness = try SessionHarness.make()
+        let history = SessionLaunchHistory(store: InMemorySettingsStore())
+        let first = harness.makeSession(history: history)
+        try first.start(context: harness.contextA)
+        for _ in 0..<3584 { _ = try first.stepFrame() }
+        XCTAssertTrue(try first.saveCrashRecoveryIfDue())
+        let checkpoint = try XCTUnwrap(harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id).first)
+        let before = harness.factory.cores.count
+        XCTAssertEqual(try history.launchAction(checkpoint: checkpoint), .recover(harness.contextA, checkpoint))
+        XCTAssertEqual(harness.factory.cores.count, before)
+        let recovery = harness.makeSession(history: history)
+        XCTAssertEqual(try recovery.start(context: harness.contextA, resumeFrom: checkpoint), .restored(checkpoint))
+        XCTAssertEqual(try history.launchAction(checkpoint: checkpoint), .recover(harness.contextA, checkpoint))
+    }
+
     func testTheGameSaveIsWrittenDuringPlayAtMostEveryFiveSeconds() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
         let session = harness.makeSession()
@@ -909,6 +1000,7 @@ private struct SessionHarness {
 
     func makeSession(
         settings: SettingsResolver? = nil,
+        history: SessionLaunchHistory? = nil,
         thumbnails: (any FrameImageEncoding)? = nil,
         now: Date = Date(timeIntervalSince1970: 1_700_000_000)
     ) -> EmulationSession {
@@ -921,6 +1013,7 @@ private struct SessionHarness {
             imageResolver: TestBuildROMResolver(builds: builds, assets: assets, store: store),
             coreRegistry: CoreRegistry(factories: [factory]),
             settings: settings,
+            launchHistory: history,
             thumbnails: thumbnails,
             now: { now }
         )
