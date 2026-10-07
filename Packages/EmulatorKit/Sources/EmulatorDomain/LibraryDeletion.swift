@@ -39,13 +39,15 @@ public struct LibraryRecordSet: Equatable, Sendable {
     }
 }
 
-/// What the player deleted in one go: a Game, a Build or a Save Profile, with whatever went with
-/// it. It stays in Recently Deleted, restorable, for `retention`, then its records are purged.
+/// What the player deleted in one go: a Game, a Build, a Save Profile or a save state, with
+/// whatever went with it. It stays in Recently Deleted, restorable, for `retention`, then its
+/// records are purged.
 public struct LibraryDeletion: Identifiable, Equatable, Sendable {
     public enum Kind: String, Codable, Sendable, CaseIterable {
         case game
         case build
         case saveProfile
+        case saveState
     }
 
     /// Thirty days (Q90).

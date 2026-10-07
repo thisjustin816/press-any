@@ -49,3 +49,15 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
         self.createdAt = createdAt
     }
 }
+
+extension SaveState {
+    /// What a state is called without a label.
+    public var kindName: String {
+        kind == .auto ? "Auto State" : "Save State"
+    }
+
+    /// Its label, or its kind when it has none.
+    public var displayName: String {
+        label ?? kindName
+    }
+}

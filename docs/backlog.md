@@ -22,35 +22,33 @@ Library backend first: everything that decides how the library is stored, identi
 safe lands before more play features, so a library built while testing never needs regrouping or
 migrating later (D "Library backend first").
 
-1. Safe deletion: deleting a single save state is what remains. Dependency-aware deletion,
-   Recently Deleted and local tombstones are done.
-2. Identity: No-Intro categorization (the bundled data and its generator, hash matching,
+1. Identity: No-Intro categorization (the bundled data and its generator, hash matching,
    Verified/Modified/Unknown, parent/clone grouping and merging existing Games that are one
    family), the regional rows, Match Game for unknown ROMs and lineage without owning the base,
    and the ROM-hack naming that remains. The license is confirmed and the design is in
    `docs/superpowers/plans/2026-10-06-no-intro-identity.md`.
-3. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
+2. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
    metadata provenance with Metadata Details, Build notes, per-Build playtime and the Build
    timeline, typed multi-artwork, documents, tags, collections and favorites, declared save
    compatibility, per-step patch input hashes, and the cross-region save check.
-4. Import pipeline: ZIP and 7z, multi-asset grouping, several ROMs into one Game in one flow,
+3. Import pipeline: ZIP and 7z, multi-asset grouping, several ROMs into one Game in one flow,
    duplicate imports still inspecting new assets, visual artwork comparison, and multi-signal
    development-build matching.
-5. Library features on that data: FTS5 search, sorting, smart and manual collections, play
+4. Library features on that data: FTS5 search, sorting, smart and manual collections, play
    statistics, the Developer view, the artwork provider chain with priority, provenance, regional
    and title-screen artwork, the signed catalog file, and the storage screen with cleanup,
    in-flight protection and verification on read.
-6. iCloud sync, once tombstones and the schema have settled.
-7. Exports, last of the library work because their format follows the settled schema: Library
+5. iCloud sync, once tombstones and the schema have settled.
+6. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
    Files folder they land in come first, as they don't depend on the schema.
-8. Display and play feel: GBC color correction, DMG palettes, Fast Forward hold or toggle, slow
+7. Display and play feel: GBC color correction, DMG palettes, Fast Forward hold or toggle, slow
    motion, rewind, and the DMG/GBC/SGB model override.
-9. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
+8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
    profiles and remapping, landscape and the layout editor, cheats and memory tools, external
    display, and the curated shader library.
-10. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
+9. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
 
 ## Known bugs
 
@@ -273,7 +271,7 @@ states.
 |---|---|---|---|---|
 | missing | Quick Save (one tap) | v1 | dec 8 | SaveStateKind.quick unused |
 | missing | Configurable fixed slots | v1 | dec 8 |  |
-| partial | Unlimited named states | v1 | dec 8 | `label` field; no naming, renaming or deleting UI |
+| partial | Unlimited named states | v1 | dec 8 | a Save Profile's Save States renames and deletes them; Save State doesn't ask for a name |
 | missing | Configurable automatic cleanup; pinned/favorited exempt | v1 | dec 8 |  |
 | missing | State records cheat config; offer Restore Cheat Configuration | v1 | Q126 |  |
 | missing | Per-Save-Profile autoresume override | v1 | dec 8/9, Q146 (see conflicts) |  |
@@ -509,13 +507,13 @@ Spec: v1.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Delete Game/Build/Profile/State from the UI | v1 | dec 30 | Games, Builds and Save Profiles go to Recently Deleted; deleting a single save state remains |
 | partial | Synchronized tombstones | v1 | Q90 | purging writes a permanent local tombstone; syncing them waits on iCloud |
 | missing | Lightweight Undo for recent structural operations | v1 | Q145 |  |
 
 Done: Dependency-aware deletion: the confirmation names patched Builds and emptied Games that go
 too, and a Game can't go while another Game's patch is built from it; Recently Deleted for 30
-days in Settings, with Restore and Delete Now, purged at launch.
+days in Settings, with Restore and Delete Now, purged at launch; Delete Game, Build, Save Profile
+and save state from the UI, a save state from its profile's Save States.
 
 ### Performance
 

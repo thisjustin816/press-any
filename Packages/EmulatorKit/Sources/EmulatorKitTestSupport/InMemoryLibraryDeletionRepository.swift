@@ -77,6 +77,16 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
         for build in stash.builds where try builds.fetchBuild(gameID: build.gameID, imageSHA256: build.imageSHA256) != nil {
             throw LibraryDeletionError.romAlreadyInGame(build.id)
         }
+        if lock.withLock({ deletions[id]?.kind }) == .saveState {
+            for state in stash.states {
+                if try profiles.fetchSaveProfile(id: state.saveProfileID) == nil {
+                    throw LibraryDeletionError.saveProfileIsDeleted(state.saveProfileID)
+                }
+                if try builds.fetchBuild(id: state.buildID) == nil {
+                    throw LibraryDeletionError.buildIsDeleted(state.buildID)
+                }
+            }
+        }
         lock.withLock { _ = stashes.removeValue(forKey: id) }
         lock.withLock { _ = deletions.removeValue(forKey: id) }
         for game in stash.games { try games.insertGame(game) }
@@ -93,8 +103,10 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
     public func purgeDeletion(id: UUID, at date: Date) throws -> [ManagedAsset] {
         guard let deletion = lock.withLock({ deletions[id] }) else { return [] }
         var purgedDeletions = [deletion]
-        // A deleted patched Build elsewhere can't be rebuilt once its base goes, so it goes too.
+        // A deleted patched Build elsewhere can't be rebuilt once its base goes, and a save state
+        // deleted on its own can't come back once its Save Profile or Build goes, so they go too.
         var purgedBuildIDs = Set(deletion.records.buildIDs)
+        var purgedProfileIDs = Set(deletion.records.saveProfileIDs)
         var changed = true
         while changed {
             changed = false
@@ -103,9 +115,13 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
                     guard let recipe = recipes.all.first(where: { $0.resultBuildID == buildID }) else { return false }
                     return purgedBuildIDs.contains(recipe.baseBuildID)
                 }
-                if dependsOnPurged {
+                let orphanedStates = other.kind == .saveState && lock.withLock { stashes[other.id]?.states ?? [] }.contains {
+                    purgedProfileIDs.contains($0.saveProfileID) || purgedBuildIDs.contains($0.buildID)
+                }
+                if dependsOnPurged || orphanedStates {
                     purgedDeletions.append(other)
                     purgedBuildIDs.formUnion(other.records.buildIDs)
+                    purgedProfileIDs.formUnion(other.records.saveProfileIDs)
                     changed = true
                 }
             }
@@ -133,6 +149,33 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
             lock.withLock {
                 tombstones += purged.records.all.map {
                     Tombstone(recordID: $0.id, kind: $0.kind, deletedAt: purged.deletedAt, purgedAt: date)
+                }
+            }
+        }
+
+        // A state of a purged Save Profile or Build can sit in another deletion, deleted with a
+        // Build or profile that's still restorable. It goes with what it belongs to, and that
+        // deletion keeps the rest.
+        for other in lock.withLock({ Array(deletions.values) }) {
+            let carried = lock.withLock { stashes[other.id]?.states ?? [] }.filter {
+                purgedProfileIDs.contains($0.saveProfileID) || purgedBuildIDs.contains($0.buildID)
+            }
+            guard !carried.isEmpty else { continue }
+            let carriedIDs = Set(carried.map(\.id))
+            for state in carried {
+                candidates.insert(state.stateAssetID)
+                if let screenshot = state.screenshotAssetID { candidates.insert(screenshot) }
+            }
+            var records = other.records
+            records.saveStateIDs.removeAll { carriedIDs.contains($0) }
+            lock.withLock {
+                stashes[other.id]?.states.removeAll { carriedIDs.contains($0.id) }
+                deletions[other.id] = LibraryDeletion(
+                    id: other.id, kind: other.kind, title: other.title, gameID: other.gameID,
+                    deletedAt: other.deletedAt, records: records
+                )
+                tombstones += carried.map {
+                    Tombstone(recordID: $0.id, kind: .saveState, deletedAt: other.deletedAt, purgedAt: date)
                 }
             }
         }

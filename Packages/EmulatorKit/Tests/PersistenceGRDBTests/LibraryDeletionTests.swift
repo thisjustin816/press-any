@@ -150,4 +150,94 @@ struct LibraryDeletionTests {
         #expect(tombstones.isSuperset(of: [fixture.build.id, fixture.patchedBuild.id]))
         #expect(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: fixture.patchedBuild.id) == nil)
     }
+
+    @Test("a save state deleted on its own comes back only to its Save Profile and Build")
+    func stateRestoreWaitsForItsProfileAndBuild() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let state = deletion(fixture, records: LibraryRecordSet(saveStateIDs: [fixture.state.id]), kind: .saveState)
+        try repositories.deletions.insertDeletion(state)
+        let profile = deletion(fixture, records: LibraryRecordSet(saveProfileIDs: [fixture.profile.id]), kind: .saveProfile)
+        try repositories.deletions.insertDeletion(profile)
+
+        #expect(throws: LibraryDeletionError.saveProfileIsDeleted(fixture.profile.id)) {
+            try repositories.deletions.restoreDeletion(id: state.id)
+        }
+        try repositories.deletions.restoreDeletion(id: profile.id)
+        try repositories.deletions.restoreDeletion(id: state.id)
+        #expect(try repositories.saveStates.fetchSaveState(id: fixture.state.id) == fixture.state)
+
+        let again = deletion(fixture, records: LibraryRecordSet(saveStateIDs: [fixture.state.id]), kind: .saveState)
+        try repositories.deletions.insertDeletion(again)
+        let build = deletion(fixture, records: LibraryRecordSet(buildIDs: [fixture.build.id]), kind: .build)
+        try repositories.deletions.insertDeletion(build)
+        #expect(throws: LibraryDeletionError.buildIsDeleted(fixture.build.id)) {
+            try repositories.deletions.restoreDeletion(id: again.id)
+        }
+    }
+
+    @Test("purging a Save Profile takes a state deleted on its own, with its file")
+    func purgeTakesAStateDeletedOnItsOwn() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let state = deletion(fixture, records: LibraryRecordSet(saveStateIDs: [fixture.state.id]), kind: .saveState)
+        try repositories.deletions.insertDeletion(state)
+        let profile = deletion(fixture, records: LibraryRecordSet(saveProfileIDs: [fixture.profile.id]), kind: .saveProfile)
+        try repositories.deletions.insertDeletion(profile)
+
+        let released = try repositories.deletions.purgeDeletion(id: profile.id, at: now)
+
+        #expect(try repositories.deletions.fetchDeletions().isEmpty, "nothing left for the state's deletion to restore")
+        #expect(released.contains { $0.id == fixture.state.stateAssetID })
+        #expect(Set(try repositories.deletions.fetchTombstones().map(\.recordID)) == [fixture.profile.id, fixture.state.id])
+    }
+
+    @Test("purging a Save Profile carries its state out of a Build deletion, which keeps the Build")
+    func purgeCarriesAStateOutOfAnotherDeletion() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let build = deletion(fixture, records: LibraryRecordSet(buildIDs: [fixture.build.id], saveStateIDs: [fixture.state.id]), kind: .build)
+        try repositories.deletions.insertDeletion(build)
+        let profile = deletion(fixture, records: LibraryRecordSet(saveProfileIDs: [fixture.profile.id]), kind: .saveProfile)
+        try repositories.deletions.insertDeletion(profile)
+
+        let released = try repositories.deletions.purgeDeletion(id: profile.id, at: now)
+
+        let remaining = try repositories.deletions.fetchDeletions()
+        #expect(remaining.map(\.id) == [build.id])
+        #expect(remaining.first?.records == LibraryRecordSet(buildIDs: [fixture.build.id]))
+        #expect(released.contains { $0.id == fixture.state.stateAssetID })
+        #expect(Set(try repositories.deletions.fetchTombstones().map(\.recordID)) == [fixture.profile.id, fixture.state.id])
+        let violations = try database.writer.read { db in try Row.fetchAll(db, sql: "PRAGMA foreign_key_check") }
+        #expect(violations.isEmpty)
+    }
+
+    @Test("a state can be renamed, and a deleted one can't be read or renamed")
+    func renameState() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+
+        try repositories.saveStates.renameSaveState(id: fixture.state.id, label: "Before the boss")
+        #expect(try repositories.saveStates.fetchSaveState(id: fixture.state.id)?.label == "Before the boss")
+        try repositories.saveStates.renameSaveState(id: fixture.state.id, label: nil)
+        #expect(try repositories.saveStates.fetchSaveState(id: fixture.state.id)?.label == nil)
+
+        try repositories.deletions.insertDeletion(
+            deletion(fixture, records: LibraryRecordSet(saveStateIDs: [fixture.state.id]), kind: .saveState)
+        )
+        #expect(try repositories.saveStates.fetchSaveState(id: fixture.state.id) == nil)
+        try repositories.saveStates.renameSaveState(id: fixture.state.id, label: "Hidden")
+        let label = try database.writer.read { db in
+            try String.fetchOne(db, sql: "SELECT label FROM save_states WHERE id = ?", arguments: [PersistenceCodec.uuid(fixture.state.id)])
+        }
+        #expect(label == nil)
+    }
 }
