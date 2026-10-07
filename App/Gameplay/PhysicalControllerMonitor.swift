@@ -1,14 +1,17 @@
+import Combine
 import EmulationCore
 import GameController
+import GameplayInput
 import UIKit
 
 @MainActor
-final class PhysicalControllerMonitor {
+final class PhysicalControllerMonitor: ObservableObject {
     var onInputChanged: ((EmulatorInputState) -> Void)?
     var onConnectionChanged: ((Bool) -> Void)?
     var onUnexpectedDisconnect: (() -> Void)?
 
-    private(set) var activeController: GCController?
+    @Published private(set) var activeController: GCController?
+    private let connectedControllers: () -> [GCController]
 
     /// Whether a controller drives the game, so the touch controls hide.
     var isConnected: Bool { activeController != nil || ScreenshotScene.simulatesGamepad }
@@ -16,7 +19,8 @@ final class PhysicalControllerMonitor {
     // the monitor, so the nonisolated deinit can remove the observers without a hop.
     nonisolated(unsafe) private var observers: [NSObjectProtocol] = []
 
-    init() {
+    init(connectedControllers: @escaping () -> [GCController] = { GCController.controllers() }) {
+        self.connectedControllers = connectedControllers
         let center = NotificationCenter.default
         observers.append(center.addObserver(
             forName: .GCControllerDidConnect,
@@ -42,7 +46,7 @@ final class PhysicalControllerMonitor {
             }
         })
 
-        if let controller = GCController.controllers().first {
+        if let controller = connectedControllers().first {
             activate(controller)
         }
     }
@@ -74,7 +78,7 @@ final class PhysicalControllerMonitor {
         onConnectionChanged?(false)
         onUnexpectedDisconnect?()
 
-        if let replacement = GCController.controllers().first {
+        if let replacement = connectedControllers().first(where: { $0 !== controller }) {
             activate(replacement)
         }
     }
@@ -88,16 +92,21 @@ final class PhysicalControllerMonitor {
     }
 
     private func publish(from controller: GCController) {
-        guard let pad = controller.extendedGamepad else { return }
-        onInputChanged?(EmulatorInputState(
-            up: pad.dpad.up.isPressed,
-            down: pad.dpad.down.isPressed,
-            left: pad.dpad.left.isPressed,
-            right: pad.dpad.right.isPressed,
-            a: pad.buttonA.isPressed,
-            b: pad.buttonB.isPressed,
-            start: pad.buttonMenu.isPressed,
-            select: pad.buttonOptions?.isPressed == true || pad.leftShoulder.isPressed
+        guard activeController === controller, let pad = controller.extendedGamepad else { return }
+        onInputChanged?(GamepadInputMapping.input(
+            dpad: .init(
+                up: pad.dpad.up.isPressed, down: pad.dpad.down.isPressed,
+                left: pad.dpad.left.isPressed, right: pad.dpad.right.isPressed
+            ),
+            leftStickX: pad.leftThumbstick.xAxis.value,
+            leftStickY: pad.leftThumbstick.yAxis.value,
+            buttonA: pad.buttonA.isPressed,
+            buttonB: pad.buttonB.isPressed,
+            buttonX: pad.buttonX.isPressed,
+            buttonY: pad.buttonY.isPressed,
+            menu: pad.buttonMenu.isPressed,
+            options: pad.buttonOptions?.isPressed == true,
+            isPlayStation: pad is GCDualShockGamepad || pad is GCDualSenseGamepad
         ))
     }
 }

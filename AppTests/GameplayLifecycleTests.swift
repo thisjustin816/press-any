@@ -1,6 +1,7 @@
 import EmulationCore
 import EmulatorDomain
 import GameplayInput
+import GameController
 import UIKit
 import XCTest
 @testable import PressAny
@@ -13,7 +14,7 @@ final class GameplayLifecycleTests: XCTestCase {
         policy: AutoResumePolicy = .always
     ) -> (GameplayViewController, LifecycleRuntime, PhysicalControllerMonitor) {
         let runtime = LifecycleRuntime()
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: policy, controllerMonitor: monitor)
         gameplay.loadViewIfNeeded()
         return (gameplay, runtime, monitor)
@@ -77,6 +78,17 @@ final class GameplayLifecycleTests: XCTestCase {
             GameplayOrientation.mask(style: .gameBoy, orientation: .landscape, coveredBySheet: true), .portrait,
             "sheets stay portrait"
         )
+        XCTAssertEqual(
+            GameplayOrientation.mask(style: .playtiles, controllerConnected: true, coveredBySheet: false), gameplayMask
+        )
+        XCTAssertEqual(
+            GameplayOrientation.mask(style: nil, controllerConnected: true, coveredBySheet: false), .portrait,
+            "the library stays portrait with a controller"
+        )
+        XCTAssertEqual(
+            GameplayOrientation.mask(style: .playtiles, orientation: .landscape, controllerConnected: true, coveredBySheet: true),
+            .portrait, "sheets stay portrait with a controller"
+        )
 
         defer { GameplayOrientation.update(.portrait) }
         let delegate = AppDelegate()
@@ -99,6 +111,68 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
         gameplay.applyDisplaySettings(controlStyle: .playtiles, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
         XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+    }
+
+    func testAControllerOverridesPlaytilesAndFollowsOrientationWithoutInterruptingPlay() {
+        for orientation in ScreenOrientation.allCases {
+            let (gameplay, runtime, monitor) = makeGameplay()
+            gameplay.applyDisplaySettings(
+                controlStyle: .playtiles, orientation: orientation, screenScaling: .integer,
+                lcdFilter: .off, frameBlending: .off
+            )
+            XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
+            XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+            monitor.selectPlayerOne(GCController.withExtendedGamepad())
+
+            XCTAssertEqual(gameplay.touchControlStyle, .gameBoy)
+            XCTAssertEqual(
+                gameplay.supportedInterfaceOrientations,
+                GameplayOrientation.mask(style: .gameBoy, orientation: orientation, coveredBySheet: false)
+            )
+            XCTAssertTrue(gameplay.isRunningFrames)
+            XCTAssertFalse(gameplay.isShowingPaused)
+            gameplay.setCoveredBySheet(true)
+            XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+            gameplay.applyDisplaySettings(
+                controlStyle: .playtiles, orientation: orientation, screenScaling: .fill,
+                lcdFilter: .off, frameBlending: .off
+            )
+            XCTAssertEqual(gameplay.touchControlStyle, .gameBoy)
+            gameplay.setCoveredBySheet(false)
+            XCTAssertFalse(gameplay.isRunningFrames)
+            XCTAssertTrue(gameplay.isShowingPaused)
+            XCTAssertFalse(runtime.failedFrame)
+        }
+    }
+
+    func testDisconnectRestoresTheLayoutLastChosenWhileConnected() {
+        let (gameplay, _, monitor) = makeGameplay()
+        let controller = GCController.withExtendedGamepad()
+        monitor.selectPlayerOne(controller)
+        gameplay.applyDisplaySettings(
+            controlStyle: .playtiles, screenScaling: .integer, lcdFilter: .off, frameBlending: .off
+        )
+        XCTAssertEqual(gameplay.touchControlStyle, .gameBoy)
+
+        NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: controller)
+
+        XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
+        XCTAssertFalse(gameplay.isRunningFrames, "losing the controller pauses the game")
+        XCTAssertTrue(gameplay.isShowingPaused)
+    }
+
+    func testAControllerConnectedBeforeLaunchOverridesPlaytilesEvenWithTouchControlsShown() {
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
+        monitor.selectPlayerOne(GCController.withExtendedGamepad())
+        let gameplay = GameplayViewController(
+            runtime: LifecycleRuntime(), autoResumePolicy: .always, controlStyle: .playtiles,
+            orientation: .landscape, hidesTouchControlsWithController: false, controllerMonitor: monitor
+        )
+        gameplay.loadViewIfNeeded()
+        XCTAssertEqual(gameplay.touchControlStyle, .gameBoy)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .landscape)
+        XCTAssertTrue(gameplay.showsTouchControls)
+        XCTAssertTrue(gameplay.isRunningFrames)
     }
 
     func testResizingKeepsRunningOrPausedAndCentersResumeOnTheNewPicture() {
@@ -189,8 +263,8 @@ final class GameplayLifecycleTests: XCTestCase {
     }
 
     func testAGamePausedByThePlayerStaysPausedThroughEveryInterruption() {
-        let (gameplay, runtime, monitor) = makeGameplay(policy: .always)
-        monitor.onUnexpectedDisconnect?()
+        let (gameplay, runtime, _) = makeGameplay(policy: .always)
+        _ = gameplay.prepareGameMenu()
         XCTAssertFalse(gameplay.isRunningFrames)
 
         gameplay.sceneWillDeactivate()

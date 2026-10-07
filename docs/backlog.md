@@ -37,9 +37,8 @@ migrating later.
    Files folder they land in come first, as they don't depend on the schema.
 7. Display and play feel: Fast Forward hold or toggle, slow motion, rewind, and the
    DMG/GBC/SGB model override.
-8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, controller
-   profiles and remapping, landscape and the layout editor, external
-   display, and the curated shader library.
+8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, landscape and
+   the layout editor, external display, and the curated shader library.
 9. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
 
 ## Known bugs
@@ -58,7 +57,7 @@ Open items in each area are in the table, finished ones on the line under it.
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | none |
 | partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | none |
-| partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
+| partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
 | missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow already seeds from `TestROMs/` |
 
@@ -376,14 +375,18 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v1 | first connected used; selectPlayerOne() has no UI |
-| missing | Named reusable controller profiles, remapping, App/System/Game/Build inheritance | v1 | fixed mapping (Select = Options or L1) |
-| missing | Controller hotkey combos and menu navigation | v1 | "Open Menu" is a mappable input with no default button, and Home is never taken |
+| missing | Controller hotkey combos and menu navigation | v1 | Menu stays START, so opening the game menu from a controller needs a fixed combo, not a user mapping; Home is never taken |
 | missing | Rumble routing override Phone / Controller / Both / Off | v1 |  |
 | missing | Separate phone and controller intensity | v1 |  |
 
-Done: Apple GameController input (extendedGamepad); Unexpected disconnect pauses, reveals touch
-controls, shows notice; A controller hides the touch controls, a touch brings them back until its
-next button press, and Settings can keep them; Cartridge rumble routed controller-first, phone fallback.
+Done: Apple GameController input (extendedGamepad), D-pad and left thumbstick with a radial dead
+zone and eight equal sectors; A and B by the controller's letters (Circle = A and Cross = B on PlayStation),
+Menu or X = START, Options or Y = SELECT (Triangle and Square on PlayStation), shoulders free; iOS controller customizations, including per-app ones, are the only button mapping; Connected controllers use Game
+Boy and follow Orientation even with Playtiles chosen; Disconnect releases input, restores the
+chosen layout, pauses and shows a notice without restarting; A controller hides the touch
+controls, a touch brings them back until its next button press, and Settings can keep them;
+Cartridge rumble routed controller-first, phone fallback. Physical-device customization checks
+remain in mvp-verification.md.
 
 ### Quick Actions
 
@@ -530,7 +533,7 @@ Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filename
 | missing | Reduce Motion support | v1 | none |
 | partial | Large/configurable touch targets | v1 | hit areas extend 10-12 pt beyond drawn controls; not configurable |
 | missing | One-handed layouts | v1 | none |
-| missing | Fully remappable controls; controller navigation | v1 | none |
+| missing | Controller navigation | v1 | none; button remapping is iOS's Game Controller settings |
 
 Done: Good contrast / color-independent states; haptics never sole feedback.
 

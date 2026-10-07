@@ -7,6 +7,10 @@ public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
     case gameBoy
     /// The Playtiles GBC skin's layout, with START and SELECT swapped into Game Boy order.
     case playtiles
+
+    public func forGameplay(controllerConnected: Bool) -> Self {
+        controllerConnected ? .gameBoy : self
+    }
 }
 
 /// Which way gameplay may face. Raw values are stored in settings. Layouts made for a portrait
