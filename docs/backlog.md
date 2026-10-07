@@ -71,7 +71,7 @@ Open items in each area are in the table, finished ones on the line under it.
 |---|---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | prod "Platform", acceptance-matrix "Release" | manual TestFlight upload workflow and setup (docs/release.md); App Store listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1 | later 12 | none |
-| missing | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | Q183 | only the one-time "Tap Press Any for the menu" hint |
+| partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | Q183; D "A welcome screen until the onboarding exists" | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1 | Q184, dec 12 | none |
 | missing | Landscape gameplay | v1 | prod "Layouts, skins, touch"; dec 22 | TouchControlLayout is portrait-only |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1 | later 12 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
