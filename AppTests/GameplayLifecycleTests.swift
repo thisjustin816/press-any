@@ -14,7 +14,7 @@ final class GameplayLifecycleTests: XCTestCase {
         policy: AutoResumePolicy = .always
     ) -> (GameplayViewController, LifecycleRuntime, PhysicalControllerMonitor) {
         let runtime = LifecycleRuntime()
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: policy, controllerMonitor: monitor)
         gameplay.loadViewIfNeeded()
         return (gameplay, runtime, monitor)
@@ -142,7 +142,7 @@ final class GameplayLifecycleTests: XCTestCase {
     }
 
     func testAControllerConnectedBeforeLaunchOverridesPlaytilesEvenWithTouchControlsShown() {
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         monitor.selectPlayerOne(GCController.withExtendedGamepad())
         let gameplay = GameplayViewController(
             runtime: LifecycleRuntime(), autoResumePolicy: .always, controlStyle: .playtiles,

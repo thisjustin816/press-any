@@ -37,7 +37,7 @@ final class PhysicalControllerMonitorTests: XCTestCase {
     }
 
     func testQueuedInputFromADisconnectedControllerCannotPressAButtonAgain() throws {
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         let controller = GCController.withExtendedGamepad()
         let pad = try XCTUnwrap(controller.extendedGamepad)
         var lastInput: EmulatorInputState?
@@ -59,6 +59,30 @@ final class PhysicalControllerMonitorTests: XCTestCase {
         XCTAssertEqual(publications, releasedPublications)
     }
 
+    func testDisconnectDoesNotReattachTheControllerStillInTheDiscoveryList() {
+        let controller = GCController.withExtendedGamepad()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [controller] })
+        XCTAssertTrue(monitor.activeController === controller)
+
+        NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: controller)
+
+        XCTAssertNil(monitor.activeController)
+    }
+
+    func testDisconnectUsesAnotherControllerFromTheDiscoveryList() throws {
+        let old = GCController.withExtendedGamepad()
+        let replacement = GCController.withExtendedGamepad()
+        try XCTUnwrap(replacement.extendedGamepad).buttonB.setValue(1)
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [old, replacement] })
+        var lastInput: EmulatorInputState?
+        monitor.onInputChanged = { lastInput = $0 }
+
+        NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: old)
+
+        XCTAssertTrue(monitor.activeController === replacement)
+        XCTAssertEqual(lastInput, .init(a: true))
+    }
+
     private func assertInput(
         _ expected: EmulatorInputState,
         file: StaticString = #filePath,
@@ -67,7 +91,7 @@ final class PhysicalControllerMonitorTests: XCTestCase {
     ) throws {
         let controller = GCController.withExtendedGamepad()
         try configure(XCTUnwrap(controller.extendedGamepad))
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         var input: EmulatorInputState?
         monitor.onInputChanged = { input = $0 }
         monitor.selectPlayerOne(controller)

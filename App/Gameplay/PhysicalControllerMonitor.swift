@@ -11,6 +11,7 @@ final class PhysicalControllerMonitor: ObservableObject {
     var onUnexpectedDisconnect: (() -> Void)?
 
     @Published private(set) var activeController: GCController?
+    private let connectedControllers: () -> [GCController]
 
     /// Whether a controller drives the game, so the touch controls hide.
     var isConnected: Bool { activeController != nil || ScreenshotScene.simulatesGamepad }
@@ -18,7 +19,8 @@ final class PhysicalControllerMonitor: ObservableObject {
     // the monitor, so the nonisolated deinit can remove the observers without a hop.
     nonisolated(unsafe) private var observers: [NSObjectProtocol] = []
 
-    init() {
+    init(connectedControllers: @escaping () -> [GCController] = { GCController.controllers() }) {
+        self.connectedControllers = connectedControllers
         let center = NotificationCenter.default
         observers.append(center.addObserver(
             forName: .GCControllerDidConnect,
@@ -44,7 +46,7 @@ final class PhysicalControllerMonitor: ObservableObject {
             }
         })
 
-        if let controller = GCController.controllers().first {
+        if let controller = connectedControllers().first {
             activate(controller)
         }
     }
@@ -76,7 +78,7 @@ final class PhysicalControllerMonitor: ObservableObject {
         onConnectionChanged?(false)
         onUnexpectedDisconnect?()
 
-        if let replacement = GCController.controllers().first {
+        if let replacement = connectedControllers().first(where: { $0 !== controller }) {
             activate(replacement)
         }
     }

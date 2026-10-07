@@ -9,7 +9,7 @@ import XCTest
 final class ControllerDisconnectTests: XCTestCase {
     func testDisconnectingRestoresPlaytilesAndReleasesInputWithoutPausing() {
         let runtime = FakeRuntime()
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         let gameplay = GameplayViewController(
             runtime: runtime, autoResumePolicy: .always, controlStyle: .playtiles,
             orientation: .landscape, controllerMonitor: monitor
@@ -45,7 +45,7 @@ final class ControllerDisconnectTests: XCTestCase {
 
     func testDisconnectingKeepsAnAlreadyPausedGamePaused() {
         let runtime = FakeRuntime()
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         let gameplay = GameplayViewController(
             runtime: runtime, autoResumePolicy: .always, controlStyle: .playtiles,
             controllerMonitor: monitor
@@ -73,7 +73,7 @@ final class ControllerDisconnectTests: XCTestCase {
 @MainActor
 final class TouchControlRevealTests: XCTestCase {
     func testATouchRevealsTheControlsUntilTheControllerIsUsed() {
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         let gameplay = GameplayViewController(runtime: FakeRuntime(), autoResumePolicy: .always, controllerMonitor: monitor)
         gameplay.loadViewIfNeeded()
         monitor.selectPlayerOne(GCController.withExtendedGamepad())
@@ -90,7 +90,7 @@ final class TouchControlRevealTests: XCTestCase {
     }
 
     func testTheSettingKeepsTheControlsWithAController() {
-        let monitor = PhysicalControllerMonitor()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         let gameplay = GameplayViewController(
             runtime: FakeRuntime(),
             autoResumePolicy: .always,
