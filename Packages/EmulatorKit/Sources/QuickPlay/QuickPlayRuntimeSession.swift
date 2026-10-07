@@ -81,7 +81,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             return worker
         }
 
-        // Quick Play starts at the game, not the boot logo (docs/decisions.md).
+        // Quick Play starts at the game, not the boot logo.
         func freshWorker() throws -> SessionWorker {
             let worker = try bootedWorker()
             try worker.perform { core in

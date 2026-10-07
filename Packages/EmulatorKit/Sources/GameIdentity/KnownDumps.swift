@@ -132,7 +132,7 @@ public enum KnownDumpError: Error, Equatable {
     case countMismatch(system: GameSystem, stated: Int, found: Int)
 }
 
-/// How a Build's image compares with the known dumps (`dec 18`). Nothing is ever altered to match.
+/// How a Build's image compares with the known dumps. Nothing is ever altered to match.
 public enum DumpVerification: Equatable, Sendable {
     /// The image is a good copy of this game.
     case verified(KnownDump)

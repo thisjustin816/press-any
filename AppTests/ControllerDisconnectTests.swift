@@ -30,7 +30,7 @@ final class ControllerDisconnectTests: XCTestCase {
     }
 }
 
-/// Q109: a touch brings the hidden touch controls back until the controller's next button press,
+/// A touch brings the hidden touch controls back until the controller's next button press,
 /// and Settings can keep them showing.
 @MainActor
 final class TouchControlRevealTests: XCTestCase {
