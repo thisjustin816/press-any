@@ -214,9 +214,9 @@ struct AppSettingsView: View {
 
             Section {
                 Picker("Sound", selection: $soundMode) {
-                    Text("Follow Silent Switch").tag(SoundMode.followSilentSwitch)
-                    Text("Always On").tag(SoundMode.alwaysOn)
-                    Text("Always Off").tag(SoundMode.alwaysOff)
+                    ForEach(SoundMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
                 }
             } header: {
                 Text("Sound")

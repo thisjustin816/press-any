@@ -538,7 +538,8 @@ picture. A connected controller still hides the touch controls.
   0.5% fast or slow to track clock drift. The game's speed never changes for the sound. Sound more
   than three times the target behind is skipped. The app asks for 10 ms hardware buffers.
 - **Sound** (app-wide): Follow Silent Switch by default, Always On, or Always Off, which mutes the
-  game but leaves other apps' audio alone.
+  game but leaves other apps' audio alone. It's in App Settings and in the game menu, where a
+  change applies to the open game at once and becomes the app-wide setting.
 - Genuine audio interruptions pause; route changes are handled without restarting.
 
 ### Speed
