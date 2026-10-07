@@ -360,7 +360,7 @@ Blending Off (default) / Blend / LCD Ghosting, inheritable.
 | missing | Optional customizable gestures (off by default) | v1 |  |
 | missing | Turbo A / Turbo B actions (not in default layout) | v1 |  |
 | missing | Suggest (never force) a preset for identifiable accessories | v1 |  |
-| missing | Controller-covered layouts (Playtiles and any later one): the app's screens fit the visible top of the screen and are navigable with the controller's buttons | v1 | today only gameplay knows the controller covers the bottom; the library and sheets use the whole screen |
+| missing | Controller-covered layouts (Playtiles and any later one): the app's screens fit the visible top of the screen and are navigable with the controller's buttons | v1.1 | today only gameplay knows the controller covers the bottom; the library and sheets use the whole screen |
 | missing | Full skin artwork authoring; community layout gallery | v1.1 / later |  |
 
 Done: Built-in "Game Boy" layout measured from DMG-01, default, inheritable; Built-in "Playtiles"

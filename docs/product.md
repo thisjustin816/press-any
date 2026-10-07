@@ -441,7 +441,7 @@ accessories such as Playtiles and GameBaby, which are chosen by hand (an identif
 may suggest a preset, never switch to it); optional gestures, off by default; optional Turbo A
 and B, not in the default layout.
 
-v1: when the chosen layout fits a physical controller over the bottom of the screen, as Playtiles
+v1.1: when the chosen layout fits a physical controller over the bottom of the screen, as Playtiles
 does (and any later layout like it), the whole app moves into the top part of the screen that
 stays visible: the library, Game Details, Settings, sheets and menus fit above the controller, and
 its buttons move a focus through them, so the app can be used without taking the controller off.
@@ -727,7 +727,8 @@ silently. The default shader must hold full speed on the slowest supported devic
 
 ## v1.1 and later
 
-- **v1.1:** link cable (local first, then nearby; not built on Multipeer Connectivity), GB Studio
+- **v1.1:** the app's screens fitting above a controller that covers the bottom of the screen, as
+  with Playtiles, and navigable with its buttons; link cable (local first, then nearby; not built on Multipeer Connectivity), GB Studio
   save migration, Game Boy Camera and Printer, RAR, skin authoring beyond the editor, video and GIF
   capture framed like a Game Boy, `.gbproject` import and export, better ROM comparison and BPS
   generation, side-by-side manuals on iPad, itch.io and Homebrew Hub browsing and shared game pages.
