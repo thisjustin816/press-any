@@ -118,6 +118,11 @@ status. Source assets are irreplaceable; generated patched ROMs are rebuildable 
   mismatched state isn't loaded, so the game boots from its battery save and says the resume point
   was kept. Either file is marked corrupt and left untouched: loading a damaged save would let the
   next flush write it back as the player's save.
+- The mismatch can also mean the app closed between writing a battery save and recording its hash,
+  when the file is the newest good save, so the stopped launch asks: Use It Anyway, Start a New
+  Save, or Cancel. Use It Anyway first copies the file as found to "<profile> before playing", then
+  records it as the profile's save and starts the game. The alert also points to Replace Save from
+  File.
 - Launch rehashes the ROM and patches it's about to use. Settings > Check Library Files rehashes
   every ROM and patch on demand, marks damaged ones, reports missing files, and removes files
   nothing uses and temporary files an interrupted write left over ten minutes ago. It runs only
