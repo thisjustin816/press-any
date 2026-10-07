@@ -33,6 +33,7 @@ final class AppContainer {
     let libraryDeletion: LibraryDeletionOperations
     let importBatterySave: ImportBatterySave
     let replaceBatterySave: ReplaceBatterySave
+    let acceptDamagedSave: AcceptDamagedSave
     let preferredLaunchResolver: ResolvePreferredLaunchContext
     let patchCreator: CreatePatchedBuild
     let launchImageResolver: ResolveImageForLaunch
@@ -126,6 +127,11 @@ final class AppContainer {
             assetStore: fileStore
         )
         replaceBatterySave = ReplaceBatterySave(
+            profiles: repositories.saveProfiles,
+            assets: repositories.assets,
+            assetStore: fileStore
+        )
+        acceptDamagedSave = AcceptDamagedSave(
             profiles: repositories.saveProfiles,
             assets: repositories.assets,
             assetStore: fileStore

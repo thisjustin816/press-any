@@ -4,7 +4,7 @@ import EmulationCore
 ///
 /// The buffer starts at a low target for responsive play and grows a step each time playback runs
 /// out of sound, up to a ceiling, then shrinks a step after a long stretch with no shortfall
-/// (Q96). Playback waits for the target to fill before it starts, and again after a shortfall, so
+/// The game's speed never changes for the sound. Playback waits for the target to fill before it starts, and again after a shortfall, so
 /// a device under load gets one short gap instead of a crackle.
 ///
 /// The emulator's clock sets the game's speed, and the output's clock drifts from it. To hold the
