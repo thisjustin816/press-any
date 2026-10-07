@@ -153,6 +153,9 @@ public enum FilenameMetadataParser {
                 status = status ?? value
                 recognizedGroups.insert(group)
             }
+            if group.range(of: #"(?i)^\s*(?:Aftermarket|Unl)\s*$"#, options: .regularExpression) != nil {
+                recognizedGroups.insert(group)
+            }
             if group.range(
                 of: #"(?i)^\s*(?:(?:ROM\s+)?Hack|h[0-9]*)\s*$"#,
                 options: .regularExpression
@@ -299,6 +302,12 @@ public enum FilenameMetadataParser {
     }
 
     private static func canonicalStatus(_ value: String) -> String? {
+        if let parts = firstMatchGroups(
+            in: value,
+            pattern: #"(?i)^\s*(alpha|beta|demo|prototype|proto|preview|release candidate|rc|final)\s+([0-9]+)\s*$"#
+        ), let status = canonicalStatus(parts[0]) {
+            return "\(status) \(parts[1])"
+        }
         switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "alpha": return "Alpha"
         case "beta": return "Beta"
@@ -307,6 +316,9 @@ public enum FilenameMetadataParser {
         case "preview": return "Preview"
         case "release candidate", "rc": return "RC"
         case "final": return "Final"
+        case "sample": return "Sample"
+        case "kiosk": return "Kiosk"
+        case "debug": return "Debug"
         default: return nil
         }
     }

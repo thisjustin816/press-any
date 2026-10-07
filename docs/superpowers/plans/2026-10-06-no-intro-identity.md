@@ -1,7 +1,7 @@
 # No-Intro Identity Plan
 
 Status: sections 1, 2 and 5 are done (#31 and the import-matching pull request), as is section 3
-apart from the title proposal, which waits on section 4. The parser's No-Intro flags remain.
+apart from the title proposal, which waits on section 4. The parser's No-Intro flags are done.
 
 **Goal:** Recognize known Game Boy and Game Boy Color dumps by hash, take their canonical names, and group a family's regional releases under one Game, from data bundled with the app.
 
@@ -32,7 +32,7 @@ Refreshing: download the two DB exports from DAT-o-MATIC in a browser (Download,
 
 `SHA1Digest` computes SHA-1 with CryptoKit on Apple platforms and a portable implementation elsewhere, as `SHA256Digest` does.
 
-A known dump's Build Details come from No-Intro's fields, not from its name: the title, region and languages as recorded, `version` split into a revision ("Rev 1") or a version ("v1.1"), and the development status. Aftermarket and Unl never become a status or part of a Build name, since every new homebrew release carries both (owner's call, 2026-10-06). The filename parser still names unknown files; teaching it No-Intro's other flags (Proto, Sample, Pirate, Virtual Console, numbered betas) remains, with Aftermarket and Unl recognized and dropped there too.
+A known dump's Build Details come from No-Intro's fields, not from its name: the title, region and languages as recorded, `version` split into a revision ("Rev 1") or a version ("v1.1"), and the development status. Aftermarket and Unl never become a status or part of a Build name, since every new homebrew release carries both (owner's call, 2026-10-06). The filename parser still names unknown files; support for No-Intro's other flags is done: numbered development flags retain their numbers, Proto becomes Prototype, and Sample, Kiosk and Debug become statuses. Aftermarket and Unl are recognized and dropped there too. Pirate and Virtual Console remain unknown groups and are preserved in the normalized filename.
 
 ## 3. Import
 
