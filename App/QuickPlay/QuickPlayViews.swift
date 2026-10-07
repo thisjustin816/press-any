@@ -86,9 +86,11 @@ struct QuickPlaySessionView: View {
                 }
             }
         } message: {
-            Text("Its save and progress are deleted. Library saves it copied from are not affected.")
+            Text(Self.discardMessage)
         }
     }
+
+    static let discardMessage = "Its save and progress are deleted. Library saves it copied from are not affected."
 
     private func startPromotion() {
         do {
@@ -202,6 +204,8 @@ struct QuickPlaySessionsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var sessions: [QuickPlaySession] = []
     @State private var selected: QuickPlaySession?
+    @State private var discardTarget: QuickPlaySession?
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -225,6 +229,9 @@ struct QuickPlaySessionsView: View {
                             }
                         }
                         .foregroundStyle(.primary)
+                        .swipeActions(edge: .trailing) {
+                            SwipeDeleteButton(title: "Discard") { discardTarget = session }
+                        }
                     }
                 }
             }
@@ -250,11 +257,36 @@ struct QuickPlaySessionsView: View {
                 }
             }
             .onAppear(perform: reload)
+            .confirmationDialog("Discard this session?", isPresented: Binding(
+                get: { discardTarget != nil },
+                set: { if !$0 { discardTarget = nil } }
+            ), titleVisibility: .visible, presenting: discardTarget) { session in
+                Button("Discard", role: .destructive) { discard(session) }
+            } message: { _ in
+                Text(QuickPlaySessionView.discardMessage)
+            }
+            .alert("Quick Play", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
+            }
         }
     }
 
     private func reload() {
         sessions = (try? container.quickPlayWorkspace.sessions()) ?? []
+    }
+
+    private func discard(_ session: QuickPlaySession) {
+        do {
+            try container.quickPlayWorkspace.discard(sessionID: session.id)
+        } catch {
+            errorMessage = "Couldn’t discard the session: \(error.localizedDescription)"
+        }
+        reload()
     }
 }
 

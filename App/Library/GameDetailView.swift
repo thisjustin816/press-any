@@ -443,6 +443,7 @@ struct GameDetailView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { launch(build: build) }
+        .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: build) } }
         .contextMenu { buildMenu(build) }
     }
 
@@ -526,6 +527,7 @@ struct GameDetailView: View {
                     .accessibilityLabel("Default Save")
             }
         }
+        .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: profile) } }
         .contextMenu {
             Button("Play with This Save") { launch(build: model.preferredBuild, profile: profile) }
             Button("Duplicate") {
