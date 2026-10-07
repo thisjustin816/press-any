@@ -49,10 +49,23 @@ struct QuickPlaySessionView: View {
                 } label: {
                     Label("Add to Library…", systemImage: "square.and.arrow.down.on.square")
                 }
+                // Attached to the button, the dialog's popover points at it rather than the form.
                 Button(role: .destructive) {
                     confirmDiscard = true
                 } label: {
                     Label("Discard", systemImage: "trash")
+                }
+                .confirmationDialog("Discard this session?", isPresented: $confirmDiscard, titleVisibility: .visible) {
+                    Button("Discard", role: .destructive) {
+                        do {
+                            try container.quickPlayWorkspace.discard(sessionID: session.id)
+                            onFinished()
+                        } catch {
+                            errorMessage = "Couldn’t discard the session: \(error.localizedDescription)"
+                        }
+                    }
+                } message: {
+                    Text(Self.discardMessage)
                 }
             }
 
@@ -75,18 +88,6 @@ struct QuickPlaySessionView: View {
             openedOnAppear = true
             if case .quickPlayInfo = ScreenshotScene.current { showsTechnicalInfo = true }
             if addsToLibrary { startPromotion() }
-        }
-        .confirmationDialog("Discard this session?", isPresented: $confirmDiscard, titleVisibility: .visible) {
-            Button("Discard", role: .destructive) {
-                do {
-                    try container.quickPlayWorkspace.discard(sessionID: session.id)
-                    onFinished()
-                } catch {
-                    errorMessage = "Couldn’t discard the session: \(error.localizedDescription)"
-                }
-            }
-        } message: {
-            Text(Self.discardMessage)
         }
     }
 
