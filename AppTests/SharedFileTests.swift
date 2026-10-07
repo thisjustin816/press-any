@@ -9,7 +9,7 @@ import XCTest
 final class SharedFileTests: XCTestCase {
     func testReceiptKeepsBytesAndFilenameAfterSenderRemovesItsFile() throws {
         try withInbox { inbox, root, _ in
-            for name in ["Example (Europe).GB", "staged.GB", "Example.gbc", "Update.ips", "Update.bps"] {
+            for name in ["Example (Europe).GB", "staged.GB", "Example.gbc", "Update.ips", "Update.bps", "Example.sav", "Example.SRM"] {
                 let source = root.appendingPathComponent(name)
                 let bytes = Data([1, 2, 3])
                 try bytes.write(to: source)
@@ -73,9 +73,9 @@ final class SharedFileTests: XCTestCase {
         }
     }
 
-    func testRejectsOversizedROMsAndPatchesBeforeStaging() throws {
+    func testRejectsOversizedROMsPatchesAndSavesBeforeStaging() throws {
         try withInbox { inbox, root, _ in
-            for (name, bytes) in [("large.gb", 8 * 1024 * 1024 + 1), ("large.bps", 16 * 1024 * 1024 + 1)] {
+            for (name, bytes) in [("large.gb", 8 * 1024 * 1024 + 1), ("large.bps", 16 * 1024 * 1024 + 1), ("large.srm", 4 * 1024 * 1024 + 1)] {
                 let source = root.appendingPathComponent(name)
                 try Data(repeating: 0, count: bytes).write(to: source)
                 XCTAssertThrowsError(try inbox.receive(source)) { error in
@@ -152,19 +152,21 @@ final class SharedFileTests: XCTestCase {
     func testAppRegistersTheFileTypesUsedByItsPickers() throws {
         let declarations = try XCTUnwrap(Bundle.main.infoDictionary?["UTImportedTypeDeclarations"] as? [[String: Any]])
         let documents = try XCTUnwrap(Bundle.main.infoDictionary?["CFBundleDocumentTypes"] as? [[String: Any]])
-        let expected: [(type: UTType, suffix: String, compatible: [String])] = [
-            (.gameBoyROM, "gb", [
+        let expected: [(type: UTType, suffixes: [String], compatible: [String])] = [
+            (.gameBoyROM, ["gb"], [
                 "com.rileytestut.delta.game.gbc", "com.provenance.rom.gb",
                 "com.github.liji32.sameboy.gb", "com.retroarch.gb"
             ]),
-            (.gameBoyColorROM, "gbc", [
+            (.gameBoyColorROM, ["gbc"], [
                 "com.rileytestut.delta.game.gbc", "com.provenance.rom.gbc",
                 "com.github.liji32.sameboy.gbc", "com.retroarch.gbc"
             ]),
-            (.ipsPatch, "ips", []),
-            (.bpsPatch, "bps", [])
+            (.ipsPatch, ["ips"], []),
+            (.bpsPatch, ["bps"], []),
+            (.gameBoySave, ["sav", "srm"], [])
         ]
-        for (type, suffix, compatible) in expected {
+        for (type, suffixes, compatible) in expected {
+            let suffix = suffixes.joined(separator: ", ")
             let matchingDocuments = documents.filter {
                 ($0["LSItemContentTypes"] as? [String] ?? []).contains(type.identifier)
             }
@@ -176,7 +178,7 @@ final class SharedFileTests: XCTestCase {
             XCTAssertTrue(Set(compatible).isSubset(of: registered), suffix)
             let declaration = try XCTUnwrap(declarations.first { $0["UTTypeIdentifier"] as? String == type.identifier })
             let tags = try XCTUnwrap(declaration["UTTypeTagSpecification"] as? [String: Any])
-            XCTAssertEqual(tags["public.filename-extension"] as? [String], [suffix])
+            XCTAssertEqual(tags["public.filename-extension"] as? [String], suffixes)
             XCTAssertTrue(type.conforms(to: .data))
         }
         let exported = Bundle.main.infoDictionary?["UTExportedTypeDeclarations"] as? [[String: Any]] ?? []
@@ -184,7 +186,7 @@ final class SharedFileTests: XCTestCase {
             let tags = declaration["UTTypeTagSpecification"] as? [String: Any] ?? [:]
             let suffixes = tags["public.filename-extension"] as? [String]
                 ?? (tags["public.filename-extension"] as? String).map { [$0] } ?? []
-            XCTAssertTrue(Set(suffixes.map { $0.lowercased() }).isDisjoint(with: expected.map { $0.suffix }))
+            XCTAssertTrue(Set(suffixes.map { $0.lowercased() }).isDisjoint(with: expected.flatMap { $0.suffixes }))
         }
     }
 

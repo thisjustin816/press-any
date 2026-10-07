@@ -17,6 +17,8 @@ struct SharedFileView: View {
         Group {
             if file.kind == .patch {
                 SharedPatchView(file: file, container: container, onFinished: onFinished)
+            } else if file.kind == .save {
+                SharedSaveView(file: file, container: container, onFinished: onFinished)
             } else if let review {
                 ImportReviewView(model: review, onImported: { _ in
                     NotificationCenter.default.post(name: .libraryDidChange, object: nil)

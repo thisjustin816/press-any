@@ -17,7 +17,7 @@ struct GameDetailView: View {
             case .patch: UTType.patchFileTypes
             // `.i`, `.sym` and `.noi` files have no system type; the import checks the contents.
             case .variableMap: [.data]
-            case .batterySave, .replacementSave: [.gameBoySave]
+            case .batterySave, .replacementSave: UTType.saveFileTypes
             case .artwork: [.image]
             }
         }
@@ -185,7 +185,7 @@ struct GameDetailView: View {
             Button {
                 request(.batterySave)
             } label: {
-                Label("Import .sav", systemImage: "square.and.arrow.down")
+                Label("Import Save File", systemImage: "square.and.arrow.down")
             }
         } header: {
             Text("Save Profiles")

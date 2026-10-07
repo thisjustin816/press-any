@@ -187,8 +187,8 @@ altering a ROM.
 | missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1.1 |  |
 | missing | Multiple ROMs attached to one Game in one flow | v1.1 |  |
 
-Done: Share Sheet / Open In for ROMs and patches, with the Quick Play or Import choice on open
-and a Game/base Build choice for patches; Owner rank with Viewer copy imports, imported format
+Done: Share Sheet / Open In for ROMs, patches and `.sav`/`.srm` saves, with the Quick Play or
+Import choice on open, a Game/base Build choice for patches and a Game choice for saves; Owner rank with Viewer copy imports, imported format
 declarations only, and compatibility identifiers from the public plists cited in product.md;
 Analyze -> ImportPlan -> Review -> transactional Commit; Game artwork from Photos or Files in
 Import Review; Files picker for .gb/.gbc; .sav and
