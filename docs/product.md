@@ -34,11 +34,13 @@ change. There is no separate decision log.
 - The library, Game Details, Settings and every sheet are portrait. Gameplay also turns to
   landscape (see Landscape).
 
-v1 is core-complete: the library model, saves and states, rewind and Fast Forward, rumble,
-patching, custom layouts with Delta and Manic skin import, curated
-shaders, Bluetooth controllers, automatic artwork, AirPlay and external displays, safe archive
-imports and Quick Play. iCloud and the Community Catalog also target v1, but either can move to
-v1.1 after an explicit review if it's the only thing holding up a stable emulator.
+v1 is a good core experience: the library model, saves and states, patching, Quick Play, Fast
+Forward, rumble, Bluetooth controllers, landscape and the built-in layouts. iCloud and the
+Community Catalog also target v1, but either can move to v1.1 after an explicit review if it's
+the only thing holding up a stable emulator. Everything else waits for v1.1: archive and
+multi-asset imports, automatic artwork and documents, rewind, slow motion, frame advance and Quick
+Actions, the model override, curated shaders, the layout editor and skin import, screenshots and
+notes, and external displays.
 
 ## Library model
 
@@ -50,7 +52,7 @@ title, a system, a preferred Build and a default Save Profile. A promoted hack i
 own name; the base game's title stays as lineage.
 
 v1 adds aliases (indexed for search, including a No-Intro family's regional titles), tags,
-collections, favorites, documents, typed artwork and metadata provenance.
+collections, favorites and metadata provenance; documents and typed artwork follow in v1.1.
 
 ### Build
 
@@ -185,24 +187,24 @@ changes the library; review shows what will happen; commit is all or nothing.
   Review labels its fields and explains Base Build and a wrong header checksum.
 - **Toolchain detection** runs when an image becomes a Build, and review shows what it found.
 - **Duplicates.** An exact duplicate image never makes a second file or Build. Its existing Build
-  keeps its metadata. In v1, a duplicate import still inspects anything new that came with it
+  keeps its metadata. In v1.1, a duplicate import still inspects anything new that came with it
   (saves, artwork, documents, patches).
 - A file shared while another sheet is open, such as Import Review mid-edit or the Resume prompt,
   waits until that sheet closes.
 
-### Planned (v1 unless noted)
+### Planned (v1.1 unless noted)
 
+- v1: development matching from several signals, preselecting a Game only at high confidence.
 - ZIP and 7z through libarchive, as temporary containers that aren't kept. Limits on nesting
   depth, size and ratio; no path traversal or links; malformed and password-protected archives
-  fail cleanly. RAR is tentative for v1.1.
+  fail cleanly. RAR is tentative.
 - Multi-asset review that groups ROMs, patches, saves, artwork, documents, READMEs, changelogs,
   variable maps and skins, attaches several ROMs to one Game in one flow, and compares existing,
   fetched and packaged artwork visually.
-- Development matching from several signals, preselecting a Game only at high confidence.
 - Importing while a game plays shows New Build Ready with Switch Now or Later; Developer Mode adds
   Restart into New Build. ROM bytes are never swapped in a running core.
-- v1.1: sharing an itch.io page or a GitHub page with a ROM download offers its downloads, and
-  the library's + menu browses itch.io's Game Boy tag and Homebrew Hub.
+- Sharing an itch.io page or a GitHub page with a ROM download offers its downloads, and the
+  library's + menu browses itch.io's Game Boy tag and Homebrew Hub.
 
 ## Identity and naming
 
@@ -396,7 +398,7 @@ fresh build.
   a session with only a resume point can keep it in a new profile. Keeping the existing profile
   brings no state, since the state holds the discarded save. If the resume point can't move, the
   Build and save are still added and the session is kept.
-- v1: screenshots, notes and debug captures in a session, moved over transactionally on
+- v1.1: screenshots, notes and debug captures in a session, moved over transactionally on
   promotion.
 
 ## Gameplay
@@ -446,7 +448,7 @@ Touch: a sliding D-pad with natural diagonals, sliding between A and B, and A+B 
 controller layout keeps the name Game Boy because it describes the hardware it recreates; the
 App Store name, keywords and icon carry no Nintendo trademarks.
 
-v1: a lightweight layout editor (screen and control position and size,
+v1.1: a lightweight layout editor (screen and control position and size,
 opacity, touch areas, separate portrait and landscape, a few control styles, saved presets),
 opened from the game with the frame frozen for alignment and offering Save for This Game or Update
 Shared Preset; Minimal, Fullscreen and one-handed presets; Delta and Manic skin import into the
@@ -497,9 +499,9 @@ picture. A connected controller still hides the touch controls.
 - **Settings** opens over the paused game at half height. A library game edits its Game's
   settings; Quick Play edits its system's. Layout, scaling, LCD filter and frame blending apply
   at once; the rest at the next launch.
-- No controller button opens the menu by default. v1 controller settings offer Open Menu as an
-  input any button can map to. The Home button is never taken, since Apple reserves it for the
-  system.
+- No controller button opens the menu by default, since Menu is START. v1 adds a fixed button
+  combination that opens it; there's no button mapping in the app. The Home button is never
+  taken, since Apple reserves it for the system.
 
 ### Picture
 
@@ -529,7 +531,7 @@ picture. A connected controller still hides the touch controls.
   game runs whole frames while it's owed one, then shows the newest. The game keeps its native
   59.73 Hz; on a 60 Hz screen one frame repeats about every four seconds. After a stall, a refresh
   longer than four frames counts as one frame, so the game doesn't race to catch up.
-- v1: a curated, RetroArch-compatible shader library chosen after a community survey and device
+- v1.1: a curated, RetroArch-compatible shader library chosen after a community survey and device
   comparison (LCD1x, LCD3x and pixel-transparency variants are candidates; PT-SkyWalker541 is a
   candidate to audit), downloaded from pinned, license-checked sources with hashes and preserved
   licenses; independent inheritance of pipeline components and parameters; named presets; live
@@ -554,7 +556,7 @@ picture. A connected controller still hides the touch controls.
   Unlimited, inheritable, applied at once when changed from the game's Settings.
 - **Fast Forward Audio**: Muted by default; Accelerated plays the sound sped up, pitch rising, up
   to 4×, and stays muted beyond.
-- v1: Fast Forward from layouts, controller buttons and gestures through Quick Actions, hold or
+- v1.1: Fast Forward from layouts, controller buttons and gestures through Quick Actions, hold or
   toggle; slow motion at 0.25×, 0.5× and 0.75×; rewind with 5 s, 15 s, 30 s, 1 min, 2 min and 5 min
   presets, memory-budgeted so the effective length can shrink on smaller devices, muted by
   default, surviving a brief trip to the background but never saved as a timeline; frame advance
@@ -582,7 +584,7 @@ picture. A connected controller still hides the touch controls.
 - v1: choosing Player 1 among several controllers (Player 2 is reserved for link play); Phone, Controller, Both or Off
   rumble routing with separate intensities.
 
-### Quick Actions (v1)
+### Quick Actions (v1.1)
 
 One action registry powers the in-game menu, controller hotkeys and skin buttons: save and load
 state, rewind, Fast Forward, slow motion, screenshot, note, manual, cheats, shader, Build and
@@ -617,7 +619,7 @@ Colors, LCD Filter, Frame Blending), Controls (Controller Layout) and Playing (F
 and Audio, Resume Games, Skip Boot Logo). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
-v1 adds automatic DMG, GBC or SGB model selection with overrides at every level (no promise that
+v1.1 adds automatic DMG, GBC or SGB model selection with overrides at every level (no promise that
 every GBC-only game works in DMG mode), and SGB palettes, borders and enhancements where SameBoy
 exposes them; custom border editing is later.
 
@@ -676,7 +678,9 @@ signatures: high for two or more, medium for one, low when inferred. Layers can 
 Studio over GBDK, with an audio driver). RGBDS detection isn't guaranteed. Detection never names
 or groups a Game and never proves two saves compatible.
 
-## Planned v1 areas
+## Planned areas
+
+Areas marked v1.1 wait for it; the rest target v1.
 
 ### Cheats and memory tools (v1.1)
 
@@ -689,7 +693,7 @@ for the session. A watch list with an optional Developer HUD and short in-memory
 Mode writes take effect at once, with Undo Last Write and a clear frozen marker. A full debugger,
 disassembler and VRAM viewer are later.
 
-### Screenshots, notes and debug context
+### Screenshots, notes and debug context (v1.1)
 
 An in-app gallery where every capture belongs to its exact Build, exported clean, with metadata,
 or with a rendered Build Info or Bug Report strip. An optional capture context records selected
@@ -698,14 +702,14 @@ and patches, RTC, cheats, profile, core and settings; a full RAM snapshot is opt
 Mode. Bug-report exports preview a checklist, and memory, saves and notes need explicit inclusion.
 Game notes, Build notes and timestamped gameplay notes.
 
-### Documents
+### Documents (v1.1)
 
 Manuals, READMEs, changelogs, guides and maps as managed copies (PDF, CBZ, PNG, JPEG, WebP image
 sets, TXT, Markdown), belonging to a Game, a Build or both. A reader opens over the paused game,
 remembers the last position, and restores the running or paused state on close. Search in text
 formats only if it's easy; no OCR. Side-by-side reading on iPad is later.
 
-### Artwork
+### Artwork (v1.1)
 
 Automatic artwork on import, which a setting can turn off, through pluggable providers: included
 or imported files, the Community Catalog, Libretro thumbnails, OpenVGDB pending its license,
@@ -718,7 +722,7 @@ cached; nothing rechecks after a choice except Check for New Artwork. Provenance
 date, rights, crop) is kept, and private artwork is never published. There's no paid artwork
 agreement.
 
-### External display
+### External display (v1.1)
 
 AirPlay and wired displays show the game as an independent render target with its own scaling,
 aspect and shader, while the phone becomes a controller with Quick Actions, the manual, states and
@@ -771,8 +775,9 @@ access (C617.1) for cleaning stale temporary files.
 ### Accessibility
 
 Dynamic Type in the normal interface, good contrast and status that doesn't rely on color, Reduce
-Motion, large and configurable touch targets, one-handed layouts, controller remapping through iOS's Game
-Controller settings, controller navigation where practical, sensible VoiceOver labels, and haptics never as the only feedback.
+Motion, large and configurable touch targets, one-handed layouts (v1.1, with the layout editor),
+controller remapping through iOS's Game Controller settings, controller navigation where
+practical, sensible VoiceOver labels, and haptics never as the only feedback.
 Narrated gameplay isn't a v1 requirement.
 
 ### Performance
