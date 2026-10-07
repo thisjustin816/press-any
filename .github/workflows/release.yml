@@ -1,0 +1,101 @@
+name: Release
+run-name: Release ${{ github.event.release.tag_name }}
+
+# A published GitHub release ships the TestFlight build of its commit. A pre-release (a beta) goes
+# to the public TestFlight group; a stable release is for the App Store, which is submitted by hand
+# for now. Every main upload already reaches the internal group on its own.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.release.tag_name }}
+
+jobs:
+  # Kept apart from the App Store Connect secrets because it needs write access.
+  notes:
+    name: Fill an empty release description
+    if: ${{ !github.event.release.body }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Write the changes since the previous release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BETA: ${{ github.event.release.prerelease }}
+          RELEASE_ID: ${{ github.event.release.id }}
+        run: |
+          kind=()
+          if [[ $BETA == true ]]; then kind=(--beta); fi
+          ./Scripts/testflight-release.py notes --tag "$TAG" "${kind[@]}" --output "$RUNNER_TEMP/notes.txt" >/dev/null
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -F "body=@$RUNNER_TEMP/notes.txt" >/dev/null
+
+  beta:
+    name: Give the public TestFlight group the build
+    if: github.event.release.prerelease
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      # The release runs this commit's scripts with the signing key, so only main's history may.
+      - name: Check the release is on main
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$TAG^{commit}" origin/main ||
+            { echo "::error::$TAG isn't on main, so it isn't released."; exit 1; }
+      - name: Write What to Test
+        env:
+          BODY: ${{ github.event.release.body }}
+        run: |
+          if [[ -n $BODY ]]; then
+            printf '%s\n' "$BODY" >"$RUNNER_TEMP/notes.txt"
+          else
+            ./Scripts/testflight-release.py notes --tag "$TAG" --beta --output "$RUNNER_TEMP/notes.txt"
+          fi
+      - name: Add the build to the group and submit it for Beta App Review
+        env:
+          GROUP: ${{ vars.TESTFLIGHT_PUBLIC_GROUP }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: |
+          if [[ -z $GROUP ]]; then
+            echo "::error::Set the TESTFLIGHT_PUBLIC_GROUP repository variable to the public group's name."
+            exit 1
+          fi
+          ./Scripts/testflight-release.py beta --tag "$TAG" --group "$GROUP" --notes "$RUNNER_TEMP/notes.txt" |
+            tee -a "$GITHUB_STEP_SUMMARY"
+
+  stable:
+    name: Name the build for the App Store
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - run: |
+          upload="$(git describe --tags --abbrev=0 --match 'testflight/*' "$TAG^{commit}")"
+          echo "App Store submission isn't automated yet. Submit TestFlight build ${upload#testflight/} for $TAG in App Store Connect." |
+            tee -a "$GITHUB_STEP_SUMMARY"

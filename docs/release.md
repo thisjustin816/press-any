@@ -17,10 +17,10 @@ The iOS build workflow also verifies an unsigned Release archive on pull request
 After installing the beta, work through `docs/mvp-verification.md` and record its
 build number. A successful upload does not prove the physical-device checks.
 
-External testing requires beta information and may require Beta App Review. An
-App Store release also needs the store listing, screenshots, age rating, App
-Privacy answers for the shipped app, and the rights and disclosures in
-`docs/acceptance-matrix.md` under Release.
+Publishing a GitHub pre-release sends its build to the public TestFlight group through Beta App
+Review; see "Release a beta" in [TestFlight](testflight.md). An App Store release also needs the
+store listing, screenshots, age rating, App Privacy answers for the shipped app, and the rights
+and disclosures in `docs/acceptance-matrix.md` under Release.
 
 ## Refreshing the No-Intro data
 
