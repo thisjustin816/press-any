@@ -47,6 +47,19 @@ public enum BuildNaming {
         return "\(title) \(naming.suggestedBuildName)"
     }
 
+    /// The title a patch offers for the Game it becomes Preferred in. A hack offers its own title.
+    /// Another patch offers its title only when that title adds words without digits to the Game's,
+    /// as "Mole Mania DX" does to "Mole Mania". A patch named "Translation", or an update such as
+    /// "Example v1.0 to v1.1", never offers its name as a Game title.
+    public static func patchGameTitle(for naming: FilenameMetadata, gameTitle: String) -> String? {
+        let title = (naming.buildMetadata.hackTitle ?? naming.suggestedTitle).trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = GameMatcher.normalized(title)
+        let gameKey = GameMatcher.normalized(gameTitle)
+        guard !key.isEmpty, key != gameKey else { return nil }
+        guard naming.releaseKind != .romHack else { return title }
+        return key.hasPrefix(gameKey) && !key.dropFirst(gameKey.count).contains(where: \.isNumber) ? title : nil
+    }
+
     /// The metadata a patch's filename gives the Build it makes. A patch with no hack title in its
     /// name is titled by its filename, since the patch is what tells the Build apart.
     public static func patchMetadata(for naming: FilenameMetadata) -> BuildImportMetadata {
@@ -177,7 +190,7 @@ public enum GameMatcher {
         return nil
     }
 
-    static func normalized(_ title: String) -> String {
+    public static func normalized(_ title: String) -> String {
         String(title.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
     }
 }

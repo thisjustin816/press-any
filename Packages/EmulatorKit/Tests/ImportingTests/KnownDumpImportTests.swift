@@ -138,6 +138,12 @@ final class KnownDumpImportTests: XCTestCase {
         let protected = try committer.commit(ROMImportPlan(analysis: analyze(europe, named: "rot.gb"), disposition: .addBuild(gameID: player.id),
             buildDisplayName: "Europe", markAsBase: false, proposedGameTitle: "Pocket Critters - Rot"))
         XCTAssertEqual(protected.game.primaryTitle, "My Critters")
+        let hack = try committer.commit(ROMImportPlan(analysis: analyze(homebrew, named: "Critters DX.gb"),
+            disposition: .addBuild(gameID: player.id), buildDisplayName: "Critters DX", markAsBase: false,
+            markAsPreferred: true, proposedGameTitle: "Critters DX", proposedGameTitleIsPlayers: true))
+        XCTAssertEqual(hack.game.primaryTitle, "Critters DX", "a title the player chose in review replaces theirs")
+        XCTAssertTrue(hack.game.hasPlayerTitle)
+        XCTAssertTrue(hack.game.aliases.contains("My Critters"))
     }
 
     func testFamilyGroupingUsesImageEvidenceAndDoesNotChangeTheLibrary() throws {

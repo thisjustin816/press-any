@@ -30,6 +30,9 @@ struct SharedPatchView: View {
     @State private var errorMessage: String?
     @State private var mismatchedBuild: Build?
     @State private var createdBuild: Build?
+    /// The base Build the patch's checksum or title picked, selected once its Game's Builds load.
+    @State private var matchedBuildID: UUID?
+    @State private var usesPatchGameTitle = true
 
     var body: some View {
         NavigationStack {
@@ -56,6 +59,9 @@ struct SharedPatchView: View {
                         TextField("New Build name", text: $displayName)
                             .accessibilityLabel("New Build name")
                             .multilineTextAlignment(.trailing)
+                    }
+                    if let title = offeredGameTitle {
+                        Toggle("Use Game Title: \(title)", isOn: $usesPatchGameTitle)
                     }
                     DisclosureGroup("Naming Details") {
                         metadataField("Region", text: $region)
@@ -108,6 +114,7 @@ struct SharedPatchView: View {
                     games = try container.repositories.games.fetchGames().sorted {
                         $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
                     }
+                    matchBase(naming: naming)
                 } catch {
                     errorMessage = error.localizedDescription
                 }
@@ -133,6 +140,10 @@ struct SharedPatchView: View {
                     builds = try container.repositories.builds.fetchBuilds(gameID: selected).sorted {
                         $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
                     }
+                    if let matchedBuildID, builds.contains(where: { $0.id == matchedBuildID }) {
+                        buildID = matchedBuildID
+                    }
+                    matchedBuildID = nil
                 } catch {
                     errorMessage = error.localizedDescription
                 }
@@ -158,6 +169,40 @@ struct SharedPatchView: View {
         .interactiveDismissDisabled()
     }
 
+    /// Preselects the Game and base Build. A BPS names its base by size and CRC32; otherwise, or
+    /// with no such Build, a Game matching the patch's title is chosen with its Base Build.
+    private func matchBase(naming: FilenameMetadata) {
+        var candidates: [(build: Build, byteLength: Int64)] = []
+        for game in games {
+            for build in container.builds(in: game.id) {
+                if let asset = try? container.repositories.assets.fetchAsset(id: build.imageAssetID) {
+                    candidates.append((build, asset.byteLength))
+                }
+            }
+        }
+        let matches = (try? Data(contentsOf: file.url)).map { patch in
+            PatchBaseMatcher.builds(matchingPatch: patch, among: candidates) { build in
+                try Data(contentsOf: container.launchImageResolver.resolve(buildID: build.id))
+            }
+        } ?? []
+        if let match = matches.first(where: \.isBase) ?? matches.first,
+           matches.allSatisfy({ $0.gameID == match.gameID }) {
+            matchedBuildID = match.id
+            gameID = match.gameID
+        } else if matches.isEmpty,
+                  let game = GameMatcher.matchingGameID(for: naming, headerTitle: "", in: games) {
+            matchedBuildID = candidates.first { $0.build.gameID == game && $0.build.isBase }?.build.id
+            gameID = game
+        }
+    }
+
+    /// The patched Build becomes Preferred, so a patch naming a variant of the Game, such as
+    /// "Mole Mania DX", offers that as the Game's title.
+    private var offeredGameTitle: String? {
+        guard let naming, let game = games.first(where: { $0.id == gameID }) else { return nil }
+        return BuildNaming.patchGameTitle(for: naming, gameTitle: game.primaryTitle)
+    }
+
     private func apply() {
         guard let build = builds.first(where: { $0.id == buildID }) else { return }
         apply(to: build)
@@ -166,7 +211,8 @@ struct SharedPatchView: View {
     private func apply(to build: Build, ignoringBaseMismatch: Bool = false) {
         mismatchedBuild = nil
         do {
-            createdBuild = try container.patchCreator.execute(.init(
+            let title = usesPatchGameTitle ? offeredGameTitle : nil
+            let created = try container.patchCreator.execute(.init(
                 gameID: build.gameID,
                 baseBuildID: build.id,
                 patches: [.init(url: file.url, ignoreBaseMismatch: ignoringBaseMismatch)],
@@ -174,6 +220,10 @@ struct SharedPatchView: View {
                 makePreferred: true,
                 metadata: reviewedMetadata
             ))
+            if let title {
+                try? container.buildOperations.renameGame(gameID: created.gameID, title: title)
+            }
+            createdBuild = created
             errorMessage = nil
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
         } catch PatchError.sourceCRC32Mismatch, PatchError.sourceSizeMismatch {
