@@ -87,7 +87,8 @@ struct RootView: View {
                     container: container,
                     onPlay: { context in launch(context, container: container) },
                     onQuickPlay: { request in quickPlay(request, container: container) },
-                    onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) }
+                    onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) },
+                    onImportFiles: { urls in urls.forEach { receiveSharedFile($0, opensImportReview: true) } }
                 )
             } else {
                 ContentUnavailableView {
@@ -254,10 +255,14 @@ struct RootView: View {
         showsWelcome = true
     }
 
-    private func receiveSharedFile(_ url: URL) {
+    private func receiveSharedFile(_ url: URL, opensImportReview: Bool = false) {
         guard let container = bootstrap.container else { return }
         do {
-            queuedSharedFiles.append(contentsOf: try container.sharedFileInbox.receiveAll(url).map { .file($0) })
+            queuedSharedFiles.append(contentsOf: try container.sharedFileInbox.receiveAll(url).map { file in
+                var file = file
+                file.opensImportReview = opensImportReview
+                return .file(file)
+            })
         } catch {
             // Reported when nothing else is on screen, as a file would be shown.
             queuedSharedFiles.append(.failure(error.localizedDescription))

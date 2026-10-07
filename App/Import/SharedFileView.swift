@@ -24,6 +24,8 @@ struct SharedFileView: View {
                     NotificationCenter.default.post(name: .libraryDidChange, object: nil)
                     onFinished()
                 }, onCancel: onFinished)
+            } else if file.opensImportReview && errorMessage == nil {
+                ProgressView().task { prepareReview() }
             } else {
                 NavigationStack {
                     Form {

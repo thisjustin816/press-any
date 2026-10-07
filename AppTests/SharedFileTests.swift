@@ -170,6 +170,13 @@ final class SharedFileTests: XCTestCase {
         }
     }
 
+    func testImportFileAcceptsEveryKindTheShareSheetDoes() {
+        for fileExtension in ["gb", "gbc", "ips", "bps", "sav", "srm", "zip"] {
+            let type = UTType(filenameExtension: fileExtension)
+            XCTAssertTrue(UTType.importFileTypes.contains { type?.conforms(to: $0) == true }, fileExtension)
+        }
+    }
+
     func testAppRegistersTheFileTypesUsedByItsPickers() throws {
         let declarations = try XCTUnwrap(Bundle.main.infoDictionary?["UTImportedTypeDeclarations"] as? [[String: Any]])
         let documents = try XCTUnwrap(Bundle.main.infoDictionary?["CFBundleDocumentTypes"] as? [[String: Any]])
