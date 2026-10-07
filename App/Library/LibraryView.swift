@@ -75,11 +75,13 @@ struct LibraryView: View {
                     ContentUnavailableView {
                         Label("No Games", systemImage: "gamecontroller")
                     } description: {
-                        Text(model.searchText.isEmpty
+                        Text(model.favoritesOnly
+                             ? "No favorite games match this view."
+                             : model.searchText.isEmpty
                              ? "Import a Game Boy or Game Boy Color ROM to get started."
                              : "No games match your search.")
                     } actions: {
-                        if model.searchText.isEmpty {
+                        if model.searchText.isEmpty && !model.favoritesOnly {
                             Button("Import ROM") {
                                 pendingFileAction = .importROM
                                 showROMImporter = true
@@ -113,6 +115,8 @@ struct LibraryView: View {
                             Label("Grid", systemImage: "square.grid.2x2").tag(DisplayMode.grid)
                             Label("List", systemImage: "list.bullet").tag(DisplayMode.list)
                         }
+                        Toggle("Favorites Only", isOn: $model.favoritesOnly)
+                            .accessibilityIdentifier("library.favoritesOnly")
                         if displayMode == .grid {
                             Toggle("Show Titles", isOn: $showsGridTitles)
                         }
@@ -276,8 +280,15 @@ struct LibraryView: View {
                     GameArtworkView(url: container.artworkURL(for: game), system: model.system(of: game), title: game.primaryTitle)
                         .frame(width: 56, height: 56)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(game.primaryTitle)
-                            .font(.headline)
+                        HStack {
+                            Text(game.primaryTitle).font(.headline)
+                            if game.isFavorite {
+                                Image(systemName: "star.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.yellow)
+                                    .accessibilityLabel("Favorite")
+                            }
+                        }
                         Text(model.system(of: game).displayName)
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -296,6 +307,11 @@ struct LibraryView: View {
     @ViewBuilder
     private func gameActions(_ game: Game) -> some View {
         Button("Play", systemImage: "play.fill") { launch(game) }
+        Button(game.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+               systemImage: game.isFavorite ? "star.slash" : "star") {
+            model.toggleFavorite(game)
+        }
+        .accessibilityIdentifier("library.toggleFavorite")
         Button("Rename…", systemImage: "pencil") {
             renameTitle = game.primaryTitle
             gameToRename = game
@@ -369,6 +385,16 @@ private struct GameLibraryTile: View {
         VStack(alignment: .leading, spacing: 8) {
             GameArtworkView(url: artworkURL, system: system, title: game.primaryTitle)
                 .aspectRatio(1, contentMode: .fit)
+                .overlay(alignment: .topTrailing) {
+                    if game.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundStyle(.yellow)
+                            .padding(6)
+                            .background(.regularMaterial, in: Circle())
+                            .padding(6)
+                    }
+                }
             if showsTitle {
                 Text(game.primaryTitle)
                     .font(.headline)
@@ -378,7 +404,7 @@ private struct GameLibraryTile: View {
         }
         // The title stays readable to VoiceOver when it isn't shown.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(game.primaryTitle)
+        .accessibilityLabel(game.isFavorite ? "\(game.primaryTitle), Favorite" : game.primaryTitle)
     }
 }
 

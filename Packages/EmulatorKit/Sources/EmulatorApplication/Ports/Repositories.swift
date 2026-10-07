@@ -22,7 +22,9 @@ public protocol BuildRepository: Sendable {
     func fetchImportedBuilds() throws -> [Build]
     func setImageSHA1(buildID: UUID, sha1: String) throws
     func insertBuild(_ build: Build) throws
+    /// Updates presentation and preferences, leaving accumulated playtime intact.
     func updateBuildMetadata(_ build: Build) throws
+    func addPlaytime(buildID: UUID, seconds: Double) throws
     func moveBuild(id: UUID, toGameID: UUID) throws
 }
 

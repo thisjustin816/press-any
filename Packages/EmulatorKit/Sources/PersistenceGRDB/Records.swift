@@ -51,6 +51,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
     var id: String
     var primaryTitle: String
     var hasPlayerTitle: Bool
+    var isFavorite: Bool
     var systemFamily: String
     var preferredBuildID: String?
     var preferredSaveProfileID: String?
@@ -64,6 +65,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         case id
         case primaryTitle = "primary_title"
         case hasPlayerTitle = "has_player_title"
+        case isFavorite = "is_favorite"
         case systemFamily = "system_family"
         case preferredBuildID = "preferred_build_id"
         case preferredSaveProfileID = "preferred_save_profile_id"
@@ -78,6 +80,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
         id = PersistenceCodec.uuid(value.id)
         primaryTitle = value.primaryTitle
         hasPlayerTitle = value.hasPlayerTitle
+        isFavorite = value.isFavorite
         systemFamily = value.systemFamily
         preferredBuildID = value.preferredBuildID.map(PersistenceCodec.uuid)
         preferredSaveProfileID = value.preferredSaveProfileID.map(PersistenceCodec.uuid)
@@ -95,6 +98,7 @@ struct GameRecord: Codable, FetchableRecord, PersistableRecord {
             systemFamily: systemFamily,
             aliases: aliases,
             hasPlayerTitle: hasPlayerTitle,
+            isFavorite: isFavorite,
             preferredBuildID: try PersistenceCodec.optionalUUID(preferredBuildID),
             preferredSaveProfileID: try PersistenceCodec.optionalUUID(preferredSaveProfileID),
             artworkAssetID: try PersistenceCodec.optionalUUID(artworkAssetID),
@@ -195,6 +199,8 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
     var author: String?
     var translation: String?
     var status: String?
+    var notes: String
+    var totalPlaytimeSeconds: Double
     var preferredSaveProfileID: String?
     var pinnedCoreID: String?
     var pinnedCoreVersion: String?
@@ -215,6 +221,8 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         case versionString = "version_string"
         case versionSortKey = "version_sort_key"
         case baseGameReferenceJSON = "base_game_reference_json"
+        case notes
+        case totalPlaytimeSeconds = "total_playtime_seconds"
         case baseTitle = "base_title"
         case hackTitle = "hack_title"
         case preferredSaveProfileID = "preferred_save_profile_id"
@@ -249,6 +257,8 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         container[CodingKeys.author.rawValue] = author
         container[CodingKeys.translation.rawValue] = translation
         container[CodingKeys.status.rawValue] = status
+        container[CodingKeys.notes.rawValue] = notes
+        container[CodingKeys.totalPlaytimeSeconds.rawValue] = totalPlaytimeSeconds
         container[CodingKeys.preferredSaveProfileID.rawValue] = preferredSaveProfileID
         container[CodingKeys.pinnedCoreID.rawValue] = pinnedCoreID
         container[CodingKeys.pinnedCoreVersion.rawValue] = pinnedCoreVersion
@@ -279,6 +289,8 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         author = value.author
         translation = value.translation
         status = value.status
+        notes = value.notes
+        totalPlaytimeSeconds = value.totalPlaytimeSeconds
         preferredSaveProfileID = value.preferredSaveProfileID.map(PersistenceCodec.uuid)
         pinnedCoreID = value.corePin?.descriptor.identifier
         pinnedCoreVersion = value.corePin?.descriptor.version
@@ -328,6 +340,8 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
             author: author,
             translation: translation,
             status: status,
+            notes: notes,
+            totalPlaytimeSeconds: totalPlaytimeSeconds,
             preferredSaveProfileID: try PersistenceCodec.optionalUUID(preferredSaveProfileID),
             corePin: pin,
             createdAt: try PersistenceCodec.date(createdAt),

@@ -39,7 +39,7 @@ states with Library Backup, patching, Quick Play, Fast Forward, rumble, Bluetoot
 landscape and the built-in layouts. Everything else waits for v1.1: iCloud sync, the Community
 Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
 artwork and documents, rewind, slow motion, frame advance and Quick Actions, the model override,
-curated shaders, the layout editor and skin import, screenshots and notes, external displays,
+curated shaders, the layout editor and skin import, screenshots and gameplay notes, external displays,
 crash reporting and usage counts, and Developer Mode.
 
 ## Library model
@@ -63,8 +63,9 @@ when a release joins the Game, so "Pocket Monsters Crystal" finds Pokémon Cryst
 in Game Details' menu or a Game's long-press menu in the library, keeps the former title as an
 alias and records the player's title choice.
 
-v1 adds favorites and metadata provenance; tags, collections, documents and typed artwork follow
-in v1.1.
+A Game stores whether it is a favorite. Merging Games keeps the survivor a favorite if either
+was, and Make Separate Game carries the source Game's favorite state. v1 adds metadata
+provenance; tags, collections, documents and typed artwork follow in v1.1.
 
 ### Build
 
@@ -81,9 +82,15 @@ Profile, its pinned core, settings overrides, and when it was added.
   Recipes keep their exact source Build and hash whatever happens to the Base mark.
 - A Game holds one Build per image.
 
-v1 adds Build notes and per-Build playtime; v1.1 adds a lightweight timeline (versions, hashes,
-parents, notes, import and activation history) and a Build comparison screen. The comparison engine
-(changed bytes and ranges, size, banks, header) exists; the screen doesn't yet.
+Each Build has one plain-text note, shown and edited in Build Details from its menu. Saving
+preserves whitespace; Cancel leaves the stored note alone, and saving an empty note clears it.
+FTS5 search over notes comes later. Build Details also shows its accumulated playtime. A session
+adds the same played time to its Build and Save Profile on background and close, counting only
+time since the last write. Game rollups and the statistics screen come later.
+
+v1.1 adds a lightweight timeline (versions, hashes, parents, notes, import and activation history)
+and a Build comparison screen. The comparison engine (changed bytes and ranges, size, banks,
+header) exists; the screen doesn't yet.
 
 ### Save Profile
 
@@ -333,13 +340,13 @@ promotion and Open Patch.
 ## Restructuring Games
 
 - **Make Separate Game** promotes a Build to its own Game, by Move (default) or Copy, without
-  re-importing. Build-scoped data (states, recipes, toolchain reports, variable maps, settings)
-  always follows the Build. A review sheet chooses the Game-level things: it offers copies of the
-  Game's artwork and Save Profiles, selecting the artwork and the profiles the Build plays or last
-  wrote. Copies get their own files. The promoted Build plays its copy of the profile it played,
-  and its states move to those copies, keeping their save times so Auto States still resume. The
-  new Game records Split From, which survives the source Game's deletion. Promoting a Game's only
-  Build by Move just renames the Game.
+  re-importing. Build-scoped data (states, recipes, toolchain reports, variable maps, settings,
+  notes and playtime) always follows the Build. A review sheet chooses the Game-level things: it
+  offers copies of the Game's artwork and Save Profiles, selecting the artwork and the profiles
+  the Build plays or last wrote. Copies get their own files. The promoted Build plays its copy of
+  the profile it played, and its states move to those copies, keeping their save times so Auto
+  States still resume. The new Game records Split From, which survives the source Game's deletion.
+  Promoting a Game's only Build by Move just renames the Game.
 - **Merge into Another Game** reviews in its own sheet: Move or Copy, the target, and the profiles
   and artwork that come along. Move takes every profile, since the source Game goes away; the
   target keeps its artwork unless Use <source>'s Artwork is on. Copy offers the source's artwork
@@ -770,6 +777,10 @@ exposes them; custom border editing is later.
   stored metadata, verification, when the Build was added, and Made With: an engine such as GB
   Studio above the toolchain it runs on, names as their projects spell them, version ranges as
   "x to y" or "x or later".
+- Favorites appear as a small star on grid tiles and list rows, including tiles with titles hidden.
+  Favorite in Game Details and Add to Favorites or Remove from Favorites beside Play and Rename
+  in the library's long-press menu change the same Game flag. Favorites Only in the view menu
+  works with title and alias search.
 - A welcome screen on first launch explains the library, Builds, saves, Quick Play, the game
   menu, exports, and that the app comes with no games. It shows once, again only when its
   content version rises, never in automated runs, and never ahead of a shared file or game.
@@ -780,7 +791,7 @@ exposes them; custom border editing is later.
   smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with
   updates); tags on Games and Builds behind long-press and overflow; sorting by title, recent
   play, added, playtime, year, system, developer, publisher, hack author, Build version and date,
-  last Build change and manual order; favorites and play statistics (no permanent session log); an
+  last Build change and manual order; play statistics (no permanent session log); an
   optional Developer view.
 
 ## Toolchain detection
@@ -815,7 +826,7 @@ or with a rendered Build Info or Bug Report strip. An optional capture context r
 watches, named variables when maps exist, memory ranges, registers, frame and time, Build, hash
 and patches, RTC, cheats, profile, core and settings; a full RAM snapshot is opt-in in Developer
 Mode. Bug-report exports preview a checklist, and memory, saves and notes need explicit inclusion.
-Game notes, Build notes and timestamped gameplay notes.
+Game notes and timestamped gameplay notes; each Build already has a plain-text note in Build Details.
 
 ### Documents (v1.1)
 
