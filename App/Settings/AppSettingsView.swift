@@ -216,6 +216,7 @@ struct AppSettingsView: View {
                 }
 
                 Section {
+                    NavigationLink("How \(AppBrand.displayName) Works") { WelcomeView() }
                     if let privacyURL = URL(string: "https://github.com/thisjustin816/press-any/blob/main/PRIVACY.md") {
                         Link("Privacy Policy", destination: privacyURL)
                     }

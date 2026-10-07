@@ -77,7 +77,9 @@ final class LibraryDeletionFlowTests: XCTestCase {
             evictImage: container.evictGeneratedImage,
             artwork: container.gameArtwork,
             variableMaps: container.attachVariableMap,
-            replaceSave: container.replaceBatterySave
+            replaceSave: container.replaceBatterySave,
+            exporter: container.exportFiles,
+            exportsDirectory: container.exportsDirectory
         )
     }
 }

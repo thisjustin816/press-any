@@ -53,6 +53,7 @@ struct RootView: View {
     @State private var sharedFileRetryScheduled = false
     /// The open game's settings, from its menu.
     @State private var showsGameplaySettings = false
+    @State private var showsWelcome = false
 
     var body: some View {
         Group {
@@ -71,13 +72,24 @@ struct RootView: View {
                 }
             }
         }
-        .task { openScreenshotScene() }
+        .task {
+            openScreenshotScene()
+            showWelcomeIfNeeded()
+        }
         .onOpenURL { receiveSharedFile($0) }
         .onChange(of: pendingResume != nil || riskyLaunch != nil) { _, hasPendingLaunch in
             if !hasPendingLaunch { presentNextSharedFile() }
         }
         .sheet(item: sharedFileBinding(overGameplay: false), onDismiss: finishSharedFile) { file in
             sharedFileView(file)
+        }
+        .sheet(isPresented: $showsWelcome, onDismiss: {
+            WelcomeScreen.markShown()
+            presentNextSharedFile()
+        }) {
+            NavigationStack {
+                WelcomeView { showsWelcome = false }
+            }
         }
         .alert("Couldn’t Open the File", isPresented: sharedFileErrorBinding(overGameplay: false)) {
             Button("OK", role: .cancel) {}
@@ -179,6 +191,14 @@ struct RootView: View {
         } message: {
             Text(errorMessage ?? "Unknown error")
         }
+    }
+
+    /// A launch that opened a shared file or a game goes straight to it, and the welcome waits for
+    /// the next launch.
+    private func showWelcomeIfNeeded() {
+        guard bootstrap.container != nil, WelcomeScreen.showsAtLaunch(),
+              gameplay == nil, sharedFile == nil, queuedSharedFiles.isEmpty else { return }
+        showsWelcome = true
     }
 
     private func receiveSharedFile(_ url: URL) {
