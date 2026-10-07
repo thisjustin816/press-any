@@ -362,7 +362,7 @@ final class TouchControllerView: UIView {
         context.rotate(by: tilt)
         let pill = CGRect(x: -rect.width / 2, y: -rect.height / 2, width: rect.width, height: rect.height)
             .offsetBy(dx: 0, dy: active ? Self.pressDepth : 0)
-        drawRaised(UIBezierPath(roundedRect: pill, cornerRadius: pill.height / 2), top: lighter(palette.pill, by: 0.3), bottom: palette.pill, pressedFace: palette.pillPressed, pressed: active, palette: palette, in: context)
+        drawRaised(UIBezierPath(roundedRect: pill, cornerRadius: pill.height / 2), top: lighter(palette.pill, by: 0.45), bottom: darker(palette.pill, by: 0.2), pressedFace: palette.pillPressed, pressed: active, palette: palette, in: context)
         context.restoreGState()
         // Just below the tilted pill's lowest point.
         let drop = abs(sin(tilt)) * rect.width / 2 + cos(tilt) * rect.height / 2
@@ -374,7 +374,7 @@ final class TouchControllerView: UIView {
         guard let touchRect else { return }
         let rect = cgRect(touchRect).offsetBy(dx: 0, dy: active ? Self.pressDepth : 0)
         // A rubber pill is rounded across its height, so its top catches more light than a flat face.
-        drawRaised(UIBezierPath(roundedRect: rect, cornerRadius: rect.height / 2), top: lighter(palette.pill, by: 0.3), bottom: palette.pill, pressedFace: palette.pillPressed, pressed: active, palette: palette, in: context)
+        drawRaised(UIBezierPath(roundedRect: rect, cornerRadius: rect.height / 2), top: lighter(palette.pill, by: 0.45), bottom: darker(palette.pill, by: 0.2), pressedFace: palette.pillPressed, pressed: active, palette: palette, in: context)
         func lettering(_ color: UIColor) -> NSAttributedString {
             NSAttributedString(string: label, attributes: [
                 .font: UIFont.systemFont(ofSize: max(9, rect.height * 0.36), weight: .bold),
@@ -385,8 +385,9 @@ final class TouchControllerView: UIView {
         let size = lettering(palette.pillText).size()
         let origin = CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2)
         // Pressed into the face like the menu button's wordmark: the top edge of each letter's
-        // recess throws a line of shade just above it.
-        lettering(palette.edgeShade).draw(at: CGPoint(x: origin.x, y: origin.y - 1))
+        // recess throws shade over it, and light catches the edge below it.
+        lettering(palette.edgeLight).draw(at: CGPoint(x: origin.x, y: origin.y + 1))
+        lettering(palette.edgeShade).draw(at: CGPoint(x: origin.x, y: origin.y - 1.5))
         lettering(palette.pillText).draw(at: origin)
     }
 
@@ -467,7 +468,7 @@ final class TouchControllerView: UIView {
         outside.append(path)
         outside.usesEvenOddFillRule = true
         // Deeper on bigger controls, so a short pill and the D-pad both read as shaped.
-        let depth = min(max(path.bounds.height * 0.1, 1.5), 3)
+        let depth = min(max(path.bounds.height * 0.15, 1.5), 3)
         for (color, offset) in [(top, depth), (bottom, -depth)] as [(UIColor?, CGFloat)] {
             guard let color else { continue }
             context.saveGState()
@@ -479,6 +480,13 @@ final class TouchControllerView: UIView {
             context.drawPath(using: .eoFill)
             context.restoreGState()
         }
+    }
+
+    /// The shaded bottom of a face: `color` moved `amount` of the way toward black.
+    private func darker(_ color: UIColor, by amount: CGFloat) -> UIColor {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return UIColor(red: red * (1 - amount), green: green * (1 - amount), blue: blue * (1 - amount), alpha: alpha)
     }
 
     /// The lit top of a face: `color` moved `amount` of the way toward white.
