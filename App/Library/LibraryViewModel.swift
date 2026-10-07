@@ -14,15 +14,18 @@ final class LibraryViewModel: ObservableObject {
     private let gameRepository: any GameRepository
     private let buildRepository: any BuildRepository
     private let launchResolver: ResolvePreferredLaunchContext
+    private let buildOperations: BuildOperations
 
     init(
         gameRepository: any GameRepository,
         buildRepository: any BuildRepository,
-        launchResolver: ResolvePreferredLaunchContext
+        launchResolver: ResolvePreferredLaunchContext,
+        buildOperations: BuildOperations
     ) {
         self.gameRepository = gameRepository
         self.buildRepository = buildRepository
         self.launchResolver = launchResolver
+        self.buildOperations = buildOperations
     }
 
     func system(of game: Game) -> GameSystem {
@@ -50,6 +53,19 @@ final class LibraryViewModel: ObservableObject {
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Renames from the library's long-press menu, the same way Rename Game in Game Details does.
+    func renameGame(_ game: Game, to title: String) {
+        do {
+            try buildOperations.renameGame(gameID: game.id, title: title)
+            reload()
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+        } catch BuildOperationError.invalidGameTitle {
+            report("A Game title can't be blank.")
+        } catch {
+            report(error.localizedDescription)
         }
     }
 

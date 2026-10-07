@@ -306,6 +306,7 @@ the Build's Auto State; 24 h default retention, expired sessions purged.
 | missing | Result actions: edit, freeze, watch, create cheat, copy address | v1.1 |  |
 | missing | Named search sessions within current emulation session | v1.1 |  |
 | missing | Memory Watch list + optional Developer HUD + short history/min/max/graph | v1.1 |  |
+| missing | Developer Mode performance overlay: frame time, dropped frames and audio underruns, recorded on the slowest supported iPhone as the device performance check | v1.1 |  |
 | missing | Immediate Developer Mode memory writes with Undo Last Write, frozen indication | v1.1 |  |
 | missing | Frame advance + frame counter (bindable) | v1.1 |  |
 | missing | Full debugger/disassembler/VRAM viewer | later |  |

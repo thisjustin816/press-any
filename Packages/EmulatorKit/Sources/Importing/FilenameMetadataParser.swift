@@ -263,6 +263,9 @@ public enum FilenameMetadataParser {
         version.range(of: #"^(?:19|20)[0-9]{2}\.(?:0[1-9]|1[0-2])\.(?:0[1-9]|[12][0-9]|3[01])$"#, options: .regularExpression) != nil
     }
 
+    /// Words an all-lowercase name keeps in capitals: "mole_mania_dx" is "Mole Mania DX".
+    private static let uppercaseWords: Set<String> = ["dx", "gb", "gbc", "sgb", "rpg", "ii", "iii", "iv"]
+
     /// A "v" version word after at least one title word, separated by spaces or underscores, or by
     /// hyphens in a name that has no spaces, so "R-Type v2" keeps its title. The title words are
     /// joined with spaces, and the words after the version are the variant.
@@ -280,10 +283,22 @@ public enum FilenameMetadataParser {
             var titleWords = Array(words[..<index])
             // An all-lowercase joined name, as in "match-land-live-0.3.0", reads better capitalized.
             if title.allSatisfy({ !$0.isUppercase }) {
-                titleWords = titleWords.map { $0.prefix(1).uppercased() + $0.dropFirst() }
+                titleWords = titleWords.map {
+                    uppercaseWords.contains($0) ? $0.uppercased() : $0.prefix(1).uppercased() + $0.dropFirst()
+                }
             }
-            let variant = words[(index + 1)...].joined(separator: " ")
-            return (titleWords.joined(separator: " "), value, variant.isEmpty ? nil : variant)
+            // In a joined name the separators stand in for the version's dots: "mole_mania_dx_v1_3" is 1.3.
+            var version = value
+            var variantStart = index + 1
+            if !title.contains(" "), value.allSatisfy(\.isNumber) {
+                while variantStart < words.count, variantStart - index < 4,
+                      words[variantStart].count <= 3, words[variantStart].allSatisfy(\.isNumber) {
+                    version += "." + words[variantStart]
+                    variantStart += 1
+                }
+            }
+            let variant = words[variantStart...].joined(separator: " ")
+            return (titleWords.joined(separator: " "), version, variant.isEmpty ? nil : variant)
         }
         return nil
     }
