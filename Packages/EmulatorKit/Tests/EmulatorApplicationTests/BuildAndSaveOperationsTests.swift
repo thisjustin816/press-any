@@ -6,6 +6,53 @@ import Foundation
 import XCTest
 
 final class BuildAndSaveOperationsTests: XCTestCase {
+    func testNotesPreservePlainTextAndCanBeCleared() throws {
+        let harness = try Harness.make()
+        let note = "  Route A\n**literal text**  "
+        let operations = harness.buildOperations()
+        try operations.setNotes(buildID: harness.baseBuild.id, notes: note)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.baseBuild.id)?.notes, note)
+        try operations.setNotes(buildID: harness.baseBuild.id, notes: "")
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.baseBuild.id)?.notes, "")
+    }
+
+    func testFavoritesSurviveMoveAndCopyPromotionAndMerge() throws {
+        for mode in [ReorganizationMode.move, .copy] {
+            for sourceFavorite in [false, true] {
+                for targetFavorite in [false, true] {
+                    let harness = try Harness.make(twoBuilds: true)
+                    let operations = harness.buildOperations()
+                    let second = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+                    try operations.setFavorite(gameID: harness.game.id, isFavorite: sourceFavorite)
+                    try operations.setNotes(buildID: second.id, notes: "Second Build")
+                    try harness.builds.addPlaytime(buildID: second.id, seconds: 45)
+                    let promoted = try operations.promoteBuild(buildID: second.id, title: "Separate", mode: mode)
+                    XCTAssertEqual(promoted.isFavorite, sourceFavorite)
+                    let promotedBuild = try XCTUnwrap(harness.builds.fetchBuilds(gameID: promoted.id).first)
+                    XCTAssertEqual(promotedBuild.notes, "Second Build")
+                    XCTAssertEqual(promotedBuild.totalPlaytimeSeconds, 45)
+                    let target = try harness.createStandaloneGame(title: "Target")
+                    try operations.setFavorite(gameID: target.id, isFavorite: targetFavorite)
+                    try operations.mergeGame(sourceGameID: promoted.id, into: target.id, mode: mode)
+                    XCTAssertEqual(try harness.games.fetchGame(id: target.id)?.isFavorite, sourceFavorite || targetFavorite)
+                    let merged = try XCTUnwrap(harness.builds.fetchBuilds(gameID: target.id).first { $0.imageSHA256 == second.imageSHA256 })
+                    XCTAssertEqual(merged.notes, "Second Build")
+                    XCTAssertEqual(merged.totalPlaytimeSeconds, 45)
+                }
+            }
+        }
+    }
+
+    func testOnlyBuildPromotionKeepsFavoriteAndCanBeUnfavorited() throws {
+        let harness = try Harness.make()
+        let operations = harness.buildOperations()
+        try operations.setFavorite(gameID: harness.game.id, isFavorite: true)
+        let promoted = try operations.promoteBuild(buildID: harness.baseBuild.id, title: "Renamed", mode: .move)
+        XCTAssertTrue(promoted.isFavorite)
+        try operations.setFavorite(gameID: promoted.id, isFavorite: false)
+        XCTAssertEqual(try harness.games.fetchGame(id: promoted.id)?.isFavorite, false)
+    }
+
     func testRenameGameKeepsAliasesAndProtectsThePlayerTitle() throws {
         let harness = try Harness.make()
         let operations = harness.buildOperations()

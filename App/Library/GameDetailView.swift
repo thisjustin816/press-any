@@ -36,6 +36,7 @@ struct GameDetailView: View {
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
     @State private var technicalInfo: Build?
+    @State private var buildDetails: Build?
     @State private var pendingReplacement: PendingReplacement?
     @State private var badgeTarget: SaveProfile?
     @State private var statesProfile: SaveProfile?
@@ -138,6 +139,11 @@ struct GameDetailView: View {
 
     private var playSection: some View {
         Section {
+            Toggle("Favorite", isOn: Binding(
+                get: { model.game?.isFavorite ?? false },
+                set: { model.setFavorite($0) }
+            ))
+            .accessibilityIdentifier("game.favorite")
             Button {
                 launch(build: model.preferredBuild)
             } label: {
@@ -283,6 +289,9 @@ struct GameDetailView: View {
                     buildID: target.buildID,
                     store: container.repositories.settings
                 )
+            }
+            .sheet(item: $buildDetails) { build in
+                BuildDetailView(build: build, container: container)
             }
             .sheet(item: $technicalInfo) { build in
                 BuildTechnicalInfoView(build: build, container: container)
@@ -483,6 +492,7 @@ struct GameDetailView: View {
             buildName = build.displayName
             renamingBuild = build
         }
+        Button("Build Details...") { buildDetails = build }
         Button("Technical Info…") { technicalInfo = build }
         Button("Export ROM") { model.exportROM(of: build) }
         Button("Build Settings…") {

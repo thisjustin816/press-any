@@ -519,9 +519,11 @@ extension EmulationSessionTests {
         _ = try session.stepFrame()
         _ = try session.stepFrame()
         try session.background()
+        try session.background()
 
         var profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
         XCTAssertEqual(profile.totalPlaytimeSeconds, 2 * frame, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id)).totalPlaytimeSeconds, 2 * frame, accuracy: 1e-9)
         XCTAssertEqual(profile.sessionCount, 1)
         XCTAssertEqual(profile.lastPlayedAt, Date(timeIntervalSince1970: 1_700_000_500))
         XCTAssertEqual(profile.modifiedAt, harness.profile.modifiedAt)
@@ -531,12 +533,18 @@ extension EmulationSessionTests {
         try session.stop()
         profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
         XCTAssertEqual(profile.totalPlaytimeSeconds, 3 * frame, accuracy: 1e-9, "time isn't counted twice")
+        XCTAssertEqual(try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id)).totalPlaytimeSeconds, 3 * frame, accuracy: 1e-9)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.buildB.id)?.totalPlaytimeSeconds, 0)
         XCTAssertEqual(profile.sessionCount, 1, "one session, however many times it backgrounds")
 
         let next = harness.makeSession()
-        try next.start(context: harness.contextA)
+        try next.start(context: harness.contextB)
         _ = try next.stepFrame()
         XCTAssertEqual(next.playtimeSeconds, 4 * frame, accuracy: 1e-9)
+        try next.stop()
+        XCTAssertEqual(try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id)).totalPlaytimeSeconds, 3 * frame, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildB.id)).totalPlaytimeSeconds, frame, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id)).totalPlaytimeSeconds, 4 * frame, accuracy: 1e-9)
     }
 }
 
@@ -665,6 +673,9 @@ extension EmulationSessionTests {
         let autos = try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
         XCTAssertEqual(autos.map(\.kind), [.auto])
         XCTAssertNotNil(try session.resumableAutoState(for: harness.contextA), "the state is the way back to the unsaved game")
+        XCTAssertEqual(try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id)).totalPlaytimeSeconds, 0.016742706, accuracy: 1e-9)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.buildA.id)?.totalPlaytimeSeconds,
+                       try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.totalPlaytimeSeconds)
     }
 
     func testAFailedStopStaysOpenToRetryOrToCloseWithoutSaving() throws {

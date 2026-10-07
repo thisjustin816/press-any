@@ -32,6 +32,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v9-game-identity") { db in
             try db.execute(sql: V1V9GameIdentitySchema.sql)
         }
+        migrator.registerMigration("v1-v10-library-model") { db in
+            try db.execute(sql: V1V10LibraryModelSchema.sql)
+        }
         return migrator
     }
 }
@@ -331,5 +334,13 @@ enum V1V9GameIdentitySchema {
     );
     CREATE INDEX game_aliases_title ON game_aliases(title COLLATE NOCASE);
     ALTER TABLE builds ADD COLUMN base_game_reference_json TEXT;
+    """
+}
+
+enum V1V10LibraryModelSchema {
+    static let sql = """
+    ALTER TABLE games ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0 CHECK (is_favorite IN (0, 1));
+    ALTER TABLE builds ADD COLUMN notes TEXT NOT NULL DEFAULT '';
+    ALTER TABLE builds ADD COLUMN total_playtime_seconds REAL NOT NULL DEFAULT 0 CHECK (total_playtime_seconds >= 0);
     """
 }

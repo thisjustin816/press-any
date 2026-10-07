@@ -55,6 +55,8 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
     public var author: String?
     public var translation: String?
     public var status: String?
+    public var notes: String
+    public var totalPlaytimeSeconds: Double
     public var preferredSaveProfileID: UUID?
     public var corePin: CorePin?
     public let createdAt: Date
@@ -82,6 +84,8 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         author: String? = nil,
         translation: String? = nil,
         status: String? = nil,
+        notes: String = "",
+        totalPlaytimeSeconds: Double = 0,
         preferredSaveProfileID: UUID? = nil,
         corePin: CorePin? = nil,
         createdAt: Date,
@@ -108,9 +112,44 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         self.author = author
         self.translation = translation
         self.status = status
+        self.notes = notes
+        self.totalPlaytimeSeconds = totalPlaytimeSeconds
         self.preferredSaveProfileID = preferredSaveProfileID
         self.corePin = corePin
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try values.decode(UUID.self, forKey: .id),
+            gameID: try values.decode(UUID.self, forKey: .gameID),
+            system: try values.decode(GameSystem.self, forKey: .system),
+            displayName: try values.decode(String.self, forKey: .displayName),
+            imageAssetID: try values.decode(UUID.self, forKey: .imageAssetID),
+            imageSHA256: try values.decode(String.self, forKey: .imageSHA256),
+            imageSHA1: try values.decodeIfPresent(String.self, forKey: .imageSHA1),
+            sourceKind: try values.decode(BuildSourceKind.self, forKey: .sourceKind),
+            parentBuildID: try values.decodeIfPresent(UUID.self, forKey: .parentBuildID),
+            isBase: try values.decode(Bool.self, forKey: .isBase),
+            region: try values.decodeIfPresent(String.self, forKey: .region),
+            language: try values.decodeIfPresent(String.self, forKey: .language),
+            revision: try values.decodeIfPresent(String.self, forKey: .revision),
+            versionString: try values.decodeIfPresent(String.self, forKey: .versionString),
+            versionSortKey: try values.decodeIfPresent(String.self, forKey: .versionSortKey),
+            baseGameReference: try values.decodeIfPresent(BaseGameReference.self, forKey: .baseGameReference),
+            baseTitle: try values.decodeIfPresent(String.self, forKey: .baseTitle),
+            hackTitle: try values.decodeIfPresent(String.self, forKey: .hackTitle),
+            author: try values.decodeIfPresent(String.self, forKey: .author),
+            translation: try values.decodeIfPresent(String.self, forKey: .translation),
+            status: try values.decodeIfPresent(String.self, forKey: .status),
+            notes: try values.decodeIfPresent(String.self, forKey: .notes) ?? "",
+            totalPlaytimeSeconds: try values.decodeIfPresent(Double.self, forKey: .totalPlaytimeSeconds) ?? 0,
+            preferredSaveProfileID: try values.decodeIfPresent(UUID.self, forKey: .preferredSaveProfileID),
+            corePin: try values.decodeIfPresent(CorePin.self, forKey: .corePin),
+            createdAt: try values.decode(Date.self, forKey: .createdAt),
+            modifiedAt: try values.decode(Date.self, forKey: .modifiedAt)
+        )
     }
 }

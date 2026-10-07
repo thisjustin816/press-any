@@ -80,7 +80,20 @@ public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable
     }
 
     public func insertBuild(_ build: Build) throws { lock.withLock { values[build.id] = build } }
-    public func updateBuildMetadata(_ build: Build) throws { lock.withLock { values[build.id] = build } }
+    public func updateBuildMetadata(_ build: Build) throws {
+        lock.withLock {
+            var updated = build
+            updated.totalPlaytimeSeconds = values[build.id]?.totalPlaytimeSeconds ?? build.totalPlaytimeSeconds
+            values[build.id] = updated
+        }
+    }
+
+    public func addPlaytime(buildID: UUID, seconds: Double) throws {
+        try lock.withLock {
+            guard values[buildID] != nil else { throw BuildOperationError.buildNotFound(buildID) }
+            values[buildID]?.totalPlaytimeSeconds += seconds
+        }
+    }
 
     public func moveBuild(id: UUID, toGameID: UUID) throws {
         lock.withLock { values[id]?.gameID = toGameID }

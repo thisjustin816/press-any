@@ -7,6 +7,50 @@ import Testing
 
 @Suite("GRDB persistence")
 struct PersistenceGRDBTests {
+    @Test("notes and favorites round-trip, and metadata edits keep accumulated Build playtime")
+    func buildNotesPlaytimeAndFavorites() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        var game = fixture.game
+        game.isFavorite = true
+        try repositories.games.updateGame(game)
+        #expect(try repositories.games.fetchGame(id: game.id) == game)
+        game.isFavorite = false
+        try repositories.games.updateGame(game)
+        #expect(try repositories.games.fetchGame(id: game.id) == game)
+
+        var build = fixture.build
+        build.notes = "  Test route\n# Plain text, including whitespace  "
+        try repositories.builds.updateBuildMetadata(build)
+        #expect(try repositories.builds.fetchBuild(id: build.id)?.notes == build.notes)
+        try repositories.builds.addPlaytime(buildID: build.id, seconds: 12.5)
+        try repositories.builds.addPlaytime(buildID: build.id, seconds: 7.25)
+        build.notes = ""
+        try repositories.builds.updateBuildMetadata(build)
+        let read = try #require(try repositories.builds.fetchBuild(id: build.id))
+        #expect(read.notes.isEmpty)
+        #expect(read.totalPlaytimeSeconds == 19.75)
+        #expect(read.imageSHA256 == build.imageSHA256)
+        #expect(read.modifiedAt == build.modifiedAt)
+        #expect(try repositories.builds.fetchBuild(id: fixture.patchedBuild.id)?.totalPlaytimeSeconds == 0)
+        let insertedGame = Game(
+            id: UUID(), primaryTitle: "Favorite", systemFamily: "gameboy", isFavorite: true,
+            createdAt: game.createdAt, modifiedAt: game.modifiedAt
+        )
+        try repositories.games.insertGame(insertedGame)
+        let insertedBuild = Build(
+            id: UUID(), gameID: insertedGame.id, system: build.system, displayName: "With Notes",
+            imageAssetID: build.imageAssetID, imageSHA256: build.imageSHA256, sourceKind: .importedImage,
+            notes: "Inserted note", totalPlaytimeSeconds: 4.5, createdAt: build.createdAt, modifiedAt: build.modifiedAt
+        )
+        try repositories.builds.insertBuild(insertedBuild)
+        #expect(try repositories.games.fetchGame(id: insertedGame.id) == insertedGame)
+        #expect(try repositories.builds.fetchBuild(id: insertedBuild.id) == insertedBuild)
+
+    }
+
     @Test("aliases, player titles and lineage without a base round-trip")
     func identityFields() throws {
         let database = try AppDatabase.inMemory()

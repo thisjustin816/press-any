@@ -160,6 +160,16 @@ final class GameDetailViewModel: ObservableObject {
         perform { try buildOperations.setPreferredBuild(gameID: gameID, buildID: build.id) }
     }
 
+    func setFavorite(_ isFavorite: Bool) {
+        do {
+            try buildOperations.setFavorite(gameID: gameID, isFavorite: isFavorite)
+            reload()
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func renameGame(to title: String) {
         do {
             try buildOperations.renameGame(gameID: gameID, title: title)

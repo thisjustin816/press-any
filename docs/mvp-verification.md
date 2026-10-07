@@ -11,6 +11,11 @@ Automated coverage runs in CI (`docs/ci.md`). These checks need a real device.
 The `Shared ROM and patch UI flows` CI job automates the share-sheet, queue and return-to-details
 scenarios on a simulator. Keep these device checks pending until they pass on an iPhone.
 
+The notes and favorites app tests cover editing, canceling, clearing, relaunching, both favorite
+actions, and combining Favorites Only with search. Core tests cover the populated v9 upgrade,
+repository round-trips, lifecycle playtime and move/copy behavior. The checks below still need
+an iPhone.
+
 Verify with a user-supplied legal ROM:
 
 - [ ] Generate/open the iOS project from a clean checkout.
@@ -58,6 +63,11 @@ Verify with a user-supplied legal ROM:
 - [ ] Settings > Acknowledgements lists SameBoy, GRDB.swift and gbtoolsid, and each opens its license text or credit.
 - [ ] Controller Theme: Classic shows dark status bar text and Dark light text, and Match System follows Light and Dark Mode. The library behind the game keeps its own appearance.
 - [ ] A library game shows the boot logo by default; with Settings > Skip Boot Logo on, it opens on the game.
+- [ ] From a Build's long-press menu, open Build Details and Edit Notes. Save several lines containing literal Markdown and spaces: they appear as plain text. Edit and Cancel, then reopen and relaunch: the stored note stays. Save an empty note: it clears.
+- [ ] Play Build A, background and foreground twice, then Close Game. Build Details shows the accumulated playtime. Download the container and verify Build A and its Save Profile gained the same time, each interval counted once. Play Build B with the same profile: only B gains that interval, and the profile adds it. Reopen the app and confirm both Build totals remain.
+- [ ] Toggle Favorite in Game Details, then long-press the Game in the library: Play, Add to Favorites or Remove from Favorites, and Rename are available. Both actions change the same favorite. Grid and list show a small star, including with Show Titles off. Favorites Only works with title and alias searches; removing the last favorite gives an empty view. Turn the filter off and all Games return. Relaunch and verify favorite state persists.
+- [ ] Move and copy a favorited Game's Build to a separate Game, then merge into an unfavorited Game. Favorite state, Build notes and playtime follow each move and copy; the merge survivor is a favorite if either Game was. Also promote the only Build by Move.
+- [ ] Upgrade a populated v9 library containing Builds, profiles, states, recipes, aliases and Recently Deleted records. All old data remains, favorites start off, Build notes are empty and Build playtime starts at zero; old profile totals stay intact. Restore a deleted Build and verify its data.
 - [ ] Move a Build to its own Game and merge it back; Build identity and data remain intact.
 - [ ] Make Separate Game shows a review with the Build's own Save Profiles and the artwork selected; the new Game gets copies, shows Split From, and the original Game is unchanged.
 - [ ] In Import Review for a new Game, choose artwork from Photos, then replace it from Files: the preview changes, and after Import the library tile and the Game show it. Choose a file that isn't an image: review refuses it and the import still works. Add a Build to a Game that has artwork without choosing any: its artwork stays.

@@ -6,6 +6,57 @@ import Testing
 
 @Suite("GRDB migrations")
 struct MigrationTests {
+    @Test("the v1 library-model migration preserves every populated table", arguments: [false, true])
+    func libraryModelUpgrade(includingDeletedRecords: Bool) throws {
+        let database = try AppDatabase.inMemory()
+        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v9-game-identity")
+        let fixture = try legacyFixture(in: database, includingDeletedRecords: includingDeletedRecords)
+        let before = try database.writer.read { db in
+            let tables = try String.fetchAll(
+                db,
+                sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'grdb_migrations' ORDER BY name"
+            )
+            return try tables.map { table in
+                let columns = try db.columns(in: table).map(\.name)
+                let rows = try Row.fetchAll(db, sql: "SELECT \(columns.joined(separator: ",")) FROM \(table) ORDER BY rowid")
+                return (table, columns, rows)
+            }
+        }
+        #expect(before.count == 13)
+        #expect(before.allSatisfy { !$0.2.isEmpty }, "every existing application table has rows to preserve")
+
+        try database.migrate()
+
+        try database.writer.read { db in
+            for (table, columns, rows) in before {
+                let upgraded = try Row.fetchAll(db, sql: "SELECT \(columns.joined(separator: ",")) FROM \(table) ORDER BY rowid")
+                #expect(upgraded == rows, "migration changed existing rows in \(table)")
+            }
+            #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(2) == [
+                "v1-v9-game-identity", "v1-v10-library-model",
+            ])
+        }
+        let repositories = database.makeRepositories()
+        let game = try #require(try repositories.games.fetchGame(id: fixture.game.id))
+        #expect(game == fixture.game)
+        #expect(!game.isFavorite)
+        let build = try #require(try repositories.builds.fetchBuild(id: fixture.build.id))
+        #expect(build == fixture.build)
+        #expect(build.notes.isEmpty)
+        #expect(build.totalPlaytimeSeconds == 0)
+        #expect(try repositories.saveProfiles.fetchSaveProfile(id: fixture.profile.id) == fixture.profile)
+        #expect(try repositories.saveStates.fetchSaveState(id: fixture.state.id) == fixture.state)
+        let recipe = try #require(try repositories.patchRecipes.fetchPatchRecipe(resultBuildID: fixture.patchedBuild.id))
+        #expect(recipe == fixture.recipe)
+        if includingDeletedRecords {
+            #expect(try repositories.builds.fetchBuild(id: fixture.patchedBuild.id) == nil)
+            let deletion = try #require(try repositories.deletions.fetchDeletions().first)
+            try repositories.deletions.restoreDeletion(id: deletion.id)
+        }
+        #expect(try repositories.builds.fetchBuild(id: fixture.patchedBuild.id) == fixture.patchedBuild)
+    }
+
     @Test("existing Base markers collapse to one and the database enforces that role")
     func singleBaseUpgrade() throws {
         let database = try AppDatabase.inMemory()
@@ -189,8 +240,10 @@ struct MigrationTests {
         #expect(game.lineage == nil)
         #expect(game.aliases.isEmpty)
         #expect(game.hasPlayerTitle, "preexisting titles have no recorded provenance")
+        #expect(!game.isFavorite)
         let builds = try repositories.builds.fetchBuilds(gameID: gameID)
         #expect(builds.map(\.id) == [buildID, patchedID])
+        #expect(builds.allSatisfy { $0.notes.isEmpty && $0.totalPlaytimeSeconds == 0 })
         #expect(builds.allSatisfy { $0.baseTitle == nil && $0.hackTitle == nil && $0.author == nil && $0.translation == nil && $0.status == nil })
         let profile = try #require(try repositories.saveProfiles.fetchSaveProfile(id: profileID))
         #expect(profile.persistentSaveAssetID == batteryID)
@@ -205,5 +258,7 @@ struct MigrationTests {
         #expect(recipe.items == [PatchRecipeItem(position: 0, patchAssetID: patchID, enabled: true, ignoresBaseMismatch: false)])
         #expect(try repositories.toolchainReports.fetchReports(buildID: buildID) == [])
         #expect(try repositories.variableMaps.fetchVariableMaps(buildID: buildID) == [])
+        let violations = try database.writer.read { db in try Row.fetchAll(db, sql: "PRAGMA foreign_key_check") }
+        #expect(violations.isEmpty)
     }
 }

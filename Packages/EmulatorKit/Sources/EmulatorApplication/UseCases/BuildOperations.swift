@@ -102,6 +102,20 @@ public struct BuildOperations: Sendable {
         try builds.updateBuildMetadata(build)
     }
 
+    public func setFavorite(gameID: UUID, isFavorite: Bool) throws {
+        guard var game = try games.fetchGame(id: gameID) else { throw BuildOperationError.gameNotFound(gameID) }
+        game.isFavorite = isFavorite
+        game.modifiedAt = now()
+        try games.updateGame(game)
+    }
+
+    public func setNotes(buildID: UUID, notes: String) throws {
+        guard var build = try builds.fetchBuild(id: buildID) else { throw BuildOperationError.buildNotFound(buildID) }
+        build.notes = notes
+        build.modifiedAt = now()
+        try builds.updateBuildMetadata(build)
+    }
+
     public func renameGame(gameID: UUID, title: String, hasPlayerTitle: Bool = true) throws {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { throw BuildOperationError.invalidGameTitle }
@@ -193,6 +207,7 @@ public struct BuildOperations: Sendable {
                 primaryTitle: title,
                 systemFamily: "gameboy",
                 hasPlayerTitle: true,
+                isFavorite: sourceGame?.isFavorite ?? false,
                 lineage: sourceGame.map { GameLineage(sourceGameID: $0.id, sourceTitle: $0.primaryTitle) },
                 createdAt: timestamp,
                 modifiedAt: timestamp
@@ -314,6 +329,7 @@ public struct BuildOperations: Sendable {
         let replacesArtwork = mode == .move && carryOver.artwork && sourceGame.artworkAssetID != nil
         try transactions.run { [games, builds, profiles, targetGame, replacements] in
             var updatedTargetGame = targetGame
+            updatedTargetGame.isFavorite = targetGame.isFavorite || sourceGame.isFavorite
             var firstMergedBuildID: UUID?
             var played: [UUID: UUID?] = [:]
             var targetHasBase = targetBuilds.contains { $0.isBase }
@@ -487,6 +503,8 @@ public struct BuildOperations: Sendable {
             author: source.author,
             translation: source.translation,
             status: source.status,
+            notes: source.notes,
+            totalPlaytimeSeconds: source.totalPlaytimeSeconds,
             preferredSaveProfileID: nil,
             corePin: source.corePin,
             createdAt: timestamp,

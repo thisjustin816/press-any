@@ -18,8 +18,8 @@ migrating later.
    hash matching, family grouping, regional proposals, reviewed family merges and Match Game
    with absent-base lineage are built. "No-Intro data" in `docs/product.md` describes the behavior.
 2. The rest of the data model, in as few schema migrations as possible: metadata provenance with
-   Metadata Details, Build notes, per-Build playtime, favorites, declared save compatibility,
-   per-step patch input hashes, and the cross-region save check. Game aliases and rename are built.
+   Metadata Details, declared save compatibility, per-step patch input hashes, and the cross-region
+   save check. Game aliases, rename, Build notes, per-Build playtime and favorites are built.
 3. Multi-signal development-build matching, the one import item left in v1.
 4. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
    with cleanup, in-flight protection and verification on read.
@@ -33,7 +33,7 @@ migrating later.
 v1 is a good core experience; everything else waits for v1.1: 7z and multi-asset import,
 artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
 Actions, the DMG/GBC/SGB model override, shaders and the layout editor with skin import,
-screenshots and notes, external displays, tags and collections, iCloud sync once the schema has
+screenshots and gameplay notes, external displays, tags and collections, iCloud sync once the schema has
 settled, the Community Catalog and metadata providers, crash reporting and usage counts, Developer
 Mode, editable patch stacks, the Build timeline and comparison screen, in-game Build switching,
 RTC offsets, rumble routing, Undo, core updates, and the internal registries and descriptors.
@@ -120,7 +120,9 @@ ROMs and patches on demand.
 | done | Game aliases/alternate titles (indexed) | v1 | normalized indexed alias table in one identity migration; family titles added at import; library search matches aliases, including "Pocket Monsters Crystal" for Pokémon Crystal; FTS5 remains separate |
 | partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
 | done | Presentation-metadata editing (rename Game/Build after creation) | v1 | Rename Game in Game Details preserves the former title as an alias and protects the player title; Rename Build; Suggest Names reviews Game titles and Build names, retaining old Game titles as aliases |
-| partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain and sidecars were MVP) | toolchain reports and variable maps done; the rest missing |
+| partial | Build toolchain record, variable-map sidecars, artwork/doc overrides, activation history | v1 (toolchain and sidecars were MVP) | toolchain reports and variable maps done; artwork/doc overrides and activation history missing |
+| done | Build notes | v1 | one plain-text note, shown and edited in Build Details; whitespace preserved; clear or cancel edits; notes follow moved and copied Builds; FTS5 note search comes later |
+| done | Per-Build playtime | v1 | session time added to Build and Save Profile together on background and close, without double counting; shown in Build Details; Game rollups and the statistics screen come later |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1.1 |  |
 | missing | Typed multi-artwork model with primary selection | v1.1 | Game.artworkAssetID is a single image |
 | missing | Tags and collections | v1.1 |  |
@@ -143,8 +145,8 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 | missing | Smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates) | v1.1 |  |
 | missing | Tags on Games/Builds via long-press/overflow | v1.1 |  |
 | partial | Sorting | v1 | title only; recent/added/playtime/release year/system/developer/publisher/hack author/Build version/last Build change/manual order missing |
-| missing | Favorites | v1 |  |
-| partial | Play statistics | v1 | profile playtime, session count, last played recorded but never displayed; per-Build playtime, Game rollups, play count, last played on Game missing |
+| done | Favorites | v1 | Game Details toggle and library long-press menu beside Play and Rename; small star on tiles/list rows; Favorites Only works with search; merge keeps either favorite and promotion carries it |
+| partial | Play statistics | v1 | Build playtime recorded and shown in Build Details; profile playtime, session count and last played recorded; profile display, Game rollups, play count, last played on Game and the statistics screen remain |
 
 Done: Box-art grid and compact list; Game detail with Builds and Save Profiles; Preferred Build
 one-tap Play; explicit choice never silently changed; Build switch from Game detail; long-press to
@@ -326,7 +328,7 @@ the Build's Auto State; 24 h default retention, expired sessions purged.
 | missing | Optional atomic Capture Context (watches, named vars, memory ranges, registers, frame/time, Build/hash/patches, RTC, cheats, profile, core/settings) | v1.1 |  |
 | missing | Full-RAM snapshot (opt-in, Developer Mode) | v1.1 |  |
 | missing | Bug-report export (Markdown/JSON) with privacy checklist/preview | v1.1 | lands in the Files folder, with any memory or save captures the player includes |
-| missing | Game notes, Build notes, timestamped gameplay notes with attachments | v1.1 |  |
+| missing | Game notes, timestamped gameplay notes with attachments | v1.1 | plain-text Build notes are built |
 
 ### Rewind and speed
 

@@ -20,9 +20,11 @@ final class GameIdentityFieldsTests: XCTestCase {
         var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
         legacy.removeValue(forKey: "aliases")
         legacy.removeValue(forKey: "hasPlayerTitle")
+        legacy.removeValue(forKey: "isFavorite")
         let decoded = try JSONDecoder().decode(Game.self, from: JSONSerialization.data(withJSONObject: legacy))
         XCTAssertEqual(decoded.primaryTitle, game.primaryTitle)
         XCTAssertTrue(decoded.hasPlayerTitle)
         XCTAssertTrue(decoded.aliases.isEmpty)
+        XCTAssertFalse(decoded.isFavorite)
     }
 }
