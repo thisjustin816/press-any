@@ -175,7 +175,7 @@ Done: Search by primary title.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; a repeated name gains the date the Build was added; Suggest Build Names reviews existing Builds; broader real-world corpus tuning remains |
+| partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; the parser recognizes numbered development flags and Sample, Kiosk and Debug, and drops Aftermarket and Unl; a repeated name gains the date the Build was added; Suggest Build Names reviews existing Builds; broader real-world corpus tuning remains |
 | partial | Header read/validate/display, no editing | v1 | dec 18 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
 | partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | prod "ROM identity"; dec 17; D 2026-10-06 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1 | dec 17 | physical renaming is an explicit action |

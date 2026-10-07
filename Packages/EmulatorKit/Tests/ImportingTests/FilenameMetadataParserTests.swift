@@ -3,6 +3,87 @@ import XCTest
 @testable import Importing
 
 final class FilenameMetadataParserTests: XCTestCase {
+    func testNumberedDevelopmentFlagsPreserveTheirNumbersAndCanonicalStatus() {
+        for (flag, status) in [
+            ("Alpha 1", "Alpha 1"), ("Beta 2", "Beta 2"), ("Demo 2", "Demo 2"),
+            ("Proto 1", "Prototype 1"), ("Prototype 3", "Prototype 3"),
+            ("Preview 4", "Preview 4"), ("RC 2", "RC 2"),
+            ("Release Candidate 3", "RC 3"), ("Final 1", "Final 1"),
+            ("Beta", "Beta"), ("Proto", "Prototype"),
+        ] {
+            for spelling in [flag, flag.lowercased(), flag.uppercased()] {
+                let parsed = FilenameMetadataParser.parse(filename: "Example (\(spelling)).gb")
+                XCTAssertEqual(parsed.suggestedTitle, "Example", spelling)
+                XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(status: status), spelling)
+                XCTAssertEqual(parsed.suggestedBuildName, status, spelling)
+                XCTAssertEqual(parsed.normalizedFilename, "Example [\(status)].gb", spelling)
+                XCTAssertEqual(parsed.releaseKind, .development, spelling)
+                XCTAssertEqual(parsed.unknownGroups, [], spelling)
+            }
+        }
+    }
+
+    func testOtherNoIntroDevelopmentFlagsBecomeStatuses() {
+        for status in ["Sample", "Kiosk", "Debug"] {
+            for spelling in [status, status.lowercased(), status.uppercased()] {
+                let parsed = FilenameMetadataParser.parse(filename: "Example (\(spelling)).gb")
+                XCTAssertEqual(parsed.suggestedTitle, "Example", spelling)
+                XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(status: status), spelling)
+                XCTAssertEqual(parsed.suggestedBuildName, status, spelling)
+                XCTAssertEqual(parsed.normalizedFilename, "Example [\(status)].gb", spelling)
+                XCTAssertEqual(parsed.releaseKind, .development, spelling)
+                XCTAssertEqual(parsed.unknownGroups, [], spelling)
+            }
+        }
+    }
+
+    func testAftermarketAndUnlicensedFlagsAreDroppedWithoutChangingReleaseKindOrConfidence() {
+        for flags in ["(Aftermarket)", "(Unl)", "(Aftermarket) (Unl)", "(aftermarket) (unl)", "(AFTERMARKET) (UNL)"] {
+            let parsed = FilenameMetadataParser.parse(filename: "Example \(flags).gb")
+            XCTAssertEqual(parsed.suggestedTitle, "Example", flags)
+            XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(), flags)
+            XCTAssertEqual(parsed.suggestedBuildName, "Original", flags)
+            XCTAssertEqual(parsed.normalizedFilename, "Example.gb", flags)
+            XCTAssertEqual(parsed.releaseKind, .standard, flags)
+            XCTAssertEqual(parsed.confidence, .low, flags)
+            XCTAssertEqual(parsed.unknownGroups, [], flags)
+        }
+
+        let parsed = FilenameMetadataParser.parse(filename: "Moon Garden (World) (v1.1) (Aftermarket) (Unl).gb")
+        XCTAssertEqual(parsed.suggestedTitle, "Moon Garden")
+        XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(region: "World", versionString: "1.1"))
+        XCTAssertEqual(parsed.suggestedBuildName, "v1.1")
+        XCTAssertEqual(parsed.normalizedFilename, "Moon Garden (World) [v1.1].gb")
+        XCTAssertEqual(parsed.releaseKind, .development)
+        XCTAssertEqual(parsed.confidence, .high)
+        XCTAssertEqual(parsed.unknownGroups, [])
+    }
+
+    func testFirstNoIntroStatusWinsAndLaterStatusesAreRecognized() {
+        let parsed = FilenameMetadataParser.parse(filename: "Pocket Critters (USA) (Beta 2) (Kiosk).gb")
+        XCTAssertEqual(parsed.suggestedTitle, "Pocket Critters")
+        XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(region: "USA", status: "Beta 2"))
+        XCTAssertEqual(parsed.suggestedBuildName, "Beta 2")
+        XCTAssertEqual(parsed.normalizedFilename, "Pocket Critters (USA) [Beta 2].gb")
+        XCTAssertEqual(parsed.releaseKind, .development)
+        XCTAssertEqual(parsed.unknownGroups, [])
+    }
+
+    func testPirateAndVirtualConsoleStayUnknownWithoutChangingReleaseKind() {
+        for groups in [["Pirate"], ["Virtual Console"], ["Pirate", "Virtual Console"], ["pirate", "virtual console"]] {
+            let flags = groups.map { "(\($0))" }.joined(separator: " ")
+            let normalizedFlags = groups.map { "[\($0)]" }.joined(separator: " ")
+            let parsed = FilenameMetadataParser.parse(filename: "Example \(flags).gb")
+            XCTAssertEqual(parsed.suggestedTitle, "Example", flags)
+            XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(), flags)
+            XCTAssertEqual(parsed.suggestedBuildName, "Original", flags)
+            XCTAssertEqual(parsed.normalizedFilename, "Example \(normalizedFlags).gb", flags)
+            XCTAssertEqual(parsed.releaseKind, .standard, flags)
+            XCTAssertEqual(parsed.confidence, .low, flags)
+            XCTAssertEqual(parsed.unknownGroups, groups, flags)
+        }
+    }
+
     func testRecognizedTagsBecomeSeparateFieldsWithoutLosingOriginalGroups() {
         let parsed = FilenameMetadataParser.parse(filename: "Example (USA, Europe) (En,Fr,De) (Rev A) [v1.10.2] [Unknown].gbc")
         XCTAssertEqual(parsed.suggestedTitle, "Example")
