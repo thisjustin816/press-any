@@ -247,7 +247,7 @@ final class GameplayViewController: UIViewController {
             formatter.timeStyle = .medium
             let loadActions = saved.map { state in
                 UIAction(
-                    title: state.label ?? (state.kind == .auto ? "Auto State" : "State"),
+                    title: state.displayName,
                     subtitle: formatter.string(from: state.createdAt),
                     image: states.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
                 ) { [weak self] _ in

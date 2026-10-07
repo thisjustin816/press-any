@@ -65,6 +65,35 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
             ) {
                 throw LibraryDeletionError.romAlreadyInGame(try PersistenceCodec.uuid(conflict))
             }
+            // A save state deleted on its own comes back only to its Save Profile and Build.
+            // States deleted with a Build or profile come back with them, so this is the only case.
+            let kind = try String.fetchOne(db, sql: "SELECT kind FROM library_deletions WHERE id = ?", arguments: [deletionID])
+            if kind == LibraryDeletion.Kind.saveState.rawValue {
+                if let profile = try String.fetchOne(
+                    db,
+                    sql: """
+                    SELECT profile.id FROM save_states state
+                    JOIN save_profiles profile ON profile.id = state.save_profile_id
+                    WHERE state.deletion_id = ? AND profile.deletion_id IS NOT NULL
+                    LIMIT 1
+                    """,
+                    arguments: [deletionID]
+                ) {
+                    throw LibraryDeletionError.saveProfileIsDeleted(try PersistenceCodec.uuid(profile))
+                }
+                if let build = try String.fetchOne(
+                    db,
+                    sql: """
+                    SELECT build.id FROM save_states state
+                    JOIN builds build ON build.id = state.build_id
+                    WHERE state.deletion_id = ? AND build.deletion_id IS NOT NULL
+                    LIMIT 1
+                    """,
+                    arguments: [deletionID]
+                ) {
+                    throw LibraryDeletionError.buildIsDeleted(try PersistenceCodec.uuid(build))
+                }
+            }
             // The Game may have a new Base since; it keeps that one.
             try db.execute(
                 sql: """
@@ -89,10 +118,14 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
             guard try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM library_deletions WHERE id = ?", arguments: [purged[0]]) == 1 else {
                 return []
             }
-            // A deleted patched Build elsewhere can't be rebuilt once its base goes, so its
-            // deletion goes too, and so on down the line.
+            // A deleted patched Build elsewhere can't be rebuilt once its base goes, and a save state
+            // deleted on its own can't come back once its Save Profile or Build goes, so their
+            // deletions go too, and so on down the line.
             while true {
                 let list = Self.placeholders(purged.count)
+                var dependentArguments: [String] = purged + purged
+                dependentArguments.append(LibraryDeletion.Kind.saveState.rawValue)
+                dependentArguments += purged + purged + purged
                 let dependents = try String.fetchAll(
                     db,
                     sql: """
@@ -101,8 +134,15 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                     JOIN builds base ON base.id = recipe.base_build_id
                     WHERE base.deletion_id IN \(list) AND result.deletion_id IS NOT NULL
                         AND result.deletion_id NOT IN \(list)
+                    UNION
+                    SELECT DISTINCT state.deletion_id FROM save_states state
+                    JOIN library_deletions deletion ON deletion.id = state.deletion_id
+                    WHERE deletion.kind = ? AND state.deletion_id NOT IN \(list) AND (
+                        state.save_profile_id IN (SELECT id FROM save_profiles WHERE deletion_id IN \(list))
+                        OR state.build_id IN (SELECT id FROM builds WHERE deletion_id IN \(list))
+                    )
                     """,
-                    arguments: StatementArguments(purged + purged)
+                    arguments: StatementArguments(dependentArguments)
                 )
                 if dependents.isEmpty { break }
                 purged += dependents
@@ -116,6 +156,29 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                 arguments: inPurged
             ).map { try Self.deletion($0, db: db) }
 
+            // A state of a purged Save Profile or Build can sit in another deletion, deleted with a
+            // Build or profile that's still restorable. It goes with what it belongs to, and that
+            // deletion keeps the rest.
+            let carriedStates = try Row.fetchAll(
+                db,
+                sql: """
+                SELECT state.id, deletion.deleted_at FROM save_states state
+                JOIN library_deletions deletion ON deletion.id = state.deletion_id
+                WHERE state.deletion_id NOT IN \(list) AND (
+                    state.save_profile_id IN (SELECT id FROM save_profiles WHERE deletion_id IN \(list))
+                    OR state.build_id IN (SELECT id FROM builds WHERE deletion_id IN \(list))
+                )
+                """,
+                arguments: StatementArguments(purged + purged + purged as [String])
+            )
+            let goneStates = """
+                deletion_id IN \(list)
+                OR save_profile_id IN (SELECT id FROM save_profiles WHERE deletion_id IN \(list))
+                OR build_id IN (SELECT id FROM builds WHERE deletion_id IN \(list))
+                """
+            let goneStatesArguments: [String] = purged + purged + purged
+            let candidateArguments: [String] = Array(repeating: purged, count: 5).flatMap { $0 } + goneStatesArguments + goneStatesArguments
+
             let candidates = try Set(String.fetchAll(
                 db,
                 sql: """
@@ -128,10 +191,10 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                 UNION SELECT map.asset_id FROM build_variable_maps map
                     JOIN builds build ON build.id = map.build_id WHERE build.deletion_id IN \(list)
                 UNION SELECT battery_asset_id FROM save_profiles WHERE deletion_id IN \(list) AND battery_asset_id IS NOT NULL
-                UNION SELECT state_asset_id FROM save_states WHERE deletion_id IN \(list)
-                UNION SELECT screenshot_asset_id FROM save_states WHERE deletion_id IN \(list) AND screenshot_asset_id IS NOT NULL
+                UNION SELECT state_asset_id FROM save_states WHERE \(goneStates)
+                UNION SELECT screenshot_asset_id FROM save_states WHERE (\(goneStates)) AND screenshot_asset_id IS NOT NULL
                 """,
-                arguments: StatementArguments(Array(repeating: purged, count: 7).flatMap { $0 })
+                arguments: StatementArguments(candidateArguments)
             ))
 
             // settings_overrides has no foreign keys, since its scope can also be the app or a system.
@@ -148,7 +211,8 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                 sql: "DELETE FROM patch_recipes WHERE result_build_id IN (SELECT id FROM builds WHERE deletion_id IN \(list))",
                 arguments: inPurged
             )
-            for table in ["save_states", "save_profiles", "builds", "games"] {
+            try db.execute(sql: "DELETE FROM save_states WHERE \(goneStates)", arguments: StatementArguments(goneStatesArguments))
+            for table in ["save_profiles", "builds", "games"] {
                 try db.execute(sql: "DELETE FROM \(table) WHERE deletion_id IN \(list)", arguments: inPurged)
             }
 
@@ -163,6 +227,12 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                         ]
                     )
                 }
+            }
+            for state in carriedStates {
+                try db.execute(
+                    sql: "INSERT OR IGNORE INTO tombstones (record_id, record_kind, deleted_at, purged_at) VALUES (?, ?, ?, ?)",
+                    arguments: [state["id"] as String, LibraryRecordKind.saveState.rawValue, state["deleted_at"] as String, purgedAt]
+                )
             }
             try db.execute(sql: "DELETE FROM library_deletions WHERE id IN \(list)", arguments: inPurged)
 

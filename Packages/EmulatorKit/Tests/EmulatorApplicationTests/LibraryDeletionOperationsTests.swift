@@ -86,6 +86,66 @@ final class LibraryDeletionOperationsTests: XCTestCase {
         XCTAssertTrue(Set(try library.builds.fetchBuilds(gameID: library.game.id).map(\.id)).isSuperset(of: [library.base.id, library.patched.id]))
     }
 
+    func testDeletingOneStateTakesOnlyThatState() throws {
+        let library = try Library()
+        let plan = try library.operations.planStateDeletion(stateID: library.state.id)
+
+        XCTAssertEqual(plan.kind, .saveState)
+        XCTAssertEqual(plan.title, "Save State")
+        XCTAssertEqual(plan.gameID, library.game.id)
+        XCTAssertEqual(plan.records, LibraryRecordSet(saveStateIDs: [library.state.id]))
+
+        let deleted = try library.operations.delete(plan)
+        XCTAssertTrue(try library.states.fetchSaveStates(saveProfileID: library.profile.id).isEmpty)
+        XCTAssertNotNil(try library.saveProfiles.fetchSaveProfile(id: library.profile.id), "the profile stays")
+        XCTAssertThrowsError(try library.operations.planStateDeletion(stateID: library.state.id)) {
+            XCTAssertEqual($0 as? LibraryDeletionError, .saveStateNotFound(library.state.id))
+        }
+
+        try library.operations.restore(deletionID: deleted.id)
+        XCTAssertEqual(try library.states.fetchSaveState(id: library.state.id), library.state)
+    }
+
+    func testAStateComesBackOnlyToItsProfileAndBuild() throws {
+        let library = try Library()
+        let state = try library.operations.delete(library.operations.planStateDeletion(stateID: library.state.id))
+        let profile = try library.operations.delete(library.operations.planProfileDeletion(profileID: library.profile.id))
+
+        XCTAssertThrowsError(try library.operations.restore(deletionID: state.id)) {
+            XCTAssertEqual($0 as? LibraryDeletionError, .saveProfileIsDeleted(library.profile.id))
+        }
+        try library.operations.restore(deletionID: profile.id)
+        try library.operations.restore(deletionID: state.id)
+
+        let onPatched = try library.addState(onBuild: library.patched.id)
+        let patchedState = try library.operations.delete(library.operations.planStateDeletion(stateID: onPatched.id))
+        try library.operations.delete(library.operations.planBuildDeletion(buildID: library.patched.id))
+        XCTAssertThrowsError(try library.operations.restore(deletionID: patchedState.id)) {
+            XCTAssertEqual($0 as? LibraryDeletionError, .buildIsDeleted(library.patched.id))
+        }
+    }
+
+    func testPurgingAProfileTakesItsStatesDeletedElsewhere() throws {
+        let library = try Library()
+        let alone = try library.operations.delete(library.operations.planStateDeletion(stateID: library.state.id))
+        let onPatched = try library.addState(onBuild: library.patched.id)
+        let patched = try library.operations.delete(library.operations.planBuildDeletion(buildID: library.patched.id))
+        XCTAssertEqual(patched.records.saveStateIDs, [onPatched.id])
+        let profile = try library.operations.delete(library.operations.planProfileDeletion(profileID: library.profile.id))
+
+        try library.operations.purge(deletionID: profile.id)
+
+        let remaining = try library.operations.recentlyDeleted()
+        XCTAssertEqual(remaining.map(\.id), [patched.id], "the lone state's deletion goes; the Build's stays")
+        XCTAssertEqual(remaining.first?.records, LibraryRecordSet(buildIDs: [library.patched.id]))
+        XCTAssertFalse(remaining.contains { $0.id == alone.id })
+        XCTAssertEqual(
+            Set(try library.deletions.fetchTombstones().map(\.recordID)),
+            [library.profile.id, library.state.id, onPatched.id]
+        )
+        XCTAssertFalse(FileManager.default.fileExists(atPath: library.stateFile.path))
+    }
+
     func testOnlyDeletionsPastThirtyDaysArePurgedWithTheirFiles() throws {
         let library = try Library()
         let old = try library.operations.delete(library.operations.planProfileDeletion(profileID: library.profile.id))
@@ -182,6 +242,26 @@ private struct Library {
         deletions = InMemoryLibraryDeletionRepository(
             games: games, builds: builds, profiles: saveProfiles, states: states, recipes: recipes, assets: assets
         )
+    }
+
+    /// A manual state on the Build with the profile, and its own file.
+    func addState(onBuild buildID: UUID) throws -> SaveState {
+        let path = "States/\(UUID().uuidString).state"
+        let url = try store.managedURL(relativePath: path)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data([2]).write(to: url)
+        let asset = ManagedAsset(
+            id: UUID(), kind: .saveState, storageClass: .userData, contentSHA256: String(repeating: "d", count: 64),
+            byteLength: 1, relativePath: path, createdAt: state.createdAt
+        )
+        try assets.insertAsset(asset)
+        let added = SaveState(
+            id: UUID(), buildID: buildID, saveProfileID: profile.id, core: state.core,
+            stateSerializationVersion: state.stateSerializationVersion, stateAssetID: asset.id,
+            kind: .manual, playtimeSeconds: 0, createdAt: state.createdAt.addingTimeInterval(1)
+        )
+        try states.insertSaveState(added)
+        return added
     }
 
     var operations: LibraryDeletionOperations {
