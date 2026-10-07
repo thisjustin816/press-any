@@ -166,7 +166,7 @@ public enum GameMatcher {
         for title in titles {
             let key = normalized(title)
             guard !key.isEmpty else { continue }
-            let matches = games.filter { normalized($0.primaryTitle) == key }
+            let matches = games.filter { ([$0.primaryTitle] + $0.aliases).contains { normalized($0) == key } }
             if matches.count == 1 { return matches[0].id }
             if matches.count > 1 { return nil }
         }

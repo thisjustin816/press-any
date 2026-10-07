@@ -28,6 +28,7 @@ public struct GameCarryOver: Equatable, Sendable {
 public enum BuildOperationError: Error, Equatable {
     case buildNotFound(UUID)
     case invalidBuildName
+    case invalidGameTitle
     case gameNotFound(UUID)
     case buildBelongsToDifferentGame(buildID: UUID, gameID: UUID)
     case profileNotFound(UUID)
@@ -99,6 +100,17 @@ public struct BuildOperations: Sendable {
         build.preferredSaveProfileID = profileID
         build.modifiedAt = now()
         try builds.updateBuildMetadata(build)
+    }
+
+    public func renameGame(gameID: UUID, title: String, hasPlayerTitle: Bool = true) throws {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { throw BuildOperationError.invalidGameTitle }
+        guard var game = try games.fetchGame(id: gameID) else { throw BuildOperationError.gameNotFound(gameID) }
+        game.addAliases([game.primaryTitle])
+        game.primaryTitle = title
+        game.hasPlayerTitle = hasPlayerTitle
+        game.modifiedAt = now()
+        try games.updateGame(game)
     }
 
     public func renameBuild(buildID: UUID, displayName: String) throws {
@@ -180,6 +192,7 @@ public struct BuildOperations: Sendable {
                 id: makeID(),
                 primaryTitle: title,
                 systemFamily: "gameboy",
+                hasPlayerTitle: true,
                 lineage: sourceGame.map { GameLineage(sourceGameID: $0.id, sourceTitle: $0.primaryTitle) },
                 createdAt: timestamp,
                 modifiedAt: timestamp
@@ -232,7 +245,9 @@ public struct BuildOperations: Sendable {
             if let remaining, var oldGame = try games.fetchGame(id: sourceBuild.gameID) {
                 if remaining.isEmpty {
                     // Promoting a Game's only Build renames it rather than splitting it.
-                    updatedNewGame.lineage = nil
+                    updatedNewGame.lineage = oldGame.lineage
+                    updatedNewGame.aliases = oldGame.aliases
+                    updatedNewGame.addAliases([oldGame.primaryTitle])
                     // The emptied Game is deleted, which would cascade to its Save Profiles, so
                     // they follow the Build. As in a merge, modifiedAt stays put.
                     for profile in try profiles.fetchSaveProfiles(gameID: oldGame.id) {
@@ -327,30 +342,28 @@ public struct BuildOperations: Sendable {
                 moved.gameID = targetGameID
                 try profiles.updateSaveProfile(moved)
             }
-            var targetChanged = false
+            updatedTargetGame.addAliases(sourceGame.aliases + [sourceGame.primaryTitle])
+            if updatedTargetGame.lineage == nil, sourceGame.lineage?.sourceGameID != targetGameID {
+                updatedTargetGame.lineage = sourceGame.lineage
+            }
             if mode == .copy {
                 // copyProfiles saves the target's new default itself.
                 try copyProfiles(carryOver.saveProfileIDs, from: sourceGameID, to: &updatedTargetGame, playedBy: played)
             }
             if updatedTargetGame.preferredBuildID == nil {
                 updatedTargetGame.preferredBuildID = firstMergedBuildID
-                targetChanged = true
             }
             if mode == .move, updatedTargetGame.preferredSaveProfileID == nil,
                let preferredProfile = sourceGame.preferredSaveProfileID {
                 updatedTargetGame.preferredSaveProfileID = preferredProfile
-                targetChanged = true
             }
             // The source Game's row goes away, so its artwork follows unless the target keeps its own.
             if mode == .move, updatedTargetGame.artworkAssetID == nil || replacesArtwork,
                let artwork = sourceGame.artworkAssetID {
                 updatedTargetGame.artworkAssetID = artwork
-                targetChanged = true
             }
-            if targetChanged {
-                updatedTargetGame.modifiedAt = timestamp
-                try games.updateGame(updatedTargetGame)
-            }
+            updatedTargetGame.modifiedAt = timestamp
+            try games.updateGame(updatedTargetGame)
             if mode == .move {
                 try games.deleteGame(id: sourceGameID)
             }
@@ -468,6 +481,7 @@ public struct BuildOperations: Sendable {
             revision: source.revision,
             versionString: source.versionString,
             versionSortKey: source.versionSortKey,
+            baseGameReference: source.baseGameReference,
             baseTitle: source.baseTitle,
             hackTitle: source.hackTitle,
             author: source.author,

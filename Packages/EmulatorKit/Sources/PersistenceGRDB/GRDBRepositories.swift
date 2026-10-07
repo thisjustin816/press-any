@@ -36,23 +36,41 @@ public final class GRDBGameRepository: GameRepository, GRDBRepositoryBacking, @u
                 db,
                 sql: "SELECT * FROM games WHERE id = ? AND deletion_id IS NULL",
                 arguments: [PersistenceCodec.uuid(id)]
-            )?.domain()
+            ).map { try $0.domain(aliases: Self.aliases(gameID: $0.id, db: db)) }
         }
     }
 
     public func fetchGames() throws -> [Game] {
         try read { db in
             try GameRecord.fetchAll(db, sql: "SELECT * FROM games WHERE deletion_id IS NULL ORDER BY primary_title COLLATE NOCASE, created_at")
-                .map { try $0.domain() }
+                .map { try $0.domain(aliases: Self.aliases(gameID: $0.id, db: db)) }
         }
     }
 
     public func insertGame(_ game: Game) throws {
-        try write { db in try GameRecord(game).insert(db) }
+        try write { db in
+            try GameRecord(game).insert(db)
+            try Self.saveAliases(game, db: db)
+        }
     }
 
     public func updateGame(_ game: Game) throws {
-        try write { db in try GameRecord(game).update(db) }
+        try write { db in
+            try GameRecord(game).update(db)
+            try Self.saveAliases(game, db: db)
+        }
+    }
+
+    private static func aliases(gameID: String, db: Database) throws -> [String] {
+        try String.fetchAll(db, sql: "SELECT title FROM game_aliases WHERE game_id = ? ORDER BY title COLLATE NOCASE", arguments: [gameID])
+    }
+
+    private static func saveAliases(_ game: Game, db: Database) throws {
+        let id = PersistenceCodec.uuid(game.id)
+        try db.execute(sql: "DELETE FROM game_aliases WHERE game_id = ?", arguments: [id])
+        for title in game.aliases {
+            try db.execute(sql: "INSERT OR IGNORE INTO game_aliases (game_id, title) VALUES (?, ?)", arguments: [id, title])
+        }
     }
 
     public func deleteGame(id: UUID) throws {

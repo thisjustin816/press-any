@@ -1,3 +1,5 @@
+import EmulatorApplication
+import EmulatorDomain
 import SwiftUI
 
 struct SharedFileView: View {
@@ -69,7 +71,9 @@ struct SharedFileView: View {
                 games: games,
                 coordinator: coordinator,
                 existingBuilds: { container.builds(in: $0) },
-                setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) }
+                setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) },
+                knownDumps: container.knownDumps,
+                releasePreference: (try? ReleasePreferenceStore(store: container.repositories.settings).load()) ?? ReleasePreference()
             )
         } catch {
             errorMessage = error.localizedDescription

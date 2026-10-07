@@ -35,7 +35,7 @@ final class LibraryViewModel: ObservableObject {
         }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return sorted }
-        return sorted.filter { $0.primaryTitle.localizedCaseInsensitiveContains(query) }
+        return sorted.filter { $0.matchesSearch(query) }
     }
 
     func reload() {

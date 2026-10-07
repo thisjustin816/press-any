@@ -6,6 +6,35 @@ import Foundation
 import XCTest
 
 final class BuildAndSaveOperationsTests: XCTestCase {
+    func testRenameGameKeepsAliasesAndProtectsThePlayerTitle() throws {
+        let harness = try Harness.make()
+        let operations = harness.buildOperations()
+        try operations.renameGame(gameID: harness.game.id, title: "  My Game  ")
+        let game = try XCTUnwrap(harness.games.fetchGame(id: harness.game.id))
+        XCTAssertEqual(game.primaryTitle, "My Game")
+        XCTAssertTrue(game.hasPlayerTitle)
+        XCTAssertTrue(game.aliases.contains(harness.game.primaryTitle))
+        XCTAssertThrowsError(try operations.renameGame(gameID: game.id, title: " "))
+        XCTAssertEqual(try harness.games.fetchGame(id: game.id), game)
+    }
+
+    func testMergeCarriesAliasesAndRecordedBaseLineage() throws {
+        let harness = try Harness.make(twoBuilds: true)
+        var second = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        let reference = BaseGameReference(title: "Absent Base", system: .gameBoy, familyName: "Absent Base (USA)")
+        second.baseGameReference = reference
+        try harness.builds.updateBuildMetadata(second)
+        let operations = harness.buildOperations()
+        let source = try operations.promoteBuild(buildID: second.id, title: "Regional Game", mode: .move)
+        try operations.renameGame(gameID: source.id, title: "Player's Regional Game")
+        try operations.mergeGame(sourceGameID: source.id, into: harness.game.id, mode: .move)
+        XCTAssertEqual(try harness.builds.fetchBuild(id: second.id)?.baseGameReference, reference)
+        let merged = try XCTUnwrap(harness.games.fetchGame(id: harness.game.id))
+        XCTAssertTrue(merged.aliases.contains("Regional Game"))
+        XCTAssertTrue(merged.aliases.contains("Player's Regional Game"))
+        XCTAssertNil(merged.lineage, "merging a split back must not create self lineage")
+    }
+
     func testMergingGamesKeepsTheTargetsBaseBuild() throws {
         for mode in [ReorganizationMode.move, .copy] {
             let harness = try Harness.make(twoBuilds: true)

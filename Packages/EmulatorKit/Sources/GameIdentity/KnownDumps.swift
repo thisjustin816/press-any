@@ -89,6 +89,10 @@ public struct KnownDump: Codable, Equatable, Sendable {
             files: try container.decode([KnownDumpFile].self, forKey: .files)
         )
     }
+
+    public func releaseTitle(for build: Build) -> ReleaseTitle {
+        ReleaseTitle(title: title, region: build.region ?? region, language: build.language ?? languages)
+    }
 }
 
 /// The bundled file: where the data came from and every known game.
@@ -213,6 +217,20 @@ public struct KnownDumpIndex: Sendable {
     public func family(of game: KnownDump) -> [KnownDump] {
         let root = game.parent.flatMap { byName[Key(system: game.system, name: $0)] } ?? game
         return [root] + (clonesByParent[Key(system: root.system, name: root.name)] ?? [])
+    }
+
+    public func reference(to dump: KnownDump, libraryGameID: UUID? = nil) -> BaseGameReference {
+        BaseGameReference(title: dump.title, system: dump.system, familyName: dump.parent ?? dump.name, releaseName: dump.name, libraryGameID: libraryGameID)
+    }
+
+    public func search(_ query: String, system: GameSystem? = nil) -> [KnownDump] {
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+        return catalog.games.filter { (system == nil || $0.system == system) && $0.name.localizedStandardContains(query) }
+            .sorted { $0.name < $1.name }
+    }
+
+    public func matches(_ reference: BaseGameReference, familyOf dump: KnownDump) -> Bool {
+        reference.system == dump.system && reference.familyName == (dump.parent ?? dump.name)
     }
 
     /// Whether the Build is a known image, or patched from one. A patched Build whose result is

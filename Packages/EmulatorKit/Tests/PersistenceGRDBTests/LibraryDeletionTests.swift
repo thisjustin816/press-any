@@ -27,7 +27,7 @@ struct LibraryDeletionTests {
         let database = try AppDatabase.inMemory()
         try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v6-release-sort-marker")
         let repositories = database.makeRepositories()
-        let fixture = try Fixture.create(in: repositories)
+        let fixture = try legacyFixture(in: database)
 
         try database.migrate()
 

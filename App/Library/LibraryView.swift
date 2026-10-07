@@ -1,3 +1,4 @@
+import EmulatorApplication
 import EmulatorDomain
 import Importing
 import QuickPlay
@@ -23,7 +24,8 @@ struct LibraryView: View {
     @State private var pendingFileAction: FileAction = .importROM
     @State private var importReview: ImportReviewPresentation?
     @State private var showSettings = false
-    @State private var showBuildNameReview = false
+    @State private var showNameReview = false
+    @State private var showFamilyMergeReview = false
     @State private var showSaveChooser = false
     @State private var chosenQuickPlaySave: UUID?
     @State private var showQuickPlaySessions = false
@@ -113,9 +115,12 @@ struct LibraryView: View {
                         }
                         Section {
                             Button {
-                                showBuildNameReview = true
+                                showNameReview = true
                             } label: {
-                                Label("Suggest Build Names…", systemImage: "character.cursor.ibeam")
+                                Label("Suggest Names…", systemImage: "character.cursor.ibeam")
+                            }
+                            Button("Suggest Game Merges…", systemImage: "arrow.triangle.merge") {
+                                showFamilyMergeReview = true
                             }
                         }
                     } label: {
@@ -200,8 +205,11 @@ struct LibraryView: View {
                     onCancel: {}
                 )
             }
-            .sheet(isPresented: $showBuildNameReview) {
-                BuildNameReviewView(container: container)
+            .sheet(isPresented: $showFamilyMergeReview) {
+                FamilyMergeReviewView(container: container)
+            }
+            .sheet(isPresented: $showNameReview) {
+                NameReviewView(container: container)
             }
             .sheet(isPresented: $showSettings) {
                 AppSettingsView(
@@ -313,7 +321,9 @@ struct LibraryView: View {
                     games: model.games,
                     coordinator: importCoordinator,
                     existingBuilds: { container.builds(in: $0) },
-                    setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) }
+                    setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) },
+                    knownDumps: container.knownDumps,
+                    releasePreference: (try? ReleasePreferenceStore(store: container.repositories.settings).load()) ?? ReleasePreference()
                 )
                 importReview = ImportReviewPresentation(model: reviewModel)
             } catch {

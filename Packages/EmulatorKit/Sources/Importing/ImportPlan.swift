@@ -31,6 +31,8 @@ public struct ROMImportAnalysis: Equatable, Sendable {
     /// The Games already holding a Build from the dump's family. With exactly one, it is the
     /// suggested Game; with several, the player chooses.
     public let familyGameIDs: [UUID]
+    public let familyTitles: [String]
+    public let baseLineageGameIDs: [UUID]
     /// The Games holding an imported Build whose ROM header has the same title. Homebrew keeps its
     /// header title from build to build, so a new build finds its project's Game even when the
     /// filename doesn't match. With exactly one, review suggests it.
@@ -51,6 +53,8 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         knownDump: KnownDump? = nil,
         knownFile: KnownDumpFile? = nil,
         familyGameIDs: [UUID] = [],
+        familyTitles: [String] = [],
+        baseLineageGameIDs: [UUID] = [],
         headerTitleGameIDs: [UUID] = []
     ) {
         self.transactionID = transactionID
@@ -68,6 +72,8 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         self.knownFile = knownFile
         self.headerTitleGameIDs = headerTitleGameIDs
         self.familyGameIDs = familyGameIDs
+        self.familyTitles = familyTitles
+        self.baseLineageGameIDs = baseLineageGameIDs
     }
 }
 
@@ -78,6 +84,9 @@ public struct ROMImportPlan: Equatable, Sendable {
     public let markAsBase: Bool
     public let markAsPreferred: Bool
     public let metadata: BuildImportMetadata
+    public let proposedGameTitle: String?
+    public let hasPlayerTitle: Bool
+    public let baseGameReference: BaseGameReference?
 
     public init(
         analysis: ROMImportAnalysis,
@@ -85,7 +94,10 @@ public struct ROMImportPlan: Equatable, Sendable {
         buildDisplayName: String,
         markAsBase: Bool,
         markAsPreferred: Bool = false,
-        metadata: BuildImportMetadata? = nil
+        metadata: BuildImportMetadata? = nil,
+        proposedGameTitle: String? = nil,
+        hasPlayerTitle: Bool = false,
+        baseGameReference: BaseGameReference? = nil
     ) {
         self.analysis = analysis
         self.disposition = disposition
@@ -93,6 +105,9 @@ public struct ROMImportPlan: Equatable, Sendable {
         self.markAsBase = markAsBase
         self.markAsPreferred = markAsPreferred
         self.metadata = metadata ?? BuildImportMetadata(analysis: analysis)
+        self.proposedGameTitle = proposedGameTitle
+        self.hasPlayerTitle = hasPlayerTitle
+        self.baseGameReference = baseGameReference
     }
 }
 

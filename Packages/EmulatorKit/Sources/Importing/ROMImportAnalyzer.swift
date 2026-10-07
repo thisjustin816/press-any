@@ -5,6 +5,7 @@ import ToolchainDetection
 
 public struct ROMImportAnalyzer: Sendable {
     private let builds: any BuildRepository
+    private let games: (any GameRepository)?
     private let assetStore: any AssetStore
     private let detectors: ToolchainDetectorRegistry
     private let knownDumps: KnownDumpIndex?
@@ -12,12 +13,14 @@ public struct ROMImportAnalyzer: Sendable {
 
     public init(
         builds: any BuildRepository,
+        games: (any GameRepository)? = nil,
         assetStore: any AssetStore,
         detectors: ToolchainDetectorRegistry = .standard,
         knownDumps: KnownDumpIndex? = nil,
         makeTransactionID: @escaping @Sendable () -> UUID = UUID.init
     ) {
         self.builds = builds
+        self.games = games
         self.assetStore = assetStore
         self.detectors = detectors
         self.knownDumps = knownDumps
@@ -42,7 +45,9 @@ public struct ROMImportAnalyzer: Sendable {
             let naming = knownDump.map {
                 FilenameMetadata(knownDump: $0, fileExtension: fileExtension.isEmpty ? $0.system.rawValue : fileExtension)
             } ?? FilenameMetadataParser.parse(filename: visibleFilename)
-            let familyGameIDs = try knownDump.map(familyGameIDs(of:)) ?? []
+            let lineageIDs = try knownDump.map(lineageGameIDs(of:)) ?? []
+            var familyGameIDs = try knownDump.map(familyGameIDs(of:)) ?? []
+            for id in lineageIDs where !familyGameIDs.contains(id) { familyGameIDs.append(id) }
             return ROMImportAnalysis(
                 transactionID: transactionID,
                 stagedURL: stagedURL,
@@ -58,12 +63,23 @@ public struct ROMImportAnalyzer: Sendable {
                 knownDump: knownDump,
                 knownFile: knownDumps?.file(sha1: sha1),
                 familyGameIDs: familyGameIDs,
+                familyTitles: knownDump.flatMap { knownDumps?.family(of: $0).map(\.title) } ?? [],
+                baseLineageGameIDs: lineageIDs,
                 headerTitleGameIDs: existing == nil ? try headerTitleGameIDs(of: header.title, excluding: sha256) : []
             )
         } catch {
             try? assetStore.removeIfExists(stagedURL.deletingLastPathComponent())
             throw error
         }
+    }
+
+    private func lineageGameIDs(of dump: KnownDump) throws -> [UUID] {
+        guard let games, let knownDumps else { return [] }
+        return try games.fetchGames().filter { game in
+            try builds.fetchBuilds(gameID: game.id).contains { build in
+                build.baseGameReference.map { knownDumps.matches($0, familyOf: dump) } == true
+            }
+        }.map(\.id)
     }
 
     /// The Games holding an imported Build whose header title is this one, read from the first

@@ -26,6 +26,10 @@ final class ImportReviewViewModel: ObservableObject {
     @Published var author: String
     @Published var translation: String
     @Published var status: String
+    @Published private(set) var proposedTitle: String?
+    @Published var acceptProposedTitle = true
+    @Published private(set) var baseGameReference: BaseGameReference?
+    @Published var matchedAsHack = true
     @Published private(set) var errorMessage: String?
     /// Cover art chosen in review, already checked and downscaled, set on the Game after import.
     @Published private(set) var artwork: (data: Data, fileExtension: String)?
@@ -36,6 +40,10 @@ final class ImportReviewViewModel: ObservableObject {
     let games: [Game]
 
     private let coordinator: ImportCoordinator
+    let knownDumps: KnownDumpIndex?
+    private let releasePreference: ReleasePreference
+    private var previousPreferredSuggestion = true
+    private var previousBaseSuggestion = true
     /// A Game's Builds: a suggested name that repeats one gains the date it was added, and an
     /// existing Base decides whether the new Build should replace it.
     private let existingBuilds: (UUID) -> [Build]
@@ -43,17 +51,19 @@ final class ImportReviewViewModel: ObservableObject {
     private let setArtwork: ((UUID, Data, String) throws -> Void)?
     /// The last name suggested, so changing the destination replaces it unless the player edited it.
     private var suggestedBuildName: String
-    /// The destination the roles were last suggested for.
-    private var previousDestination: Destination
 
     init(
         analysis: ROMImportAnalysis,
         games: [Game],
         coordinator: ImportCoordinator,
         existingBuilds: @escaping (UUID) -> [Build] = { _ in [] },
-        setArtwork: ((UUID, Data, String) throws -> Void)? = nil
+        setArtwork: ((UUID, Data, String) throws -> Void)? = nil,
+        knownDumps: KnownDumpIndex? = nil,
+        releasePreference: ReleasePreference = ReleasePreference()
     ) {
         self.analysis = analysis
+        self.knownDumps = knownDumps
+        self.releasePreference = releasePreference
         // Games holding the release's No-Intro family, or a Build with its header title, come first,
         // so a choice among them is at hand.
         let family = Set(analysis.familyGameIDs + analysis.headerTitleGameIDs)
@@ -95,7 +105,6 @@ final class ImportReviewViewModel: ObservableObject {
             initialDestination = .newGame
         }
         destination = initialDestination
-        previousDestination = initialDestination
         markAsBase = Self.suggestedBase(for: analysis, destination: initialDestination, existingBuilds: existingBuilds)
         markAsPreferred = true
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
@@ -104,6 +113,8 @@ final class ImportReviewViewModel: ObservableObject {
         let suggestion = Self.buildName(for: analysis, destination: initialDestination, existingBuilds: existingBuilds)
         suggestedBuildName = suggestion
         buildDisplayName = analysis.exactExistingBuildID == nil ? suggestion : "Existing"
+        previousBaseSuggestion = markAsBase
+        refreshIdentityProposals()
     }
 
     private static func buildName(
@@ -154,11 +165,11 @@ final class ImportReviewViewModel: ObservableObject {
             buildDisplayName = suggestedBuildName
         }
         // Like the name, a role the player set stays; only an untouched suggestion follows the Game.
-        let previousBase = Self.suggestedBase(for: analysis, destination: previousDestination, existingBuilds: existingBuilds)
-        if markAsBase == previousBase {
-            markAsBase = Self.suggestedBase(for: analysis, destination: destination, existingBuilds: existingBuilds)
-        }
-        previousDestination = destination
+        let baseSuggestion = baseGameReference != nil ? false
+            : Self.suggestedBase(for: analysis, destination: destination, existingBuilds: existingBuilds)
+        if markAsBase == previousBaseSuggestion { markAsBase = baseSuggestion }
+        previousBaseSuggestion = baseSuggestion
+        refreshIdentityProposals()
     }
 
     var plan: ROMImportPlan {
@@ -179,13 +190,100 @@ final class ImportReviewViewModel: ObservableObject {
             buildDisplayName: buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines),
             markAsBase: markAsBase,
             markAsPreferred: markAsPreferred,
-            metadata: reviewedMetadata
+            metadata: reviewedMetadata,
+            proposedGameTitle: acceptProposedTitle ? proposedTitle : nil,
+            hasPlayerTitle: analysis.filenameMetadata.releaseKind == .romHack
+                || (baseGameReference != nil && matchedAsHack)
+                || gameTitle.trimmingCharacters(in: .whitespacesAndNewlines) != analysis.filenameMetadata.suggestedTitle,
+            baseGameReference: baseGameReference
         )
     }
 
     var canCommit: Bool {
-        isExactDuplicate || !buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        isExactDuplicate || (!buildDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (destination != .newGame || !gameTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
     }
+
+    var offersBaseLink: Bool {
+        guard case .existing(let id) = destination else { return false }
+        return analysis.baseLineageGameIDs.contains(id)
+    }
+
+    func matchGame(_ game: Game) {
+        let builds = existingBuilds(game.id)
+        let ordered = builds.sorted {
+            if $0.isBase != $1.isBase { return $0.isBase }
+            return $0.createdAt < $1.createdAt
+        }
+        let base = ordered.first
+        let dump = ordered.compactMap { $0.imageSHA1.flatMap { knownDumps?.dump(sha1: $0) } }.first
+        if let dump, let knownDumps {
+            baseGameReference = knownDumps.reference(to: dump, libraryGameID: game.id)
+        } else if let reference = ordered.compactMap(\.baseGameReference).first {
+            baseGameReference = BaseGameReference(title: reference.title, system: reference.system,
+                familyName: reference.familyName, releaseName: reference.releaseName, libraryGameID: game.id)
+        } else {
+            baseGameReference = BaseGameReference(title: game.primaryTitle, system: base?.system ?? analysis.header.system, libraryGameID: game.id)
+        }
+        destination = .existing(game.id)
+        baseTitle = baseGameReference?.title ?? ""
+        destinationChanged()
+        markAsBase = false
+    }
+
+    func matchGame(_ dump: KnownDump) {
+        guard let knownDumps else { return }
+        let candidates = games.filter { game in
+            existingBuilds(game.id).contains { build in
+                build.imageSHA1.flatMap { knownDumps.dump(sha1: $0) }.map { ($0.parent ?? $0.name) == (dump.parent ?? dump.name) && $0.system == dump.system } == true
+            }
+        }
+        baseGameReference = knownDumps.reference(to: dump, libraryGameID: candidates.count == 1 ? candidates[0].id : nil)
+        destination = candidates.count == 1 ? .existing(candidates[0].id) : .newGame
+        baseTitle = dump.title
+        destinationChanged()
+        markAsBase = false
+    }
+
+    func clearMatch() {
+        baseGameReference = nil
+        baseTitle = analysis.filenameMetadata.buildMetadata.baseTitle ?? ""
+        matchedAsHack = true
+        markAsBase = Self.suggestedBase(for: analysis, destination: destination, existingBuilds: existingBuilds)
+        previousBaseSuggestion = markAsBase
+    }
+
+    private func refreshIdentityProposals() {
+        proposedTitle = nil
+        var preferred = true
+        if let incoming = analysis.knownDump, let knownDumps,
+           case .existing(let id) = destination, let game = games.first(where: { $0.id == id }) {
+            let builds = existingBuilds(id)
+            let familyName = incoming.parent ?? incoming.name
+            let releases = builds.compactMap { build -> (Build, KnownDump)? in
+                guard let dump = build.imageSHA1.flatMap({ knownDumps.dump(sha1: $0) }),
+                      dump.system == incoming.system, (dump.parent ?? dump.name) == familyName else { return nil }
+                return (build, dump)
+            }
+            if let current = releases.first(where: { $0.0.id == game.preferredBuildID }) {
+                preferred = releasePreference.prefers(region: region, language: language, overRegion: current.0.region, overLanguage: current.0.language)
+            } else if let current = releases.first {
+                preferred = releasePreference.prefers(region: region, language: language, overRegion: current.0.region, overLanguage: current.0.language)
+            }
+            if !releases.isEmpty, !game.hasPlayerTitle {
+                let titles = releases.sorted {
+                    ($0.0.createdAt, $0.0.id.uuidString) < ($1.0.createdAt, $1.0.id.uuidString)
+                }.map { $0.1.releaseTitle(for: $0.0) }
+                    + [ReleaseTitle(title: incoming.title, region: region, language: language)]
+                if let best = releasePreference.preferredTitle(among: titles, currentTitle: game.primaryTitle),
+                   best.title != game.primaryTitle { proposedTitle = best.title }
+            }
+        }
+        if markAsPreferred == previousPreferredSuggestion { markAsPreferred = preferred }
+        previousPreferredSuggestion = preferred
+    }
+
+    func metadataRankingChanged() { refreshIdentityProposals() }
 
     func commit() throws -> ROMImportResult {
         let result: ROMImportResult
@@ -252,17 +350,15 @@ final class ImportReviewViewModel: ObservableObject {
         coordinator.discard(analysis)
     }
 
-    /// A new Build is the one to play, so Preferred is always suggested. Base, the clean ROM patches
-    /// apply to, is suggested for a Game that has none yet, unless the file is a hack. Where the Game
-    /// has a Base, only a newer homebrew release replaces it: a file whose version or date sorts after
-    /// the Base's, or any versioned file when the Base has none. A retail revision or a beta has no
-    /// version, so it leaves the Base alone. Marking Base replaces the Game's previous Base Build.
+    /// A missing Base or a recorded base family suggests a clean Base. Otherwise, only a newer
+    /// homebrew version or date suggests replacing the Base.
     private static func suggestedBase(
         for analysis: ROMImportAnalysis,
         destination: Destination,
         existingBuilds: (UUID) -> [Build]
     ) -> Bool {
         guard analysis.filenameMetadata.releaseKind != .romHack else { return false }
+        if case .existing(let id) = destination, analysis.baseLineageGameIDs.contains(id) { return true }
         guard case .existing(let gameID) = destination,
               let base = existingBuilds(gameID).first(where: \.isBase) else { return true }
         guard let key = BuildImportMetadata(analysis: analysis).versionSortKey else { return false }
@@ -277,7 +373,7 @@ final class ImportReviewViewModel: ObservableObject {
             revision: revision,
             versionString: version,
             baseTitle: baseTitle,
-            hackTitle: hackTitle,
+            hackTitle: baseGameReference != nil && matchedAsHack && hackTitle.isEmpty ? gameTitle : hackTitle,
             author: author,
             translation: translation,
             status: status

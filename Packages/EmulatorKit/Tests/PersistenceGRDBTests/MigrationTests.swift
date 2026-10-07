@@ -187,6 +187,8 @@ struct MigrationTests {
         #expect(game.preferredBuildID == buildID)
         #expect(game.artworkAssetID == nil)
         #expect(game.lineage == nil)
+        #expect(game.aliases.isEmpty)
+        #expect(game.hasPlayerTitle, "preexisting titles have no recorded provenance")
         let builds = try repositories.builds.fetchBuilds(gameID: gameID)
         #expect(builds.map(\.id) == [buildID, patchedID])
         #expect(builds.allSatisfy { $0.baseTitle == nil && $0.hackTitle == nil && $0.author == nil && $0.translation == nil && $0.status == nil })
