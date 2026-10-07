@@ -28,6 +28,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             launchMessage: launchMessage,
             firstFrameClock: firstFrameClock,
             controlStyle: display.controlStyle,
+            orientation: display.orientation,
             screenScaling: display.screenScaling,
             lcdFilter: display.lcdFilter,
             colorCorrection: display.colorCorrection,
@@ -51,6 +52,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
         uiViewController.setCoveredBySheet(isCoveredBySheet)
         uiViewController.applyDisplaySettings(
             controlStyle: display.controlStyle,
+            orientation: display.orientation,
             screenScaling: display.screenScaling,
             lcdFilter: display.lcdFilter,
             colorCorrection: display.colorCorrection,

@@ -37,6 +37,13 @@ struct ScopedSettingsView: View {
                     context: context
                 )
                 InheritableSettingRow(
+                    title: "Orientation",
+                    key: .orientation,
+                    defaultValue: ScreenOrientation.automatic,
+                    options: [(.automatic, "Automatic"), (.portrait, "Portrait"), (.landscape, "Landscape")],
+                    context: context
+                )
+                InheritableSettingRow(
                     title: "Screen Scaling",
                     key: .screenScaling,
                     defaultValue: ScreenScaling.integer,

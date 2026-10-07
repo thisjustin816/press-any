@@ -9,6 +9,16 @@ public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
     case playtiles
 }
 
+/// Which way gameplay may face. Raw values are stored in settings. Layouts made for a portrait
+/// phone, such as Playtiles, stay portrait whatever this says.
+public enum ScreenOrientation: String, Codable, Sendable, CaseIterable {
+    /// Follows the phone as it turns, within iOS's rotation lock.
+    case automatic
+    case portrait
+    /// Either landscape direction, following the phone between them.
+    case landscape
+}
+
 /// How the game picture is scaled into its frame. Raw values are stored in settings.
 public enum ScreenScaling: String, Codable, Sendable, CaseIterable {
     /// The largest whole number of device pixels per Game Boy pixel, so every pixel is the same size.
@@ -96,6 +106,10 @@ public struct TouchControlLayout: Equatable, Sendable {
     public let alignmentGuide: TouchAlignmentGuide?
     /// Where the Press Any logo is printed. Drawn only; it takes no touches.
     public let logo: TouchRect?
+    /// Recessed plates carrying a control's name beside it, as the Game Boy Advance prints START
+    /// and SELECT, turned by `labelPlateTilt` radians about their centers. Drawn only.
+    public let labelPlates: [TouchControl: TouchRect]
+    public let labelPlateTilt: Double
     public let dpadDeadZoneFraction: Double
     /// How large the weaker axis must be relative to the stronger one to count as a diagonal.
     public let dpadDiagonalRatio: Double
@@ -114,6 +128,8 @@ public struct TouchControlLayout: Equatable, Sendable {
         artwork: [TouchControl: TouchRect] = [:],
         alignmentGuide: TouchAlignmentGuide? = nil,
         logo: TouchRect? = nil,
+        labelPlates: [TouchControl: TouchRect] = [:],
+        labelPlateTilt: Double = 0,
         dpadDeadZoneFraction: Double = 0.16,
         dpadDiagonalRatio: Double = 0
     ) {
@@ -130,6 +146,8 @@ public struct TouchControlLayout: Equatable, Sendable {
         self.artwork = artwork
         self.alignmentGuide = alignmentGuide
         self.logo = logo
+        self.labelPlates = labelPlates
+        self.labelPlateTilt = labelPlateTilt
         self.dpadDeadZoneFraction = min(max(dpadDeadZoneFraction, 0), 0.49)
         self.dpadDiagonalRatio = min(max(dpadDiagonalRatio, 0), 1)
     }
@@ -155,8 +173,8 @@ public struct TouchControlLayout: Equatable, Sendable {
 }
 
 extension TouchControlLayout {
-    /// The layout for `style` in a portrait view of the given size, in points. `safeTop` keeps the
-    /// screen clear of the status bar and `safeBottom` the logo clear of the home indicator.
+    /// The layout for `style` in portrait, or a Game Boy Advance layout in landscape, in points.
+    /// Safe-area insets keep the picture and controls clear of screen cutouts and the home indicator.
     /// `displayScale` lets the Game Boy layout size the picture to whole device pixels under
     /// `scaling`. `pictureOpensMenu` makes a tap on the game picture open the menu as well as one
     /// on the logo.
@@ -166,11 +184,20 @@ extension TouchControlLayout {
         height: Double,
         safeTop: Double = 0,
         safeBottom: Double = 0,
+        safeLeft: Double = 0,
+        safeRight: Double = 0,
         displayScale: Double = 3,
         scaling: ScreenScaling = .integer,
         pictureOpensMenu: Bool = false
     ) -> TouchControlLayout {
-        switch style {
+        if width > height {
+            return gameBoyAdvance(
+                width: width, height: height,
+                safeTop: safeTop, safeBottom: safeBottom, safeLeft: safeLeft, safeRight: safeRight,
+                displayScale: displayScale, scaling: scaling, pictureOpensMenu: pictureOpensMenu
+            )
+        }
+        return switch style {
         case .gameBoy:
             gameBoy(
                 width: width,
@@ -222,9 +249,115 @@ extension TouchControlLayout {
         static let pillTilt = -18.0 * Double.pi / 180
     }
 
+    /// START and SELECT on a Game Boy Advance (AGB-001), in millimeters, measured from a front
+    /// photograph: small round buttons, START above SELECT, right of the D-pad's center and below
+    /// it, each with its name on a slanted plate to its left.
+    enum GameBoyAdvancePanel {
+        /// From the D-pad's center to START's, and from START down to SELECT.
+        static let start = (x: 9.8, y: 20.1)
+        static let selectBelowStart = 8.2
+        /// The hardware's D-pad, which the start offset is measured against.
+        static let dpadSize = 19.4
+        /// The buttons are 4.5 mm; drawn a little larger so they read on a phone.
+        static let buttonSize = 5.5
+        /// Each plate's center from its button's, and its size.
+        static let plate = (x: -7.4, y: -2.1, length: 11.0, width: 3.6)
+        /// The plates fall about 15 degrees to the right.
+        static let plateTilt = 15.0 * Double.pi / 180
+    }
+
     /// Points per millimeter on an iPhone screen, near enough on every model (153 to 163 points
     /// per inch), so the controls come out at the Game Boy's own size.
     static let pointsPerMillimeter = 6.1
+
+    static func gameBoyAdvance(
+        width: Double, height: Double,
+        safeTop: Double, safeBottom: Double, safeLeft: Double, safeRight: Double,
+        displayScale: Double, scaling: ScreenScaling, pictureOpensMenu: Bool
+    ) -> TouchControlLayout {
+        let panel = GameBoyPanel.self
+        let mm = pointsPerMillimeter
+        let dpadSize = panel.dpadSize * mm
+        let buttonSize = panel.buttonSize * mm
+        let margin = 8.0
+        let bezelPadding = 12.0
+        let bottom = height - safeBottom
+        let logo = TouchRect(x: width / 2 - 90, y: bottom - 28, width: 180, height: 24)
+        let logoAreas = menuAreas(logo: logo, screen: .init(x: 0, y: 0, width: 0, height: 0), pictureOpensMenu: false)
+        // A centered picture reserves equal space for both sides, including the larger cutout inset.
+        let sideSpace = max(safeLeft, safeRight) + margin + dpadSize + bezelPadding
+        let pictureWidth = max(1, width - 2 * (sideSpace + margin))
+        let pictureTop = safeTop + 4 + bezelPadding
+        let pictureBottom = logoAreas[0].y - 4 - bezelPadding
+        let frame = TouchRect(x: (width - pictureWidth) / 2, y: pictureTop,
+                              width: pictureWidth, height: max(1, pictureBottom - pictureTop))
+        let screen = scaling.picture(sourceWidth: 160, sourceHeight: 144, in: frame, pixelsPerPoint: displayScale)
+        let bezel = TouchRect(x: screen.x - bezelPadding, y: screen.y - bezelPadding,
+                              width: screen.width + 2 * bezelPadding, height: screen.height + 2 * bezelPadding)
+        let leftEdge = safeLeft + margin
+        let leftEnd = bezel.x - margin
+        let rightEdge = bezel.x + bezel.width + margin
+        let rightEnd = width - safeRight - margin
+
+        func centered(_ center: TouchPoint, width: Double, height: Double) -> TouchRect {
+            TouchRect(x: center.x - width / 2, y: center.y - height / 2, width: width, height: height)
+        }
+        func square(_ center: TouchPoint, _ size: Double) -> TouchRect {
+            centered(center, width: size, height: size)
+        }
+        func clipped(_ rect: TouchRect, left: Double, right: Double) -> TouchRect {
+            let x = max(rect.x, left), y = max(rect.y, safeTop)
+            return TouchRect(x: x, y: y, width: min(rect.x + rect.width, right) - x,
+                             height: min(rect.y + rect.height, bottom) - y)
+        }
+
+        let advance = GameBoyAdvancePanel.self
+        let smallButton = advance.buttonSize * mm
+        // The hardware's offsets from its smaller D-pad, kept from the edge of this one.
+        let startBelow = dpadSize / 2 + (advance.start.y - advance.dpadSize / 2) * mm
+        let selectBelow = startBelow + advance.selectBelowStart * mm
+        let dpadY = min((safeTop + bottom) / 2 - 24, bottom - selectBelow - 22)
+        let dpad = TouchPoint(x: (leftEdge + leftEnd) / 2, y: dpadY)
+        let aToBX = min((panel.a.x - panel.b.x) * mm, rightEnd - rightEdge - buttonSize)
+        let aToBY = aToBX * (panel.b.y - panel.a.y) / (panel.a.x - panel.b.x)
+        let a = TouchPoint(x: rightEnd - buttonSize / 2, y: dpadY + (panel.a.y - panel.dpad.y) * mm)
+        let b = TouchPoint(x: a.x - aToBX, y: a.y + aToBY)
+        let buttonReach = min(buttonSize + 14, aToBX - 4)
+        // Right of the D-pad's center, toward the picture, but never into the bezel.
+        let smallX = min(dpad.x + advance.start.x * mm, leftEnd - smallButton / 2 - 6)
+        let start = TouchPoint(x: smallX, y: dpadY + startBelow)
+        let select = TouchPoint(x: smallX, y: dpadY + selectBelow)
+        func plate(_ button: TouchPoint) -> TouchRect {
+            centered(TouchPoint(x: button.x + advance.plate.x * mm, y: button.y + advance.plate.y * mm),
+                     width: advance.plate.length * mm, height: advance.plate.width * mm)
+        }
+        // A touch on the plate counts too, so each button reaches across its name.
+        func reach(_ button: TouchPoint) -> TouchRect {
+            let left = plate(button).x
+            let right = button.x + smallButton / 2 + 10
+            return TouchRect(x: left, y: button.y - 22, width: right - left, height: 44)
+        }
+        let dpadRect = square(dpad, dpadSize)
+
+        return TouchControlLayout(
+            dpad: dpadRect,
+            dpadHitArea: clipped(square(dpad, dpadSize + 24), left: leftEdge, right: leftEnd),
+            a: clipped(square(a, buttonReach), left: rightEdge - margin, right: width - safeRight),
+            b: clipped(square(b, buttonReach), left: rightEdge - margin, right: width - safeRight),
+            start: clipped(reach(start), left: leftEdge, right: leftEnd),
+            select: clipped(reach(select), left: leftEdge, right: leftEnd),
+            screen: screen,
+            menuAreas: menuAreas(logo: logo, screen: screen, pictureOpensMenu: pictureOpensMenu),
+            bezel: bezel,
+            artwork: [
+                .dpad: dpadRect, .a: square(a, buttonSize), .b: square(b, buttonSize),
+                .start: square(start, smallButton), .select: square(select, smallButton),
+            ],
+            logo: logo,
+            labelPlates: [.start: plate(start), .select: plate(select)],
+            labelPlateTilt: advance.plateTilt
+        )
+    }
 
     /// The Game Boy layout. The D-pad, buttons and START and SELECT are drawn at the hardware's
     /// size, with its spacing and angles. Across the width they keep the Game Boy's proportions,

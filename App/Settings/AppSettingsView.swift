@@ -23,6 +23,7 @@ struct AppSettingsView: View {
     @State private var frameBlending: FrameBlending
     @State private var fastForwardSpeed: FastForwardSpeed
     @State private var fastForwardAudio: FastForwardAudio
+    @State private var orientation: ScreenOrientation
     @State private var screenScaling: ScreenScaling
     @State private var tapGameForMenu: Bool
     @State private var soundMode: SoundMode
@@ -52,6 +53,7 @@ struct AppSettingsView: View {
         _frameBlending = State(initialValue: Self.stored(FrameBlending.self, .frameBlending, in: store) ?? .off)
         _fastForwardSpeed = State(initialValue: Self.stored(FastForwardSpeed.self, .fastForwardSpeed, in: store) ?? .x2)
         _fastForwardAudio = State(initialValue: Self.stored(FastForwardAudio.self, .fastForwardAudio, in: store) ?? .muted)
+        _orientation = State(initialValue: Self.stored(ScreenOrientation.self, .orientation, in: store) ?? .automatic)
         _screenScaling = State(initialValue: Self.stored(ScreenScaling.self, .screenScaling, in: store) ?? .integer)
         _tapGameForMenu = State(initialValue: Self.stored(Bool.self, .tapGameForMenu, in: store) ?? false)
         _soundMode = State(initialValue: Self.stored(SoundMode.self, .soundMode, in: store) ?? .followSilentSwitch)
@@ -100,6 +102,7 @@ struct AppSettingsView: View {
         .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
         .onChange(of: fastForwardSpeed) { _, newValue in save(newValue, .fastForwardSpeed) }
         .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
+        .onChange(of: orientation) { _, newValue in save(newValue, .orientation) }
         .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
     }
 
@@ -149,12 +152,22 @@ struct AppSettingsView: View {
             }
 
             Section {
+                Picker("Orientation", selection: $orientation) {
+                    Text("Automatic").tag(ScreenOrientation.automatic)
+                    Text("Portrait").tag(ScreenOrientation.portrait)
+                    Text("Landscape").tag(ScreenOrientation.landscape)
+                }
+            } header: {
+                Text("Display")
+            } footer: {
+                Text("Automatic turns games with the phone, within its rotation lock. Playtiles always plays in portrait, and the library stays in portrait.")
+            }
+
+            Section {
                 Picker("Screen Scaling", selection: $screenScaling) {
                     Text("Integer").tag(ScreenScaling.integer)
                     Text("Fill").tag(ScreenScaling.fill)
                 }
-            } header: {
-                Text("Display")
             } footer: {
                 Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
             }

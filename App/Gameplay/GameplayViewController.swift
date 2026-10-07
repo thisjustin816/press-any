@@ -31,6 +31,7 @@ final class GameplayViewController: UIViewController {
     /// Set once an emulation error has stopped the game for good.
     private var halted = false
     private var controlStyle: TouchControlStyle
+    private var orientation: ScreenOrientation
     private var lcdFilter: LCDFilter
     private var colorCorrection: ColorCorrection
     private var dmgPalette: DMGPalette
@@ -67,6 +68,7 @@ final class GameplayViewController: UIViewController {
         launchMessage: String? = nil,
         firstFrameClock: UInt64? = nil,
         controlStyle: TouchControlStyle = .gameBoy,
+        orientation: ScreenOrientation = .automatic,
         screenScaling: ScreenScaling = .integer,
         lcdFilter: LCDFilter = .off,
         colorCorrection: ColorCorrection = .defaultValue,
@@ -84,6 +86,7 @@ final class GameplayViewController: UIViewController {
         self.runtime = runtime
         self.controllerMonitor = controllerMonitor
         self.controlStyle = controlStyle
+        self.orientation = orientation
         self.lcdFilter = lcdFilter
         self.colorCorrection = colorCorrection
         self.dmgPalette = dmgPalette
@@ -105,6 +108,19 @@ final class GameplayViewController: UIViewController {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        GameplayOrientation.mask(style: controlStyle, orientation: orientation, coveredBySheet: coveredBySheet)
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
+        touchControls.cancelInput()
+        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            self?.view.setNeedsLayout()
+            self?.view.layoutIfNeeded()
+        })
     }
 
     override func viewDidLoad() {
@@ -491,6 +507,7 @@ final class GameplayViewController: UIViewController {
     /// with them, so the player sees each change behind the sheet.
     func applyDisplaySettings(
         controlStyle: TouchControlStyle,
+        orientation: ScreenOrientation = .automatic,
         screenScaling: ScreenScaling,
         lcdFilter: LCDFilter,
         colorCorrection: ColorCorrection = .defaultValue,
@@ -503,6 +520,10 @@ final class GameplayViewController: UIViewController {
             self.colorCorrection = colorCorrection
             self.dmgPalette = dmgPalette
             applyCoreDisplaySettings()
+        }
+        if orientation != self.orientation {
+            self.orientation = orientation
+            setNeedsUpdateOfSupportedInterfaceOrientations()
         }
         if fastForwardSpeed != self.fastForwardSpeed || fastForwardAudio != self.fastForwardAudio {
             self.fastForwardSpeed = fastForwardSpeed
