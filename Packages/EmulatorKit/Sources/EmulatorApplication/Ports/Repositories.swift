@@ -37,6 +37,9 @@ public protocol SaveStateRepository: Sendable {
     func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState]
     /// Every state made with the profile, on any Build.
     func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState]
+    func fetchSaveState(id: UUID) throws -> SaveState?
+    /// Names the state, or clears its name with nil.
+    func renameSaveState(id: UUID, label: String?) throws
     /// Moves the Build's states made with one profile over to another.
     func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws
     func deleteSaveState(id: UUID) throws

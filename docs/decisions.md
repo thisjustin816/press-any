@@ -14,6 +14,17 @@ boots the game normally from its battery save and tells the player the resume po
 Both mismatches mark the asset corrupt when the repository can record it; a failed status update
 still rejects the data. Verification hashes the bytes already read, without reading the file
 again. No file is deleted or repaired by verification.
+## 2026-10-07: Save states are managed from their Save Profile
+
+A Save Profile's menu opens Save States: its states on every Build, newest first, each with its
+picture, Build and date. A state can be renamed there, and an empty name gives back "Save State"
+or "Auto State". Deleting one sends it to Recently Deleted on its own, like a Game, Build or
+profile. Loading stays in the game menu, where the Build and profile are already chosen.
+
+A state deleted on its own comes back only once its profile and Build are back, so Restore asks
+for those first. Purging a profile or Build for good takes all its states with it, including ones
+waiting in another deletion: a state-only deletion goes entirely, and a Build's deletion drops
+the states that belonged to the purged profile and keeps the rest.
 
 ## 2026-10-07: A welcome screen until the onboarding exists
 

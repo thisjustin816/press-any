@@ -2,7 +2,8 @@ import EmulatorApplication
 import EmulatorDomain
 import SwiftUI
 
-/// Deleted Games, Builds and Save Profiles, each restorable until 30 days after it was deleted.
+/// Deleted Games, Builds, Save Profiles and save states, each restorable until 30 days after it
+/// was deleted.
 struct RecentlyDeletedView: View {
     let operations: LibraryDeletionOperations
     let games: any GameRepository
@@ -28,7 +29,7 @@ struct RecentlyDeletedView: View {
                 ContentUnavailableView(
                     "Nothing Recently Deleted",
                     systemImage: "trash",
-                    description: Text("Deleted Games, Builds and Save Profiles wait here for 30 days.")
+                    description: Text("Deleted Games, Builds, Save Profiles and save states wait here for 30 days.")
                 )
             }
         }
@@ -79,8 +80,12 @@ struct RecentlyDeletedView: View {
         switch deletion.kind {
         case .game:
             parts.append("Game")
-        case .build, .saveProfile:
-            let kind = deletion.kind == .build ? "Build" : "Save Profile"
+        case .build, .saveProfile, .saveState:
+            let kind = switch deletion.kind {
+            case .build: "Build"
+            case .saveState: "Save State"
+            default: "Save Profile"
+            }
             if let game = try? games.fetchGame(id: deletion.gameID) {
                 parts.append("\(kind) in \(game.primaryTitle)")
             } else {
@@ -109,6 +114,12 @@ struct RecentlyDeletedView: View {
         } catch LibraryDeletionError.baseBuildIsDeleted(let buildID) {
             let base = holder(of: buildID, in: \.buildIDs)
             message = "It’s patched from \(base), which is in Recently Deleted too. Restore that first."
+        } catch LibraryDeletionError.saveProfileIsDeleted(let profileID) {
+            let profile = holder(of: profileID, in: \.saveProfileIDs)
+            message = "Its Save Profile, \(profile), is in Recently Deleted too. Restore that first."
+        } catch LibraryDeletionError.buildIsDeleted(let buildID) {
+            let build = holder(of: buildID, in: \.buildIDs)
+            message = "Its Build, \(build), is in Recently Deleted too. Restore that first."
         } catch LibraryDeletionError.romAlreadyInGame {
             message = "Its Game has the same ROM again, imported after \(deletion.title) was deleted."
         } catch {

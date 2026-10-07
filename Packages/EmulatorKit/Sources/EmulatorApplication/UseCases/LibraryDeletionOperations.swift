@@ -5,6 +5,7 @@ public enum LibraryDeletionError: Error, Equatable {
     case gameNotFound(UUID)
     case buildNotFound(UUID)
     case saveProfileNotFound(UUID)
+    case saveStateNotFound(UUID)
     case deletionNotFound(UUID)
     /// Patched Builds in other Games are rebuilt from Builds in this Game. They name the Builds.
     case dependentBuildsInOtherGames([UUID])
@@ -12,6 +13,10 @@ public enum LibraryDeletionError: Error, Equatable {
     case gameIsDeleted(UUID)
     /// A patched Build can't come back while the Build it's rebuilt from is deleted.
     case baseBuildIsDeleted(UUID)
+    /// A deleted save state comes back only to its Save Profile and Build, so those are restored
+    /// first. They name the deleted record.
+    case saveProfileIsDeleted(UUID)
+    case buildIsDeleted(UUID)
     /// The same ROM was imported into the Game again since this Build was deleted. Names the
     /// deleted Build.
     case romAlreadyInGame(UUID)
@@ -29,8 +34,8 @@ public struct DeletionPlan: Equatable, Sendable {
     public let emptiedGames: [Game]
 }
 
-/// Deletes Games, Builds and Save Profiles into Recently Deleted, restores them, and purges them
-/// after `LibraryDeletion.retention`.
+/// Deletes Games, Builds, Save Profiles and save states into Recently Deleted, restores them, and
+/// purges them after `LibraryDeletion.retention`.
 public struct LibraryDeletionOperations: Sendable {
     private let games: any GameRepository
     private let builds: any BuildRepository
@@ -136,6 +141,22 @@ public struct LibraryDeletionOperations: Sendable {
             saveStateIDs: try states.fetchSaveStates(saveProfileID: profileID).map(\.id)
         )
         return DeletionPlan(kind: .saveProfile, title: profile.displayName, gameID: profile.gameID, records: records, dependentBuilds: [], emptiedGames: [])
+    }
+
+    /// One save state.
+    public func planStateDeletion(stateID: UUID) throws -> DeletionPlan {
+        guard let state = try states.fetchSaveState(id: stateID) else { throw LibraryDeletionError.saveStateNotFound(stateID) }
+        guard let profile = try profiles.fetchSaveProfile(id: state.saveProfileID) else {
+            throw LibraryDeletionError.saveProfileNotFound(state.saveProfileID)
+        }
+        return DeletionPlan(
+            kind: .saveState,
+            title: state.displayName,
+            gameID: profile.gameID,
+            records: LibraryRecordSet(saveStateIDs: [stateID]),
+            dependentBuilds: [],
+            emptiedGames: []
+        )
     }
 
     /// Moves the plan's records into Recently Deleted. A Game or Build that preferred a deleted
