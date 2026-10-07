@@ -3,6 +3,23 @@
 Product decisions made after the specs in `docs/specs/`, newest first. Each entry wins over the
 specs where they conflict; update the spec it touches in the same change.
 
+## 2026-10-07: Landscape gameplay uses the Game Boy Advance layout
+
+Gameplay with the Game Boy controls supports portrait and both landscape orientations, following
+the phone's rotation lock. The library, Game Details, Settings and every sheet stay portrait;
+closing a game held sideways returns to the portrait library. Playtiles stays portrait.
+
+Landscape uses the Game Boy Advance (AGB-001) arrangement regardless of the portrait layout
+choice: the picture centered in its bezel, D-pad on the left, A and B on the right, level START
+above SELECT below the D-pad, and the Press Any menu button below the picture. Controls keep the
+portrait Game Boy's physical sizes and drawing, and clear the phone's safe areas. Screen Scaling
+still chooses Integer or Fill. Rotating releases held touch input and keeps the game running or
+paused as it was, with Resume centered on the picture. A connected controller still hides the
+touch controls.
+
+This replaces the temporary portrait lock from October 5. Gameplay needs a comfortable landscape
+layout before a public build; management screens and Playtiles keep their portrait layouts.
+
 ## 2026-10-07: Save states are managed from their Save Profile
 
 A Save Profile's menu opens Save States: its states on every Build, newest first, each with its
@@ -387,18 +404,18 @@ hack metadata conventions and metadata editing after import remain v1 work.
 **Why.** The Build columns existed but imports left them empty. Players need to distinguish
 regional and versioned Builds without having to put all their metadata into the display name.
 
-## 2026-10-05: TestFlight from CI, by hand, in portrait
+## 2026-10-05: TestFlight from CI, by hand
 
 **Decision.** TestFlight builds are archived, signed and uploaded by a manual GitHub Actions
 workflow, using an App Store Connect API key, an Apple Distribution certificate, and an App Store
 provisioning profile stored in GitHub secrets. The runner imports the signing credentials into a
 temporary keychain, so no Mac is needed. A build ships only when someone runs it. The bundle ID stays `com.thisjustin816.PressAny`,
-the technical name in `AGENTS.md`; the name people see is the display name. The app is locked to
-portrait until the v1 landscape layouts.
+the technical name in `AGENTS.md`; the name people see is the display name. Gameplay rotation
+follows the October 7 landscape decision; management screens and sheets stay portrait.
 
 **Why.** The owner tests on an iPhone without building locally. Uploading on every merge would
-send testers half-finished work. Nothing kept the app in portrait, so it rotated into a landscape
-that no layout supports yet.
+send testers half-finished work. The temporary portrait lock kept unsupported layouts off screen
+until the landscape gameplay layout arrived.
 
 ## 2026-10-05: Pause when the app goes inactive, and keep Quick Play progress with its Build
 

@@ -69,6 +69,73 @@ final class MenuScreenshots: XCTestCase {
         try openGameplayMenu(scene: "quick-play", expecting: "Add to Library…", then: "menu-quick-play")
     }
 
+    func test9LandscapeGameplayAndClosingReturnsToPortrait() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let settings = try settings()
+        let app = try launch("play:\(settings.playROM)")
+        let menu = app.buttons["Game Menu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        sleep(4)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        waitForOrientation(in: app, landscape: true)
+        try expect(menu, then: "play-landscape")
+        menu.tap()
+        let resume = app.buttons["Resume"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 5))
+        try expect(app.buttons["Close Game"], then: "menu-gameplay-landscape")
+        app.buttons["Close Game"].tap()
+        XCTAssertTrue(app.buttons["library.addMenu"].waitForExistence(timeout: 10))
+        waitForOrientation(in: app, landscape: false)
+    }
+
+    func testLandscapeQuickPlayWithController() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let settings = try settings()
+        let app = try launch("quick-play:\(settings.playROM)", arguments: ["-ScreenshotGamepad", "YES"])
+        let menu = app.buttons["Game Menu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        sleep(4)
+        XCUIDevice.shared.orientation = .landscapeRight
+        waitForOrientation(in: app, landscape: true)
+        try expect(menu, then: "play-landscape-gamepad")
+        menu.tap()
+        try expect(app.buttons["Add to Library…"], then: "menu-quick-play-landscape")
+    }
+
+    func testPlaytilesStaysPortrait() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let settings = try settings()
+        let app = try launch("play:\(settings.playROM)", arguments: ["-ScreenshotLayout", "playtiles"])
+        XCTAssertTrue(app.buttons["Game Menu"].waitForExistence(timeout: 10))
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        XCTAssertLessThan(app.frame.width, app.frame.height)
+    }
+
+    func testSettingsOverLandscapeGameplayStaysPortrait() throws {
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let settings = try settings()
+        let app = try launch("play:\(settings.playROM)")
+        let menu = app.buttons["Game Menu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        XCUIDevice.shared.orientation = .landscapeLeft
+        waitForOrientation(in: app, landscape: true)
+        menu.tap()
+        let settingsButton = app.buttons["Settings…"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        settingsButton.tap()
+        waitForOrientation(in: app, landscape: false)
+        try expect(app.navigationBars["Game Settings"], then: "settings-over-game-portrait")
+    }
+
+    private func waitForOrientation(in app: XCUIApplication, landscape: Bool) {
+        let deadline = Date().addingTimeInterval(10)
+        while (app.frame.width > app.frame.height) != landscape, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        XCTAssertEqual(app.frame.width > app.frame.height, landscape)
+    }
+
     /// Taps the logo, which opens the same menu with or without a controller connected.
     private func openGameplayMenu(
         scene: String = "play",
@@ -109,6 +176,7 @@ final class MenuScreenshots: XCTestCase {
     }
 
     private func launch(_ scene: String, arguments: [String] = []) throws -> XCUIApplication {
+        XCUIDevice.shared.orientation = .portrait
         let settings = try settings()
         let app = XCUIApplication()
         app.launchArguments = ["-ScreenshotScene", scene, "-ScreenshotROMs", settings.roms] + arguments

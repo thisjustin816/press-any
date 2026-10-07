@@ -50,8 +50,8 @@ targets:
         INFOPLIST_FILE: Config/PressAny-Info.plist
         # Without a launch screen, iOS runs the app letterboxed at an old iPhone's size.
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        # Every layout is portrait until the v1 landscape layouts (docs/decisions.md).
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        # The app delegate restricts landscape to Game Boy gameplay.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
     dependencies:

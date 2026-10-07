@@ -101,6 +101,19 @@ final class GameplayViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        GameplayOrientation.mask(style: controlStyle, coveredBySheet: coveredBySheet)
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
+        touchControls.cancelInput()
+        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            self?.view.setNeedsLayout()
+            self?.view.layoutIfNeeded()
+        })
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black

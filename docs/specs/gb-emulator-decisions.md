@@ -804,6 +804,10 @@ Internal model:
 - own native layout/skin representation
 - import adapters for Delta/Manic rather than using either schema as the app's core model
 
+Built-in landscape gameplay uses the Game Boy Advance (AGB-001) arrangement, with the portrait
+Game Boy's control sizes. Only Game Boy gameplay rotates; Playtiles, management screens and
+sheets stay portrait. See the 2026-10-07 landscape decision in `docs/decisions.md`.
+
 v1 visual editor scope:
 - lightweight editor
 - built-in presets

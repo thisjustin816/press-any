@@ -67,6 +67,8 @@ final class TouchControllerView: UIView {
             height: Double(bounds.height),
             safeTop: Double(safeAreaInsets.top),
             safeBottom: Double(safeAreaInsets.bottom),
+            safeLeft: Double(safeAreaInsets.left),
+            safeRight: Double(safeAreaInsets.right),
             displayScale: Double(traitCollection.displayScale),
             scaling: scaling,
             pictureOpensMenu: pictureOpensMenu
@@ -91,7 +93,7 @@ final class TouchControllerView: UIView {
         if let bezel = layout.bezel { drawBezel(bezel, around: layout.screen, palette: palette, in: context) }
         guard showsControls else { return }
 
-        switch style {
+        switch bounds.width > bounds.height ? .gameBoy : style {
         case .gameBoy:
             if let dpad = layout.drawnRect(.dpad) { drawCrossDPad(dpad, input: lastInput, palette: palette, in: context) }
             drawButtonGroove(palette: palette, in: context)

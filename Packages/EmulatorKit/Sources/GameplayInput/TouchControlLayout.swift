@@ -155,8 +155,8 @@ public struct TouchControlLayout: Equatable, Sendable {
 }
 
 extension TouchControlLayout {
-    /// The layout for `style` in a portrait view of the given size, in points. `safeTop` keeps the
-    /// screen clear of the status bar and `safeBottom` the logo clear of the home indicator.
+    /// The layout for `style` in portrait, or a Game Boy Advance layout in landscape, in points.
+    /// Safe-area insets keep the picture and controls clear of screen cutouts and the home indicator.
     /// `displayScale` lets the Game Boy layout size the picture to whole device pixels under
     /// `scaling`. `pictureOpensMenu` makes a tap on the game picture open the menu as well as one
     /// on the logo.
@@ -166,11 +166,20 @@ extension TouchControlLayout {
         height: Double,
         safeTop: Double = 0,
         safeBottom: Double = 0,
+        safeLeft: Double = 0,
+        safeRight: Double = 0,
         displayScale: Double = 3,
         scaling: ScreenScaling = .integer,
         pictureOpensMenu: Bool = false
     ) -> TouchControlLayout {
-        switch style {
+        if width > height {
+            return gameBoyAdvance(
+                width: width, height: height,
+                safeTop: safeTop, safeBottom: safeBottom, safeLeft: safeLeft, safeRight: safeRight,
+                displayScale: displayScale, scaling: scaling, pictureOpensMenu: pictureOpensMenu
+            )
+        }
+        return switch style {
         case .gameBoy:
             gameBoy(
                 width: width,
@@ -225,6 +234,78 @@ extension TouchControlLayout {
     /// Points per millimeter on an iPhone screen, near enough on every model (153 to 163 points
     /// per inch), so the controls come out at the Game Boy's own size.
     static let pointsPerMillimeter = 6.1
+
+    static func gameBoyAdvance(
+        width: Double, height: Double,
+        safeTop: Double, safeBottom: Double, safeLeft: Double, safeRight: Double,
+        displayScale: Double, scaling: ScreenScaling, pictureOpensMenu: Bool
+    ) -> TouchControlLayout {
+        let panel = GameBoyPanel.self
+        let mm = pointsPerMillimeter
+        let dpadSize = panel.dpadSize * mm
+        let buttonSize = panel.buttonSize * mm
+        let pill = (length: panel.pillSize.length * mm, width: panel.pillSize.width * mm)
+        let margin = 8.0
+        let bezelPadding = 12.0
+        let bottom = height - safeBottom
+        let logo = TouchRect(x: width / 2 - 90, y: bottom - 28, width: 180, height: 24)
+        let logoAreas = menuAreas(logo: logo, screen: .init(x: 0, y: 0, width: 0, height: 0), pictureOpensMenu: false)
+        // A centered picture reserves equal space for both sides, including the larger cutout inset.
+        let sideSpace = max(safeLeft, safeRight) + margin + dpadSize + bezelPadding
+        let pictureWidth = max(1, width - 2 * (sideSpace + margin))
+        let pictureTop = safeTop + 4 + bezelPadding
+        let pictureBottom = logoAreas[0].y - 4 - bezelPadding
+        let frame = TouchRect(x: (width - pictureWidth) / 2, y: pictureTop,
+                              width: pictureWidth, height: max(1, pictureBottom - pictureTop))
+        let screen = scaling.picture(sourceWidth: 160, sourceHeight: 144, in: frame, pixelsPerPoint: displayScale)
+        let bezel = TouchRect(x: screen.x - bezelPadding, y: screen.y - bezelPadding,
+                              width: screen.width + 2 * bezelPadding, height: screen.height + 2 * bezelPadding)
+        let leftEdge = safeLeft + margin
+        let leftEnd = bezel.x - margin
+        let rightEdge = bezel.x + bezel.width + margin
+        let rightEnd = width - safeRight - margin
+
+        func centered(_ center: TouchPoint, width: Double, height: Double) -> TouchRect {
+            TouchRect(x: center.x - width / 2, y: center.y - height / 2, width: width, height: height)
+        }
+        func square(_ center: TouchPoint, _ size: Double) -> TouchRect {
+            centered(center, width: size, height: size)
+        }
+        func clipped(_ rect: TouchRect, left: Double, right: Double) -> TouchRect {
+            let x = max(rect.x, left), y = max(rect.y, safeTop)
+            return TouchRect(x: x, y: y, width: min(rect.x + rect.width, right) - x,
+                             height: min(rect.y + rect.height, bottom) - y)
+        }
+
+        let dpadY = min((safeTop + bottom) / 2 - 24, bottom - (dpadSize / 2 + 12 + 8 + 44 + 8 + 44))
+        let dpad = TouchPoint(x: (leftEdge + leftEnd) / 2, y: dpadY)
+        let aToBX = min((panel.a.x - panel.b.x) * mm, rightEnd - rightEdge - buttonSize)
+        let aToBY = aToBX * (panel.b.y - panel.a.y) / (panel.a.x - panel.b.x)
+        let a = TouchPoint(x: rightEnd - buttonSize / 2, y: dpadY + (panel.a.y - panel.dpad.y) * mm)
+        let b = TouchPoint(x: a.x - aToBX, y: a.y + aToBY)
+        let buttonReach = min(buttonSize + 14, aToBX - 4)
+        let start = TouchPoint(x: dpad.x, y: dpadY + dpadSize / 2 + 12 + 8 + 22)
+        let select = TouchPoint(x: dpad.x, y: start.y + 52)
+        let dpadRect = square(dpad, dpadSize)
+
+        return TouchControlLayout(
+            dpad: dpadRect,
+            dpadHitArea: clipped(square(dpad, dpadSize + 24), left: leftEdge, right: leftEnd),
+            a: clipped(square(a, buttonReach), left: rightEdge - margin, right: width - safeRight),
+            b: clipped(square(b, buttonReach), left: rightEdge - margin, right: width - safeRight),
+            start: clipped(centered(start, width: pill.length + 24, height: 44), left: leftEdge, right: leftEnd),
+            select: clipped(centered(select, width: pill.length + 24, height: 44), left: leftEdge, right: leftEnd),
+            screen: screen,
+            menuAreas: menuAreas(logo: logo, screen: screen, pictureOpensMenu: pictureOpensMenu),
+            bezel: bezel,
+            artwork: [
+                .dpad: dpadRect, .a: square(a, buttonSize), .b: square(b, buttonSize),
+                .start: centered(start, width: pill.length, height: pill.width),
+                .select: centered(select, width: pill.length, height: pill.width),
+            ],
+            logo: logo
+        )
+    }
 
     /// The Game Boy layout. The D-pad, buttons and START and SELECT are drawn at the hardware's
     /// size, with its spacing and angles. Across the width they keep the Game Boy's proportions,
