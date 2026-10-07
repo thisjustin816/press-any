@@ -200,6 +200,7 @@ public struct BuildOperations: Sendable {
             throw BuildOperationError.buildNotFound(buildID)
         }
         let sourceGame = try games.fetchGame(id: sourceBuild.gameID)
+        let restoredTitle = mode == .move ? Self.titleBefore(hack: sourceBuild, in: sourceGame) : nil
         let timestamp = now()
         let promotedGame = try transactions.run { [games, builds, profiles, states, sourceBuild, makeID] in
             let newGame = Game(
@@ -208,7 +209,7 @@ public struct BuildOperations: Sendable {
                 systemFamily: "gameboy",
                 hasPlayerTitle: true,
                 isFavorite: sourceGame?.isFavorite ?? false,
-                lineage: sourceGame.map { GameLineage(sourceGameID: $0.id, sourceTitle: $0.primaryTitle) },
+                lineage: sourceGame.map { GameLineage(sourceGameID: $0.id, sourceTitle: restoredTitle ?? $0.primaryTitle) },
                 createdAt: timestamp,
                 modifiedAt: timestamp
             )
@@ -275,8 +276,14 @@ public struct BuildOperations: Sendable {
                     updatedNewGame.artworkAssetID = oldGame.artworkAssetID
                     try games.updateGame(updatedNewGame)
                     try games.deleteGame(id: oldGame.id)
-                } else if oldGame.preferredBuildID == sourceBuild.id {
-                    oldGame.preferredBuildID = remaining.first?.id
+                } else if oldGame.preferredBuildID == sourceBuild.id || restoredTitle != nil {
+                    if oldGame.preferredBuildID == sourceBuild.id {
+                        oldGame.preferredBuildID = remaining.first?.id
+                    }
+                    if let restoredTitle {
+                        oldGame.aliases.removeAll { $0.caseInsensitiveCompare(restoredTitle) == .orderedSame }
+                        oldGame.primaryTitle = restoredTitle
+                    }
                     oldGame.modifiedAt = timestamp
                     try games.updateGame(oldGame)
                 }
@@ -287,6 +294,17 @@ public struct BuildOperations: Sendable {
             return try copyArtwork(artwork, to: promotedGame.id) ?? promotedGame
         }
         return promotedGame
+    }
+
+    /// The title a Game had before it took a hack's title, for when that hack moves to its own
+    /// Game. Mole Mania, renamed Mole Mania DX for its patched Build, is Mole Mania again once the
+    /// DX Build leaves. The hack records the title it was made from, and the Game must still hold
+    /// it as an alias, so a title the player chose since is left alone.
+    static func titleBefore(hack build: Build, in game: Game?) -> String? {
+        guard let game, let hackTitle = build.hackTitle, let baseTitle = build.baseTitle,
+              game.primaryTitle.caseInsensitiveCompare(hackTitle) == .orderedSame,
+              baseTitle.caseInsensitiveCompare(hackTitle) != .orderedSame else { return nil }
+        return game.aliases.first { $0.caseInsensitiveCompare(baseTitle) == .orderedSame }
     }
 
     public func mergeGame(

@@ -23,14 +23,14 @@ struct BuildDetailView: View {
                     Section {
                         LabeledContent("Playtime", value: BuildPlaytime.formatted(build.totalPlaytimeSeconds))
                             .accessibilityIdentifier("build.playtime")
-                        Button("Technical Info...") { showsTechnicalInfo = true }
+                        Button("Technical Info…") { showsTechnicalInfo = true }
                     }
                     Section("Notes") {
                         Text(verbatim: build.notes.isEmpty ? "No notes" : build.notes)
                             .foregroundStyle(build.notes.isEmpty ? .secondary : .primary)
                             .textSelection(.enabled)
                             .accessibilityIdentifier("build.notes")
-                        Button("Edit Notes...", systemImage: "pencil") { model.editNotes() }
+                        Button("Edit Notes…", systemImage: "pencil") { model.editNotes() }
                     }
                 }
             }

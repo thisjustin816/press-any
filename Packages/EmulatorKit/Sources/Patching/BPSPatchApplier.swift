@@ -8,6 +8,20 @@ public struct BPSPatchApplier: Sendable {
 
     public init() {}
 
+    /// The size and CRC32 of the ROM a patch was made for, from its header and footer. Nil when the
+    /// data isn't an intact BPS patch.
+    public static func expectedSource(of patch: Data) -> (size: Int, crc32: UInt32)? {
+        let patch = Data(patch)
+        guard patch.count >= 16, patch.prefix(4) == Data("BPS1".utf8) else { return nil }
+        let trailerStart = patch.count - 12
+        guard let sourceCRC = try? littleEndianUInt32(patch, at: trailerStart),
+              let patchCRC = try? littleEndianUInt32(patch, at: trailerStart + 8),
+              CRC32.checksum(patch.prefix(patch.count - 4)) == patchCRC else { return nil }
+        var reader = BPSReader(data: patch, limit: trailerStart, index: 4)
+        guard let size = try? reader.readInt() else { return nil }
+        return (size, sourceCRC)
+    }
+
     /// With `ignoringBaseMismatch`, the source size and CRC and the resulting target CRC are not
     /// enforced, since a different base cannot produce the recorded target. The patch CRC is.
     public func apply(patch: Data, to source: Data, ignoringBaseMismatch: Bool = false) throws -> Data {
@@ -18,9 +32,9 @@ public struct BPSPatchApplier: Sendable {
         }
 
         let trailerStart = patch.count - 12
-        let expectedSourceCRC = try littleEndianUInt32(patch, at: trailerStart)
-        let expectedTargetCRC = try littleEndianUInt32(patch, at: trailerStart + 4)
-        let expectedPatchCRC = try littleEndianUInt32(patch, at: trailerStart + 8)
+        let expectedSourceCRC = try Self.littleEndianUInt32(patch, at: trailerStart)
+        let expectedTargetCRC = try Self.littleEndianUInt32(patch, at: trailerStart + 4)
+        let expectedPatchCRC = try Self.littleEndianUInt32(patch, at: trailerStart + 8)
 
         let actualPatchCRC = CRC32.checksum(patch.prefix(patch.count - 4))
         guard actualPatchCRC == expectedPatchCRC else {
@@ -111,7 +125,7 @@ public struct BPSPatchApplier: Sendable {
         return result
     }
 
-    private func littleEndianUInt32(_ data: Data, at offset: Int) throws -> UInt32 {
+    private static func littleEndianUInt32(_ data: Data, at offset: Int) throws -> UInt32 {
         guard offset >= 0, offset + 4 <= data.count else { throw PatchError.malformedPatch }
         return UInt32(data[offset])
             | UInt32(data[offset + 1]) << 8

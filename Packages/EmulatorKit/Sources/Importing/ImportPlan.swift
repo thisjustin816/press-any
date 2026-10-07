@@ -85,6 +85,9 @@ public struct ROMImportPlan: Equatable, Sendable {
     public let markAsPreferred: Bool
     public let metadata: BuildImportMetadata
     public let proposedGameTitle: String?
+    /// The player chose `proposedGameTitle` in review, as with a hack's own title, so it replaces
+    /// even a title they set before and becomes theirs.
+    public let proposedGameTitleIsPlayers: Bool
     public let hasPlayerTitle: Bool
     public let baseGameReference: BaseGameReference?
 
@@ -96,6 +99,7 @@ public struct ROMImportPlan: Equatable, Sendable {
         markAsPreferred: Bool = false,
         metadata: BuildImportMetadata? = nil,
         proposedGameTitle: String? = nil,
+        proposedGameTitleIsPlayers: Bool = false,
         hasPlayerTitle: Bool = false,
         baseGameReference: BaseGameReference? = nil
     ) {
@@ -106,6 +110,7 @@ public struct ROMImportPlan: Equatable, Sendable {
         self.markAsPreferred = markAsPreferred
         self.metadata = metadata ?? BuildImportMetadata(analysis: analysis)
         self.proposedGameTitle = proposedGameTitle
+        self.proposedGameTitleIsPlayers = proposedGameTitleIsPlayers
         self.hasPlayerTitle = hasPlayerTitle
         self.baseGameReference = baseGameReference
     }

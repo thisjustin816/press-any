@@ -492,7 +492,7 @@ struct GameDetailView: View {
             buildName = build.displayName
             renamingBuild = build
         }
-        Button("Build Details...") { buildDetails = build }
+        Button("Build Details…") { buildDetails = build }
         Button("Technical Info…") { technicalInfo = build }
         Button("Export ROM") { model.exportROM(of: build) }
         Button("Build Settings…") {
@@ -625,7 +625,8 @@ private struct PromoteBuildSheet: View {
         self.sourceHasArtwork = sourceHasArtwork
         self.profiles = profiles
         self.onPromote = onPromote
-        _title = State(initialValue: build.displayName)
+        // A hack's own title names a Game better than its Build name, "v1.3".
+        _title = State(initialValue: build.hackTitle.flatMap { $0.isEmpty ? nil : $0 } ?? build.displayName)
         _carryOver = State(initialValue: suggested)
     }
 

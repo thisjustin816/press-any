@@ -226,6 +226,43 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.game.id).count, 1)
     }
 
+    func testMovingOutTheHackAGameWasRenamedForRestoresItsTitle() throws {
+        let harness = try Harness.make(twoBuilds: true)
+        var hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        hack.hackTitle = "Mole Mania DX"
+        hack.baseTitle = "Mole Mania"
+        try harness.builds.updateBuildMetadata(hack)
+        try harness.setPreferredBuild(hack.id)
+        let operations = harness.buildOperations()
+        try operations.renameGame(gameID: harness.game.id, title: "Mole Mania")
+        try operations.renameGame(gameID: harness.game.id, title: "Mole Mania DX")
+
+        let copied = try operations.promoteBuild(buildID: hack.id, title: "Mole Mania DX", mode: .copy)
+        XCTAssertEqual(try harness.games.fetchGame(id: harness.game.id)?.primaryTitle, "Mole Mania DX", "a copy leaves the hack in place")
+        XCTAssertEqual(copied.lineage?.sourceTitle, "Mole Mania DX")
+
+        let moved = try operations.promoteBuild(buildID: hack.id, title: "Mole Mania DX", mode: .move)
+        let original = try XCTUnwrap(harness.games.fetchGame(id: harness.game.id))
+        XCTAssertEqual(original.primaryTitle, "Mole Mania")
+        XCTAssertFalse(original.aliases.contains("Mole Mania"))
+        XCTAssertEqual(original.preferredBuildID, harness.baseBuild.id)
+        XCTAssertEqual(moved.lineage?.sourceTitle, "Mole Mania")
+    }
+
+    func testMovingOutAHackLeavesATitleThePlayerChoseSince() throws {
+        let harness = try Harness.make(twoBuilds: true)
+        var hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
+        hack.hackTitle = "Mole Mania DX"
+        hack.baseTitle = "Mole Mania"
+        try harness.builds.updateBuildMetadata(hack)
+        let operations = harness.buildOperations()
+        try operations.renameGame(gameID: harness.game.id, title: "Mole Mania DX")
+
+        _ = try operations.promoteBuild(buildID: hack.id, title: "Mole Mania DX", mode: .move)
+        XCTAssertEqual(try harness.games.fetchGame(id: harness.game.id)?.primaryTitle, "Mole Mania DX",
+                       "the Game was never titled Mole Mania, so there's nothing to go back to")
+    }
+
     func testPromoteBuildCopyReusesImmutableROMAsset() throws {
         let harness = try Harness.make(twoBuilds: true)
         var second = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })

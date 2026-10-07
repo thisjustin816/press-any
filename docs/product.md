@@ -49,7 +49,13 @@ crash reporting and usage counts, and Developer Mode.
 A Game is what the player thinks of as the game. It survives ROM replacement, patching, new
 versions, regional and revision variants, and Builds moving in or out. It has a UUID, a primary
 title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its
-own name; the base game's title stays as lineage.
+own name; the base game's title stays as lineage. A hack that becomes an existing Game's
+Preferred Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title:
+Mole Mania DX"), on by default. Accepting it keeps the old title as an alias and makes the new
+one the player's. Moving that hack out with Make Separate Game, which suggests the hack's title for
+the new Game, gives the original Game back the title the hack was made from, as long as it still
+holds it as an alias; a copy leaves the title alone. A patch without hack tags offers its title only when it adds words without
+digits to the Game's.
 
 A Game keeps alternate titles as aliases in an indexed table, ready for the later FTS5 index.
 Library search already matches them. A No-Intro family's other regional titles become aliases
@@ -337,10 +343,10 @@ promotion and Open Patch.
   re-importing. Build-scoped data (states, recipes, toolchain reports, variable maps, settings,
   notes and playtime) always follows the Build. A review sheet chooses the Game-level things: it
   offers copies of the Game's artwork and Save Profiles, selecting the artwork and the profiles
-  the Build plays or last wrote. Copies get their own files. The promoted Build plays its copy of the profile it played,
-  and its states move to those copies, keeping their save times so Auto States still resume. The
-  new Game records Split From, which survives the source Game's deletion. Promoting a Game's only
-  Build by Move just renames the Game.
+  the Build plays or last wrote. Copies get their own files. The promoted Build plays its copy of
+  the profile it played, and its states move to those copies, keeping their save times so Auto
+  States still resume. The new Game records Split From, which survives the source Game's deletion.
+  Promoting a Game's only Build by Move just renames the Game.
 - **Merge into Another Game** reviews in its own sheet: Move or Copy, the target, and the profiles
   and artwork that come along. Move takes every profile, since the source Game goes away; the
   target keeps its artwork unless Use <source>'s Artwork is on. Copy offers the source's artwork
@@ -749,9 +755,12 @@ exposes them; custom border editing is later.
   to its own kind's size limit before it's inflated and checked against its CRC32. Encrypted,
   Zip64 and damaged archives are refused.
 - A shared ROM offers Quick Play or Import to Library. A shared patch opens Open Patch, which
-  needs a Game and a base Build. A shared save opens Open Save, which imports it as a new Save
-  Profile in the chosen Game. The Game is preselected when the save is named like exactly one
-  Game's ROM file, as emulators name saves, or when its title matches one Game.
+  needs a Game and a base Build. A BPS patch records its base ROM's size and CRC32, so Open Patch
+  preselects the Build whose image matches, checking only images of that size. Without one, a
+  Game whose title matches the patch's is preselected with its Base Build. A shared save opens
+  Open Save, which imports it as a new Save Profile in the chosen Game. The Game is preselected
+  when the save is named like exactly one Game's ROM file, as emulators name saves, or when its
+  title matches one Game.
 - A file shared mid-game opens over the game, which pauses as for the game menu and stays paused
   afterward. Quick Play from that sheet reads "Close Game and Quick Play": the running game closes
   the normal way, saving first, and a Quick Play session still offers Keep for Later before the new

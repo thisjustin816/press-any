@@ -123,10 +123,16 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertEqual(hack.hackTitle, "Better")
         XCTAssertEqual(hack.author, "Jane")
         XCTAssertEqual(hack.status, "Beta")
+        XCTAssertEqual(hack.offeredGameTitle, "Better", "a Preferred hack offers its title for the Game")
+        hack.markAsPreferred = false
+        XCTAssertNil(hack.offeredGameTitle)
+        hack.markAsPreferred = true
 
         let result = try hack.commit()
         XCTAssertFalse(result.build.isBase)
         XCTAssertEqual(result.game.preferredBuildID, result.build.id)
+        XCTAssertEqual(result.game.primaryTitle, "Better")
+        XCTAssertTrue(result.game.aliases.contains("Example"))
     }
 
     func testANewHomebrewBuildJoinsTheMatchingGameAsBaseAndPreferred() throws {

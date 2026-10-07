@@ -107,7 +107,7 @@ final class SharedFileUITests: XCTestCase {
         openGameDetails()
         share("gbdk450-rev-v1.0-to-v1.1.bps")
         expect(app.navigationBars["Open Patch"], timeout: 45)
-        XCTAssertFalse(app.buttons["Apply Patch"].isEnabled, "a base must be selected explicitly")
+        XCTAssertTrue(app.buttons["Apply Patch"].isEnabled, "the BPS checksum picks the Game and base Build")
         app.buttons["Cancel"].tap()
         expect(app.navigationBars[gameTitle])
         expect(app.staticTexts[baseBuildName])

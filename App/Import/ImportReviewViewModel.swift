@@ -193,7 +193,8 @@ final class ImportReviewViewModel: ObservableObject {
             markAsBase: markAsBase,
             markAsPreferred: markAsPreferred,
             metadata: reviewedMetadata,
-            proposedGameTitle: acceptProposedTitle ? proposedTitle : nil,
+            proposedGameTitle: acceptProposedTitle ? offeredGameTitle : nil,
+            proposedGameTitleIsPlayers: acceptProposedTitle && proposedHackTitle != nil,
             hasPlayerTitle: analysis.filenameMetadata.releaseKind == .romHack
                 || (baseGameReference != nil && matchedAsHack)
                 || gameTitle.trimmingCharacters(in: .whitespacesAndNewlines) != analysis.filenameMetadata.suggestedTitle,
@@ -288,6 +289,20 @@ final class ImportReviewViewModel: ObservableObject {
     }
 
     func metadataRankingChanged() { refreshIdentityProposals() }
+
+    /// A hack that becomes an existing Game's Preferred Build offers its own title for the Game, as
+    /// "Mole Mania DX" for Mole Mania. Accepting it keeps the old title as an alias.
+    var proposedHackTitle: String? {
+        guard markAsPreferred, case .existing(let id) = destination,
+              analysis.filenameMetadata.releaseKind == .romHack || (baseGameReference != nil && matchedAsHack),
+              let game = games.first(where: { $0.id == id }) else { return nil }
+        let title = hackTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, GameMatcher.normalized(title) != GameMatcher.normalized(game.primaryTitle) else { return nil }
+        return title
+    }
+
+    /// The title review offers for the Game: a hack's own, or the best regional release title.
+    var offeredGameTitle: String? { proposedHackTitle ?? proposedTitle }
 
     func commit() throws -> ROMImportResult {
         let result: ROMImportResult

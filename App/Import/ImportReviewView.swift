@@ -182,7 +182,7 @@ struct ImportDestinationSection: View {
                     TextField("Build Name", text: $model.buildDisplayName)
                         .multilineTextAlignment(.trailing)
                 }
-                if let title = model.proposedTitle {
+                if let title = model.offeredGameTitle {
                     Toggle("Use Game Title: \(title)", isOn: $model.acceptProposedTitle)
                 }
                 if model.offersBaseLink {
