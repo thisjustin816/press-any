@@ -6,7 +6,7 @@ import XCTest
 @testable import PressAny
 
 /// The game pauses whenever its scene isn't active, and a trip to the background brings it back
-/// only as Resume Games says (docs/decisions.md "Pause when the app goes inactive").
+/// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
     private func makeGameplay(

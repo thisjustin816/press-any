@@ -44,7 +44,7 @@ public struct QuickPlayWorkspace: Sendable {
         let destinationROM = root.appendingPathComponent("rom.bin")
 
         do {
-            // Time to first frame is Quick Play's primary metric (docs/decisions.md): read the
+            // Time to first frame is Quick Play's primary metric (docs/product.md): read the
             // image once and validate, copy and hash that same buffer.
             let romData = try assetStore.readData(at: romURL)
             let header = try GBROMHeaderParser.parse(romData)

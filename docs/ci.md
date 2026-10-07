@@ -59,12 +59,12 @@ workflow is not the MVP device gate.
 
 ## Not built yet
 
-`docs/specs/gb-emulator-later-decisions.md` section 11 lists further workflows.
+`docs/product.md` (Automation) lists further workflows.
 None exists, because each needs a generator, a data source or a rights decision that does not
 exist yet, and a workflow that only prints success would be misleading:
 
 - `no-intro-update.yml` is not going to be built: DAT-o-MATIC bans clients it takes for bots, so
-  the No-Intro data is refreshed by hand (`docs/superpowers/plans/2026-10-06-no-intro-identity.md`).
+  the No-Intro data is refreshed by hand (`docs/product.md`, Identity and naming).
 - `shader-catalog-update.yml`, `openvgdb-update.yml`: need their generators and approved upstream
   sources. OpenVGDB stays disabled until its data license is established.
 - `toolchain-fingerprints-update.yml`: `ci.yml` already checks the port against its pinned

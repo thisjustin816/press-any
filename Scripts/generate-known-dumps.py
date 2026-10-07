@@ -4,7 +4,7 @@
 Download "Nintendo - Game Boy" and "Nintendo - Game Boy Color" from DAT-o-MATIC's
 download page in a browser, using the DB column. A .zip holding the one .xml file
 works as well as the .xml itself. Never script the download: DAT-o-MATIC bans
-clients it takes for bots (docs/decisions.md, "The game database is No-Intro's").
+clients it takes for bots (docs/product.md, "No-Intro data").
 
 The DB export lists every file No-Intro knows for a game: its own trusted dumps,
 and scene releases it hasn't dumped itself. Each game becomes one record holding
