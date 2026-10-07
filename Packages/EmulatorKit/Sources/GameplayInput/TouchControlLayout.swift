@@ -135,7 +135,7 @@ public struct TouchControlLayout: Equatable, Sendable {
         labelPlates: [TouchControl: TouchRect] = [:],
         labelPlateTilt: Double = 0,
         dpadDeadZoneFraction: Double = 0.16,
-        dpadDiagonalRatio: Double = 0
+        dpadDiagonalRatio: Double = 0.67
     ) {
         self.dpad = dpad
         self.dpadHitArea = dpadHitArea ?? dpad
@@ -537,8 +537,7 @@ extension TouchControlLayout {
                 bar: frame(0, 1129, 1080, 83),
                 tab: frame(494, 1129, 92, 182)
             ),
-            logo: logo,
-            dpadDiagonalRatio: 0.65
+            logo: logo
         )
     }
 }

@@ -18,6 +18,8 @@ public protocol BuildRepository: Sendable {
     func fetchBuilds(imageSHA1s: [String]) throws -> [Build]
     /// Live imported Builds whose SHA-1 hasn't been computed yet.
     func fetchImportedBuildsMissingImageSHA1() throws -> [Build]
+    /// Every live imported Build, oldest first.
+    func fetchImportedBuilds() throws -> [Build]
     func setImageSHA1(buildID: UUID, sha1: String) throws
     func insertBuild(_ build: Build) throws
     func updateBuildMetadata(_ build: Build) throws

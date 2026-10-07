@@ -190,6 +190,16 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
         }
     }
 
+    public func fetchImportedBuilds() throws -> [Build] {
+        try read { db in
+            try BuildRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM builds WHERE source_kind = ? AND deletion_id IS NULL ORDER BY created_at",
+                arguments: [BuildSourceKind.importedImage.rawValue]
+            ).map { try $0.domain() }
+        }
+    }
+
     public func setImageSHA1(buildID: UUID, sha1: String) throws {
         try write { db in
             try db.execute(

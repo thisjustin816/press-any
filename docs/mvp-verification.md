@@ -17,6 +17,7 @@ Verify with a user-supplied legal ROM:
 - [ ] A fresh install opens on the welcome screen, in Light and Dark Mode and at the largest text size; Get Started or a swipe down leaves the library, and later launches skip it. Settings > How Press Any Works shows it again.
 - [ ] Launch a GB game and a GBC game through SameBoy with correct colors, orientation, native speed and audio.
 - [ ] Touch input works with acceptable latency.
+- [ ] With Game Boy selected and Controller Theme set to Classic, slide a thumb around the D-pad in portrait and both landscape orientations: cardinals stay clean, diagonals engage only near the corners, and sliding back to a cardinal or the center releases the diagonal without lifting.
 - [ ] With Playtiles selected and the physical overlay aligned, press left/right/up/down slightly off-center: each stays straight. Deliberate diagonals and sliding back to straight directions still work.
 - [ ] From Files and a browser's downloaded-file share sheet, open `.gb`, `.gbc`, `.ips` and `.bps` in the app (use More if needed). ROMs offer Quick Play or Import Review; patches require a Game and base Build. Cancelling leaves the sender's file and library unchanged. While gameplay is open, the shared file waits until the game and its session sheet close.
 - [ ] With a Bluetooth controller, the D-pad and left thumbstick both move in all eight directions; slight stick drift does nothing. The controller's A and B are Game Boy A and B, Menu or X is START, Options or Y is SELECT, and the shoulders do nothing. On a PlayStation controller, Circle is A, Cross is B, Triangle is START and Square is SELECT. Disconnect while holding a direction: no button sticks, the touch controls return and the game pauses with a notice. Repeat with a paused game: it stays paused.
@@ -56,6 +57,7 @@ Verify with a user-supplied legal ROM:
 - [ ] Make Separate Game shows a review with the Build's own Save Profiles and the artwork selected; the new Game gets copies, shows Split From, and the original Game is unchanged.
 - [ ] In Import Review for a new Game, choose artwork from Photos, then replace it from Files: the preview changes, and after Import the library tile and the Game show it. Choose a file that isn't an image: review refuses it and the import still works. Add a Build to a Game that has artwork without choosing any: its artwork stays.
 - [ ] Import a homebrew ROM (GB Studio, GBDK or RGBDS); Import Review and the Build's Technical Info show what it was made with.
+- [ ] Import a second build of a homebrew game whose filename differs from the first, such as "Game-v5-Stability.gbc"; Import Review suggests adding it to the first Game and reads version 5, status Stability.
 - [ ] Play Build A of a homebrew Game, then launch Build B, made with different tools, with the same save; the warning appears, and Play with a Copy leaves the original save unchanged.
 - [ ] Replace Save from File on a profile with a save asks first and keeps "<name> before import"; on a blank profile it doesn't ask.
 - [ ] Load State shows each state's thumbnail.

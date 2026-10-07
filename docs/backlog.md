@@ -194,7 +194,8 @@ re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Pr
 (development releases default to both; ROM hacks default Preferred only); Toolchain
 findings in Import Review and Quick Play promotion; Files over a size limit for their kind
 (ROM, patch, save, artwork, variable map) refused before they are read or staged; only regular
-files staged.
+files staged. Review suggests the Game holding a Build with the same header title, and a
+mid-name "v5" or "0.3.0" word in a hyphenated or underscored filename becomes the version.
 
 ### Game/Build restructuring
 
@@ -349,6 +350,7 @@ update the open picture from Settings, and survive reset and state loads.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
+| partial | Consistent touch D-pad diagonal sectors | v1 | Game Boy portrait and landscape and Playtiles share a 0.67 weaker/stronger axis ratio, about 22.5° per diagonal and 67.5° per cardinal; dead zones and hit areas stay unchanged. Angle regression tests cover both styles and orientations; physical-iPhone thumb-sliding check remains in mvp-verification.md |
 | missing | Minimal / Fullscreen / one-handed presets | v1.1 |  |
 | missing | GameBaby preset; per-accessory/device calibration screen | v1.1 |  |
 | missing | Lightweight editor: screen/control position+size, opacity, hitboxes, portrait/landscape, control styles, save preset | v1.1 |  |

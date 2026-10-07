@@ -33,6 +33,10 @@ public struct ROMImportAnalysis: Equatable, Sendable {
     public let familyGameIDs: [UUID]
     public let familyTitles: [String]
     public let baseLineageGameIDs: [UUID]
+    /// The Games holding an imported Build whose ROM header has the same title. Homebrew keeps its
+    /// header title from build to build, so a new build finds its project's Game even when the
+    /// filename doesn't match. With exactly one, review suggests it.
+    public let headerTitleGameIDs: [UUID]
 
     public init(
         transactionID: UUID,
@@ -50,7 +54,8 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         knownFile: KnownDumpFile? = nil,
         familyGameIDs: [UUID] = [],
         familyTitles: [String] = [],
-        baseLineageGameIDs: [UUID] = []
+        baseLineageGameIDs: [UUID] = [],
+        headerTitleGameIDs: [UUID] = []
     ) {
         self.transactionID = transactionID
         self.stagedURL = stagedURL
@@ -65,6 +70,7 @@ public struct ROMImportAnalysis: Equatable, Sendable {
         self.imageSHA1 = imageSHA1
         self.knownDump = knownDump
         self.knownFile = knownFile
+        self.headerTitleGameIDs = headerTitleGameIDs
         self.familyGameIDs = familyGameIDs
         self.familyTitles = familyTitles
         self.baseLineageGameIDs = baseLineageGameIDs

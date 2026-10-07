@@ -173,6 +173,13 @@ public enum FilenameMetadataParser {
         } else {
             cleanTitle = title
         }
+        // A version word mid-name, as in "Serve-Sisters-Coop-v5-Stability" or
+        // "match-land-live-0.3.0+live1": the words after it describe the variant.
+        if version == nil, let stamp = versionStamp(in: cleanTitle) {
+            version = stamp.version
+            status = status ?? stamp.variant.map { canonicalStatus($0) ?? $0 }
+            cleanTitle = stamp.title
+        }
         // Builds from game jams and nightlies are often stamped with a date, as in
         // "AeonMetalFighters_20261006_classic". The date becomes the version and the words after
         // it describe the variant.
@@ -254,6 +261,31 @@ public enum FilenameMetadataParser {
     /// A date version, "2026.10.06", reads as a date in a Build name: "2026-10-06".
     static func isDateVersion(_ version: String) -> Bool {
         version.range(of: #"^(?:19|20)[0-9]{2}\.(?:0[1-9]|1[0-2])\.(?:0[1-9]|[12][0-9]|3[01])$"#, options: .regularExpression) != nil
+    }
+
+    /// A "v" version word after at least one title word, separated by spaces or underscores, or by
+    /// hyphens in a name that has no spaces, so "R-Type v2" keeps its title. The title words are
+    /// joined with spaces, and the words after the version are the variant.
+    private static func versionStamp(in title: String) -> (title: String, version: String, variant: String?)? {
+        let splitsHyphens = !title.contains(" ")
+        let words = title.split(whereSeparator: { $0 == " " || $0 == "_" || (splitsHyphens && $0 == "-") })
+            .map(String.init)
+        guard words.count >= 2 else { return nil }
+        // A bare number needs a dot to count, so "Mega Man 2" keeps its 2.
+        let bareVersion = #"^([0-9]+(?:\.[0-9]+){1,3}"# + versionSuffixPattern + #")$"#
+        for index in stride(from: words.count - 1, through: 1, by: -1) {
+            guard let value = captures(in: words[index], pattern: #"(?i)^v("# + versionPattern + #")$"#).first
+                ?? captures(in: words[index], pattern: bareVersion).first
+            else { continue }
+            var titleWords = Array(words[..<index])
+            // An all-lowercase joined name, as in "match-land-live-0.3.0", reads better capitalized.
+            if title.allSatisfy({ !$0.isUppercase }) {
+                titleWords = titleWords.map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            }
+            let variant = words[(index + 1)...].joined(separator: " ")
+            return (titleWords.joined(separator: " "), value, variant.isEmpty ? nil : variant)
+        }
+        return nil
     }
 
     /// A date stamp after at least one title word, as "20261006" or "2026-10-06", separated by

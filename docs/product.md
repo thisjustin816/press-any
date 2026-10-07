@@ -180,7 +180,10 @@ changes the library; review shows what will happen; commit is all or nothing.
   Build from its family; with several candidates it's a choice, not a default. Otherwise review
   suggests a Game whose title or alias matches the file's title, header title or a hack's base title,
   ignoring case, punctuation and spacing. Only whole titles match ("Mega Man 2" never joins
-  "Mega Man"), and two matching Games suggest neither. An uncertain ROM is never attached silently.
+  "Mega Man"), and two matching Games suggest neither. A ROM whose header title matches a Build
+  already in one Game suggests that Game, since homebrew builds of one project share a header
+  title while their filenames change. When the title and header suggest different Games, neither
+  is suggested. An uncertain ROM is never attached silently.
 - **Match Game.** A ROM with no No-Intro match can be marked as a hack or another Build of a known
   game. Search the library and bundled No-Intro data, choose the base game, then confirm Import.
   A recorded base keeps its title, system and, when known, No-Intro family and release even if its
@@ -273,6 +276,11 @@ promotion and Open Patch.
   are recognized. A dotted "Rev 0.2.0" is a homebrew version. Versions keep a semver suffix such
   as "-beta.3" and sort by their numeric part. Loose forms such as "r2" or a bare trailing number
   stay in the title, since "R-Type" and "Mega Man 2" look the same.
+- In a name joined by hyphens or underscores, a "v5" or "v1.2" word mid-name becomes the version
+  and the words after it the status: "Serve-Sisters-Coop-v5-Stability" is "Serve Sisters Coop",
+  version 5, status Stability. A dotted number needs no "v": "match-land-live-0.3.0+live1" is
+  "Match Land Live", version 0.3.0+live1, with an all-lowercase name capitalized. A lone "v2" is
+  never the whole title.
 - A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version,
   shown as "2026-10-06" and sorted by date; the words after it become the status. Only a valid
   eight-digit or hyphenated date counts, and never as the whole title.
@@ -467,8 +475,7 @@ disconnect.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
   START and SELECT in Game Boy order. A is larger than B, as in the skin, and controls respond
   across both the frame and the artwork. A raised alignment guide marks where the physical overlay
-  sits. Its diagonals need the weaker axis to exceed 65% of the stronger one as well as the center
-  dead zone, which widens the straight directions. The skin's artwork isn't used.
+  sits. The skin's artwork isn't used.
 
 The controls are drawn in code on a controller body behind them. Every control is raised like
 the menu button: a face lit from above, light along the inside of its top edge and shade along its
@@ -487,8 +494,12 @@ D-pad, gray pills, navy lettering); Dark is the same design on a near-black body
 bezel and a lighter channel behind A and B. Match System picks Classic in Light Mode and Dark in
 Dark Mode.
 
-Touch: a sliding D-pad with natural diagonals, sliding between A and B, and A+B together. The
-controller layout keeps the name Game Boy because it describes the hardware it recreates; the
+Touch: a sliding D-pad, sliding between A and B, and A+B together. Game Boy (portrait and
+landscape) and Playtiles share the same direction rule: the weaker axis must exceed 67% of the
+stronger one as well as the center dead zone to count as a diagonal. Away from the dead zone,
+each diagonal spans about 22.5° around a corner (45°), and each cardinal spans about 67.5°.
+The center dead zone stays at 16% of the pad's half-width on each axis.
+The controller layout keeps the name Game Boy because it describes the hardware it recreates; the
 App Store name, keywords and icon carry no Nintendo trademarks.
 
 v1.1: a lightweight layout editor (screen and control position and size,
