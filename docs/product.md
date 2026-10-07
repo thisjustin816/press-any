@@ -421,10 +421,15 @@ built-in layouts. Each also decides where the game picture goes.
   dead zone, which widens the straight directions. The skin's artwork isn't used.
 
 The controls are drawn in code on a controller body behind them. Every control is raised like
-the menu button: a face lit from above, a thin rim and a shadow below. Pressed, it goes flat,
-sinks a point and its shadow shrinks; the Game Boy D-pad sinks as one piece with the held arm
-darker. The Game Boy layout prints "A" and "B" below the buttons along their tilt and "SELECT" and
-"START" level below their pills; Playtiles keeps unlabeled buttons and labeled pills.
+the menu button: a face lit from above, light along the inside of its top edge and shade along its
+bottom (deeper on bigger controls, up to 3 points), a thin rim and a shadow below. Pressed, it
+goes flat, sinks a point, its shadow shrinks and its top edge shades the face. SELECT and START
+are rubber pills, so they shade more from top to bottom, and Playtiles presses their labels into
+them. The Game Boy D-pad never sinks: as in SameBoy's iOS app, it tips, so the held arm's end goes
+into shade that fades out toward the center with no hard edge. Each arm has an arrow pressed into
+it, and the dip at the center is lit as a hollow. The Game Boy layout prints "A" and "B" below the
+buttons along their tilt and "SELECT" and "START" level below their pills; Playtiles keeps
+unlabeled buttons and labeled pills.
 
 **Controller Theme** (app-wide, Match System by default): Classic uses an original Game Boy's
 colors sampled from the same photograph (warm gray body, gray lens, maroon-magenta A and B, dark
