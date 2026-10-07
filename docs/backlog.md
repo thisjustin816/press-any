@@ -21,25 +21,24 @@ migrating later.
    `docs/product.md` describes the design.
 2. The rest of the data model, in as few schema migrations as possible: Game aliases and rename,
    metadata provenance with Metadata Details, Build notes, per-Build playtime and the Build
-   timeline, typed multi-artwork, documents, tags, collections and favorites, declared save
-   compatibility, per-step patch input hashes, and the cross-region save check.
-3. Import pipeline: ZIP and 7z, multi-asset grouping, several ROMs into one Game in one flow,
-   duplicate imports still inspecting new assets, visual artwork comparison, and multi-signal
-   development-build matching.
+   timeline, tags, collections and favorites, declared save compatibility, per-step patch input
+   hashes, and the cross-region save check.
+3. Multi-signal development-build matching, the one import item left in v1.
 4. Library features on that data: FTS5 search, sorting, smart and manual collections, play
-   statistics, the Developer view, the artwork provider chain with priority, provenance, regional
-   and title-screen artwork, the signed catalog file, and the storage screen with cleanup,
+   statistics, the Developer view, the signed catalog file, and the storage screen with cleanup,
    in-flight protection and verification on read.
 5. iCloud sync, once tombstones and the schema have settled.
 6. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
    Files folder they land in come first, as they don't depend on the schema.
-7. Display and play feel: Fast Forward hold or toggle, slow motion, rewind, and the
-   DMG/GBC/SGB model override.
-8. The rest of the v1 core gate: Quick Actions, save state slots and Quick Save, landscape and
-   the layout editor, external display, and the curated shader library.
-9. Remaining services: the in-game manual reader, and the hosted Community Catalog after v1.
+7. The rest of the v1 core: Quick Save and save state slots, crash recovery, reopening the last
+   game, a fixed controller combo for the game menu, and rumble routing.
+
+v1 is a good core experience; everything else waits for v1.1: ZIP, 7z and multi-asset import,
+artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
+Actions, the DMG/GBC/SGB model override, shaders and the layout editor with skin import,
+screenshots and notes, and external displays. The hosted Community Catalog follows v1.
 
 ## Known bugs
 
@@ -84,9 +83,9 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 |---|---|---|---|
 | missing | Nonintrusive "core update available" notice | v1 | none |
 | missing | Explicit, reversible core-migration checkpoint (new state lineage, rollback when old core available) | v1 | none |
-| partial | Automatic model selection | v1 | CGB flag 0x80/0xC0 -> CGB, else DMG (SameBoyAdapter.loadImage); SGB never chosen |
-| missing | Model override DMG/GBC/SGB at App->System->Game->Build | v1 | no setting key |
-| missing | SGB mode: palettes, borders, game enhancements (custom border editing deferred) | v1 | no SGB model/boot ROM in bridge |
+| partial | Automatic model selection | v1.1 | CGB flag 0x80/0xC0 -> CGB, else DMG (SameBoyAdapter.loadImage); SGB never chosen |
+| missing | Model override DMG/GBC/SGB at App->System->Game->Build | v1.1 | no setting key |
+| missing | SGB mode: palettes, borders, game enhancements (custom border editing deferred) | v1.1 | no SGB model/boot ROM in bridge |
 | missing | User-chosen alternate core per Build | later |  |
 | missing | mGBA/GBA adapter | 1.2 or 2.0 | after GB/GBC is feature complete |
 
@@ -119,8 +118,8 @@ ROMs and patches on demand.
 | partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
 | partial | Presentation-metadata editing (rename Game/Build after creation) | v1 | Rename Build and Suggest Build Names; no Game rename UI |
 | partial | Build toolchain record, variable-map sidecars, notes, per-Build playtime, artwork/doc overrides, activation history | v1 (toolchain and sidecars were MVP) | toolchain reports and variable maps done; the rest missing |
-| missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1 |  |
-| missing | Typed multi-artwork model with primary selection | v1 | Game.artworkAssetID is a single image |
+| missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1.1 |  |
+| missing | Typed multi-artwork model with primary selection | v1.1 | Game.artworkAssetID is a single image |
 | missing | Tags and collections | v1 |  |
 
 Done: Game: UUID, primary title, system family, preferred Build/Profile, timestamps; Build: UUID,
@@ -182,12 +181,12 @@ altering a ROM.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | ZIP + 7z (libarchive) with archive safety (depth/ratio limits, traversal, password detect) | v1 |  |
-| missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1 |  |
-| partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1 | duplicate path only repairs the blob |
-| missing | Visual artwork comparison (existing/fetched/packaged) in review | v1 |  |
-| missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1 |  |
-| missing | Multiple ROMs attached to one Game in one flow | v1 |  |
+| missing | ZIP + 7z (libarchive) with archive safety (depth/ratio limits, traversal, password detect) | v1.1 |  |
+| missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 |  |
+| partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path only repairs the blob |
+| missing | Visual artwork comparison (existing/fetched/packaged) in review | v1.1 |  |
+| missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1.1 |  |
+| missing | Multiple ROMs attached to one Game in one flow | v1.1 |  |
 
 Done: Share Sheet / Open In for ROMs and patches, with the Quick Play or Import choice on open;
 Analyze -> ImportPlan -> Review -> transactional Commit; Files picker for .gb/.gbc; .sav and
@@ -281,7 +280,7 @@ loading state"; A separated Build's states follow it to the profile copies it pl
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | missing | Configurable retention Immediately / 24 h / 7 d | v1 |  |
-| partial | Session artifacts | v1 | battery + autosave kept; manual states ("Save states aren't kept in Quick Play"), screenshots, notes, debug captures and their transfer on promotion missing |
+| partial | Session artifacts | v1.1 | battery + autosave kept; manual states ("Save states aren't kept in Quick Play"), screenshots, notes, debug captures and their transfer on promotion missing |
 | missing | Background hash/identify/toolchain detection for Quick Play | v1 | not run |
 
 Done: Temporary sandbox, no library mutation until promotion; Time-to-first-frame path: read once,
@@ -304,7 +303,7 @@ the Build's Auto State; 24 h default retention, expired sessions purged.
 | missing | Named search sessions within current emulation session | v1.1 |  |
 | missing | Memory Watch list + optional Developer HUD + short history/min/max/graph | v1.1 |  |
 | missing | Immediate Developer Mode memory writes with Undo Last Write, frozen indication | v1.1 |  |
-| missing | Frame advance + frame counter (bindable) | v1 |  |
+| missing | Frame advance + frame counter (bindable) | v1.1 |  |
 | missing | Full debugger/disassembler/VRAM viewer | later |  |
 
 ### Screenshots, notes, debug context
@@ -312,20 +311,20 @@ the Build's Auto State; 24 h default retention, expired sessions purged.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | In-app screenshot gallery tied to exact Build; export/share to Photos | v1 |  |
-| missing | Export presets Clean / Build Info / Bug Report with rendered info strip and metadata fields | v1 |  |
-| missing | Optional atomic Capture Context (watches, named vars, memory ranges, registers, frame/time, Build/hash/patches, RTC, cheats, profile, core/settings) | v1 |  |
-| missing | Full-RAM snapshot (opt-in, Developer Mode) | v1 |  |
-| missing | Bug-report export (Markdown/JSON) with privacy checklist/preview | v1 | lands in the Files folder, with any memory or save captures the player includes |
-| missing | Game notes, Build notes, timestamped gameplay notes with attachments | v1 |  |
+| missing | In-app screenshot gallery tied to exact Build; export/share to Photos | v1.1 |  |
+| missing | Export presets Clean / Build Info / Bug Report with rendered info strip and metadata fields | v1.1 |  |
+| missing | Optional atomic Capture Context (watches, named vars, memory ranges, registers, frame/time, Build/hash/patches, RTC, cheats, profile, core/settings) | v1.1 |  |
+| missing | Full-RAM snapshot (opt-in, Developer Mode) | v1.1 |  |
+| missing | Bug-report export (Markdown/JSON) with privacy checklist/preview | v1.1 | lands in the Files folder, with any memory or save captures the player includes |
+| missing | Game notes, Build notes, timestamped gameplay notes with attachments | v1.1 |  |
 
 ### Rewind and speed
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Rewind, presets 5 s/15 s/30 s/1 m/2 m/5 m, memory-budgeted, effective duration shown, muted by default (optional audio), survives brief background | v1 | no RewindCapability |
-| partial | Fast-forward | MVP basic / v1 full | menu toggle at the Fast Forward Speed setting (1.5x/2x/3x/4x/8x/Unlimited, default 2x, inheritable, changes live from the game menu's Settings); Fast Forward Audio setting Muted (default) or Accelerated up to 4x; hold vs toggle waits for Quick Actions |
-| missing | Slow motion 0.25x/0.5x/0.75x | v1 |  |
+| missing | Rewind, presets 5 s/15 s/30 s/1 m/2 m/5 m, memory-budgeted, effective duration shown, muted by default (optional audio), survives brief background | v1.1 | no RewindCapability |
+| partial | Fast-forward | MVP basic / v1.1 full | menu toggle at the Fast Forward Speed setting (1.5x/2x/3x/4x/8x/Unlimited, default 2x, inheritable, changes live from the game menu's Settings); Fast Forward Audio setting Muted (default) or Accelerated up to 4x; hold vs toggle waits for Quick Actions |
+| missing | Slow motion 0.25x/0.5x/0.75x | v1.1 |  |
 
 Done: Pause / Resume from menu with paused overlay.
 
@@ -334,10 +333,10 @@ Done: Pause / Resume from menu with paused overlay.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; thermal or Low Power Mode rate changes not handled |
-| partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
-| partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
-| missing | Custom crop / other aspect options | v1 |  |
-| missing | Thermal-aware degradation of optional work | v1 |  |
+| partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1.1 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
+| partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1.1 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
+| missing | Custom crop / other aspect options | v1.1 |  |
+| missing | Thermal-aware degradation of optional work | v1.1 |  |
 | missing | Arbitrary .slang/.slangp import; shader preset file import/export | later |  |
 
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
@@ -351,15 +350,15 @@ update the open picture from Settings, and survive reset and state loads.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Minimal / Fullscreen / one-handed presets | v1 |  |
-| missing | GameBaby preset; per-accessory/device calibration screen | v1 |  |
-| missing | Lightweight editor: screen/control position+size, opacity, hitboxes, portrait/landscape, control styles, save preset | v1 |  |
-| missing | Edit Layout from gameplay on a frozen frame; Save for This Game vs Update Shared Preset | v1 |  |
-| missing | Native layout import/export via Files/Share | v1 |  |
-| missing | Delta + Manic skin import adapters, source package kept, unsupported-element report, no silent mis-map | v1 |  |
-| missing | Optional customizable gestures (off by default) | v1 |  |
-| missing | Turbo A / Turbo B actions (not in default layout) | v1 |  |
-| missing | Suggest (never force) a preset for identifiable accessories | v1 |  |
+| missing | Minimal / Fullscreen / one-handed presets | v1.1 |  |
+| missing | GameBaby preset; per-accessory/device calibration screen | v1.1 |  |
+| missing | Lightweight editor: screen/control position+size, opacity, hitboxes, portrait/landscape, control styles, save preset | v1.1 |  |
+| missing | Edit Layout from gameplay on a frozen frame; Save for This Game vs Update Shared Preset | v1.1 |  |
+| missing | Native layout import/export via Files/Share | v1.1 |  |
+| missing | Delta + Manic skin import adapters, source package kept, unsupported-element report, no silent mis-map | v1.1 |  |
+| missing | Optional customizable gestures (off by default) | v1.1 |  |
+| missing | Turbo A / Turbo B actions (not in default layout) | v1.1 |  |
+| missing | Suggest (never force) a preset for identifiable accessories | v1.1 |  |
 | missing | Controller-covered layouts (Playtiles and any later one): the app's screens fit the visible top of the screen and are navigable with the controller's buttons | v1.1 | today only gameplay knows the controller covers the bottom; the library and sheets use the whole screen |
 | missing | Full skin artwork authoring; community layout gallery | v1.1 / later |  |
 
@@ -392,9 +391,9 @@ remain in mvp-verification.md.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | One shared action registry for menu, controller hotkeys and skin buttons | v1 |  |
-| missing | Reorderable/customizable Quick Actions with favorites | v1 |  |
-| missing | Remaining actions: rewind, slow-mo, screenshot, note, manual, cheats, shader, Build/Profile switch, Build info, watches, frame advance, layout edit | v1 |  |
+| missing | One shared action registry for menu, controller hotkeys and skin buttons | v1.1 |  |
+| missing | Reorderable/customizable Quick Actions with favorites | v1.1 |  |
+| missing | Remaining actions: rewind, slow-mo, screenshot, note, manual, cheats, shader, Build/Profile switch, Build info, watches, frame advance, layout edit | v1.1 |  |
 
 Done: In-game menu from the wordmark with or without a controller: Pause/Resume, Fast Forward,
 Save State, Load State and Close; Quick Play offers Add to Library and explains disabled Save State.
@@ -404,26 +403,26 @@ Save State, Load State and Close; Quick Play offers Add to Library and explains 
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | PDF, CBZ, PNG/JPEG/WebP sets, TXT, Markdown as managed copies | v1 |  |
-| missing | Game/Build/both association with semantic types, default manual | v1 |  |
-| missing | In-game overlay reader: pauses, restores prior run/pause state, remembers last-read position | v1 |  |
-| missing | Text search in TXT/MD/text PDFs if simple; no OCR | v1 |  |
-| missing | iPad side-by-side; bookmarks/annotations/OCR | v1 |  |
+| missing | PDF, CBZ, PNG/JPEG/WebP sets, TXT, Markdown as managed copies | v1.1 |  |
+| missing | Game/Build/both association with semantic types, default manual | v1.1 |  |
+| missing | In-game overlay reader: pauses, restores prior run/pause state, remembers last-read position | v1.1 |  |
+| missing | Text search in TXT/MD/text PDFs if simple; no OCR | v1.1 |  |
+| missing | iPad side-by-side; bookmarks/annotations/OCR | v1.1 |  |
 
 ### Artwork
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Automatic fetch on import + setting to disable | v1 |  |
-| missing | Provider chain: local/imported, Community Catalog, OpenVGDB (experimental), Libretro thumbnails, SteamGridDB (user key), title-screen fallback | v1 |  |
-| missing | Priority manual -> hack-specific -> inherited base (recorded as inherited) -> generated | v1 |  |
-| missing | Artwork generated from the Game's title screen | v1 | open: capturing after import by running the game unseen (detecting the title screen past the boot logo, for example once the picture settles) or from the current frame chosen in the game menu, or both; framing the 10:9 picture in a square tile (whole-pixel scale on a border color sampled from the frame, or on the placeholder cartridge's label) |
-| missing | Build-level artwork override | v1 |  |
-| missing | Regional artwork: lookups use the Build's region, and a Game's primary artwork follows the preferred region | v1 | box art differs by region |
-| missing | Multiple typed assets (box front/back, cart, title, screenshots, logo, fan) | v1 |  |
-| missing | Non-destructive crop/reposition | v1 |  |
-| missing | Manual "Check for New Artwork"; cache only selected primary | v1 |  |
-| missing | Artwork provenance (provider, URL, fetch time, rights) | v1 |  |
+| missing | Automatic fetch on import + setting to disable | v1.1 |  |
+| missing | Provider chain: local/imported, Community Catalog, OpenVGDB (experimental), Libretro thumbnails, SteamGridDB (user key), title-screen fallback | v1.1 |  |
+| missing | Priority manual -> hack-specific -> inherited base (recorded as inherited) -> generated | v1.1 |  |
+| missing | Artwork generated from the Game's title screen | v1.1 | open: capturing after import by running the game unseen (detecting the title screen past the boot logo, for example once the picture settles) or from the current frame chosen in the game menu, or both; framing the 10:9 picture in a square tile (whole-pixel scale on a border color sampled from the frame, or on the placeholder cartridge's label) |
+| missing | Build-level artwork override | v1.1 |  |
+| missing | Regional artwork: lookups use the Build's region, and a Game's primary artwork follows the preferred region | v1.1 | box art differs by region |
+| missing | Multiple typed assets (box front/back, cart, title, screenshots, logo, fan) | v1.1 |  |
+| missing | Non-destructive crop/reposition | v1.1 |  |
+| missing | Manual "Check for New Artwork"; cache only selected primary | v1.1 |  |
+| missing | Artwork provenance (provider, URL, fetch time, rights) | v1.1 |  |
 
 Done: Manual artwork from Photos/Files, remove, stored as user data, downscaled to 1024 pixels;
 title placeholder fallback; Artwork follows Builds when a Game is emptied by promote/merge.
@@ -433,9 +432,9 @@ title placeholder fallback; Artwork follows Builds when a Game is emptied by pro
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Independent external render target (not mirroring); wired displays | v1 |  |
-| missing | Phone as controller companion keeping Quick Actions/manual/states/Build switching | v1 |  |
-| missing | Display-specific scaling/aspect/shader/safe area; modes game-only/minimal HUD/mirror | v1 |  |
+| missing | Independent external render target (not mirroring); wired displays | v1.1 |  |
+| missing | Phone as controller companion keeping Quick Actions/manual/states/Build switching | v1.1 |  |
+| missing | Display-specific scaling/aspect/shader/safe area; modes game-only/minimal HUD/mirror | v1.1 |  |
 
 ### iCloud
 
@@ -506,7 +505,7 @@ and save state from the UI, a save state from its profile's Save States.
 |---|---|---|---|
 | partial | Audio interruptions pause safely; route changes don't restart the game | v1 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio-only interruption that leaves the scene active still runs silently |
 | missing | Thermal-aware degradation | v1 |  |
-| missing | Default shader sustains full speed on minimum QA device | v1 | no shader yet; device gate not recorded |
+| missing | Default shader sustains full speed on minimum QA device | v1.1 | no shader yet; device gate not recorded |
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
@@ -518,7 +517,7 @@ after shortfalls); frames run on the display refresh at native speed, up to 120 
 |---|---|---|---|
 | missing | Opt-in crash reporting limited to non-content diagnostics | v1 | no crash reporting at all |
 | missing | Opt-in anonymous usage counts (Games, Builds per Game, Save Profiles used by several Builds, Quick Play sessions added to the library), never titles, hashes, filenames or contents | v1 | endpoint or provider and privacy copy not chosen; PRIVACY.md and the App Store privacy answers change with it |
-| missing | Explicit bug-report export with checklist/preview | v1 |  |
+| missing | Explicit bug-report export with checklist/preview | v1.1 |  |
 | missing | Accurate privacy/consent copy for provider queries and catalog; keys server-side/secure storage | v1 |  |
 
 Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filenames, notes).
@@ -532,7 +531,7 @@ Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filename
 | partial | Dynamic Type in normal UI | v1 | SwiftUI defaults; controller drawing fixed size |
 | missing | Reduce Motion support | v1 | none |
 | partial | Large/configurable touch targets | v1 | hit areas extend 10-12 pt beyond drawn controls; not configurable |
-| missing | One-handed layouts | v1 | none |
+| missing | One-handed layouts | v1.1 | none |
 | missing | Controller navigation | v1 | none; button remapping is iOS's Game Controller settings |
 
 Done: Good contrast / color-independent states; haptics never sole feedback.
