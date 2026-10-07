@@ -3,6 +3,7 @@ import EmulatorApplication
 import EmulatorDomain
 import EmulatorKitTestSupport
 import Foundation
+import Testing
 import XCTest
 @testable import Patching
 
@@ -118,7 +119,7 @@ final class PatchedBuildTests: XCTestCase {
         XCTAssertThrowsError(try harness.creator.execute(
             .init(gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patchURL)], displayName: "Hack")
         )) { error in
-            guard case .sourceCRC32Mismatch = error as? PatchError else {
+            guard case .sourceMismatch = error as? PatchError else {
                 return XCTFail("Expected source CRC mismatch, got \(error)")
             }
         }
@@ -515,5 +516,115 @@ extension PatchedBuildTests {
             gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patches: [.init(url: patch)], displayName: "Hack"
         ))
         XCTAssertEqual(build.system, .gameBoyColor)
+    }
+}
+
+@Suite("Patch step inputs")
+struct PatchStepInputTests {
+    @Test("enabled IPS steps record their actual inputs; disabled steps have no hash")
+    func recordsInputs() throws {
+        let h = try PatchBuildHarness.make()
+        defer { try? FileManager.default.removeItem(at: h.root) }
+        let first = try h.writePatch(singleByteIPS(offset: 0, value: 0x58), name: "first.ips")
+        let disabled = try h.writePatch(singleByteIPS(offset: 1, value: 0x5a), name: "disabled.ips")
+        let second = try h.writePatch(singleByteIPS(offset: 1, value: 0x59), name: "second.ips")
+        let build = try h.creator.execute(.init(
+            gameID: h.gameID, baseBuildID: h.baseBuild.id,
+            patches: [.init(url: first), .init(url: disabled, enabled: false), .init(url: second)],
+            displayName: "Stack"
+        ))
+        let recipe = try #require(try h.recipes.fetchPatchRecipe(resultBuildID: build.id))
+        #expect(recipe.items.map(\.expectedInputSHA256) == [
+            h.store.hashData(h.baseImage), nil, h.store.hashData(h.base(changing: [0: 0x58])),
+        ])
+        #expect(try h.outputData(for: build) == h.base(changing: [0: 0x58, 1: 0x59]))
+        try h.store.removeIfExists(h.store.generatedImageURL(sha256: build.imageSHA256))
+        #expect(try h.store.readData(at: h.resolver.resolve(buildID: build.id)) == h.base(changing: [0: 0x58, 1: 0x59]))
+    }
+
+    @Test("a wrong middle input stops replay before applying that step, even with Apply Anyway")
+    func wrongMiddleInput() throws {
+        let h = try PatchBuildHarness.make()
+        defer { try? FileManager.default.removeItem(at: h.root) }
+        let patches = try (0..<3).map { index in
+            try h.writePatch(singleByteIPS(offset: index, value: UInt8(0x58 + index)), name: "step-\(index).ips")
+        }
+        let build = try h.creator.execute(.init(
+            gameID: h.gameID, baseBuildID: h.baseBuild.id, patchURLs: patches, displayName: "Stack"
+        ))
+        let recipe = try #require(try h.recipes.fetchPatchRecipe(resultBuildID: build.id))
+        let expected = h.store.hashData(h.base(changing: [0: 0x58]))
+        let actual = h.store.hashData(h.base(changing: [0: 0x57]))
+        let patcher = WrongFirstOutput()
+        let resolver = ResolveImageForLaunch(
+            builds: h.builds, recipes: h.recipes, assets: h.assets, assetStore: h.store, patcher: patcher
+        )
+        try h.recipes.insertPatchRecipe(PatchRecipe(
+            id: recipe.id, resultBuildID: recipe.resultBuildID, baseBuildID: recipe.baseBuildID,
+            expectedResultSHA256: recipe.expectedResultSHA256,
+            items: recipe.items.map {
+                PatchRecipeItem(position: $0.position, patchAssetID: $0.patchAssetID, enabled: $0.enabled,
+                    ignoresBaseMismatch: true, expectedInputSHA256: $0.expectedInputSHA256)
+            }, createdAt: recipe.createdAt
+        ))
+        try h.store.removeIfExists(h.store.generatedImageURL(sha256: build.imageSHA256))
+        #expect(throws: ResolveImageForLaunchError.stepInputMismatch(position: 1, expected: expected, actual: actual)) {
+            try resolver.resolve(buildID: build.id)
+        }
+        #expect(!h.store.fileExists(at: h.store.generatedImageURL(sha256: build.imageSHA256)))
+        let message = ResolveImageForLaunchError.stepInputMismatch(position: 1, expected: expected, actual: actual).localizedDescription
+        #expect(message.contains("Patch step 2"))
+        #expect(message.contains("Expected SHA-256: \(expected)"))
+        #expect(message.contains("Actual SHA-256: \(actual)"))
+    }
+
+    @Test("recipes without recorded inputs still rebuild")
+    func legacyInputs() throws {
+        let h = try PatchBuildHarness.make()
+        defer { try? FileManager.default.removeItem(at: h.root) }
+        let patch = try h.writePatch(singleByteIPS(offset: 0, value: 0x58), name: "legacy.ips")
+        let build = try h.creator.execute(.init(
+            gameID: h.gameID, baseBuildID: h.baseBuild.id, patchURLs: [patch], displayName: "Legacy"
+        ))
+        let recipe = try #require(try h.recipes.fetchPatchRecipe(resultBuildID: build.id))
+        try h.recipes.insertPatchRecipe(PatchRecipe(
+            id: recipe.id, resultBuildID: recipe.resultBuildID, baseBuildID: recipe.baseBuildID,
+            expectedResultSHA256: recipe.expectedResultSHA256,
+            items: recipe.items.map { PatchRecipeItem(position: $0.position, patchAssetID: $0.patchAssetID) },
+            createdAt: recipe.createdAt
+        ))
+        try h.store.removeIfExists(h.store.generatedImageURL(sha256: build.imageSHA256))
+        #expect(try h.store.readData(at: h.resolver.resolve(buildID: build.id)) == h.base(changing: [0: 0x58]))
+    }
+
+    @Test("copying a patched Build preserves all recipe inputs")
+    func copiedInputs() throws {
+        let h = try PatchBuildHarness.make()
+        defer { try? FileManager.default.removeItem(at: h.root) }
+        let patch = try h.writePatch(singleByteIPS(offset: 0, value: 0x58), name: "copy.ips")
+        let build = try h.creator.execute(.init(
+            gameID: h.gameID, baseBuildID: h.baseBuild.id,
+            patches: [.init(url: patch), .init(url: patch, enabled: false)], displayName: "Copy"
+        ))
+        let recipe = try #require(try h.recipes.fetchPatchRecipe(resultBuildID: build.id))
+        let operations = BuildOperations(
+            games: h.games, builds: h.builds, profiles: InMemorySaveProfileRepository(),
+            states: InMemorySaveStateRepository(), recipes: h.recipes, assets: h.assets, assetStore: h.store
+        )
+        let game = try operations.promoteBuild(buildID: build.id, title: "Copy", mode: .copy)
+        let copy = try #require(try h.builds.fetchBuilds(gameID: game.id).first)
+        let copiedRecipe = try #require(try h.recipes.fetchPatchRecipe(resultBuildID: copy.id))
+        #expect(copiedRecipe.items == recipe.items)
+        #expect(copiedRecipe.items.map(\.expectedInputSHA256) == [h.store.hashData(h.baseImage), nil])
+    }
+}
+
+private struct WrongFirstOutput: PatchApplying {
+    func apply(patch: Data, fileExtension: String, to source: Data, ignoringBaseMismatch: Bool) throws -> Data {
+        // A second call means replay applied the step whose input should have been rejected.
+        guard source[0] == 0x41 else { throw PatchError.malformedPatch }
+        var result = source
+        result[0] = 0x57
+        return result
     }
 }

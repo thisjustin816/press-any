@@ -115,8 +115,8 @@ kinds.
 ### Patch recipe
 
 A recipe records its exact base Build and hash, its ordered IPS or BPS patches, each step's
-enabled state, and the hash of its result. The executable identity is the result's hash, not the
-recipe.
+enabled state, each enabled step's input SHA-256, and the hash of its result. The executable
+identity is the result's hash, not the recipe.
 
 ### Managed assets
 
@@ -367,14 +367,20 @@ promotion and Open Patch.
   Unsupported formats are identified and reported.
 - Patching keeps the base ROM, the original patch files, the recipe and the result's hash. A
   patch's result is always a new Build, and toolchain detection runs on it.
-- A base mismatch warns and allows an explicit Apply Anyway.
+- A base mismatch warns and allows an explicit Apply Anyway. For BPS, the warning compares the
+  expected and selected input sizes and CRC32s.
 - A patched Build's system comes from the patched ROM's own header, so a patch can turn a GB game
   into a GBC one or the reverse. A result too short for a header is refused.
 - Generated ROMs are cache: kept for launch speed, evicted safely, rebuilt and hash-checked
   before launch. An output whose base or patch is missing isn't disposable.
 - Open Patch (from a Game or a shared patch) requires choosing a Game and an explicit base Build.
-- v1: each step records the input hash it expects, so a stacked IPS patch can't apply to the
-  wrong input unnoticed, and review shows expected and selected hashes side by side.
+- Each enabled step records the SHA-256 of the bytes it receives. Disabled steps have no input
+  hash. Rebuilds check each recorded hash before applying its step and stop on a mismatch,
+  naming the step and showing the expected and actual hashes together. Apply Anyway still checks
+  the recorded input; it only bypasses the patch's own base check. Recipes without recorded input
+  hashes still rebuild and check the final result.
+- Build Technical Info lists the ordered patch filenames, Enabled or Disabled, and each expected
+  input SHA-256 (touch and hold to copy), or Not recorded.
 - v1.1: editable stacks (reorder, enable, disable, add, remove), each edit making a new Build;
   patch metadata with confidence, catalog over README over filename; BPS generation from a base
   and a modified Build. Future: Quick Play a patch without making a Build.

@@ -6,12 +6,13 @@ import UIKit
 /// isn't part of it, so each line shrinks to fit instead. Touch and hold copies it.
 struct SHA256Row: View {
     let hash: String
+    var title = "SHA-256"
 
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("SHA-256")
+            Text(title)
             ForEach(Array(Self.lines(hash, groupsPerLine: typeSize.isAccessibilitySize ? 1 : 2).enumerated()), id: \.offset) { _, line in
                 Text(line)
                     .font(.caption.monospaced())

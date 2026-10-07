@@ -1,4 +1,5 @@
 import Foundation
+import Testing
 import XCTest
 @testable import Patching
 
@@ -26,7 +27,7 @@ final class BPSPatchApplierTests: XCTestCase {
         let patch = try XCTUnwrap(Data(hex: "4250533183838080815880480383a393f9ae1348dc32ee"))
 
         XCTAssertThrowsError(try BPSPatchApplier().apply(patch: patch, to: source)) { error in
-            guard case .sourceCRC32Mismatch = error as? PatchError else {
+            guard case .sourceMismatch = error as? PatchError else {
                 return XCTFail("Expected source CRC mismatch, got \(error)")
             }
         }
@@ -120,5 +121,22 @@ private extension Data {
             append(byte)
             index = next
         }
+    }
+}
+
+@Suite("BPS base mismatch details")
+struct BPSBaseMismatchTests {
+    @Test("both size and CRC failures report the full expected and actual input", arguments: ["ZBC", "ZBCD"])
+    func details(sourceText: String) throws {
+        let source = Data(sourceText.utf8)
+        let patch = try #require(Data(hex: "4250533183838080815880480383a393f9ae1348dc32ee"))
+        let error = PatchError.sourceMismatch(
+            expectedSize: 3, actualSize: source.count,
+            expectedCRC32: CRC32.checksum(Data("ABC".utf8)), actualCRC32: CRC32.checksum(source)
+        )
+        #expect(throws: error) { try BPSPatchApplier().apply(patch: patch, to: source) }
+        let message = try #require(error.baseMismatchDescription)
+        #expect(message.contains("Patch expects: 3 bytes, CRC32 A3830348"))
+        #expect(message.contains("Selected input: \(source.count) bytes, CRC32 \(String(format: "%08X", CRC32.checksum(source)))"))
     }
 }

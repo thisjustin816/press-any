@@ -233,7 +233,7 @@ automatically replacing the previous one; rename a Build from its long-press men
 | missing | Patch metadata with confidence/provenance (catalog > README > filename) | v1.1 |  |
 | missing | BPS generation from base vs modified Build | v1.1 |  |
 | missing | Quick Play a patch against a base without creating a Build | future |  |
-| missing | Expected input hash on every step of a patch stack; review shows expected and selected hashes when they differ | v1 | PatchRecipe checks only the base and the result; IPS carries no checksum of its own |
+| done | Expected input hash on every step of a patch stack; review shows expected and selected hashes when they differ | v1 | Enabled steps record their input SHA-256; rebuilds stop at a mismatched step and show both hashes. Technical Info lists all steps. BPS Apply Anyway warnings compare sizes and CRC32s. |
 
 Done: IPS (RLE, truncate) and BPS (CRC checks) engines; Preserve base ROM, original patch, recipe,
 result hash; Base validation; explicit Apply Anyway persisted for rebuilds; Patch result is a new

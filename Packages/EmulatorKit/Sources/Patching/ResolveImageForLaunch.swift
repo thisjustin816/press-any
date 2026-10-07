@@ -7,6 +7,7 @@ public enum ResolveImageForLaunchError: Error, Equatable {
     case assetNotFound(UUID)
     case recipeNotFound(UUID)
     case integrityMismatch(expected: String, actual: String)
+    case stepInputMismatch(position: Int, expected: String, actual: String)
     case cyclicBuildLineage(UUID)
     case patchFilenameMissing(UUID)
 }
@@ -72,6 +73,14 @@ public struct ResolveImageForLaunch: Sendable {
         var output = try assetStore.readData(at: baseURL)
 
         for item in recipe.items.filter(\.enabled).sorted(by: { $0.position < $1.position }) {
+            if let expected = item.expectedInputSHA256 {
+                let actual = assetStore.hashData(output)
+                guard actual == expected else {
+                    throw ResolveImageForLaunchError.stepInputMismatch(
+                        position: item.position, expected: expected, actual: actual
+                    )
+                }
+            }
             guard let patchAsset = try assets.fetchAsset(id: item.patchAssetID) else {
                 throw ResolveImageForLaunchError.assetNotFound(item.patchAssetID)
             }
@@ -119,5 +128,12 @@ public typealias PatchDerivedImageResolver = ResolveImageForLaunch
 extension ResolveImageForLaunch: BuildImageResolving {
     public func resolveImageURL(buildID: UUID) throws -> URL {
         try resolve(buildID: buildID)
+    }
+}
+
+extension ResolveImageForLaunchError: LocalizedError {
+    public var errorDescription: String? {
+        guard case let .stepInputMismatch(position, expected, actual) = self else { return nil }
+        return "Patch step \(position + 1) received a different input.\nExpected SHA-256: \(expected)\nActual SHA-256: \(actual)"
     }
 }

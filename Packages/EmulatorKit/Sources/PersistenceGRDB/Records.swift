@@ -519,12 +519,14 @@ struct PatchRecipeItemRecord: Codable, FetchableRecord, PersistableRecord {
     var patchAssetID: String
     var enabled: Bool
     var ignoresBaseMismatch: Bool
+    var expectedInputSHA256: String?
 
     enum CodingKeys: String, CodingKey {
         case position, enabled
         case recipeID = "recipe_id"
         case patchAssetID = "patch_asset_id"
         case ignoresBaseMismatch = "ignores_base_mismatch"
+        case expectedInputSHA256 = "expected_input_sha256"
     }
 
     init(recipeID: UUID, value: PatchRecipeItem) {
@@ -533,6 +535,7 @@ struct PatchRecipeItemRecord: Codable, FetchableRecord, PersistableRecord {
         patchAssetID = PersistenceCodec.uuid(value.patchAssetID)
         enabled = value.enabled
         ignoresBaseMismatch = value.ignoresBaseMismatch
+        expectedInputSHA256 = value.expectedInputSHA256
     }
 
     func domain() throws -> PatchRecipeItem {
@@ -540,7 +543,8 @@ struct PatchRecipeItemRecord: Codable, FetchableRecord, PersistableRecord {
             position: position,
             patchAssetID: try PersistenceCodec.uuid(patchAssetID),
             enabled: enabled,
-            ignoresBaseMismatch: ignoresBaseMismatch
+            ignoresBaseMismatch: ignoresBaseMismatch,
+            expectedInputSHA256: expectedInputSHA256
         )
     }
 }

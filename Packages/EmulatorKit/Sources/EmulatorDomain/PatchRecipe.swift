@@ -4,13 +4,21 @@ public struct PatchRecipeItem: Codable, Equatable, Sendable {
     public let position: Int
     public let patchAssetID: UUID
     public let enabled: Bool
+    public let expectedInputSHA256: String?
     /// Applied with Apply Anyway over a base the patch does not expect. Rebuilds repeat it.
     public let ignoresBaseMismatch: Bool
 
-    public init(position: Int, patchAssetID: UUID, enabled: Bool = true, ignoresBaseMismatch: Bool = false) {
+    public init(
+        position: Int,
+        patchAssetID: UUID,
+        enabled: Bool = true,
+        ignoresBaseMismatch: Bool = false,
+        expectedInputSHA256: String? = nil
+    ) {
         self.position = position
         self.patchAssetID = patchAssetID
         self.enabled = enabled
+        self.expectedInputSHA256 = enabled ? expectedInputSHA256 : nil
         self.ignoresBaseMismatch = ignoresBaseMismatch
     }
 }

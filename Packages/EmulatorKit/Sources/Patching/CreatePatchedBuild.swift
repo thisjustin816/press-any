@@ -142,15 +142,23 @@ public struct CreatePatchedBuild: Sendable {
         let baseURL = try resolver.resolve(buildID: baseBuild.id)
         var output = try assetStore.readData(at: baseURL)
         var imported: [ImportedPatch] = []
+        var recipeItems: [PatchRecipeItem] = []
 
         do {
-            for patchInput in input.patches {
+            for (position, patchInput) in input.patches.enumerated() {
                 var patch = try importPatch(at: patchInput.url)
                 // The same file twice in one stack is one source asset.
                 if let earlier = imported.first(where: { $0.asset.contentSHA256 == patch.asset.contentSHA256 }) {
                     patch = ImportedPatch(asset: earlier.asset, needsAssetInsert: false, newlyCommittedURL: nil)
                 }
                 imported.append(patch)
+                recipeItems.append(PatchRecipeItem(
+                    position: position,
+                    patchAssetID: patch.asset.id,
+                    enabled: patchInput.enabled,
+                    ignoresBaseMismatch: patchInput.ignoreBaseMismatch,
+                    expectedInputSHA256: patchInput.enabled ? assetStore.hashData(output) : nil
+                ))
                 guard patchInput.enabled else { continue }
                 output = try patcher.apply(
                     patch: assetStore.readData(
@@ -216,21 +224,13 @@ public struct CreatePatchedBuild: Sendable {
                 modifiedAt: timestamp
             )
             let reports = detectors.detect(image: output, system: build.system)
-            let patchAssets = imported.map(\.asset)
             let assetsToInsert = imported.filter(\.needsAssetInsert).map(\.asset)
             let recipe = PatchRecipe(
                 id: makeID(),
                 resultBuildID: build.id,
                 baseBuildID: baseBuild.id,
                 expectedResultSHA256: resultSHA,
-                items: patchAssets.enumerated().map { index, asset in
-                    PatchRecipeItem(
-                        position: index,
-                        patchAssetID: asset.id,
-                        enabled: input.patches[index].enabled,
-                        ignoresBaseMismatch: input.patches[index].ignoreBaseMismatch
-                    )
-                },
+                items: recipeItems,
                 createdAt: timestamp
             )
 

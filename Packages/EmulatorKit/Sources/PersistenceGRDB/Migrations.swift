@@ -35,6 +35,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v10-library-model") { db in
             try db.execute(sql: V1V10LibraryModelSchema.sql)
         }
+        migrator.registerMigration("v1-v13-patch-step-inputs") { db in
+            try db.execute(sql: "ALTER TABLE patch_recipe_items ADD COLUMN expected_input_sha256 TEXT")
+        }
         return migrator
     }
 }

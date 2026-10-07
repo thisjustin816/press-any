@@ -28,6 +28,7 @@ struct SharedPatchView: View {
     @State private var status = ""
     @State private var unknownGroups: [String] = []
     @State private var errorMessage: String?
+    @State private var baseMismatchDetails = ""
     @State private var mismatchedBuild: Build?
     @State private var createdBuild: Build?
     /// The base Build the patch's checksum or title picked, selected once its Game's Builds load.
@@ -155,7 +156,7 @@ struct SharedPatchView: View {
                 Button("Apply Anyway", role: .destructive) { apply(to: build, ignoringBaseMismatch: true) }
                 Button("Cancel", role: .cancel) { mismatchedBuild = nil }
             } message: { build in
-                Text("“\(build.displayName)” doesn’t match the patch’s expected base. Applying it anyway may produce a game that doesn’t work.")
+                Text("\(build.displayName) doesn't match the patch's expected base.\n\n\(baseMismatchDetails)\n\nApplying it anyway may produce a game that doesn't work.")
             }
             .alert("Build Created", isPresented: Binding(
                 get: { createdBuild != nil },
@@ -226,7 +227,8 @@ struct SharedPatchView: View {
             createdBuild = created
             errorMessage = nil
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
-        } catch PatchError.sourceCRC32Mismatch, PatchError.sourceSizeMismatch {
+        } catch let error as PatchError where error.baseMismatchDescription != nil {
+            baseMismatchDetails = error.baseMismatchDescription ?? ""
             mismatchedBuild = build
         } catch {
             errorMessage = error.localizedDescription

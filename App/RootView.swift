@@ -3,6 +3,7 @@ import EmulatorApplication
 import EmulatorDomain
 import GameplayInput
 import Foundation
+import Patching
 import QuickPlay
 import SwiftUI
 import UIKit
@@ -525,7 +526,8 @@ struct RootView: View {
             let profile = try? container.repositories.saveProfiles.fetchSaveProfile(id: launch.context.saveProfileID)
             damagedSave = DamagedSaveLaunch(context: launch.context, profileName: profile?.displayName ?? "This Save Profile")
         } catch {
-            errorMessage = "Could not start the game: \(error)"
+            let detail = (error as? ResolveImageForLaunchError)?.errorDescription ?? String(describing: error)
+            errorMessage = "Could not start the game: \(detail)"
         }
     }
 

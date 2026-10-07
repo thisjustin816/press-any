@@ -25,7 +25,7 @@ struct MigrationTests {
         #expect(before.count == 13)
         #expect(before.allSatisfy { !$0.2.isEmpty }, "every existing application table has rows to preserve")
 
-        try database.migrate()
+        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v10-library-model")
 
         try database.writer.read { db in
             for (table, columns, rows) in before {
