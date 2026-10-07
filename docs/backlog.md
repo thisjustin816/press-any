@@ -385,7 +385,7 @@ Done: Apple GameController input (extendedGamepad), D-pad and left thumbstick wi
 zone and eight equal sectors; Positional A/B mapping (right/bottom), Menu = START, Options or L1 =
 SELECT; iOS controller customizations, including per-app mappings; Connected controllers use Game
 Boy and follow Orientation even with Playtiles chosen; Disconnect releases input, restores the
-chosen layout and shows a notice without restarting or pausing; A controller hides the touch
+chosen layout, pauses and shows a notice without restarting; A controller hides the touch
 controls, a touch brings them back until its next button press, and Settings can keep them;
 Cartridge rumble routed controller-first, phone fallback. Physical-device customization checks
 remain in mvp-verification.md.

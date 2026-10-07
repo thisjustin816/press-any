@@ -5,9 +5,10 @@ import GameplayInput
 import XCTest
 @testable import PressAny
 
+/// MVP test 14: losing the controller mid-game pauses it and brings the touch controls back.
 @MainActor
 final class ControllerDisconnectTests: XCTestCase {
-    func testDisconnectingRestoresPlaytilesAndReleasesInputWithoutPausing() {
+    func testDisconnectingPausesRestoresPlaytilesAndReleasesInput() {
         let runtime = FakeRuntime()
         let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
         let gameplay = GameplayViewController(
@@ -33,9 +34,9 @@ final class ControllerDisconnectTests: XCTestCase {
         }
 
         XCTAssertFalse(monitor.isConnected)
-        XCTAssertFalse(gameplay.isShowingPaused)
-        XCTAssertTrue(gameplay.isRunningFrames)
-        XCTAssertEqual(runtime.pauseCount, pauses)
+        XCTAssertTrue(gameplay.isShowingPaused)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertGreaterThan(runtime.pauseCount, pauses, "the emulator itself is paused")
         XCTAssertEqual(runtime.stopCount, 0)
         XCTAssertEqual(gameplay.heldInput, .init())
         XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
@@ -54,14 +55,12 @@ final class ControllerDisconnectTests: XCTestCase {
         let controller = GCController.withExtendedGamepad()
         monitor.selectPlayerOne(controller)
         _ = gameplay.prepareGameMenu()
-        let pauses = runtime.pauseCount
 
         NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: controller)
 
         XCTAssertFalse(monitor.isConnected)
         XCTAssertTrue(gameplay.isShowingPaused)
         XCTAssertFalse(gameplay.isRunningFrames)
-        XCTAssertEqual(runtime.pauseCount, pauses)
         XCTAssertEqual(runtime.stopCount, 0)
         XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
         XCTAssertTrue(gameplay.showsTouchControls)

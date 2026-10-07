@@ -408,7 +408,8 @@ built-in layouts. Each also decides where the game picture goes.
 
 A connected controller uses Game Boy while it drives the game, even when Playtiles is chosen,
 so the picture and Orientation setting fit playing without the physical overlay. Disconnecting
-restores the chosen layout without restarting or pausing the game.
+restores the chosen layout without restarting the game, which pauses as for any unexpected
+disconnect.
 
 - **Game Boy** follows an original DMG-01's front panel, measured from Evan-Amos's public-domain
   photograph (`File:Game-Boy-FL.jpg` on Wikimedia Commons) and scaled to its 90 mm width. The
@@ -564,8 +565,8 @@ picture. A connected controller still hides the touch controls.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls with a Controller is on by default.
-- An unexpected disconnect releases held controller input, restores the chosen touch layout and
-  shows a notice. A running game keeps running, and a paused game stays paused.
+- An unexpected disconnect pauses the game, releases held controller input, restores the chosen
+  touch layout and shows a notice.
 - Touch Haptics: Off, Light (default) or Medium, off while a controller is in use.
 - Cartridge rumble goes to the controller when it can, the phone otherwise.
 - v1: named controller profiles per controller type with the usual inheritance; choosing Player

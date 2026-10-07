@@ -435,10 +435,13 @@ final class GameplayViewController: UIViewController {
         }
         controllerMonitor.onUnexpectedDisconnect = { [weak self] in
             guard let self else { return }
+            // Apple's guidance: losing the controller mid-game pauses it, so play waits for the
+            // player to pick up the phone or reconnect.
+            self.pauseGameplay()
             self.touchControlsRevealed = false
             self.updateTouchControls(controllerConnected: false)
             self.input.resetController()
-            self.showTransientMessage("Controller disconnected.")
+            self.showTransientMessage("Controller disconnected. Game paused.")
         }
 
         updateTouchControls(controllerConnected: controllerMonitor.isConnected)
