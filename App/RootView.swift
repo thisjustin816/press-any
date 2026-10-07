@@ -257,7 +257,7 @@ struct RootView: View {
     private func receiveSharedFile(_ url: URL) {
         guard let container = bootstrap.container else { return }
         do {
-            queuedSharedFiles.append(.file(try container.sharedFileInbox.receive(url)))
+            queuedSharedFiles.append(contentsOf: try container.sharedFileInbox.receiveAll(url).map { .file($0) })
         } catch {
             // Reported when nothing else is on screen, as a file would be shown.
             queuedSharedFiles.append(.failure(error.localizedDescription))

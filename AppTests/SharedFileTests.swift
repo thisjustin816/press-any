@@ -44,6 +44,27 @@ final class SharedFileTests: XCTestCase {
         }
     }
 
+    func testAZipYieldsItsROMsPatchesAndSavesAndSkipsEverythingElse() throws {
+        try withInbox { inbox, root, _ in
+            let source = root.appendingPathComponent("Mole Mania DX.zip")
+            try storedZip([
+                ("readme.txt", Data("read me".utf8)),
+                ("Mole Mania DX/mole_mania_dx_v1_3.bps", Data([1, 2, 3])),
+                ("game.gb", Data([4, 5])),
+                ("game.srm", Data([6])),
+            ]).write(to: source)
+            let received = try inbox.receiveAll(source)
+            XCTAssertEqual(received.map(\.originalFilename), ["mole_mania_dx_v1_3.bps", "game.gb", "game.srm"])
+            XCTAssertEqual(received.map(\.kind), [.patch, .rom, .save])
+            XCTAssertEqual(try Data(contentsOf: received[0].url), Data([1, 2, 3]))
+            received.forEach(inbox.discard)
+
+            let readmeOnly = root.appendingPathComponent("Readme.zip")
+            try storedZip([("readme.txt", Data("read me".utf8))]).write(to: readmeOnly)
+            XCTAssertThrowsError(try inbox.receiveAll(readmeOnly))
+        }
+    }
+
     func testDiscardKeepsSenderAndOtherQueuedCopies() throws {
         try withInbox { inbox, root, _ in
             let source = root.appendingPathComponent("Example.gb")
@@ -181,6 +202,8 @@ final class SharedFileTests: XCTestCase {
             XCTAssertEqual(tags["public.filename-extension"] as? [String], suffixes)
             XCTAssertTrue(type.conforms(to: .data))
         }
+        let zip = try XCTUnwrap(documents.first { ($0["LSItemContentTypes"] as? [String])?.contains("public.zip-archive") == true })
+        XCTAssertEqual(zip["LSHandlerRank"] as? String, "Alternate", "other zips keep opening where they did")
         let exported = Bundle.main.infoDictionary?["UTExportedTypeDeclarations"] as? [[String: Any]] ?? []
         for declaration in exported {
             let tags = declaration["UTTypeTagSpecification"] as? [String: Any] ?? [:]
@@ -188,6 +211,39 @@ final class SharedFileTests: XCTestCase {
                 ?? (tags["public.filename-extension"] as? String).map { [$0] } ?? []
             XCTAssertTrue(Set(suffixes.map { $0.lowercased() }).isDisjoint(with: expected.flatMap { $0.suffixes }))
         }
+    }
+
+    /// A zip whose entries are stored uncompressed, which is enough to test the inbox; the reader's
+    /// own tests cover deflate.
+    private func storedZip(_ files: [(String, Data)]) -> Data {
+        func le16(_ value: Int) -> Data { Data([UInt8(value & 0xff), UInt8(value >> 8 & 0xff)]) }
+        func le32(_ value: UInt32) -> Data { Data((0..<4).map { UInt8(truncatingIfNeeded: value >> (8 * $0)) }) }
+        func crc32(_ data: Data) -> UInt32 {
+            var crc: UInt32 = 0xffff_ffff
+            for byte in data {
+                crc ^= UInt32(byte)
+                for _ in 0..<8 { crc = crc & 1 == 1 ? (crc >> 1) ^ 0xedb8_8320 : crc >> 1 }
+            }
+            return ~crc
+        }
+        var archive = Data()
+        var directory = Data()
+        for (name, data) in files {
+            let nameData = Data(name.utf8)
+            let crc = crc32(data)
+            let offset = UInt32(archive.count)
+            archive += le32(0x0403_4b50) + le16(20) + le16(0) + le16(0) + le16(0) + le16(0)
+            archive += le32(crc) + le32(UInt32(data.count)) + le32(UInt32(data.count)) + le16(nameData.count) + le16(0)
+            archive += nameData + data
+            directory += le32(0x0201_4b50) + le16(20) + le16(20) + le16(0) + le16(0) + le16(0) + le16(0)
+            directory += le32(crc) + le32(UInt32(data.count)) + le32(UInt32(data.count)) + le16(nameData.count)
+            directory += le16(0) + le16(0) + le16(0) + le16(0) + le32(0) + le32(offset) + nameData
+        }
+        let directoryOffset = UInt32(archive.count)
+        archive += directory
+        archive += le32(0x0605_4b50) + le16(0) + le16(0) + le16(files.count) + le16(files.count)
+        archive += le32(UInt32(directory.count)) + le32(directoryOffset) + le16(0)
+        return archive
     }
 
     private func withInbox(_ body: (SharedFileInbox, URL, AppContainer) throws -> Void) throws {
