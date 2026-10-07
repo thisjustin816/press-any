@@ -115,7 +115,7 @@ camera and printer declared, and a missing one is a failed cast.
 
 | Status | Item | Target | Spec | Notes |
 |---|---|---|---|---|
-| partial | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged files, removes leftovers and stale temporary files); saves/states not verified on read |
+| done | Verify important assets when read/used (Q180) | v1 | prod "Persistence and storage" | launch re-hashes image/patches (ResolveImageForLaunch); battery saves and save states are verified against their recorded SHA-256 when read, rejecting mismatches and marking assets corrupt without changing the files; Settings > Check Library Files runs ManagedAssetIntegrityChecker (missing and damaged source/cache files, removes leftovers and stale temporary files) |
 | missing | Storage screen by category, source vs disposable, safe cleanup | v1 | Q138 | none |
 | partial | Automatic cleanup of disposable data only | v1 | Q139 | expired Quick Play sessions and staged copies left by interrupted imports removed at launch (AppContainer init); no generated-cache eviction under pressure |
 | partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | later 6 | Check Library Files runs the orphan sweep on demand; in-flight protection and GC coordination remain |
