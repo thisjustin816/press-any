@@ -9,6 +9,8 @@ import UIKit
 final class SaveStatesViewModel: ObservableObject {
     @Published private(set) var states: [SaveState] = []
     @Published var pendingDeletion: DeletionPlan?
+    @Published var selection = ItemSelection<UUID>()
+    @Published var pendingBatchDeletion: BatchDeletionPlan?
     @Published var errorMessage: String?
 
     let profile: SaveProfile
@@ -41,6 +43,7 @@ final class SaveStatesViewModel: ObservableObject {
         do {
             states = try repository.fetchSaveStates(saveProfileID: profile.id)
                 .filter { $0.kind != .crashRecovery }
+            selection.reconcile(with: Set(states.map(\.id)))
             buildNames = Dictionary(
                 try builds.fetchBuilds(gameID: profile.gameID).map { ($0.id, $0.displayName) },
                 uniquingKeysWith: { first, _ in first }
@@ -75,6 +78,20 @@ final class SaveStatesViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func requestSelectedDeletion() {
+        pendingBatchDeletion = deletion.planDeletion(of: states.filter { selection.ids.contains($0.id) }.map {
+            LibraryDeletionTarget(kind: .saveState, id: $0.id)
+        })
+    }
+
+    func confirm(_ batch: BatchDeletionPlan) {
+        let result = deletion.delete(batch)
+        reload()
+        selection.ids = Set(result.skipped.map { $0.target.id }).intersection(Set(states.map(\.id)))
+        NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+        if !result.skipped.isEmpty { errorMessage = result.skipped.map(\.reason).joined(separator: "\n\n") }
     }
 
     func requestDeletion(of state: SaveState) {

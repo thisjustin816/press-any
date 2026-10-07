@@ -10,14 +10,16 @@ struct RecentlyDeletedView: View {
 
     @State private var deletions: [LibraryDeletion] = []
     @State private var purgeTarget: LibraryDeletion?
+    @State private var selection = ItemSelection<UUID>()
+    @State private var batchPurge: [UUID]?
     @State private var failure: (title: String, message: String)?
 
     var body: some View {
-        List {
+        List(selection: selection.isSelecting ? $selection.ids : nil) {
             if !deletions.isEmpty {
                 Section {
                     ForEach(deletions) { deletion in
-                        row(deletion)
+                        row(deletion).tag(deletion.id)
                     }
                 } footer: {
                     Text("Items are removed for good 30 days after deletion. Swipe for Restore and Delete Now.")
@@ -35,7 +37,32 @@ struct RecentlyDeletedView: View {
         }
         .navigationTitle("Recently Deleted")
         .navigationBarTitleDisplayMode(.inline)
+        .environment(\.editMode, .constant(selection.isSelecting ? .active : .inactive))
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(selection.isSelecting ? "Done" : "Select") { selection.toggleMode() }
+                    .disabled(deletions.isEmpty)
+            }
+            if selection.isSelecting {
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Button("Restore (\(selection.ids.count))") { restoreSelected() }
+                        .disabled(selection.ids.isEmpty)
+                    Spacer()
+                    Button("Delete Now (\(selection.ids.count))", role: .destructive) { batchPurge = selectedIDs }
+                        .disabled(selection.ids.isEmpty)
+                }
+            }
+        }
         .task { reload() }
+        .alert("Delete \(batchPurge?.count ?? 0) \((batchPurge?.count ?? 0) == 1 ? "Item" : "Items") Now?", isPresented: Binding(
+            get: { batchPurge != nil },
+            set: { if !$0 { batchPurge = nil } }
+        ), presenting: batchPurge) { ids in
+            Button("Delete Now (\(ids.count))", role: .destructive) { purgeSelected(ids) }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("They and everything that went with them are removed for good. This can't be undone.")
+        }
         .alert("Delete Now?", isPresented: Binding(
             get: { purgeTarget != nil },
             set: { if !$0 { purgeTarget = nil } }
@@ -68,8 +95,10 @@ struct RecentlyDeletedView: View {
         }
         .swipeActions(edge: .trailing) { SwipeDeleteButton(title: "Delete Now") { purgeTarget = deletion } }
         .contextMenu {
-            Button("Restore") { restore(deletion) }
-            Button("Delete Now", role: .destructive) { purgeTarget = deletion }
+            if !selection.isSelecting {
+                Button("Restore") { restore(deletion) }
+                Button("Delete Now", role: .destructive) { purgeTarget = deletion }
+            }
         }
     }
 
@@ -97,6 +126,7 @@ struct RecentlyDeletedView: View {
 
     private func reload() {
         deletions = (try? operations.recentlyDeleted()) ?? []
+        selection.reconcile(with: Set(deletions.map(\.id)))
     }
 
     private func restore(_ deletion: LibraryDeletion) {
@@ -106,22 +136,8 @@ struct RecentlyDeletedView: View {
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
             reload()
             return
-        } catch LibraryDeletionError.gameIsDeleted(let gameID) {
-            let game = holder(of: gameID, in: \.gameIDs)
-            message = "Its Game, \(game), is in Recently Deleted too. Restore that first."
-        } catch LibraryDeletionError.baseBuildIsDeleted(let buildID) {
-            let base = holder(of: buildID, in: \.buildIDs)
-            message = "It’s patched from \(base), which is in Recently Deleted too. Restore that first."
-        } catch LibraryDeletionError.saveProfileIsDeleted(let profileID) {
-            let profile = holder(of: profileID, in: \.saveProfileIDs)
-            message = "Its Save Profile, \(profile), is in Recently Deleted too. Restore that first."
-        } catch LibraryDeletionError.buildIsDeleted(let buildID) {
-            let build = holder(of: buildID, in: \.buildIDs)
-            message = "Its Build, \(build), is in Recently Deleted too. Restore that first."
-        } catch LibraryDeletionError.romAlreadyInGame {
-            message = "Its Game has the same ROM again, imported after \(deletion.title) was deleted."
         } catch {
-            message = error.localizedDescription
+            message = operations.failureMessage(for: error, title: deletion.title)
         }
         failure = ("Couldn’t Restore \(deletion.title)", message)
     }
@@ -135,8 +151,28 @@ struct RecentlyDeletedView: View {
         reload()
     }
 
-    /// The title of the deletion holding a record, which is what this list shows for it.
-    private func holder(of recordID: UUID, in records: KeyPath<LibraryRecordSet, [UUID]>) -> String {
-        deletions.first { $0.records[keyPath: records].contains(recordID) }?.title ?? "another item"
+    private var selectedIDs: [UUID] {
+        deletions.filter { selection.ids.contains($0.id) }.map(\.id)
+    }
+
+    private func restoreSelected() {
+        let result = operations.restore(deletionIDs: selectedIDs)
+        finishBatch(result, title: "Couldn't Restore \(result.skipped.count) Items")
+    }
+
+    private func purgeSelected(_ ids: [UUID]) {
+        let result = operations.purge(deletionIDs: ids)
+        finishBatch(result, title: "Couldn't Delete \(result.skipped.count) Items")
+    }
+
+    private func finishBatch(_ result: BatchRecoveryResult, title: String) {
+        reload()
+        selection.ids.subtract(result.completed)
+        if !result.completed.isEmpty {
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+        }
+        if !result.skipped.isEmpty {
+            failure = (title, result.skipped.map { "\($0.title): \($0.reason)" }.joined(separator: "\n\n"))
+        }
     }
 }

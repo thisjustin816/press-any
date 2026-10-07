@@ -206,6 +206,8 @@ struct QuickPlaySessionsView: View {
     @State private var selected: QuickPlaySession?
     @State private var discardTarget: QuickPlaySession?
     @State private var errorMessage: String?
+    @State private var selection = ItemSelection<UUID>()
+    @State private var batchDiscard: [QuickPlaySession]?
 
     var body: some View {
         NavigationStack {
@@ -217,20 +219,20 @@ struct QuickPlaySessionsView: View {
                         description: Text("Sessions you keep stay here until they expire.")
                     )
                 } else {
-                    List(sessions) { session in
-                        Button {
-                            selected = session
-                        } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(session.originalFilename)
-                                Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                    List(selection: selection.isSelecting ? $selection.ids : nil) {
+                        ForEach(sessions) { session in
+                            Group {
+                                if selection.isSelecting {
+                                    sessionLabel(session)
+                                } else {
+                                    Button { selected = session } label: { sessionLabel(session) }
+                                        .foregroundStyle(.primary)
+                                        .swipeActions(edge: .trailing) {
+                                            SwipeDeleteButton(title: "Discard") { discardTarget = session }
+                                        }
+                                }
                             }
-                        }
-                        .foregroundStyle(.primary)
-                        .swipeActions(edge: .trailing) {
-                            SwipeDeleteButton(title: "Discard") { discardTarget = session }
+                            .tag(session.id)
                         }
                     }
                 }
@@ -251,9 +253,21 @@ struct QuickPlaySessionsView: View {
                     }
                 )
             }
+            .selectionControls(selection: $selection, available: Set(sessions.map(\.id)), action: "Discard") {
+                batchDiscard = sessions.filter { selection.ids.contains($0.id) }
+            }
+            .confirmationDialog("Discard \(batchDiscard?.count ?? 0) \((batchDiscard?.count ?? 0) == 1 ? "Session" : "Sessions")?", isPresented: Binding(
+                get: { batchDiscard != nil },
+                set: { if !$0 { batchDiscard = nil } }
+            ), titleVisibility: .visible, presenting: batchDiscard) { sessions in
+                Button("Discard (\(sessions.count))", role: .destructive) { discardSelected(sessions) }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("Their saves and progress are deleted. Library saves they copied from are not affected. This can't be undone.")
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    if !selection.isSelecting { Button("Done") { dismiss() } }
                 }
             }
             .onAppear(perform: reload)
@@ -276,8 +290,32 @@ struct QuickPlaySessionsView: View {
         }
     }
 
+    private func sessionLabel(_ session: QuickPlaySession) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(session.originalFilename)
+            Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func discardSelected(_ sessions: [QuickPlaySession]) {
+        var failures: [String] = []
+        for session in sessions {
+            do {
+                try container.quickPlayWorkspace.discard(sessionID: session.id)
+                selection.ids.remove(session.id)
+            } catch {
+                failures.append("\(session.originalFilename): \(error.localizedDescription)")
+            }
+        }
+        reload()
+        if !failures.isEmpty { errorMessage = failures.joined(separator: "\n\n") }
+    }
+
     private func reload() {
         sessions = (try? container.quickPlayWorkspace.sessions()) ?? []
+        selection.reconcile(with: Set(sessions.map(\.id)))
     }
 
     private func discard(_ session: QuickPlaySession) {

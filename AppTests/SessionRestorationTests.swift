@@ -113,6 +113,55 @@ final class SessionRestorationTests: XCTestCase {
         XCTAssertEqual(model.states, [manual])
     }
 
+    func testSaveStateSelectionPlansOnlySelectedVisibleStatesAndExitsWhenEmpty() throws {
+        let fixture = try makeLibrary()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let container = fixture.container
+        let checkpoint = try insertState(.crashRecovery, in: container, context: fixture.context)
+        let first = try insertState(.manual, in: container, context: fixture.context)
+        let second = try insertState(.manual, in: container, context: fixture.context)
+        let model = SaveStatesViewModel(
+            profile: try XCTUnwrap(container.repositories.saveProfiles.fetchSaveProfile(id: fixture.context.saveProfileID)),
+            repository: container.repositories.saveStates, builds: container.repositories.builds,
+            assets: container.repositories.assets, fileStore: container.fileStore, deletion: container.libraryDeletion
+        )
+        model.selection.toggleMode()
+        model.selection.toggle(first.id)
+        model.requestSelectedDeletion()
+        XCTAssertEqual(try XCTUnwrap(model.pendingBatchDeletion).items.map { $0.target.id }, [first.id])
+        XCTAssertEqual(model.states.count, 2)
+        model.selection.toggleMode()
+        XCTAssertTrue(model.selection.ids.isEmpty)
+        model.selection.toggleMode()
+        model.selection.toggle(first.id)
+        model.selection.toggle(second.id)
+        model.requestSelectedDeletion()
+        model.confirm(try XCTUnwrap(model.pendingBatchDeletion))
+        XCTAssertTrue(model.states.isEmpty)
+        XCTAssertFalse(model.selection.isSelecting)
+        XCTAssertTrue(model.selection.ids.isEmpty)
+        XCTAssertNotNil(try container.repositories.saveStates.fetchSaveState(id: checkpoint.id))
+        XCTAssertEqual(try container.libraryDeletion.recentlyDeleted().count, 2)
+    }
+
+    func testSaveStateSelectionDropsAnExternallyDeletedStateOnReload() throws {
+        let fixture = try makeLibrary()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let container = fixture.container
+        let state = try insertState(.manual, in: container, context: fixture.context)
+        let model = SaveStatesViewModel(
+            profile: try XCTUnwrap(container.repositories.saveProfiles.fetchSaveProfile(id: fixture.context.saveProfileID)),
+            repository: container.repositories.saveStates, builds: container.repositories.builds,
+            assets: container.repositories.assets, fileStore: container.fileStore, deletion: container.libraryDeletion
+        )
+        model.selection.toggleMode()
+        model.selection.toggle(state.id)
+        try container.libraryDeletion.delete(container.libraryDeletion.planStateDeletion(stateID: state.id))
+        model.reload()
+        XCTAssertFalse(model.selection.isSelecting)
+        XCTAssertTrue(model.selection.ids.isEmpty)
+    }
+
     private func makeLibrary() throws -> (root: URL, container: AppContainer, context: LaunchContext) {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let container = try AppContainer(rootURL: root)

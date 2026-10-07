@@ -23,9 +23,9 @@ struct SaveStatesView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            List(selection: model.selection.isSelecting ? $model.selection.ids : nil) {
                 ForEach(model.states) { state in
-                    row(state)
+                    row(state).tag(state.id)
                 }
             }
             .overlay {
@@ -39,9 +39,13 @@ struct SaveStatesView: View {
             }
             .navigationTitle("Save States")
             .navigationBarTitleDisplayMode(.inline)
+            .selectionControls(selection: $model.selection, available: Set(model.states.map(\.id))) {
+                model.requestSelectedDeletion()
+            }
+            .batchDeletionAlert(plan: $model.pendingBatchDeletion, noun: "Save States", confirm: model.confirm)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    if !model.selection.isSelecting { Button("Done") { dismiss() } }
                 }
             }
             .alert("Rename Save State", isPresented: Binding(
@@ -91,8 +95,10 @@ struct SaveStatesView: View {
         }
         .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: state) } }
         .contextMenu {
-            Button("Rename…") { startRenaming(state) }
-            Button("Delete…", role: .destructive) { model.requestDeletion(of: state) }
+            if !model.selection.isSelecting {
+                Button("Rename…") { startRenaming(state) }
+                Button("Delete…", role: .destructive) { model.requestDeletion(of: state) }
+            }
         }
     }
 

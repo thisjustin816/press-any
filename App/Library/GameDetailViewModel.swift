@@ -20,6 +20,8 @@ final class GameDetailViewModel: ObservableObject {
     @Published var baseMismatch: PendingPatch?
     /// A deletion waiting on its confirmation, with everything it takes.
     @Published var pendingDeletion: DeletionPlan?
+    @Published var selection = ItemSelection<LibraryDeletionTarget>()
+    @Published var pendingBatchDeletion: BatchDeletionPlan?
 
     struct PendingPatch: Identifiable {
         let id = UUID()
@@ -107,6 +109,9 @@ final class GameDetailViewModel: ObservableObject {
         do {
             guard let fetched = try games.fetchGame(id: gameID) else {
                 gameRemoved = true
+                builds = []
+                saveProfiles = []
+                selection.reconcile(with: [])
                 return
             }
             game = fetched
@@ -114,6 +119,7 @@ final class GameDetailViewModel: ObservableObject {
             saveProfiles = try profiles.fetchSaveProfiles(gameID: gameID).sorted {
                 $0.createdAt < $1.createdAt
             }
+            selection.reconcile(with: selectableItems)
             otherGames = try games.fetchGames()
                 .filter { $0.id != gameID }
                 .sorted { $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending }
@@ -211,6 +217,23 @@ final class GameDetailViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    var selectableItems: Set<LibraryDeletionTarget> {
+        Set(builds.map { LibraryDeletionTarget(kind: .build, id: $0.id) }
+            + saveProfiles.map { LibraryDeletionTarget(kind: .saveProfile, id: $0.id) })
+    }
+
+    func requestSelectedDeletion() {
+        pendingBatchDeletion = deletion.planDeletion(of: selection.ids.intersection(selectableItems).sorted { $0.id.uuidString < $1.id.uuidString })
+    }
+
+    func confirm(_ batch: BatchDeletionPlan) {
+        let result = deletion.delete(batch)
+        reload()
+        selection.ids = Set(result.skipped.map(\.target)).intersection(selectableItems)
+        NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+        if !result.skipped.isEmpty { errorMessage = result.skipped.map(\.reason).joined(separator: "\n\n") }
     }
 
     func requestGameDeletion() {
@@ -439,16 +462,8 @@ final class GameDetailViewModel: ObservableObject {
     private func requestDeletion(_ plan: () throws -> DeletionPlan) {
         do {
             pendingDeletion = try plan()
-        } catch LibraryDeletionError.dependentBuildsInOtherGames(let buildIDs) {
-            let names = buildIDs.compactMap { id -> String? in
-                guard let build = try? buildRepository.fetchBuild(id: id) else { return nil }
-                guard let game = try? games.fetchGame(id: build.gameID) else { return build.displayName }
-                return "\(build.displayName) in \(game.primaryTitle)"
-            }
-            let one = names.count == 1
-            errorMessage = "\(names.formatted(.list(type: .and))) \(one ? "is" : "are") patched from this Game’s Builds and can’t be rebuilt without them. Delete \(one ? "it" : "them") first, or merge the Games."
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = deletion.failureMessage(for: error)
         }
     }
 

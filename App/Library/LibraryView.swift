@@ -72,7 +72,8 @@ struct LibraryView: View {
             gameRepository: container.repositories.games,
             buildRepository: container.repositories.builds,
             launchResolver: container.preferredLaunchResolver,
-            buildOperations: container.buildOperations
+            buildOperations: container.buildOperations,
+            deletion: container.libraryDeletion
         ))
     }
 
@@ -174,6 +175,10 @@ struct LibraryView: View {
                     .accessibilityIdentifier("library.addMenu")
                 }
             }
+            .selectionControls(selection: $model.selection, available: Set(model.visibleGames.map(\.id)), selectAll: true) {
+                model.requestSelectedDeletion()
+            }
+            .batchDeletionAlert(plan: $model.pendingBatchDeletion, noun: "Games", confirm: model.confirm)
             .onAppear { model.reload() }
             .task { openScreenshotScene() }
             .navigationDestination(item: $screenshotGameID) { gameID in
@@ -261,55 +266,79 @@ struct LibraryView: View {
                 : [GridItem(.adaptive(minimum: 145), spacing: 16, alignment: .top)]
             LazyVGrid(columns: columns, spacing: 20) {
                 ForEach(model.visibleGames) { game in
-                    NavigationLink {
-                        GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
-                    } label: {
-                        GameLibraryTile(
-                            game: game,
-                            system: model.system(of: game),
-                            artworkURL: container.artworkURL(for: game),
-                            showsTitle: showsGridTitles
-                        )
+                    if model.selection.isSelecting {
+                        Button { model.selection.toggle(game.id) } label: {
+                            gameTile(game)
+                                .overlay(alignment: .bottomTrailing) {
+                                    Image(systemName: model.selection.ids.contains(game.id) ? "checkmark.circle.fill" : "circle")
+                                        .font(.title2)
+                                        .foregroundStyle(Color.accentColor)
+                                        .padding(8)
+                                        .background(.regularMaterial, in: Circle())
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(game.primaryTitle)
+                        .accessibilityValue(model.selection.ids.contains(game.id) ? "Selected" : "Not selected")
+                        .accessibilityAddTraits(model.selection.ids.contains(game.id) ? .isSelected : [])
+                    } else {
+                        NavigationLink {
+                            GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
+                        } label: { gameTile(game) }
+                        .buttonStyle(.plain)
+                        .contextMenu { gameActions(game) }
                     }
-                    .buttonStyle(.plain)
-                    .contextMenu { gameActions(game) }
                 }
             }
             .padding()
         }
     }
 
+    private func gameTile(_ game: Game) -> some View {
+        GameLibraryTile(game: game, system: model.system(of: game), artworkURL: container.artworkURL(for: game), showsTitle: showsGridTitles)
+    }
+
     private var gameList: some View {
-        List(model.visibleGames) { game in
-            NavigationLink {
-                GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
-            } label: {
-                HStack(spacing: 12) {
-                    GameArtworkView(url: container.artworkURL(for: game), system: model.system(of: game), title: game.primaryTitle)
-                        .frame(width: 56, height: 56)
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(game.primaryTitle).font(.headline)
-                            if game.isFavorite {
-                                Image(systemName: "star.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.yellow)
-                                    .accessibilityLabel("Favorite")
-                            }
+        List(selection: model.selection.isSelecting ? $model.selection.ids : nil) {
+            ForEach(model.visibleGames) { game in
+                Group {
+                    if model.selection.isSelecting {
+                        gameListLabel(game)
+                    } else {
+                        NavigationLink {
+                            GameDetailView(container: container, gameID: game.id, onPlay: onPlay)
+                        } label: { gameListLabel(game) }
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button("Play") { launch(game) }.tint(.accentColor)
                         }
-                        Text(model.system(of: game).displayName)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        .contextMenu { gameActions(game) }
                     }
                 }
+                .tag(game.id)
             }
-            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                Button("Play") { launch(game) }
-                    .tint(.accentColor)
-            }
-            .contextMenu { gameActions(game) }
         }
         .listStyle(.plain)
+    }
+
+    private func gameListLabel(_ game: Game) -> some View {
+        HStack(spacing: 12) {
+            GameArtworkView(url: container.artworkURL(for: game), system: model.system(of: game), title: game.primaryTitle)
+                .frame(width: 56, height: 56)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(game.primaryTitle).font(.headline)
+                    if game.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundStyle(.yellow)
+                            .accessibilityLabel("Favorite")
+                    }
+                }
+                Text(model.system(of: game).displayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     @ViewBuilder
@@ -327,6 +356,7 @@ struct LibraryView: View {
     }
 
     private func launch(_ game: Game) {
+        guard !model.selection.isSelecting else { return }
         do {
             onPlay(try model.launchContext(for: game))
         } catch {
