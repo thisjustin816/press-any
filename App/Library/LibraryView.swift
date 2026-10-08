@@ -356,17 +356,21 @@ struct LibraryView: View {
                 }
                 .tag(game.id)
             }
-            .onMove(perform: isReordering ? moveGames : nil)
+            .onMove(perform: moveAction)
         }
         .listStyle(.plain)
         // Drag handles show only in edit mode, which Select also turns on for its checkboxes.
         .environment(\.editMode, .constant(model.selection.isSelecting || isReordering ? .active : .inactive))
     }
 
-    private func moveGames(from source: IndexSet, to destination: Int) {
-        var ids = model.visibleGames.map(\.id)
-        ids.move(fromOffsets: source, toOffset: destination)
-        model.reorder(visible: ids)
+    /// Nil outside Reorder, so Select's edit mode shows checkboxes without drag handles.
+    private var moveAction: ((IndexSet, Int) -> Void)? {
+        guard isReordering else { return nil }
+        return { source, destination in
+            var ids = model.visibleGames.map(\.id)
+            ids.move(fromOffsets: source, toOffset: destination)
+            model.reorder(visible: ids)
+        }
     }
 
     private func gameListLabel(_ game: Game) -> some View {

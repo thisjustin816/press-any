@@ -949,8 +949,7 @@ exposes them; custom border editing is later.
   Playtime, System, Hack Author, Version or Manual. Recent play, added, changed and playtime sort
   largest first; Games never played go last under Recently Played and Playtime. Recently Changed
   uses the newest Build added or edited in the Game. Hack Author sorts by the Preferred Build's
-  author, A to Z, and Version by its version, newest first, in the order Builds' versions and dates
-  sort; Games without one go last. System groups Game Boy before Game Boy Color. Ties use title
+  author, A to Z, and Version by its version, newest first; Games without one go last. System groups Game Boy before Game Boy Color. Ties use title
   order. Search and Favorites Only filter the sorted list. List rows show the system under Title,
   System and Manual, relative last played under Recently Played, the relative last change under
   Recently Changed, playtime under Playtime, the date added under Recently Added, the author under
