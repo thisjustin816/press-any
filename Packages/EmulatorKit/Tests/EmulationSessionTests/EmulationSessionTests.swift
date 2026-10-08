@@ -243,6 +243,26 @@ final class EmulationSessionTests: XCTestCase {
         XCTAssertEqual(autos.first?.saveProfileID, harness.profile.id)
     }
 
+    func testRestartBootsAgainAndKeepsTheMomentLeftAsAnAutoState() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3, 4]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        for _ in 0..<3 { _ = try session.stepFrame(input: .init()) }
+
+        try session.restart()
+
+        XCTAssertEqual(try session.stepFrame(input: .init()).bgra8888[0], 1, "the game booted again")
+        let autos = try harness.states.fetchSaveStates(
+            buildID: harness.buildA.id,
+            saveProfileID: harness.profile.id
+        ).filter { $0.kind == .auto }
+        XCTAssertEqual(autos.count, 1)
+        try session.loadState(try XCTUnwrap(autos.first))
+        XCTAssertEqual(try session.stepFrame(input: .init()).bgra8888[0], 4, "the Auto State goes back to before the restart")
+        let profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
+        XCTAssertEqual(try harness.loadPersistentSave(profile: profile), Data([1, 2, 3, 4]))
+    }
+
     func testAutoStateRetentionKeepsFiveNewest() throws {
         let harness = try SessionHarness.make()
         let session = harness.makeSession()

@@ -86,7 +86,7 @@ struct RootView: View {
             if let container = bootstrap.container {
                 LibraryView(
                     container: container,
-                    onPlay: { context in launch(context, container: container) },
+                    onPlay: { context, start in launch(context, container: container, start: start) },
                     onQuickPlay: { request in quickPlay(request, container: container) },
                     onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) },
                     onImportFiles: { urls in urls.forEach { receiveSharedFile($0, opensImportReview: true) } }
@@ -233,7 +233,9 @@ struct RootView: View {
                 }
                 Button("Use “\(risky.profileName)” Anyway", role: .destructive) {
                     riskyLaunch = nil
-                    if let container = bootstrap.container { launch(risky.context, container: container, checkSave: false) }
+                    if let container = bootstrap.container {
+                        launch(risky.context, container: container, checkSave: false, start: risky.start)
+                    }
                 }
                 Button("Cancel", role: .cancel) { riskyLaunch = nil }
             } message: { risky in
@@ -398,15 +400,24 @@ struct RootView: View {
         }
     }
 
-    private func launch(_ context: LaunchContext, container: AppContainer, checkSave: Bool = true) {
+    private func launch(
+        _ context: LaunchContext,
+        container: AppContainer,
+        checkSave: Bool = true,
+        start launchStart: LaunchStart = .resumeGames
+    ) {
         // A failed check never blocks play; it only withholds a warning it couldn't confirm.
         if checkSave, let assessment = try? container.saveCompatibility.execute(context: context), assessment.isRisky,
            let profile = try? container.repositories.saveProfiles.fetchSaveProfile(id: context.saveProfileID) {
-            riskyLaunch = RiskyLaunch(context: context, assessment: assessment, profileName: profile.displayName)
+            riskyLaunch = RiskyLaunch(
+                context: context, assessment: assessment, profileName: profile.displayName, start: launchStart
+            )
             return
         }
         let prepared = container.prepareLaunch(context: context)
-        if prepared.autoState != nil, prepared.policy == .ask {
+        if launchStart == .startOver {
+            start(prepared, resume: false)
+        } else if prepared.autoState != nil, prepared.policy == .ask {
             pendingResume = prepared
         } else {
             start(prepared, resume: true)
@@ -472,7 +483,7 @@ struct RootView: View {
             let context = newSave
                 ? try container.chooseSaveForBuild.playWithNewSave(risky.context)
                 : try container.chooseSaveForBuild.playWithCopy(risky.context)
-            launch(context, container: container, checkSave: false)
+            launch(context, container: container, checkSave: false, start: risky.start)
         } catch {
             errorMessage = "Could not make the save: \(error.localizedDescription)"
         }
@@ -483,7 +494,7 @@ struct RootView: View {
         guard let container = bootstrap.container, let writer = risky.assessment.writtenBy else { return }
         do {
             let context = try container.chooseSaveForBuild.playSharingSaves(risky.context, writtenByBuildID: writer.id)
-            launch(context, container: container, checkSave: false)
+            launch(context, container: container, checkSave: false, start: risky.start)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -496,7 +507,7 @@ struct RootView: View {
         do {
             try container.acceptDamagedSave.execute(profileID: damaged.context.saveProfileID)
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
-            launch(damaged.context, container: container, checkSave: false)
+            launch(damaged.context, container: container, checkSave: false, start: damaged.start)
         } catch {
             errorMessage = "Couldn’t use the save: \(error.localizedDescription)"
         }
@@ -544,7 +555,11 @@ struct RootView: View {
             )
         } catch PersistentSaveServiceError.hashMismatch {
             let profile = try? container.repositories.saveProfiles.fetchSaveProfile(id: launch.context.saveProfileID)
-            damagedSave = DamagedSaveLaunch(context: launch.context, profileName: profile?.displayName ?? "This Save Profile")
+            damagedSave = DamagedSaveLaunch(
+                context: launch.context,
+                profileName: profile?.displayName ?? "This Save Profile",
+                start: resume ? .resumeGames : .startOver
+            )
         } catch {
             let detail = (error as? ResolveImageForLaunchError)?.errorDescription ?? String(describing: error)
             errorMessage = "Could not start the game: \(detail)"
@@ -699,4 +714,5 @@ private extension ControllerTheme {
 private struct DamagedSaveLaunch {
     let context: LaunchContext
     let profileName: String
+    let start: LaunchStart
 }

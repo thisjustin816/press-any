@@ -409,6 +409,21 @@ public final class EmulationSession: @unchecked Sendable {
         return state
     }
 
+    /// Starts the game again from its boot, the way switching the cartridge off and on does. The
+    /// cartridge keeps its battery-backed RAM through a reset, so the save stays. An Auto State
+    /// taken first keeps the moment being left, so Load State can go back to it; when that state
+    /// can't be written, the game isn't reset. Stop the frame loop before calling this.
+    public func restart() throws {
+        let (worker, context, _) = try snapshotActive()
+        try saveAutoState()
+        let skipBoot = try builds.fetchBuild(id: context.buildID).map(skipsBootAnimation) ?? false
+        try worker.perform { core in
+            try core.reset()
+            if skipBoot { _ = try (core as? any BootSkippingCapability)?.skipBootAnimation() }
+        }
+        lock.withLock { latestFrame = nil }
+    }
+
     /// The periodic save queue calls this during play. Checkpoints have their own cadence and
     /// never enter the player's state list or Auto State retention.
     @discardableResult

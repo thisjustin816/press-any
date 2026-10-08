@@ -491,6 +491,12 @@ claims reliability from just an old ROM, old save and new ROM.
 - **Resume Games** (Always by default; Ask or Never; App, System, Game or Build) decides whether a
   restorable Auto State is used, offered or ignored, at launch, on a background-session reopen,
   and when returning to the app. Crash recovery is a separate, explicit choice.
+- **Restart and Start Over.** Restart, beside Close Game in the game menu, asks first, then starts
+  the game again from its boot and plays. The cartridge keeps its save through a reset. A library
+  game first keeps where the player was as an Auto State, so Load State can go back to it; Quick
+  Play keeps only what the game itself saved. Start Over, beside Play in a Game's and a Build's
+  menus and on a long press of a Game's Play button, boots from the save whatever Resume Games
+  says and keeps the resume point, as the Ask prompt's Start Over does.
 - **Pausing.** The game pauses whenever its scene goes inactive and lets go of every held button.
   After only an overlay (Control Center, Notification Center, a call banner) it resumes on its own
   unless the player had paused it; after the background, Resume Games decides. Backgrounding

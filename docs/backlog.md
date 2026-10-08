@@ -275,6 +275,7 @@ states.
 | missing | State records cheat config; offer Restore Cheat Configuration | v1.1 |  |
 | missing | Per-Save-Profile autoresume override | v1.1 |  |
 | done | Separate crash-recovery checkpoint + Recover Session / Start Normally | v1 | One hidden state per Build and Save Profile, refreshed each minute of play; clean close or Auto State removes it. An open-session marker offers recovery without automatic launch; Start Normally keeps the checkpoint until that Build launches |
+| done | Restart from the game menu; Start Over from the library | v1 | Restart asks first, keeps the battery save through a core reset and, for a library game, an Auto State of the moment left; Start Over boots from the save whatever Resume Games says, keeping the resume point |
 | done | App relaunch returns to the previous game/session | v1 | A library game saved in the background reopens with Resume Games (Always, Ask or Never); a closed game stays closed, and Quick Play is excluded |
 | missing | In-game Build/Profile switching (save, check, relaunch) | v1.1 |  |
 

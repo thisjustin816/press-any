@@ -27,6 +27,8 @@ protocol GameplayRuntime: AnyObject {
     func stop(createAutoState: Bool, discardUnsaved: Bool) throws
     /// Writes the game's save once it changes, checking at most every few seconds of play.
     @discardableResult func flushBatteryIfChanged() throws -> Bool
+    /// Starts the game again from its boot, keeping its save. Stop the frame loop first.
+    func restart() throws
 }
 
 /// Library sessions also keep manual save states. Quick Play does not, since nothing in its

@@ -171,6 +171,17 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         lock.withLock { _state = .running(session.id) }
     }
 
+    /// Starts the game again from its boot. The cartridge keeps its battery-backed RAM through a
+    /// reset, so the save stays. Stop the frame loop before calling this.
+    public func restart() throws {
+        let worker = try activeWorker(requireRunning: false)
+        try worker.perform { core in
+            try core.reset()
+            _ = try (core as? any BootSkippingCapability)?.skipBootAnimation()
+        }
+        lock.withLock { latestFrame = nil }
+    }
+
     public func flushBattery() throws {
         let worker = try activeWorker(requireRunning: false)
         let data = try worker.perform { try $0.persistentSaveData() }

@@ -127,4 +127,5 @@ private final class FakeRuntime: GameplayRuntime, @unchecked Sendable {
     func stop(createAutoState: Bool) throws { lock.withLock { stops += 1 } }
     func stop(createAutoState: Bool, discardUnsaved: Bool) throws { lock.withLock { stops += 1 } }
     func flushBatteryIfChanged() throws -> Bool { false }
+    func restart() throws {}
 }

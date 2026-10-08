@@ -83,6 +83,7 @@ private final class BlockingSaveRuntime: GameplayRuntime, @unchecked Sendable {
     func foreground(policy: AutoResumePolicy) throws -> Bool { true }
     func stop(createAutoState: Bool) throws {}
     func stop(createAutoState: Bool, discardUnsaved: Bool) throws {}
+    func restart() throws {}
 
     func flushBatteryIfChanged() throws -> Bool {
         let shouldBlock = lock.withLock {
