@@ -160,3 +160,18 @@ the ball only moves up and down. These checks remain pending until run on a phys
 - [ ] Close the game, quit Press Any and reopen it. The cheat, its switch and the list order are still there, and the ball holds again when the game starts.
 - [ ] Add a cheat whose second line is `123-456`. Save is refused with "Line 2 isn’t a Game Genie or GameShark code" under the codes, and nothing is added.
 - [ ] Back up the library and restore the backup with Replace Entire Library, or into a fresh install: the cheat comes back with its switch and order, and holds the ball again. A Game package of the ROM's Game carries the cheat too.
+
+## Press Any Plus device checks
+
+Set up the product in App Store Connect first (`docs/testflight.md`). A TestFlight build buys in
+Apple's sandbox with the tester's own Apple Account, for free, and the purchase doesn't carry over
+to the App Store. These checks remain pending until run on a physical iPhone.
+
+- [ ] Without Plus, set LCD Filter to LCD 1× before installing this build, or restore a backup that has it. The game plays with Off, and Settings shows LCD 1× (Plus). Choosing LCD 3× in App, Game Boy, Game, Build and game-menu settings opens the Plus screen once each time and saves nothing. No Plus screen ever opens at launch or during play.
+- [ ] Settings > Press Any Plus shows the sandbox price from the App Store, not a fixed one. Buy Plus: the screen thanks you, the stored LCD 1× plays at once, also in a game left open behind its settings sheet, and Keep Auto States offers 3, 5 and 10 again with the earlier choice.
+- [ ] Settings > App Icon: change to Grape and back to Default. iOS confirms each change, and the home screen shows the icon in Light, Dark and Tinted.
+- [ ] Delete the app and install it again, or install it on a second iPhone with the same Apple Account. Plus is already there; if not, Restore Purchases finds it.
+- [ ] Family Sharing: a second Apple Account in the same family, with purchase sharing on, gets Plus on its own iPhone without buying it. If the sandbox won't share the purchase, run this check on the first App Store release.
+- [ ] Take the purchase back. TestFlight purchases can't be refunded, so this needs a development build from a Mac: buy with a sandbox tester (App Store Connect > Users and Access > Sandbox), clear that tester's purchase history and tap Restore Purchases, or run from Xcode with the StoreKit configuration and refund in Debug > StoreKit > Manage Transactions. Plus locks again: LCD 1× plays as Off and is still shown, the App Icon picker locks but the chosen icon stays, and existing Auto States stay until the next one is written, which leaves the latest unpinned one and every pinned one.
+- [ ] With Plus owned, turn on Airplane Mode and launch the app. Plus is still owned and the LCD filter plays.
+- [ ] Without Plus, in Airplane Mode, the Plus screen shows the calm unavailable message with Try Again, which loads the price once back online.
