@@ -23,6 +23,39 @@ final class ZipArchiveValidationTests: XCTestCase {
         assertDamaged(archive)
     }
 
+    func testROMImportSkipsLinksAndUnsupportedEntriesThatBackupsRefuse() throws {
+        let rom = Data(repeating: 1, count: 64)
+        func archive(_ entries: [(String, Data)], patch: (inout Data, _ secondRecord: Int) -> Void) -> Data {
+            var archive = ZipTestArchive.make(entries)
+            patch(&archive, archive.zipCentralOffset + 46 + entries[0].0.utf8.count)
+            return archive
+        }
+        let link = archive([("Moon/moon.gb", rom), ("latest.gb", Data("Moon/moon.gb".utf8))]) { archive, second in
+            archive.zipSet32(0xa1ff_0000, at: second + 38)
+        }
+        let encryptedReadme = archive([("moon.gb", rom), ("readme.txt", Data([2]))]) { archive, second in
+            archive.zipSet16(0x0801, at: second + 8)
+            archive.zipSet16(0x0801, at: Int(archive.zipUInt32(at: second + 42)) + 6)
+        }
+        let newerReadme = archive([("moon.gb", rom), ("-", Data([2]))]) { archive, second in
+            archive.zipSet16(45, at: second + 6)
+        }
+        var trailing = ZipTestArchive.make([("moon.gb", rom)])
+        trailing.append(Data("signed".utf8))
+        for archive in [link, encryptedReadme, newerReadme, trailing] {
+            let entries = try ZipArchiveReader.entries(in: archive, extensions: ["gb"]) { _ in 8 << 20 }
+            XCTAssertEqual(entries.map(\.data), [rom])
+            XCTAssertThrowsError(try ZipArchiveReader.backupEntries(in: archive))
+        }
+        let encryptedROM = archive([("readme.txt", Data([2])), ("moon.gb", rom)]) { archive, second in
+            archive.zipSet16(0x0801, at: second + 8)
+            archive.zipSet16(0x0801, at: Int(archive.zipUInt32(at: second + 42)) + 6)
+        }
+        XCTAssertThrowsError(try ZipArchiveReader.entries(in: encryptedROM, extensions: ["gb"]) { _ in 8 << 20 }) { error in
+            XCTAssertEqual(error as? ZipArchiveError, .encrypted)
+        }
+    }
+
     private func assertDamaged(_ archive: Data, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertThrowsError(try ZipArchiveReader.entries(in: archive, extensions: ["gb"]) { _ in 8 << 20 }, file: file, line: line) { error in
             XCTAssertEqual(error as? ZipArchiveError, .damaged, file: file, line: line)

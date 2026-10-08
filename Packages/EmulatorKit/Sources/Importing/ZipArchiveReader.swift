@@ -100,18 +100,21 @@ public enum ZipArchiveReader {
     }
 
     /// ROM imports keep only basenames, skip folders and macOS metadata, and apply extension limits.
+    /// Entries they don't want are skipped unread, along with links and anything this reader
+    /// can't open, so a download's odd readme doesn't stop its ROM from importing.
     public static func entries(
         in archive: Data,
         extensions: Set<String>,
         limit: (String) -> Int64
     ) throws -> [ZipArchiveEntry] {
         let archive = Data(archive)
-        let directory = try directory(in: archive, limit: maximumArchiveBytes)
+        func wanted(_ path: String) -> Bool {
+            filename(of: path).map { extensions.contains(($0 as NSString).pathExtension.lowercased()) } ?? false
+        }
+        let directory = try directory(in: archive, limit: maximumArchiveBytes, wanted: wanted)
         var entries: [ZipArchiveEntry] = []
         for entry in directory {
-            guard let filename = filename(of: entry.path), extensions.contains((filename as NSString).pathExtension.lowercased()) else {
-                continue
-            }
+            guard let filename = filename(of: entry.path) else { continue }
             guard entries.count < maximumMatchingEntries else { throw ZipArchiveError.tooManyEntries }
             guard Int64(entry.size) <= limit((filename as NSString).pathExtension.lowercased()) else {
                 throw ZipArchiveError.entryTooLarge(filename)
@@ -131,7 +134,7 @@ public enum ZipArchiveReader {
     /// Checks for the exact root `backup-manifest.json` using metadata only, with no extraction
     /// or ROM matching cap. This identifies the container, not the validity of its manifest data.
     public static func isLibraryBackup(_ archive: Data) throws -> Bool {
-        try directory(in: archive, limit: maximumBackupArchiveBytes).contains { $0.name == Data("backup-manifest.json".utf8) }
+        try !directory(in: archive, limit: maximumBackupArchiveBytes, wanted: { $0 == "backup-manifest.json" }).isEmpty
     }
 
     private struct ArchivedEntry: Sendable {
@@ -172,9 +175,13 @@ public enum ZipArchiveReader {
         return data
     }
 
-    private static func directory(in archive: Data, limit: Int) throws -> [ArchivedEntry] {
+    /// Reads the central directory. With `wanted`, entries it rejects and links are skipped before
+    /// validation, and trailing bytes after the end record are ignored; without it, every entry
+    /// must be valid. Backups pass none.
+    private static func directory(in archive: Data, limit: Int,
+                                  wanted: ((String) -> Bool)? = nil) throws -> [ArchivedEntry] {
         guard archive.count <= limit else { throw ZipArchiveError.archiveTooLarge }
-        let end = try endOfCentralDirectory(in: archive)
+        let end = try endOfCentralDirectory(in: archive, allowsTrailingBytes: wanted != nil)
         guard end.entryCount <= maximumEntries else { throw ZipArchiveError.tooManyEntries }
         let directoryEnd = end.directoryOffset + end.directorySize
         var offset = end.directoryOffset
@@ -183,60 +190,18 @@ public enum ZipArchiveReader {
             guard offset <= directoryEnd - 46, try uint32(archive, offset) == 0x0201_4b50 else {
                 throw ZipArchiveError.damaged
             }
-            let version = try uint16(archive, offset + 6)
-            let flags = try uint16(archive, offset + 8)
-            let method = try uint16(archive, offset + 10)
-            let timestamp = try uint32(archive, offset + 12)
-            let crc = try uint32(archive, offset + 16)
-            let compressedSize = Int(try uint32(archive, offset + 20))
-            let size = Int(try uint32(archive, offset + 24))
             let nameLength = Int(try uint16(archive, offset + 28))
             let extraLength = Int(try uint16(archive, offset + 30))
             let commentLength = Int(try uint16(archive, offset + 32))
-            let attributes = try uint32(archive, offset + 38)
-            let localOffset = Int(try uint32(archive, offset + 42))
             let next = offset + 46 + nameLength + extraLength + commentLength
-            guard next <= directoryEnd, version >= 10, version <= 20,
-                  compressedSize != 0xffff_ffff, size != 0xffff_ffff, localOffset != 0xffff_ffff,
-                  try uint16(archive, offset + 34) == 0 else { throw ZipArchiveError.damaged }
-            guard flags & 0x2041 == 0 else { throw ZipArchiveError.encrypted }
-            guard flags & ~UInt16(0x080e) == 0 else { throw ZipArchiveError.damaged }
-            let fileType = (attributes >> 16) & 0xf000
-            guard fileType == 0 || fileType == 0x8000 || fileType == 0x4000 else { throw ZipArchiveError.damaged }
+            guard next <= directoryEnd else { throw ZipArchiveError.damaged }
             let name = try bytes(archive, offset + 46, nameLength)
-            try validateExtra(archive, offset + 46 + nameLength, extraLength)
-            guard localOffset <= end.directoryOffset - 30,
-                  try uint32(archive, localOffset) == 0x0403_4b50,
-                  try uint16(archive, localOffset + 4) == version,
-                  try uint16(archive, localOffset + 6) == flags,
-                  try uint16(archive, localOffset + 8) == method,
-                  try uint32(archive, localOffset + 10) == timestamp else { throw ZipArchiveError.damaged }
-            let localNameLength = Int(try uint16(archive, localOffset + 26))
-            let localExtraLength = Int(try uint16(archive, localOffset + 28))
-            let dataStart = localOffset + 30 + localNameLength + localExtraLength
-            let dataEnd = dataStart + compressedSize
-            guard dataEnd <= end.directoryOffset,
-                  try bytes(archive, localOffset + 30, localNameLength) == name else { throw ZipArchiveError.damaged }
-            try validateExtra(archive, localOffset + 30 + localNameLength, localExtraLength)
-            let localCRC = try uint32(archive, localOffset + 14)
-            let localCompressedSize = try uint32(archive, localOffset + 18)
-            let localSize = try uint32(archive, localOffset + 22)
-            var rangeEnd = dataEnd
-            if flags & 8 == 0 {
-                guard localCRC == crc, localCompressedSize == compressedSize, localSize == size else {
-                    throw ZipArchiveError.damaged
-                }
-            } else {
-                guard (localCRC == 0 || localCRC == crc),
-                      (localCompressedSize == 0 || localCompressedSize == compressedSize),
-                      (localSize == 0 || localSize == size) else { throw ZipArchiveError.damaged }
-                rangeEnd = try descriptorEnd(in: archive, at: dataEnd, before: end.directoryOffset,
-                                             crc: crc, compressedSize: compressedSize, size: size)
+            let fileType = (try uint32(archive, offset + 38) >> 16) & 0xf000
+            if let wanted, fileType == 0xa000 || !wanted(String(decoding: name, as: UTF8.self)) {
+                offset = next
+                continue
             }
-            guard method != 0 || compressedSize == size else { throw ZipArchiveError.damaged }
-            entries.append(ArchivedEntry(name: name, path: String(decoding: name, as: UTF8.self), method: method,
-                                         crc: crc, compressedSize: compressedSize, size: size,
-                                         dataStart: dataStart, localRange: localOffset..<rangeEnd))
+            entries.append(try entry(in: archive, at: offset, name: name, directoryOffset: end.directoryOffset))
             offset = next
         }
         guard offset == directoryEnd else { throw ZipArchiveError.damaged }
@@ -245,6 +210,61 @@ public enum ZipArchiveReader {
             guard ranges[index - 1].upperBound <= ranges[index].lowerBound else { throw ZipArchiveError.damaged }
         }
         return entries
+    }
+
+    /// Validates one central directory record and its local header.
+    private static func entry(in archive: Data, at offset: Int, name: Data, directoryOffset: Int) throws -> ArchivedEntry {
+        let version = try uint16(archive, offset + 6)
+        let flags = try uint16(archive, offset + 8)
+        let method = try uint16(archive, offset + 10)
+        let timestamp = try uint32(archive, offset + 12)
+        let crc = try uint32(archive, offset + 16)
+        let compressedSize = Int(try uint32(archive, offset + 20))
+        let size = Int(try uint32(archive, offset + 24))
+        let nameLength = name.count
+        let extraLength = Int(try uint16(archive, offset + 30))
+        let attributes = try uint32(archive, offset + 38)
+        let localOffset = Int(try uint32(archive, offset + 42))
+        guard version >= 10, version <= 20,
+              compressedSize != 0xffff_ffff, size != 0xffff_ffff, localOffset != 0xffff_ffff,
+              try uint16(archive, offset + 34) == 0 else { throw ZipArchiveError.damaged }
+        guard flags & 0x2041 == 0 else { throw ZipArchiveError.encrypted }
+        guard flags & ~UInt16(0x080e) == 0 else { throw ZipArchiveError.damaged }
+        let fileType = (attributes >> 16) & 0xf000
+        guard fileType == 0 || fileType == 0x8000 || fileType == 0x4000 else { throw ZipArchiveError.damaged }
+        try validateExtra(archive, offset + 46 + nameLength, extraLength)
+        guard localOffset <= directoryOffset - 30,
+              try uint32(archive, localOffset) == 0x0403_4b50,
+              try uint16(archive, localOffset + 4) == version,
+              try uint16(archive, localOffset + 6) == flags,
+              try uint16(archive, localOffset + 8) == method,
+              try uint32(archive, localOffset + 10) == timestamp else { throw ZipArchiveError.damaged }
+        let localNameLength = Int(try uint16(archive, localOffset + 26))
+        let localExtraLength = Int(try uint16(archive, localOffset + 28))
+        let dataStart = localOffset + 30 + localNameLength + localExtraLength
+        let dataEnd = dataStart + compressedSize
+        guard dataEnd <= directoryOffset,
+              try bytes(archive, localOffset + 30, localNameLength) == name else { throw ZipArchiveError.damaged }
+        try validateExtra(archive, localOffset + 30 + localNameLength, localExtraLength)
+        let localCRC = try uint32(archive, localOffset + 14)
+        let localCompressedSize = try uint32(archive, localOffset + 18)
+        let localSize = try uint32(archive, localOffset + 22)
+        var rangeEnd = dataEnd
+        if flags & 8 == 0 {
+            guard localCRC == crc, localCompressedSize == compressedSize, localSize == size else {
+                throw ZipArchiveError.damaged
+            }
+        } else {
+            guard (localCRC == 0 || localCRC == crc),
+                  (localCompressedSize == 0 || localCompressedSize == compressedSize),
+                  (localSize == 0 || localSize == size) else { throw ZipArchiveError.damaged }
+            rangeEnd = try descriptorEnd(in: archive, at: dataEnd, before: directoryOffset,
+                                         crc: crc, compressedSize: compressedSize, size: size)
+        }
+        guard method != 0 || compressedSize == size else { throw ZipArchiveError.damaged }
+        return ArchivedEntry(name: name, path: String(decoding: name, as: UTF8.self), method: method,
+                             crc: crc, compressedSize: compressedSize, size: size,
+                             dataStart: dataStart, localRange: localOffset..<rangeEnd)
     }
 
     private static func validateExtra(_ archive: Data, _ offset: Int, _ size: Int) throws {
@@ -280,7 +300,8 @@ public enum ZipArchiveReader {
         return String(last)
     }
 
-    private static func endOfCentralDirectory(in archive: Data) throws -> (entryCount: Int, directoryOffset: Int, directorySize: Int) {
+    private static func endOfCentralDirectory(in archive: Data, allowsTrailingBytes: Bool) throws
+        -> (entryCount: Int, directoryOffset: Int, directorySize: Int) {
         // The record is 22 bytes, followed by a comment of at most 65,535.
         guard archive.count >= 22 else { throw ZipArchiveError.notAZip }
         var offset = archive.count - 22
@@ -288,7 +309,8 @@ public enum ZipArchiveReader {
         while offset >= earliest {
             if try uint32(archive, offset) == 0x0605_4b50 {
                 let commentLength = Int(try uint16(archive, offset + 20))
-                guard offset + 22 + commentLength == archive.count else {
+                let recordEnd = offset + 22 + commentLength
+                guard recordEnd == archive.count || (allowsTrailingBytes && recordEnd < archive.count) else {
                     offset -= 1
                     continue
                 }
@@ -298,7 +320,14 @@ public enum ZipArchiveReader {
                 guard try uint16(archive, offset + 4) == 0, try uint16(archive, offset + 6) == 0,
                       try uint16(archive, offset + 8) == entryCount,
                       entryCount != 0xffff, directoryOffset != 0xffff_ffff, directorySize != 0xffff_ffff,
-                      directoryOffset + directorySize == offset else { throw ZipArchiveError.damaged }
+                      directoryOffset + directorySize == offset else {
+                    // Trailing bytes can contain the signature by chance; keep looking before them.
+                    if allowsTrailingBytes && recordEnd < archive.count {
+                        offset -= 1
+                        continue
+                    }
+                    throw ZipArchiveError.damaged
+                }
                 return (entryCount, directoryOffset, directorySize)
             }
             offset -= 1
