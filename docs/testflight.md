@@ -204,29 +204,56 @@ still done by hand in App Store Connect.
 
 ## 8. Download screenshots for App Store Connect
 
-Open **Actions → Screenshots → Run workflow** and choose:
+Open **Actions → Screenshots → Run workflow**. The defaults take the App Store listing set:
 
-| Input | Value |
+| Input | Default |
 |---|---|
-| device | iPhone 14 Plus (6.5-inch screenshots) |
+| device | iPhone 17 Pro Max (6.9-inch) |
 | roms | hero |
-| shots | summary |
+| shots | listing |
 | appearance | both (or light for one set) |
 | text_size | default |
-| import_rom | Leave the default |
+| import_rom | zgb-dmg.gb |
 
-After the run, download `screenshots-light-6.5-inch` and/or `screenshots-dark-6.5-inch` from its
-**Artifacts** section and unzip them. Select the PNGs, not the included logs.
-They show the original test ROMs from `TestROMs/`, with no commercial game images.
+The **listing** set is ten screenshots, numbered in the order to upload them. The first three
+appear in search results.
 
-The iPhone 14 Plus captures are 1284 × 2778 pixels (or 2778 × 1284 in landscape),
-which fit Apple's 6.5-inch screenshot slot. Choose iPhone 17 Pro Max for the
-separate 6.9-inch slot: 1320 × 2868 pixels, in artifacts ending `-6.9-inch`. The
-workflow checks every PNG's dimensions for both, and each set fits only its own slot. Use portrait captures for
-portrait slots and landscape captures for landscape slots.
-Choose up to ten clear images, for example the library, gameplay, the game page,
-Build info and Settings. Check that each shows a loaded app, readable content and
-features present in the Release build; screenshot seeding runs in Debug.
+1. Gameplay
+2. The library
+3. A Game with its Builds and saves
+4. Gameplay in landscape
+5. Import Review
+6. The Playtiles layout
+7. Gameplay with the LCD effect
+8. Technical Info, showing what a game was made with
+9. Quick Play
+10. Gameplay with a controller connected
+
+**summary** takes every screen and menu for checking layouts, and **every-rom** adds each ROM's
+own screens. `gbdk450-badsum.gb` as the import ROM shows Import Review's checksum warning.
+
+By default the test ROMs from `TestROMs/` play, so no commercial game appears. To show a real
+game in the gameplay shots, set three repository variables under **Settings → Secrets and
+variables → Actions → Variables**:
+
+| Variable | Value |
+|---|---|
+| `SCREENSHOT_GAME_URL` | A direct download of the game: a `.gb`, `.gbc`, or a `.zip` holding one |
+| `SCREENSHOT_GAME_SHA256` | The ROM's SHA-256, so a changed download is refused |
+| `SCREENSHOT_GAME_NAME` | The game's title in the library (optional; the ROM header's title otherwise) |
+
+The game is downloaded for each run and never stored in the repository. Use only a game whose
+author allows its use in your listing, and credit them if its license asks for it. The test
+ROMs still fill the library, the Game page and Import Review.
+
+After the run, download `screenshots-light-6.9-inch` and/or `screenshots-dark-6.9-inch` from its
+**Artifacts** section and unzip them. Upload the numbered PNGs, not the included logs.
+
+The iPhone 17 Pro Max captures are 1320 × 2868 pixels (2868 × 1320 in landscape), Apple's
+6.9-inch size, which App Store Connect scales down for smaller iPhones. Choose iPhone 14 Plus for
+the 6.5-inch slot: 1284 × 2778 pixels, in artifacts ending `-6.5-inch`. The workflow checks every
+PNG's dimensions, and each set fits only its own slot. Check that each image shows a loaded app,
+readable content, and features present in the Release build; screenshot seeding runs in Debug.
 
 In **Apps → Press Any → the iOS version page → App Previews and Screenshots**,
 select the iPhone display-size group and drag in the chosen PNGs. Screenshots
