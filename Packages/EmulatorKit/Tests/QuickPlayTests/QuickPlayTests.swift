@@ -5,6 +5,7 @@ import EmulatorApplication
 import EmulatorDomain
 import Foundation
 import Importing
+import Testing
 import XCTest
 @testable import QuickPlay
 
@@ -932,5 +933,29 @@ extension QuickPlayTests {
         let selected = try resolver.execute(gameID: h.game.id, buildID: promoted.importResult.build.id)
         XCTAssertEqual(selected.id, promotedProfile.id,
                        "Play on the promoted Build should use its new progress, not the old Main profile")
+    }
+}
+
+@Suite("Quick Play metadata provenance")
+struct QuickPlayMetadataProvenanceTests {
+    @Test("promotion records filename provenance and review overrides")
+    func promotion() throws {
+        let harness = try QuickPlayHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.external.deletingLastPathComponent()) }
+        let rom = harness.external.appendingPathComponent("Example (USA) (En) [v1.2].gb")
+        try TestROM.make(title: "EXAMPLE").write(to: rom)
+        let session = try harness.workspace.start(romURL: rom)
+        let analysis = try harness.promoter.analyze(session, targetGameID: nil)
+        var metadata = BuildImportMetadata(analysis: analysis)
+        metadata.language = "Fr"
+        let result = try harness.promoter.promote(session: session, plan: ROMImportPlan(analysis: analysis,
+            disposition: .createGame(title: "Example"), buildDisplayName: analysis.filenameMetadata.suggestedBuildName,
+            markAsBase: true, metadata: metadata), saveDisposition: .keepExisting)
+        let rows = try harness.builds.fetchMetadataProvenance(ownerID: result.build.id)
+        #expect(rows.first { $0.field == .region }?.source == .filename)
+        #expect(rows.first { $0.field == .region }?.confidence == .high)
+        #expect(rows.first { $0.field == .language }?.source == .player)
+        #expect(rows.first { $0.field == .language }?.providedValue == "En")
+        #expect(try harness.games.fetchMetadataProvenance(ownerID: result.importResult.game.id).first?.source == .filename)
     }
 }

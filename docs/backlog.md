@@ -118,7 +118,7 @@ ROMs and patches on demand.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | done | Game aliases/alternate titles (indexed) | v1 | normalized indexed alias table in one identity migration; family titles added at import; library search matches aliases, including "Pocket Monsters Crystal" for Pokémon Crystal; FTS5 remains separate |
-| partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | filename source/confidence and editable import suggestions exist; full provider provenance and Metadata Details UI remain |
+| partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Game title and Build field provenance, confidence and player overrides are recorded; offered values survive corrections and rows follow restructuring and deletion; Metadata Details UI and provider refreshes remain |
 | done | Presentation-metadata editing (rename Game/Build after creation) | v1 | Rename Game in Game Details preserves the former title as an alias and protects the player title; Rename Build; Suggest Names reviews Game titles and Build names, retaining old Game titles as aliases |
 | partial | Build toolchain record, variable-map sidecars, artwork/doc overrides, activation history | v1 (toolchain and sidecars were MVP) | toolchain reports and variable maps done; artwork/doc overrides and activation history missing |
 | done | Build notes | v1 | one plain-text note, shown and edited in Build Details; whitespace preserved; clear or cancel edits; notes follow moved and copied Builds; FTS5 note search comes later |

@@ -7,6 +7,110 @@ import Testing
 
 @Suite("GRDB persistence")
 struct PersistenceGRDBTests {
+    @Test("provenance survives reopening and player edits retain offered values")
+    func metadataProvenanceRoundTrip() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let url = root.appendingPathComponent("library.sqlite")
+        let database = try AppDatabase(url: url)
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let date = fixture.game.createdAt
+        let title = MetadataProvenance(field: .title, source: .noIntro, confidence: .high,
+            providedValue: "Catalog Title", recordedAt: date)
+        try repositories.games.saveMetadataProvenance(title, ownerID: fixture.game.id)
+        let fields = MetadataField.allCases.filter { $0 != .title }
+        let offered = fields.map { field in
+            MetadataProvenance(field: field, source: .filename, confidence: .medium,
+                providedValue: "Offered \(field.rawValue)", recordedAt: date)
+        }
+        for row in offered { try repositories.builds.saveMetadataProvenance(row, ownerID: fixture.build.id) }
+        let reopened = try AppDatabase(url: url)
+        try reopened.migrate()
+        let readers = reopened.makeRepositories()
+        #expect(try readers.games.fetchMetadataProvenance(ownerID: fixture.game.id) == [title])
+        #expect(try readers.builds.fetchMetadataProvenance(ownerID: fixture.build.id) == offered.sorted { $0.field.rawValue < $1.field.rawValue })
+        let operations = try Self.operations(repositories)
+        try operations.renameGame(gameID: fixture.game.id, title: "Player Title")
+        try operations.renameGame(gameID: fixture.game.id, title: "Second Title")
+        let corrected = try #require(try readers.games.fetchMetadataProvenance(ownerID: fixture.game.id).first)
+        #expect(corrected.source == .player)
+        #expect(corrected.confidence == nil)
+        #expect(corrected.providedValue == "Catalog Title")
+        #expect(try readers.games.fetchGame(id: fixture.game.id)?.hasPlayerTitle == true)
+        var build = fixture.build
+        build.displayName = "Player Build"
+        build.region = "Europe"
+        build.language = "Fr"
+        build.revision = nil
+        build.versionString = "2.0"
+        build.baseTitle = "Base"
+        build.hackTitle = "Hack"
+        build.author = "Author"
+        build.translation = nil
+        build.status = "Final"
+        build.modifiedAt = date.addingTimeInterval(10)
+        try repositories.builds.updateBuildMetadata(build)
+        let rows = try readers.builds.fetchMetadataProvenance(ownerID: build.id)
+        #expect(rows.count == 10)
+        #expect(rows.allSatisfy { $0.source == .player && $0.confidence == nil && $0.recordedAt == build.modifiedAt })
+        for row in rows { #expect(row.providedValue == "Offered \(row.field.rawValue)") }
+        #expect(throws: (any Error).self) {
+            try repositories.games.saveMetadataProvenance(offered[0], ownerID: fixture.game.id)
+        }
+        #expect(throws: (any Error).self) {
+            try repositories.builds.saveMetadataProvenance(title, ownerID: fixture.build.id)
+        }
+        #expect(throws: (any Error).self) {
+            try repositories.builds.saveMetadataProvenance(offered[0], ownerID: UUID())
+        }
+        #expect(throws: TestFailure.expectedRollback) {
+            try repositories.transactions.run {
+                try repositories.games.saveMetadataProvenance(title, ownerID: fixture.game.id)
+                throw TestFailure.expectedRollback
+            }
+        }
+        #expect(try readers.games.fetchMetadataProvenance(ownerID: fixture.game.id) == [corrected])
+        #expect(try readers.games.fetchGame(id: fixture.game.id)?.hasPlayerTitle == true)
+    }
+
+    @Test("move and copies carry Build provenance while merges keep the surviving title")
+    func metadataProvenanceThroughReorganization() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let fixture = try Fixture.create(in: repositories)
+        let date = fixture.game.createdAt
+        let title = MetadataProvenance(field: .title, source: .noIntro, confidence: .high,
+            providedValue: fixture.game.primaryTitle, recordedAt: date)
+        try repositories.games.saveMetadataProvenance(title, ownerID: fixture.game.id)
+        let rows = MetadataField.allCases.filter { $0 != .title }.map {
+            MetadataProvenance(field: $0, source: .patch, confidence: .low, providedValue: $0.rawValue, recordedAt: date)
+        }.sorted { $0.field.rawValue < $1.field.rawValue }
+        for row in rows { try repositories.builds.saveMetadataProvenance(row, ownerID: fixture.patchedBuild.id) }
+        let operations = try Self.operations(repositories)
+        let copied = try operations.promoteBuild(buildID: fixture.patchedBuild.id, title: "Copy", mode: .copy)
+        let copiedBuild = try #require(try repositories.builds.fetchBuilds(gameID: copied.id).first)
+        #expect(try repositories.builds.fetchMetadataProvenance(ownerID: copiedBuild.id) == rows)
+        #expect(try repositories.builds.fetchMetadataProvenance(ownerID: fixture.patchedBuild.id) == rows)
+        let moved = try operations.promoteBuild(buildID: fixture.patchedBuild.id, title: "Moved", mode: .move)
+        #expect(try repositories.builds.fetchMetadataProvenance(ownerID: fixture.patchedBuild.id) == rows)
+        try operations.mergeGame(sourceGameID: moved.id, into: fixture.game.id, mode: .move)
+        #expect(try repositories.games.fetchMetadataProvenance(ownerID: fixture.game.id) == [title])
+        #expect(try repositories.games.fetchMetadataProvenance(ownerID: moved.id).isEmpty)
+        let target = Game(id: UUID(), primaryTitle: "Target", systemFamily: "gameboy", createdAt: date, modifiedAt: date)
+        try repositories.games.insertGame(target)
+        let targetTitle = MetadataProvenance(field: .title, source: .player, providedValue: "Target Offer", recordedAt: date)
+        try repositories.games.saveMetadataProvenance(targetTitle, ownerID: target.id)
+        try operations.mergeGame(sourceGameID: fixture.game.id, into: target.id, mode: .copy)
+        let mergedCopy = try #require(try repositories.builds.fetchBuilds(gameID: target.id).first { $0.imageSHA256 == fixture.patchedBuild.imageSHA256 })
+        #expect(try repositories.builds.fetchMetadataProvenance(ownerID: mergedCopy.id) == rows)
+        #expect(try repositories.games.fetchMetadataProvenance(ownerID: target.id) == [targetTitle])
+        #expect(try repositories.games.fetchMetadataProvenance(ownerID: fixture.game.id) == [title])
+    }
+
     @Test("a declaration round-trips once per symmetric pair and rejects invalid pairs")
     func saveDeclarations() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

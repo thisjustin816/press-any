@@ -382,7 +382,8 @@ final class GameDetailViewModel: ObservableObject {
                 patches: urls.map { .init(url: $0, ignoreBaseMismatch: ignoringBaseMismatch) },
                 displayName: displayName,
                 makePreferred: true,
-                metadata: metadata
+                metadata: metadata,
+                suggestedDisplayName: displayName
             ))
             reload()
             infoMessage = "Created \(patched.displayName) from \(build.displayName)."

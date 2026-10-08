@@ -219,11 +219,10 @@ struct SharedPatchView: View {
                 patches: [.init(url: file.url, ignoreBaseMismatch: ignoringBaseMismatch)],
                 displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines),
                 makePreferred: true,
-                metadata: reviewedMetadata
+                metadata: reviewedMetadata,
+                suggestedDisplayName: suggestedBuildName,
+                gameTitle: title
             ))
-            if let title {
-                try? container.buildOperations.renameGame(gameID: created.gameID, title: title)
-            }
             createdBuild = created
             errorMessage = nil
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)

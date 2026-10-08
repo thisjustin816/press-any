@@ -44,6 +44,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v13-patch-step-inputs") { db in
             try db.execute(sql: "ALTER TABLE patch_recipe_items ADD COLUMN expected_input_sha256 TEXT")
         }
+        migrator.registerMigration("v1-v14-metadata-provenance") { db in
+            try db.execute(sql: V1V14MetadataProvenanceSchema.sql)
+        }
         return migrator
     }
 }
@@ -381,5 +384,29 @@ enum V1V10LibraryModelSchema {
     ALTER TABLE games ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0 CHECK (is_favorite IN (0, 1));
     ALTER TABLE builds ADD COLUMN notes TEXT NOT NULL DEFAULT '';
     ALTER TABLE builds ADD COLUMN total_playtime_seconds REAL NOT NULL DEFAULT 0 CHECK (total_playtime_seconds >= 0);
+    """
+}
+
+enum V1V14MetadataProvenanceSchema {
+    static let sql = """
+    CREATE TABLE game_metadata_provenance (
+        game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+        field TEXT NOT NULL CHECK (field = 'title'),
+        source TEXT NOT NULL CHECK (source IN ('noIntro', 'romHeader', 'filename', 'patch', 'player')),
+        confidence TEXT CHECK (confidence IN ('low', 'medium', 'high')),
+        provided_value TEXT,
+        recorded_at TEXT NOT NULL,
+        PRIMARY KEY (game_id, field)
+    );
+    CREATE TABLE build_metadata_provenance (
+        build_id TEXT NOT NULL REFERENCES builds(id) ON DELETE CASCADE,
+        field TEXT NOT NULL CHECK (field IN ('displayName', 'region', 'language', 'revision', 'versionString',
+            'baseTitle', 'hackTitle', 'author', 'translation', 'status')),
+        source TEXT NOT NULL CHECK (source IN ('noIntro', 'romHeader', 'filename', 'patch', 'player')),
+        confidence TEXT CHECK (confidence IN ('low', 'medium', 'high')),
+        provided_value TEXT,
+        recorded_at TEXT NOT NULL,
+        PRIMARY KEY (build_id, field)
+    );
     """
 }

@@ -116,11 +116,12 @@ public struct ImportCommitter: Sendable {
                         id: makeID(),
                         primaryTitle: title,
                         systemFamily: "gameboy",
-                        hasPlayerTitle: plan.hasPlayerTitle,
+                        hasPlayerTitle: plan.titleProvenance(value: title, at: timestamp).source == .player,
                         createdAt: timestamp,
                         modifiedAt: timestamp
                     )
                     try games.insertGame(game)
+                    try games.saveMetadataProvenance(plan.titleProvenance(value: title, at: timestamp), ownerID: game.id)
                     createdNewGame = true
                 case .addBuild(let gameID):
                     guard let existingGame = try games.fetchGame(id: gameID) else {
@@ -156,7 +157,7 @@ public struct ImportCommitter: Sendable {
                     versionString: plan.metadata.versionString,
                     versionSortKey: plan.metadata.versionSortKey,
                     baseGameReference: plan.baseGameReference,
-                    baseTitle: plan.baseGameReference?.title ?? plan.metadata.baseTitle,
+                    baseTitle: plan.metadata.baseTitle,
                     hackTitle: plan.metadata.hackTitle,
                     author: plan.metadata.author,
                     translation: plan.metadata.translation,
@@ -165,23 +166,33 @@ public struct ImportCommitter: Sendable {
                     modifiedAt: timestamp
                 )
                 try builds.insertBuild(build)
+                for row in plan.buildProvenance(at: timestamp) {
+                    try builds.saveMetadataProvenance(row, ownerID: build.id)
+                }
                 for report in plan.analysis.toolchainReports {
                     try toolchainReports.saveReport(report, buildID: build.id, detectedAt: timestamp)
                 }
 
                 var returnedGame = game
                 returnedGame.addAliases(plan.analysis.familyTitles)
+                var titleProvenance: MetadataProvenance?
                 if let title = plan.proposedGameTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !title.isEmpty, plan.proposedGameTitleIsPlayers || !returnedGame.hasPlayerTitle {
+                   !title.isEmpty, plan.proposedGameTitleIsPlayers || plan.metadata.hackTitle == title || !returnedGame.hasPlayerTitle {
                     returnedGame.addAliases([returnedGame.primaryTitle])
                     returnedGame.primaryTitle = title
-                    returnedGame.hasPlayerTitle = returnedGame.hasPlayerTitle || plan.proposedGameTitleIsPlayers
+                    let offered = plan.titleProvenance(value: title, proposed: true, at: timestamp)
+                    let previous = try games.fetchMetadataProvenance(ownerID: game.id).first { $0.field == .title }
+                    titleProvenance = offered.source == .player ? previous?.playerOverride(recordedAt: timestamp) ?? offered : offered
+                    returnedGame.hasPlayerTitle = titleProvenance?.source == .player
                 }
                 if createdNewGame || plan.markAsPreferred {
                     returnedGame.preferredBuildID = build.id
                 }
                 returnedGame.modifiedAt = timestamp
                 try games.updateGame(returnedGame)
+                if let titleProvenance {
+                    try games.saveMetadataProvenance(titleProvenance, ownerID: returnedGame.id)
+                }
 
                 return ROMImportResult(
                     game: returnedGame,

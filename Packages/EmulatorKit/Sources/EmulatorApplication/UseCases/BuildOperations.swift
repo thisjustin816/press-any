@@ -122,12 +122,25 @@ public struct BuildOperations: Sendable {
         guard var game = try games.fetchGame(id: gameID) else { throw BuildOperationError.gameNotFound(gameID) }
         game.addAliases([game.primaryTitle])
         game.primaryTitle = title
-        game.hasPlayerTitle = hasPlayerTitle
+        let titleSource: MetadataSource = hasPlayerTitle ? .player : .noIntro
+        game.hasPlayerTitle = titleSource == .player
         game.modifiedAt = now()
-        try games.updateGame(game)
+        let updated = game
+        try transactions.run { [games] in
+            try games.updateGame(updated)
+            if titleSource == .player {
+                try games.recordPlayerOverride(field: .title, value: title, ownerID: gameID, at: updated.modifiedAt)
+            } else {
+                try games.saveMetadataProvenance(MetadataProvenance(field: .title, source: titleSource,
+                    confidence: .high,
+                    providedValue: title, recordedAt: updated.modifiedAt), ownerID: gameID)
+            }
+        }
     }
 
-    public func renameBuild(buildID: UUID, displayName: String) throws {
+    /// A name the player typed is theirs; one accepted unchanged from a suggestion keeps the
+    /// suggestion's source.
+    public func renameBuild(buildID: UUID, displayName: String, source: MetadataSource = .player) throws {
         let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { throw BuildOperationError.invalidBuildName }
         guard var build = try builds.fetchBuild(id: buildID) else {
@@ -136,7 +149,14 @@ public struct BuildOperations: Sendable {
         guard build.displayName != name else { return }
         build.displayName = name
         build.modifiedAt = now()
-        try builds.updateBuildMetadata(build)
+        let updated = build
+        try transactions.run { [builds] in
+            try builds.updateBuildMetadata(updated)
+            if source != .player {
+                try builds.saveMetadataProvenance(MetadataProvenance(field: .displayName, source: source,
+                    providedValue: name, recordedAt: updated.modifiedAt), ownerID: buildID)
+            }
+        }
     }
 
     /// Marks or unmarks an imported Build as the clean original that patches start from. Marking
@@ -201,6 +221,7 @@ public struct BuildOperations: Sendable {
         }
         let sourceGame = try games.fetchGame(id: sourceBuild.gameID)
         let restoredTitle = mode == .move ? Self.titleBefore(hack: sourceBuild, in: sourceGame) : nil
+        let restoredProvenance = try builds.fetchMetadataProvenance(ownerID: sourceBuild.id).first { $0.field == .baseTitle }
         let timestamp = now()
         let promotedGame = try transactions.run { [games, builds, profiles, states, sourceBuild, makeID] in
             let newGame = Game(
@@ -214,6 +235,11 @@ public struct BuildOperations: Sendable {
                 modifiedAt: timestamp
             )
             try games.insertGame(newGame)
+            // The sheet offers the hack's title, or the Build's name.
+            let offeredTitle = try builds.fetchMetadataProvenance(ownerID: sourceBuild.id).first { $0.field == .hackTitle }
+            try games.saveMetadataProvenance(MetadataProvenance(field: .title, source: .player,
+                providedValue: offeredTitle?.providedValue ?? sourceBuild.hackTitle ?? sourceBuild.displayName,
+                recordedAt: timestamp), ownerID: newGame.id)
 
             let promoted: Build
             switch mode {
@@ -283,9 +309,15 @@ public struct BuildOperations: Sendable {
                     if let restoredTitle {
                         oldGame.aliases.removeAll { $0.caseInsensitiveCompare(restoredTitle) == .orderedSame }
                         oldGame.primaryTitle = restoredTitle
+                        oldGame.hasPlayerTitle = restoredProvenance?.source == .player || restoredProvenance == nil
                     }
                     oldGame.modifiedAt = timestamp
                     try games.updateGame(oldGame)
+                    if restoredTitle != nil, let restoredProvenance {
+                        try games.saveMetadataProvenance(MetadataProvenance(field: .title,
+                            source: restoredProvenance.source, confidence: restoredProvenance.confidence,
+                            providedValue: restoredProvenance.providedValue, recordedAt: timestamp), ownerID: oldGame.id)
+                    }
                 }
             }
             return updatedNewGame
@@ -479,6 +511,9 @@ public struct BuildOperations: Sendable {
             timestamp: timestamp
         )
         try builds.insertBuild(copied)
+        for row in try builds.fetchMetadataProvenance(ownerID: source.id) {
+            try builds.saveMetadataProvenance(row, ownerID: copied.id)
+        }
         if source.sourceKind == .patchRecipe, let recipe = try recipes.fetchPatchRecipe(resultBuildID: source.id) {
             try recipes.insertPatchRecipe(PatchRecipe(
                 id: makeID(),
