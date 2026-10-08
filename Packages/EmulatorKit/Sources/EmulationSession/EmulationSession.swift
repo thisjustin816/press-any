@@ -241,7 +241,7 @@ public final class EmulationSession: @unchecked Sendable {
         return policy ?? .always
     }
 
-    /// Manual and Auto States for the active Build and profile, newest first.
+    /// Manual, Quick and Auto States for the active Build and profile, newest first.
     public func saveStates() throws -> [SaveState] {
         let (_, context, _) = try snapshotActive()
         return try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
@@ -372,13 +372,22 @@ public final class EmulationSession: @unchecked Sendable {
     /// is still unwritten is newer than every state.
     @discardableResult
     public func saveManualState(label: String? = nil) throws -> SaveState {
+        try savePlayerState(kind: .manual, label: label)
+    }
+
+    @discardableResult
+    public func saveQuickState() throws -> SaveState {
+        try savePlayerState(kind: .quick)
+    }
+
+    private func savePlayerState(kind: SaveStateKind, label: String? = nil) throws -> SaveState {
         let (worker, context, _) = try snapshotActive()
         // A failed write leaves the save unwritten, so loading warns more often, never less.
         _ = try? flushBatteryIfDirty()
         return try stateService.save(
             worker: worker,
             context: context,
-            kind: .manual,
+            kind: kind,
             label: label,
             playtimeSeconds: playtimeSeconds,
             frame: currentFrame

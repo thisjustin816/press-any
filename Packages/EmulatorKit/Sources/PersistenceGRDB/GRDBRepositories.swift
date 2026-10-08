@@ -297,6 +297,10 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
         try write { db in try SaveStateRecord(state).insert(db) }
     }
 
+    public func updateSaveState(_ state: SaveState) throws {
+        try write { db in try SaveStateRecord(state).update(db) }
+    }
+
     public func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
         try read { db in
             try SaveStateRecord.fetchAll(

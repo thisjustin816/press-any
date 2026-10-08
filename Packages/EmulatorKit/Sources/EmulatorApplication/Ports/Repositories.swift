@@ -43,6 +43,7 @@ public protocol SaveProfileRepository: Sendable {
 
 public protocol SaveStateRepository: Sendable {
     func insertSaveState(_ state: SaveState) throws
+    func updateSaveState(_ state: SaveState) throws
     func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState]
     /// Every state made with the profile, on any Build.
     func fetchSaveStates(saveProfileID: UUID) throws -> [SaveState]

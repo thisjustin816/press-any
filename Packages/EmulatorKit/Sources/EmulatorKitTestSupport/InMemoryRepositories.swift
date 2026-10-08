@@ -168,6 +168,8 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
 
     public func insertSaveState(_ state: SaveState) throws { lock.withLock { values[state.id] = state } }
 
+    public func updateSaveState(_ state: SaveState) throws { lock.withLock { values[state.id] = state } }
+
     /// Newest first.
     public func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
         lock.withLock {

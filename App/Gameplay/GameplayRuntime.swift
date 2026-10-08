@@ -34,6 +34,7 @@ protocol GameplayRuntime: AnyObject {
 protocol SaveStateRuntime: GameplayRuntime {
     @discardableResult func saveCrashRecoveryIfDue() throws -> Bool
     func saveManualState(label: String?) throws -> SaveState
+    func saveQuickState() throws -> SaveState
     func saveStates() throws -> [SaveState]
     func loadState(_ saveState: SaveState) throws
     /// Whether loading the state would take back a newer game save.

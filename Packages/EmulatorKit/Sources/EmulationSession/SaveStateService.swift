@@ -93,7 +93,7 @@ public struct SaveStateService: Sendable {
                 } else {
                     autoSequence = nil
                 }
-                state = SaveState(
+                let candidate = SaveState(
                     id: stateID,
                     buildID: context.buildID,
                     saveProfileID: context.saveProfileID,
@@ -107,7 +107,14 @@ public struct SaveStateService: Sendable {
                     playtimeSeconds: playtimeSeconds,
                     createdAt: timestamp
                 )
-                try insertState(state, context: context)
+                if kind == .quick {
+                    let result = try SaveQuickState(states: states, transactions: transactions).execute(candidate)
+                    state = result.saved
+                    if let previous = result.previous { discardAssets(of: previous) }
+                } else {
+                    try insertState(candidate, context: context)
+                    state = candidate
+                }
             } catch {
                 try? assets.deleteAsset(id: assetID)
                 throw error

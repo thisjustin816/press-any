@@ -112,9 +112,9 @@ v1.1), never a full fifth settings layer.
 
 A save state belongs to one exact context: Build, Save Profile, image hash, core and state
 serialization version. States never load across Builds, even when the Builds share a battery
-save. Each state records its time and playtime. Manual and Auto States also keep a thumbnail and
-an optional name. Manual states, lifecycle Auto States and crash-recovery checkpoints are separate
-kinds.
+save. Each state records its time and playtime. Manual, Quick and Auto States also keep a thumbnail
+and an optional name. Each Build + Save Profile can keep one Quick State, replaced by Quick Save.
+Manual states, Quick States, lifecycle Auto States and crash-recovery checkpoints are separate kinds.
 
 ### Patch recipe
 
@@ -447,16 +447,25 @@ claims reliability from just an old ROM, old save and new ROM.
 
 ## Save states and lifecycle
 
-- **Saving and loading.** Taking a manual or Auto State writes the battery save first. Manual
-  state actions stop frames until they finish. Loading asks first when the game has saved since the battery save was
-  last written, or when the state is older than the profile's save; going ahead keeps the current
-  save as "<profile> before loading state". A state that fails partway puts the latest save back
-  in the game.
+- **Saving and loading.** Taking a manual, Quick or Auto State writes the battery save first.
+  Manual and Quick state actions stop frames until they finish. Loading asks first when the game
+  has saved since the battery save was last written, or when the state is older than the profile's
+  save. Continuing keeps the current save as "<profile> before loading state". A state that fails
+  partway puts the latest save back in the game.
+- **Quick Save and Quick Load.** Above Save State and Load State in the game menu, Quick Save
+  replaces the exact Build + Save Profile's Quick State in place, with no naming prompt, and
+  confirms "State saved." Quick Load uses the same load checks and backup prompt as Load State.
+  It shows the Quick State's date, or is disabled with "No Quick Save yet" when there is none.
+  Quick States appear as "Quick Save" with their date in Load State and Save States. Renaming
+  keeps that name on later Quick Saves. Deleting sends the state to Recently Deleted; restoring
+  it when another Quick State exists makes the restored state ordinary and keeps both.
+  Quick States are never chosen automatically at launch, by Resume Games, or for crash recovery.
 - **Save States screen.** A profile's menu opens its states on every Build, newest first, with
-  picture, Build and date. A state can be renamed (an empty name gives back "Save State" or "Auto
-  State") or deleted to Recently Deleted. Loading stays in the game menu, where the Build and
-  profile are already chosen. Select shows checkboxes and a Delete (n) bottom button for one
-  confirmation across the selection. Crash-recovery checkpoints are hidden from both state lists.
+  picture, Build and date. A state can be renamed (an empty name gives back "Save State", "Quick
+  Save" or "Auto State") or deleted to Recently Deleted. Loading stays in the game menu, where
+  the Build and profile are already chosen. Select shows checkboxes and a Delete (n) bottom
+  button for one confirmation across the selection. Crash-recovery checkpoints are hidden from
+  both state lists.
 - **Auto State.** Backgrounding, closing and switching sessions write the battery save and an
   Auto State, keeping the last five. Each step is attempted even if an earlier one fails, so the
   Auto State can recover progress a failed battery write lost. A close that fails keeps the game
@@ -484,7 +493,7 @@ claims reliability from just an old ROM, old save and new ROM.
   the checkpoint until the next launch of that Build, when it is removed. A crash never launches
   a game automatically, including a crash while recovering. Quick Play sessions are not recovered.
 - One emulator session at a time.
-- v1: Quick Save, configurable fixed slots, naming states when saving, configurable cleanup with
+- v1: configurable fixed slots, naming states when saving, configurable cleanup with
   pinned states exempt. v1.1: switching Build or profile from the game through the compatibility
   check and a relaunch.
 
@@ -502,8 +511,9 @@ fresh build.
   logo unless Settings > Skip Boot Logo is on.
 - A Quick Play session lives in a temporary workspace and never writes a library save. Using an
   existing save copies it in.
-- The game menu shows Save State grayed out with "Add to Library to save states", and Add to
-  Library closes the game and opens promotion. The session screen opens the ROM's Technical Info.
+- The game menu shows Quick Save, Quick Load and Save State grayed out with
+  "Add to Library to save states". Add to Library closes the game and opens promotion. The session
+  screen opens the ROM's Technical Info.
 - Closing offers Keep for Later. Sessions expire after 24 hours; v1.1 makes that Immediately,
   24 hours or 7 days.
 - Quick Play Sessions has Select, checkboxes and Discard (n) in the bottom bar. One confirmation

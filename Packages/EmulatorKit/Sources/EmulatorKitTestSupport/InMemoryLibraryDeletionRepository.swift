@@ -97,7 +97,13 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
             try builds.insertBuild(build)
         }
         for profile in stash.profiles { try profiles.insertSaveProfile(profile) }
-        for state in stash.states { try states.insertSaveState(state) }
+        for var state in stash.states {
+            if state.kind == .quick,
+               try states.fetchSaveStates(buildID: state.buildID, saveProfileID: state.saveProfileID).contains(where: { $0.kind == .quick }) {
+                state.kind = .manual
+            }
+            try states.insertSaveState(state)
+        }
     }
 
     public func purgeDeletion(id: UUID, at date: Date) throws -> [ManagedAsset] {

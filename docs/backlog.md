@@ -27,7 +27,7 @@ migrating later.
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
    Files folder they land in come first, as they don't depend on the schema.
-6. The rest of the v1 core: Quick Save and save state slots, crash recovery, reopening the last
+6. The rest of the v1 core: save state slots, crash recovery, reopening the last
    game, and a fixed controller combo for the game menu.
 
 v1 is a good core experience; everything else waits for v1.1: 7z and multi-asset import,
@@ -268,7 +268,7 @@ states.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Quick Save (one tap) | v1 | SaveStateKind.quick unused |
+| done | Quick Save (one tap) | v1 | One replaceable Quick State per Build + Save Profile; Quick Load uses the existing load checks; rename, delete and restore in Save States |
 | missing | Configurable fixed slots | v1 |  |
 | partial | Unlimited named states | v1 | a Save Profile's Save States renames and deletes them; Save State doesn't ask for a name |
 | missing | Configurable automatic cleanup; pinned/favorited exempt | v1 |  |

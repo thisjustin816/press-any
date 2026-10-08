@@ -273,13 +273,25 @@ final class GameplayViewController: UIViewController {
         })
 
         if let states = runtime as? any SaveStateRuntime {
-            elements.append(UIAction(title: "Save State", image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
-                self?.saveState()
-            })
             let saved = (try? states.saveStates()) ?? []
             let formatter = DateFormatter()
             formatter.dateStyle = .short
             formatter.timeStyle = .medium
+            let quick = saved.first { $0.kind == .quick }
+            elements.append(UIAction(title: "Quick Save", image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
+                self?.saveState(quick: true)
+            })
+            elements.append(UIAction(
+                title: "Quick Load",
+                subtitle: quick.map { formatter.string(from: $0.createdAt) } ?? "No Quick Save yet",
+                image: UIImage(systemName: "square.and.arrow.up"),
+                attributes: quick == nil ? .disabled : []
+            ) { [weak self] _ in
+                if let quick { self?.loadState(quick) }
+            })
+            elements.append(UIAction(title: "Save State", image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
+                self?.saveState()
+            })
             let loadActions = saved.map { state in
                 UIAction(
                     title: state.displayName,
@@ -296,6 +308,14 @@ final class GameplayViewController: UIViewController {
                 elements.append(UIMenu(title: "Load State", image: loadImage, children: loadActions))
             }
         } else {
+            for (title, image) in [("Quick Save", "square.and.arrow.down"), ("Quick Load", "square.and.arrow.up")] {
+                elements.append(UIAction(
+                    title: title,
+                    subtitle: "Add to Library to save states",
+                    image: UIImage(systemName: image),
+                    attributes: .disabled
+                ) { _ in })
+            }
             elements.append(UIAction(
                 title: "Save State",
                 subtitle: "Add to Library to save states",
@@ -346,12 +366,12 @@ final class GameplayViewController: UIViewController {
         }
     }
 
-    private func saveState() {
+    private func saveState(quick: Bool = false) {
         guard let states = runtime as? any SaveStateRuntime else { return }
         holdFrames()
         defer { releaseFrames() }
         do {
-            _ = try states.saveManualState(label: nil)
+            _ = try quick ? states.saveQuickState() : states.saveManualState(label: nil)
             showTransientMessage("State saved.")
         } catch {
             showTransientMessage("Couldn’t save the state: \(error)")

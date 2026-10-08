@@ -827,6 +827,7 @@ private struct InsertRefusingStates: SaveStateRepository {
     struct Refused: Error {}
 
     func insertSaveState(_ state: SaveState) throws { throw Refused() }
+    func updateSaveState(_ state: SaveState) throws { throw Refused() }
     func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
         try inner.fetchSaveStates(buildID: buildID, saveProfileID: saveProfileID)
     }
