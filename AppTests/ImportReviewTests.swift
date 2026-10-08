@@ -116,23 +116,20 @@ final class ImportReviewTests: XCTestCase {
 
         XCTAssertEqual(hack.destination, .existing(original.game.id))
         XCTAssertEqual(hack.gameTitle, "Better")
-        XCTAssertEqual(hack.buildDisplayName, "v1.3 · Beta")
+        XCTAssertEqual(hack.buildDisplayName, "Better v1.3 · Beta", "the Game keeps its title, so the Build carries the hack's")
         XCTAssertFalse(hack.markAsBase)
         XCTAssertTrue(hack.markAsPreferred)
         XCTAssertEqual(hack.baseTitle, "Example")
         XCTAssertEqual(hack.hackTitle, "Better")
         XCTAssertEqual(hack.author, "Jane")
         XCTAssertEqual(hack.status, "Beta")
-        XCTAssertEqual(hack.offeredGameTitle, "Better", "a Preferred hack offers its title for the Game")
-        hack.markAsPreferred = false
+        // "Better" doesn't continue Example's title, so it names the Build and leaves the Game alone.
         XCTAssertNil(hack.offeredGameTitle)
-        hack.markAsPreferred = true
 
         let result = try hack.commit()
         XCTAssertFalse(result.build.isBase)
         XCTAssertEqual(result.game.preferredBuildID, result.build.id)
-        XCTAssertEqual(result.game.primaryTitle, "Better")
-        XCTAssertTrue(result.game.aliases.contains("Example"))
+        XCTAssertEqual(result.game.primaryTitle, "Example")
     }
 
     func testANewHomebrewBuildJoinsTheMatchingGameAsBaseAndPreferred() throws {

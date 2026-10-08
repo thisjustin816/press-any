@@ -103,7 +103,7 @@ final class ImportReviewViewModel: ObservableObject {
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
             ? analysis.header.title
             : analysis.filenameMetadata.suggestedTitle
-        let suggestion = Self.buildName(for: analysis, destination: initialDestination, existingBuilds: existingBuilds)
+        let suggestion = Self.buildName(for: analysis, destination: initialDestination, games: games, existingBuilds: existingBuilds)
         suggestedBuildName = suggestion
         buildDisplayName = analysis.exactExistingBuildID == nil ? suggestion : "Existing"
         previousBaseSuggestion = markAsBase
@@ -113,15 +113,23 @@ final class ImportReviewViewModel: ObservableObject {
     private static func buildName(
         for analysis: ROMImportAnalysis,
         destination: Destination,
+        games: [Game],
         existingBuilds: (UUID) -> [Build]
     ) -> String {
-        let existing: [String]
-        if case .existing(let gameID) = destination {
-            existing = existingBuilds(gameID).map(\.displayName)
-        } else {
-            existing = []
+        guard case .existing(let gameID) = destination else {
+            return BuildNaming.distinctName(analysis.filenameMetadata.suggestedBuildName, existing: [], addedAt: .now)
         }
-        return BuildNaming.distinctName(analysis.filenameMetadata.suggestedBuildName, existing: existing, addedAt: .now)
+        var name = analysis.filenameMetadata.suggestedBuildName
+        // A hack joining a Game whose title it doesn't continue keeps its own title in the Build's
+        // name, since the Game won't take it: "Co-op sync patch v0.1".
+        if analysis.filenameMetadata.releaseKind == .romHack,
+           let hack = analysis.filenameMetadata.buildMetadata.hackTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !hack.isEmpty, let game = games.first(where: { $0.id == gameID }),
+           GameMatcher.normalized(hack) != GameMatcher.normalized(game.primaryTitle),
+           !BuildNaming.offersTitle(hack, for: game.primaryTitle) {
+            name = ["Original", "Hack"].contains(name) ? hack : "\(hack) \(name)"
+        }
+        return BuildNaming.distinctName(name, existing: existingBuilds(gameID).map(\.displayName), addedAt: .now)
     }
 
     var isExactDuplicate: Bool { analysis.exactExistingBuildID != nil }
@@ -165,7 +173,7 @@ final class ImportReviewViewModel: ObservableObject {
 
     func destinationChanged() {
         if !isExactDuplicate, buildDisplayName == suggestedBuildName {
-            suggestedBuildName = Self.buildName(for: analysis, destination: destination, existingBuilds: existingBuilds)
+            suggestedBuildName = Self.buildName(for: analysis, destination: destination, games: games, existingBuilds: existingBuilds)
             buildDisplayName = suggestedBuildName
         }
         // Like the name, a role the player set stays; only an untouched suggestion follows the Game.
@@ -296,15 +304,16 @@ final class ImportReviewViewModel: ObservableObject {
 
     func metadataRankingChanged() { refreshIdentityProposals() }
 
-    /// A hack that becomes an existing Game's Preferred Build offers its own title for the Game, as
-    /// "Mole Mania DX" for Mole Mania. Accepting it keeps the old title as an alias.
+    /// A hack that becomes an existing Game's Preferred Build offers its own title for the Game when
+    /// that title is the Game's followed by more words, as "Mole Mania DX" for Mole Mania. A hack
+    /// titled "Co-op sync patch" names its Build and leaves the Game alone. Accepting keeps the old
+    /// title as an alias.
     var proposedHackTitle: String? {
         guard markAsPreferred, case .existing(let id) = destination,
               analysis.filenameMetadata.releaseKind == .romHack || (baseGameReference != nil && matchedAsHack),
               let game = games.first(where: { $0.id == id }) else { return nil }
         let title = hackTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty, GameMatcher.normalized(title) != GameMatcher.normalized(game.primaryTitle) else { return nil }
-        return title
+        return BuildNaming.offersTitle(title, for: game.primaryTitle) ? title : nil
     }
 
     /// The title review offers for the Game: a hack's own, or the best regional release title.

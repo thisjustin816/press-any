@@ -48,15 +48,17 @@ crash reporting and usage counts, and Developer Mode.
 
 A Game is what the player thinks of as the game. It survives ROM replacement, patching, new
 versions, regional and revision variants, and Builds moving in or out. It has a UUID, a primary
-title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its
-own name; the base game's title stays as lineage. A hack that becomes an existing Game's
-Preferred Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title:
-Mole Mania DX"), on by default. Accepting it keeps the old title as an alias and makes the new
-one the player's, so regional title proposals leave it alone.
+title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its own
+name; the base game's title stays as lineage. A hack that becomes an existing Game's Preferred
+Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title: Mole Mania
+DX"), on by default, only when that title is the Game's followed by more words. A hack titled
+"Better" or "Co-op sync patch" leaves the Game's title alone and leads its Build's name instead
+("Co-op sync patch v0.1"). Accepting keeps the old title as an alias and makes the new one the
+player's, so regional title proposals leave it alone.
 Moving that hack out with Make Separate Game, which suggests the hack's title for
 the new Game, gives the original Game back the title the hack was made from, as long as it still
-holds it as an alias; a copy leaves the title alone. A patch without hack tags offers its title only when it adds words without
-digits to the Game's.
+holds it as an alias; a copy leaves the title alone. A patch without hack tags offers its title only
+when the words it adds to the Game's hold no digits.
 
 A Game keeps alternate titles as aliases in an indexed table, ready for the later FTS5 index.
 Library search already matches them. A No-Intro family's other regional titles become aliases
@@ -378,7 +380,11 @@ isn't stored.
   second one the same day. A hack with nothing else to name it is "Hack".
 - A patch's Build is named by its title, followed by any version or other tag: "Mole Mania DX
   v1.3". When the patch's title is the Game's own, only the tag remains, so "Example (Rev 1)"
-  applied to Example is "Rev 1".
+  applied to Example is "Rev 1". A tag joined to the Game's title by a hyphen, a colon
+  or a spaced dash is the name on its own: "Moon Garden-coop-sync" applied to Moon Garden is
+  "Coop Sync".
+- A patch whose result the Game already holds, such as a zip carrying both a ROM and the patch
+  that made it, is refused before anything is written, naming the Build that already has it.
 - A suggested name that repeats one already in the Game gains the day ("v1.0 · Oct 6"), then the
   time, then a number. A name the player typed is left alone. A Build sharing its name with
   another shows its date and time in the list.

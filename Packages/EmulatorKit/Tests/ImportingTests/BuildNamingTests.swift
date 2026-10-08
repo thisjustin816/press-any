@@ -117,7 +117,23 @@ final class BuildNamingTests: XCTestCase {
         let update = FilenameMetadataParser.parse(filename: "gbdk450-rev-v1.0-to-v1.1.bps")
         XCTAssertNil(BuildNaming.patchGameTitle(for: update, gameTitle: "Gbdk450 Rev"))
         let hack = FilenameMetadataParser.parse(filename: "Super Mario Land 2 - DX (Hack by Foo).ips")
-        XCTAssertEqual(BuildNaming.patchGameTitle(for: hack, gameTitle: "Super Mario Land 2"), "DX")
+        XCTAssertNil(BuildNaming.patchGameTitle(for: hack, gameTitle: "Super Mario Land 2"), "\"DX\" alone names the Build")
+        let extending = FilenameMetadataParser.parse(filename: "Super Mario Land 2 DX (Hack by Foo).ips")
+        XCTAssertEqual(BuildNaming.patchGameTitle(for: extending, gameTitle: "Super Mario Land 2"), "Super Mario Land 2 DX")
+        let described = FilenameMetadataParser.parse(filename: "Moon Garden [Co-op sync patch by Jane v0.1].ips")
+        XCTAssertNil(BuildNaming.patchGameTitle(for: described, gameTitle: "Moon Garden"))
+        let joined = FilenameMetadataParser.parse(filename: "Moon Garden-coop-sync.ips")
+        XCTAssertNil(BuildNaming.patchGameTitle(for: joined, gameTitle: "Moon Garden"), "a hyphen joins a tag, not a title")
+        let dashed = FilenameMetadataParser.parse(filename: "Example - Beta.ips")
+        XCTAssertNil(BuildNaming.patchGameTitle(for: dashed, gameTitle: "Example"))
+    }
+
+    func testAPatchTagJoinedToTheGameTitleNamesTheBuild() {
+        let joined = FilenameMetadataParser.parse(filename: "Moon Garden-coop-sync.ips")
+        XCTAssertEqual(BuildNaming.patchBuildName(for: joined), "Moon Garden-coop-sync", "without a Game the whole title stays")
+        XCTAssertEqual(BuildNaming.patchBuildName(for: joined, gameTitle: "Moon Garden"), "Coop Sync")
+        let words = FilenameMetadataParser.parse(filename: "mole_mania_dx_v1_3.bps")
+        XCTAssertEqual(BuildNaming.patchBuildName(for: words, gameTitle: "Mole Mania"), "Mole Mania DX v1.3")
     }
 
     func testAVersionedPatchKeepsItsTitleInTheBuildName() {
