@@ -20,7 +20,7 @@ migrating later.
 2. Multi-signal development-build matching, the one import item left in v1. Metadata provenance,
    Metadata Details and per-step patch input hashes are built, along with Game aliases, rename,
    Build notes, per-Build playtime, favorites, declared save compatibility and the cross-region save check.
-3. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
+3. Library features on that data: sorting, play statistics, and the storage screen
    with cleanup, in-flight protection and verification on read.
 4. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
@@ -156,7 +156,7 @@ play another Build/Save; Build preferred Save Profile falling back to Game prefe
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | SQLite FTS5 live index (aliases, filenames, hack title/author/version, system, region, Build names, tags, doc titles) with title-first ranking | v1 | no FTS table |
+| missing | SQLite FTS5 live index (aliases, filenames, hack title/author/version, system, region, Build names, tags, doc titles) with title-first ranking | v1.1 | no FTS table; v1 searches titles and aliases |
 
 Done: Search by primary title and Game aliases.
 
@@ -543,12 +543,12 @@ Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filename
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | VoiceOver labels for management UI and emulator controls | v1 | the logo is the "Game Menu" button, with Close Game inside the menu; the default save's star reads "Default Save"; controls not playable by VoiceOver (accepted) |
-| partial | Dynamic Type in normal UI | v1 | SwiftUI defaults; controller drawing fixed size |
-| missing | Reduce Motion support | v1 | none |
-| partial | Large/configurable touch targets | v1 | hit areas extend 10-12 pt beyond drawn controls; not configurable |
+| partial | VoiceOver labels for management UI and emulator controls | v1.1 | the logo is the "Game Menu" button, with Close Game inside the menu; the default save's star reads "Default Save"; controls not playable by VoiceOver (accepted) |
+| partial | Dynamic Type in normal UI | v1.1 | SwiftUI defaults; controller drawing fixed size |
+| missing | Reduce Motion support | v1.1 | none |
+| partial | Large/configurable touch targets | v1.1 | hit areas extend 10-12 pt beyond drawn controls; not configurable |
 | missing | One-handed layouts | v1.1 | none |
-| missing | Controller navigation | v1 | none; button remapping is iOS's Game Controller settings |
+| missing | Controller navigation | v1.1 | none; button remapping is iOS's Game Controller settings |
 
 Done: Good contrast / color-independent states; haptics never sole feedback.
 
