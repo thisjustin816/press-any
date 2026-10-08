@@ -8,6 +8,8 @@ final class LibraryViewModel: ObservableObject {
     @Published private(set) var games: [Game] = []
     /// Each Game's system, from the Build it plays.
     @Published private(set) var systems: [UUID: GameSystem] = [:]
+    @Published private(set) var statistics: [UUID: GameStatistics] = [:]
+    @Published var sort: LibrarySort = .title
     @Published var selection = ItemSelection<UUID>()
     @Published var pendingBatchDeletion: BatchDeletionPlan?
     @Published var searchText = "" {
@@ -20,6 +22,7 @@ final class LibraryViewModel: ObservableObject {
 
     private let gameRepository: any GameRepository
     private let buildRepository: any BuildRepository
+    private let fetchStatistics: FetchGameStatistics
     private let launchResolver: ResolvePreferredLaunchContext
     private let buildOperations: BuildOperations
     private let deletion: LibraryDeletionOperations
@@ -27,12 +30,14 @@ final class LibraryViewModel: ObservableObject {
     init(
         gameRepository: any GameRepository,
         buildRepository: any BuildRepository,
+        profiles: any SaveProfileRepository,
         launchResolver: ResolvePreferredLaunchContext,
         buildOperations: BuildOperations,
         deletion: LibraryDeletionOperations
     ) {
         self.gameRepository = gameRepository
         self.buildRepository = buildRepository
+        self.fetchStatistics = FetchGameStatistics(games: gameRepository, builds: buildRepository, profiles: profiles)
         self.launchResolver = launchResolver
         self.buildOperations = buildOperations
         self.deletion = deletion
@@ -57,9 +62,8 @@ final class LibraryViewModel: ObservableObject {
     }
 
     var visibleGames: [Game] {
-        let sorted = games.filter { !favoritesOnly || $0.isFavorite }.sorted {
-            $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
-        }
+        let sorted = sort.sorted(games: games, systems: systems, statistics: statistics)
+            .filter { !favoritesOnly || $0.isFavorite }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return sorted }
         return sorted.filter { $0.matchesSearch(query) }
@@ -67,13 +71,18 @@ final class LibraryViewModel: ObservableObject {
 
     func reload() {
         do {
-            games = try gameRepository.fetchGames()
+            let games = try gameRepository.fetchGames()
+            let builds = try buildRepository.fetchAllBuilds()
+            let buildsByGame = Dictionary(grouping: builds, by: \.gameID)
+            let statistics = try fetchStatistics.execute(games: games, builds: builds)
             var systems: [UUID: GameSystem] = [:]
             for game in games {
-                let builds = try buildRepository.fetchBuilds(gameID: game.id)
+                let builds = buildsByGame[game.id] ?? []
                 systems[game.id] = (builds.first { $0.id == game.preferredBuildID } ?? builds.first)?.system
             }
+            self.games = games
             self.systems = systems
+            self.statistics = statistics
             selection.reconcile(with: Set(visibleGames.map(\.id)))
             errorMessage = nil
         } catch {

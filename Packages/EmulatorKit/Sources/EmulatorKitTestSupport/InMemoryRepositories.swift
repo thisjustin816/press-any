@@ -82,8 +82,12 @@ public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable
     public func fetchBuild(id: UUID) throws -> Build? { lock.withLock { values[id] } }
 
     public func fetchBuilds(gameID: UUID) throws -> [Build] {
+        try fetchAllBuilds().filter { $0.gameID == gameID }
+    }
+
+    public func fetchAllBuilds() throws -> [Build] {
         lock.withLock {
-            values.values.filter { $0.gameID == gameID }.sorted {
+            values.values.sorted {
                 if $0.isBase != $1.isBase { return $0.isBase }
                 if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
                 return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
@@ -207,8 +211,12 @@ public final class InMemorySaveProfileRepository: SaveProfileRepository, @unchec
     public func fetchSaveProfile(id: UUID) throws -> SaveProfile? { lock.withLock { values[id] } }
 
     public func fetchSaveProfiles(gameID: UUID) throws -> [SaveProfile] {
+        try fetchAllSaveProfiles().filter { $0.gameID == gameID }
+    }
+
+    public func fetchAllSaveProfiles() throws -> [SaveProfile] {
         lock.withLock {
-            values.values.filter { $0.gameID == gameID }.sorted {
+            values.values.sorted {
                 if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
                 return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
             }

@@ -121,7 +121,7 @@ ROMs and patches on demand.
 | done | Presentation-metadata editing (rename Game/Build after creation) | v1 | Rename Game in Game Details preserves the former title as an alias and protects the player title; Rename Build; Suggest Names reviews Game titles and Build names, retaining old Game titles as aliases |
 | partial | Build toolchain record, variable-map sidecars, artwork/doc overrides, activation history | v1 (toolchain and sidecars were MVP) | toolchain reports and variable maps done; artwork/doc overrides and activation history missing |
 | done | Build notes | v1 | one plain-text note, shown and edited in Build Details; whitespace preserved; clear or cancel edits; notes follow moved and copied Builds; FTS5 note search comes later |
-| done | Per-Build playtime | v1 | session time added to Build and Save Profile together on background and close, without double counting; shown in Build Details; Game rollups and the statistics screen come later |
+| done | Per-Build playtime | v1 | session time added to Build and Save Profile together on background and close, without double counting; shown in Build Details and Game rollups; a separate statistics screen comes later |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v1.1 |  |
 | missing | Typed multi-artwork model with primary selection | v1.1 | Game.artworkAssetID is a single image |
 | missing | Tags and collections | v1.1 |  |
@@ -143,10 +143,10 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 | missing | Manual collections/folders | v1.1 |  |
 | missing | Smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates) | v1.1 |  |
 | missing | Tags on Games/Builds via long-press/overflow | v1.1 |  |
-| partial | Sorting | v1 | title only; recent/added/playtime/release year/system/developer/publisher/hack author/Build version/last Build change/manual order missing |
+| partial | Sorting | v1 | remembered Sort menu: title, recent play, added, playtime and system; list second lines follow the sort; release year/developer/publisher/hack author/Build version and date/last Build change/manual order remain |
 | done | Multi-select deletion | v1 | Select in library grid/list, Game Builds and Save Profiles, Save States, Quick Play Sessions and Recently Deleted; one confirmation with skipped counts and reasons, separate restorable entries, and dependency-ordered Restore |
 | done | Favorites | v1 | Game Details toggle and library long-press menu beside Play and Rename; small star on tiles/list rows; Favorites Only works with search; merge keeps either favorite and promotion carries it |
-| partial | Play statistics | v1 | Build playtime recorded and shown in Build Details; profile playtime, session count and last played recorded; profile display, Game rollups, play count, last played on Game and the statistics screen remain |
+| done | Play statistics | v1 | Game rollups of Build playtime and profile session counts/latest last played in Game Details; played profiles show playtime and last played; Recently Deleted rows excluded; refresh on library changes and game close; a separate statistics screen remains later work |
 
 Done: Box-art grid and compact list; Game detail with Builds and Save Profiles; Preferred Build
 one-tap Play; explicit choice never silently changed; Build switch from Game detail; long-press to

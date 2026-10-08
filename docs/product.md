@@ -68,6 +68,10 @@ A Game stores whether it is a favorite. Merging Games keeps the survivor a favor
 was, and Make Separate Game carries the source Game's favorite state. Game titles and Build
 metadata keep provenance. Tags, collections, documents and typed artwork follow in v1.1.
 
+A Game's statistics sum playtime across its live Builds and session counts across its live Save
+Profiles. Last Played is the latest profile's last-played date; Added is the Game's creation date.
+Recently Deleted Builds and profiles don't count until restored. No permanent session log is kept.
+
 ### Build
 
 A Build is one exact playable image within a Game. It has its own UUID, and its image identity,
@@ -87,7 +91,8 @@ Each Build has one plain-text note, shown and edited in Build Details from its m
 preserves whitespace; Cancel leaves the stored note alone, and saving an empty note clears it.
 FTS5 search over notes comes later. Build Details also shows its accumulated playtime. A session
 adds the same played time to its Build and Save Profile on background and close, counting only
-time since the last write. Game rollups and the statistics screen come later.
+time since the last write. Game Details shows the Game's combined statistics. A separate
+statistics screen comes later.
 
 v1.1 adds a lightweight timeline (versions, hashes, parents, notes, import and activation history)
 and a Build comparison screen. The comparison engine (changed bytes and ranges, size, banks,
@@ -100,6 +105,9 @@ Testing. Profiles can be blank, duplicated, imported from a `.sav` or `.srm`, or
 and they're listed flat, with a subtle "copied from" note rather than a tree. Compatible Builds
 can deliberately share one. A Build remembers its preferred profile and falls back to the Game's
 default.
+
+Each profile records playtime, session count and last played. Once played, its row in Game Details
+shows playtime and a relative last-played time under its name.
 
 Each profile records the Build that last wrote its battery save. Save compatibility declarations
 belong to a symmetric pair of Builds, so they apply to every profile played between that pair.
@@ -871,6 +879,12 @@ exposes them; custom border editing is later.
   list and checkmark circles on tiles. The bottom bar offers Select All / Deselect All and Delete
   (n) for the visible Games, with one confirmation. Tiles read Selected or Not selected to
   VoiceOver. Tapping while selecting changes the selection without opening or playing a Game.
+- The Sort menu beside the view options remembers Title (the default), Recently Played, Recently
+  Added, Playtime or System. Recent play, added and playtime sort largest first; Games never
+  played go last under Recently Played and Playtime. System groups Game Boy before Game Boy
+  Color. Ties use title order. Search and Favorites Only filter the sorted list. List rows show
+  the system under Title and System, relative last played under Recently Played, playtime under
+  Playtime, and the date added under Recently Added. Grid tiles keep their usual appearance.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
   profile. Select edits the Builds and Save Profiles sections with one selection across both and
   Delete (n) in the bottom bar. Build taps select instead of playing. The Build menu groups playing
@@ -879,6 +893,10 @@ exposes them; custom border editing is later.
   stored metadata, verification, when the Build was added, and Made With: an engine such as GB
   Studio above the toolchain it runs on, names as their projects spell them, version ranges as
   "x to y" or "x or later".
+  Once a Game has been played, its Statistics section shows Playtime, Sessions and Last Played.
+  Playtime uses the same abbreviated hours, minutes and seconds as Build Details. Played Save
+  Profiles show their playtime and relative last played under their names. These statistics
+  refresh when the library changes and when a game closes.
 - Favorites appear as a small star on grid tiles and list rows, including tiles with titles hidden.
   Favorite in Game Details and Add to Favorites or Remove from Favorites beside Play and Rename
   in the library's long-press menu change the same Game flag. Favorites Only in the view menu
@@ -888,9 +906,8 @@ exposes them; custom border editing is later.
   content version rises, never in automated runs, and never ahead of a shared file or game.
   Settings > How Press Any Works reopens it. v1 replaces it with onboarding that covers opt-ins
   and introduces advanced features in context.
-- v1: sorting by title, recent play, added, playtime, year, system, developer, publisher, hack
-  author, Build version and date, last Build change and manual order; play statistics (no
-  permanent session log).
+- v1: more sorting by year, developer, publisher, hack author, Build version and date, last
+  Build change and manual order; a separate statistics screen (no permanent session log).
 - v1.1: SQLite FTS5 live search across titles, aliases, filenames, hack title, author, version,
   system, region, Build names, tags and document titles, title matches ranked first; manual and
   smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with

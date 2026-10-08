@@ -92,6 +92,11 @@ final class GameDetailViewModel: ObservableObject {
         return builds.first { $0.id == preferred } ?? builds.first
     }
 
+    var statistics: GameStatistics? {
+        guard let game else { return nil }
+        return GameStatistics.rollup(games: [game], builds: builds, profiles: saveProfiles)[game.id]
+    }
+
     /// The save Play uses when the Build names none: the Game's default, or else its oldest, as
     /// `ResolvePreferredSaveProfile` picks it.
     var defaultSaveProfile: SaveProfile? {

@@ -17,6 +17,7 @@ public protocol BuildRepository: MetadataProvenanceRepository {
     func removeSaveCompatibility(between first: UUID, and second: UUID) throws
     func fetchBuild(id: UUID) throws -> Build?
     func fetchBuilds(gameID: UUID) throws -> [Build]
+    func fetchAllBuilds() throws -> [Build]
     func fetchBuild(gameID: UUID, imageSHA256: String) throws -> Build?
     func fetchBuild(imageSHA256: String) throws -> Build?
     /// Live Builds whose image has one of these SHA-1s.
@@ -37,6 +38,7 @@ public protocol BuildRepository: MetadataProvenanceRepository {
 public protocol SaveProfileRepository: Sendable {
     func fetchSaveProfile(id: UUID) throws -> SaveProfile?
     func fetchSaveProfiles(gameID: UUID) throws -> [SaveProfile]
+    func fetchAllSaveProfiles() throws -> [SaveProfile]
     func insertSaveProfile(_ profile: SaveProfile) throws
     func updateSaveProfile(_ profile: SaveProfile) throws
     func deleteSaveProfile(id: UUID) throws

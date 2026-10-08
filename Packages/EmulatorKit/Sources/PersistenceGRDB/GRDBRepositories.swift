@@ -147,6 +147,15 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
         }
     }
 
+    public func fetchAllBuilds() throws -> [Build] {
+        try read { db in
+            try BuildRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM builds WHERE deletion_id IS NULL ORDER BY is_base DESC, created_at, display_name COLLATE NOCASE"
+            ).map { try $0.domain() }
+        }
+    }
+
     public func fetchBuilds(gameID: UUID) throws -> [Build] {
         try read { db in
             try BuildRecord.fetchAll(
@@ -273,6 +282,15 @@ public final class GRDBSaveProfileRepository: SaveProfileRepository, GRDBReposit
                 sql: "SELECT * FROM save_profiles WHERE id = ? AND deletion_id IS NULL",
                 arguments: [PersistenceCodec.uuid(id)]
             )?.domain()
+        }
+    }
+
+    public func fetchAllSaveProfiles() throws -> [SaveProfile] {
+        try read { db in
+            try SaveProfileRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM save_profiles WHERE deletion_id IS NULL ORDER BY created_at, display_name COLLATE NOCASE"
+            ).map { try $0.domain() }
         }
     }
 

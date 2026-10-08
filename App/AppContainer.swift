@@ -526,7 +526,7 @@ final class AppContainer {
 }
 
 extension Notification.Name {
-    /// Posted when Games or Builds change outside the screen showing them.
+    /// Posted when library records or play statistics change outside the screen showing them.
     static let libraryDidChange = Notification.Name("libraryDidChange")
 }
 
