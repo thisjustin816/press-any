@@ -230,15 +230,26 @@ public final class InMemorySaveProfileRepository: SaveProfileRepository, @unchec
     var all: [SaveProfile] { lock.withLock { Array(values.values) } }
 }
 
+public enum InMemorySaveStateError: Error { case slotOccupied }
+
 public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked Sendable {
     private let lock = NSLock()
     private var values: [UUID: SaveState] = [:]
 
     public init() {}
 
-    public func insertSaveState(_ state: SaveState) throws { lock.withLock { values[state.id] = state } }
+    public func insertSaveState(_ state: SaveState) throws { try store(state) }
 
-    public func updateSaveState(_ state: SaveState) throws { lock.withLock { values[state.id] = state } }
+    private func store(_ state: SaveState) throws {
+        try lock.withLock {
+            if let slot = state.slot, values.values.contains(where: {
+                $0.id != state.id && $0.buildID == state.buildID && $0.saveProfileID == state.saveProfileID && $0.slot == slot
+            }) { throw InMemorySaveStateError.slotOccupied }
+            values[state.id] = state
+        }
+    }
+
+    public func updateSaveState(_ state: SaveState) throws { try store(state) }
 
     /// Newest first.
     public func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
@@ -258,8 +269,15 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
     public func renameSaveState(id: UUID, label: String?) throws { lock.withLock { values[id]?.label = label } }
 
     public func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {
+        guard fromSaveProfileID != toSaveProfileID else { return }
         lock.withLock {
-            for state in values.values where state.buildID == buildID && state.saveProfileID == fromSaveProfileID {
+            let target = values.values.filter { $0.buildID == buildID && $0.saveProfileID == toSaveProfileID }
+            for var state in Array(values.values) where state.buildID == buildID && state.saveProfileID == fromSaveProfileID {
+                if (state.kind == .quick && target.contains { $0.kind == .quick }) ||
+                    (state.slot != nil && target.contains { $0.slot == state.slot }) {
+                    state.kind = .manual
+                    state.slot = nil
+                }
                 values[state.id] = SaveState(
                     id: state.id,
                     buildID: state.buildID,
@@ -269,6 +287,8 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
                     stateAssetID: state.stateAssetID,
                     screenshotAssetID: state.screenshotAssetID,
                     kind: state.kind,
+                    slot: state.slot,
+                    isPinned: state.isPinned,
                     autoSequence: state.autoSequence,
                     label: state.label,
                     playtimeSeconds: state.playtimeSeconds,

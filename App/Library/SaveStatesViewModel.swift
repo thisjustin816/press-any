@@ -4,7 +4,7 @@ import EmulatorDomain
 import Foundation
 import UIKit
 
-/// One Save Profile's save states, on every Build, for naming and deleting.
+/// One Save Profile's save states, on every Build, for naming, pinning and deleting.
 @MainActor
 final class SaveStatesViewModel: ObservableObject {
     @Published private(set) var states: [SaveState] = []
@@ -74,6 +74,17 @@ final class SaveStatesViewModel: ObservableObject {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             try repository.renameSaveState(id: state.id, label: trimmed.isEmpty ? nil : trimmed)
+            reload()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func togglePin(_ state: SaveState) {
+        do {
+            guard var current = try repository.fetchSaveState(id: state.id) else { return }
+            current.isPinned.toggle()
+            try repository.updateSaveState(current)
             reload()
         } catch {
             errorMessage = error.localizedDescription

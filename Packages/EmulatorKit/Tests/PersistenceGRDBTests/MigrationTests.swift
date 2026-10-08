@@ -7,6 +7,56 @@ import Testing
 
 @Suite("GRDB migrations")
 struct MigrationTests {
+    @Test("slot upgrade preserves old columns and defaults pins, including deleted rows", arguments: [false, true])
+    func saveStateSlotsUpgrade(deleted: Bool) throws {
+        let database = try AppDatabase.inMemory()
+        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v14-metadata-provenance")
+        let fixture = try legacyFixture(in: database)
+        if deleted {
+            try database.writer.write { db in
+                try db.execute(sql: "UPDATE save_states SET deletion_id = 'fixture-deletion'")
+            }
+        }
+        let before = try database.writer.read { db in
+            let columns = try db.columns(in: "save_states").map(\.name)
+            return (columns, try Row.fetchAll(db, sql: "SELECT * FROM save_states ORDER BY id"))
+        }
+        #expect(!before.1.isEmpty)
+        try database.migrate()
+        try database.writer.read { db throws -> Void in
+            #expect(try Row.fetchAll(db, sql: "SELECT \(before.0.joined(separator: ",")) FROM save_states ORDER BY id") == before.1)
+            #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM save_states WHERE slot IS NOT NULL OR is_pinned != 0") == 0)
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").last == "v1-v15-save-state-slots")
+        }
+        if !deleted { #expect(try database.makeRepositories().saveStates.fetchSaveState(id: fixture.state.id) == fixture.state) }
+    }
+
+    @Test("unique slot index rejects a second live state but allows deleted slots and other contexts")
+    func uniqueLiveSlot() throws {
+        let database = try AppDatabase.inMemory()
+        try database.migrate()
+        let repositories = database.makeRepositories()
+        let f = try Fixture.create(in: repositories)
+        func slotState(profileID: UUID, buildID: UUID) -> SaveState {
+            SaveState(id: UUID(), buildID: buildID, saveProfileID: profileID, core: f.state.core,
+                stateSerializationVersion: f.state.stateSerializationVersion, stateAssetID: f.state.stateAssetID,
+                kind: .slot, slot: 2, playtimeSeconds: 0, createdAt: f.state.createdAt)
+        }
+        let first = slotState(profileID: f.profile.id, buildID: f.build.id)
+        try repositories.saveStates.insertSaveState(first)
+        #expect(throws: DatabaseError.self) {
+            try repositories.saveStates.insertSaveState(slotState(profileID: f.profile.id, buildID: f.build.id))
+        }
+        let otherProfile = SaveProfile(id: UUID(), gameID: f.game.id, displayName: "Other", createdAt: f.state.createdAt, modifiedAt: f.state.createdAt)
+        try repositories.saveProfiles.insertSaveProfile(otherProfile)
+        try repositories.saveStates.insertSaveState(slotState(profileID: otherProfile.id, buildID: f.build.id))
+        try repositories.saveStates.insertSaveState(slotState(profileID: f.profile.id, buildID: f.patchedBuild.id))
+        let deletion = LibraryDeletion(id: UUID(), kind: .saveState, title: "Slot 2", gameID: f.game.id,
+            deletedAt: f.state.createdAt, records: LibraryRecordSet(saveStateIDs: [first.id]))
+        try repositories.deletions.insertDeletion(deletion)
+        try repositories.saveStates.insertSaveState(slotState(profileID: f.profile.id, buildID: f.build.id))
+    }
+
     @Test("provenance upgrade preserves every populated table and adds no rows", arguments: [false, true])
     func metadataProvenanceUpgrade(includingDeletedRecords: Bool) throws {
         let database = try AppDatabase.inMemory()
@@ -19,14 +69,17 @@ struct MigrationTests {
         }
         let before = try database.writer.read { db in
             let tables = try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'grdb_migrations' ORDER BY name")
-            return try tables.map { table in (table, try Row.fetchAll(db, sql: "SELECT * FROM \(table) ORDER BY rowid")) }
+            return try tables.map { table in
+                let columns = try db.columns(in: table).map(\.name)
+                return (table, columns, try Row.fetchAll(db, sql: "SELECT \(columns.joined(separator: ",")) FROM \(table) ORDER BY rowid"))
+            }
         }
         #expect(before.count == 14)
-        #expect(before.allSatisfy { !$0.1.isEmpty })
+        #expect(before.allSatisfy { !$0.2.isEmpty })
         try database.migrate()
         try database.writer.read { db throws -> Void in
-            for (table, rows) in before {
-                #expect(try Row.fetchAll(db, sql: "SELECT * FROM \(table) ORDER BY rowid") == rows)
+            for (table, columns, rows) in before {
+                #expect(try Row.fetchAll(db, sql: "SELECT \(columns.joined(separator: ",")) FROM \(table) ORDER BY rowid") == rows)
             }
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM game_metadata_provenance") == 0)
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_metadata_provenance") == 0)
@@ -63,9 +116,10 @@ struct MigrationTests {
                 #expect(upgraded == rows, "migration changed existing rows in \(table)")
             }
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(6) == [
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(7) == [
                 "v1-v9-game-identity", "v1-v10-library-model", "v1-v11-save-compatibility",
                 "v1-v12-system-screen-colors", "v1-v13-patch-step-inputs", "v1-v14-metadata-provenance",
+                "v1-v15-save-state-slots",
             ])
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_save_declarations") == 0)
         }

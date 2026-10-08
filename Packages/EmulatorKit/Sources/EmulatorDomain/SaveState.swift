@@ -3,6 +3,7 @@ import Foundation
 public enum SaveStateKind: String, Codable, Sendable {
     case manual
     case quick
+    case slot
     case auto
     case crashRecovery
 }
@@ -16,6 +17,8 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
     public let stateAssetID: UUID
     public let screenshotAssetID: UUID?
     public var kind: SaveStateKind
+    public var slot: Int?
+    public var isPinned: Bool
     public let autoSequence: Int?
     public var label: String?
     public let playtimeSeconds: Double
@@ -30,6 +33,8 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
         stateAssetID: UUID,
         screenshotAssetID: UUID? = nil,
         kind: SaveStateKind,
+        slot: Int? = nil,
+        isPinned: Bool = false,
         autoSequence: Int? = nil,
         label: String? = nil,
         playtimeSeconds: Double,
@@ -43,10 +48,37 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
         self.stateAssetID = stateAssetID
         self.screenshotAssetID = screenshotAssetID
         self.kind = kind
+        self.slot = slot
+        self.isPinned = isPinned
         self.autoSequence = autoSequence
         self.label = label
         self.playtimeSeconds = playtimeSeconds
         self.createdAt = createdAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, buildID, saveProfileID, core, stateSerializationVersion, stateAssetID, screenshotAssetID
+        case kind, slot, isPinned, autoSequence, label, playtimeSeconds, createdAt
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try values.decode(UUID.self, forKey: .id),
+            buildID: try values.decode(UUID.self, forKey: .buildID),
+            saveProfileID: try values.decode(UUID.self, forKey: .saveProfileID),
+            core: try values.decode(CoreDescriptor.self, forKey: .core),
+            stateSerializationVersion: try values.decode(String.self, forKey: .stateSerializationVersion),
+            stateAssetID: try values.decode(UUID.self, forKey: .stateAssetID),
+            screenshotAssetID: try values.decodeIfPresent(UUID.self, forKey: .screenshotAssetID),
+            kind: try values.decode(SaveStateKind.self, forKey: .kind),
+            slot: try values.decodeIfPresent(Int.self, forKey: .slot),
+            isPinned: try values.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false,
+            autoSequence: try values.decodeIfPresent(Int.self, forKey: .autoSequence),
+            label: try values.decodeIfPresent(String.self, forKey: .label),
+            playtimeSeconds: try values.decode(Double.self, forKey: .playtimeSeconds),
+            createdAt: try values.decode(Date.self, forKey: .createdAt)
+        )
     }
 }
 
@@ -55,6 +87,7 @@ extension SaveState {
     public var kindName: String {
         switch kind {
         case .quick: "Quick Save"
+        case .slot: slot.map { "Slot \($0)" } ?? "Save State"
         case .auto: "Auto State"
         case .manual, .crashRecovery: "Save State"
         }
