@@ -121,9 +121,15 @@ struct LibraryView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    // Sort lives in the view menu: a fourth toolbar button left the wordmark no
-                    // room at larger text sizes.
+                    // Select and Sort live in this menu, as in Photos and Files: more toolbar
+                    // buttons left the wordmark no room at larger text sizes.
                     Menu {
+                        if !model.selection.isSelecting {
+                            Section {
+                                Button("Select", systemImage: "checkmark.circle") { model.selection.toggleMode() }
+                                    .disabled(model.visibleGames.isEmpty)
+                            }
+                        }
                         Picker(selection: $sort) {
                             ForEach(LibrarySort.allCases, id: \.self) { order in
                                 Text(order.displayName).tag(order)
@@ -154,7 +160,7 @@ struct LibraryView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: displayMode == .grid ? "square.grid.2x2" : "list.bullet")
+                        Label("More", systemImage: "ellipsis")
                     }
                     .accessibilityIdentifier("library.viewMenu")
 
@@ -189,7 +195,10 @@ struct LibraryView: View {
                     .accessibilityIdentifier("library.addMenu")
                 }
             }
-            .selectionControls(selection: $model.selection, available: Set(model.visibleGames.map(\.id)), selectAll: true) {
+            .selectionControls(
+                selection: $model.selection, available: Set(model.visibleGames.map(\.id)),
+                selectAll: true, selectInToolbar: false
+            ) {
                 model.requestSelectedDeletion()
             }
             .batchDeletionAlert(plan: $model.pendingBatchDeletion, noun: "Games", confirm: model.confirm)

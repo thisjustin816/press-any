@@ -195,7 +195,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     var body: some View {
         Menu {
             Picker(title, selection: $choice) {
-                Text("Inherit (\(label(for: inheritedValue)))").tag(Choice.inherit)
+                Text("\(inheritNote) (\(label(for: inheritedValue)))").tag(Choice.inherit)
                 ForEach(options.indices, id: \.self) { index in
                     Text(options[index].1).tag(Choice.value(options[index].0))
                 }
@@ -239,15 +239,18 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     }
 
     /// Where the value comes from, under the setting's title. What it overrides shows in the menu,
-    /// as Inherit's value.
+    /// beside the same words.
     private var note: String {
         switch choice {
-        case .inherit:
-            let source = inherited?.source
-            return source == nil ? "Default" : "From \(sourceName(source))"
-        case .value:
-            return "Set here"
+        case .inherit: inheritNote
+        case .value: "Set here"
         }
+    }
+
+    /// "Default" when no level above sets the value, since there is nothing to inherit then;
+    /// otherwise the level it comes from.
+    private var inheritNote: String {
+        inherited?.source.map { "From \(sourceName($0))" } ?? "Default"
     }
 
     private func label(for value: Value) -> String {
