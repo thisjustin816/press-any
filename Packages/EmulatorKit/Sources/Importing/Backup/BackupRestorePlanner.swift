@@ -195,7 +195,8 @@ struct BackupRestorePlanner {
         result.assets = assets.filter { result.referencedAssetIDs.contains($0.id) }
         let paths = Set(result.assets.map(\.relativePath))
         files = files.filter { paths.contains($0.key) }
-        try BackupSnapshotCodec.validate(result, allowExternalLineage: !replacing)
+        try BackupSnapshotCodec.validate(result, allowExternalLineage: !replacing,
+            retainedIDs: replacing ? [] : library.retained.recordIDs)
         return BackupRestorePlan(snapshot: result, files: files, notes: notes)
     }
 

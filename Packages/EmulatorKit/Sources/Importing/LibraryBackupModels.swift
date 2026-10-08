@@ -102,6 +102,7 @@ public enum LibraryBackupError: LocalizedError, Equatable {
     case unresolvedConflict(String)
     case unsafeChoice(String)
     case safetyBackupRequired
+    case cannotBackUp(String)
 
     public var errorDescription: String? {
         switch self {
@@ -115,6 +116,7 @@ public enum LibraryBackupError: LocalizedError, Equatable {
         case .unresolvedConflict(let name): "Choose which version of \(name) to keep."
         case .unsafeChoice(let name): "\(name) cannot be kept as a second copy."
         case .safetyBackupRequired: "Create the automatic backup before replacing the library."
+        case .cannotBackUp(let reason): "The library can't be backed up: \(reason)."
         }
     }
 }

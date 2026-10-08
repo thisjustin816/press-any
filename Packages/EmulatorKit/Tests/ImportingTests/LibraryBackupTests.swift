@@ -151,6 +151,22 @@ import Testing
         _ = try fixture.service.restore(prepared, review: review, choices: [:], replaceEntireLibrary: true, safetyBackupURL: safety)
     }
 
+    @Test func brokenLibraryReferencesFailExportWithExportWording() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        var broken = fixture.snapshot
+        broken.states[0] = SaveState(id: broken.states[0].id, buildID: UUID(), saveProfileID: broken.states[0].saveProfileID,
+            core: broken.states[0].core, stateSerializationVersion: "test", stateAssetID: broken.states[0].stateAssetID,
+            kind: .manual, playtimeSeconds: 0, createdAt: fixture.date)
+        let service = LibraryBackupService(repository: InMemoryLibraryBackupRepository(broken), assetStore: fixture.store)
+        #expect {
+            try service.export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1")
+        } throws: { error in
+            guard case LibraryBackupError.cannotBackUp = error else { return false }
+            return error.localizedDescription.hasPrefix("The library can't be backed up")
+        }
+    }
+
     @Test func damagedNewerAndMissingArchivesFailBeforeChanges() throws {
         let fixture = try BackupFixture()
         defer { fixture.remove() }

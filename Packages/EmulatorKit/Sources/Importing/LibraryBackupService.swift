@@ -192,7 +192,11 @@ public struct LibraryBackupService: Sendable {
                              appVersion: String, appBuild: String, includeROMs: Bool, gameID: UUID?,
                              progress: @Sendable (Double) -> Void) throws -> URL {
         let snapshot = snapshot.backupOmittingExternalLineage()
-        try BackupSnapshotCodec.validate(snapshot)
+        do {
+            try BackupSnapshotCodec.validate(snapshot)
+        } catch LibraryBackupError.invalidArchive(let reason) {
+            throw LibraryBackupError.cannotBackUp(reason)
+        }
         var files = try BackupSnapshotCodec.records(snapshot)
         var omissions = ["Generated patched ROMs and image fingerprints", "Crash recovery checkpoints",
                          "Quick Play sessions, staged files, and Recently Deleted", "Device view preferences and launch markers"]

@@ -46,9 +46,15 @@ struct BackupMerge {
         func hash(_ id: UUID?, _ snapshot: LibraryBackupSnapshot) -> String? {
             snapshot.assets.first { $0.id == id }?.contentSHA256
         }
+        // A backup cannot carry pointers into Recently Deleted, so the library side is compared
+        // the way it would be exported. The library keeps its pointers when nothing changes.
+        let exported = library.backupOmittingExternalLineage()
+        let exportedGames = Dictionary(exported.games.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let exportedBuilds = Dictionary(exported.builds.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let exportedProfiles = Dictionary(exported.profiles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         result.games = try records(archive.games, library.games, kind: "Game", key: { $0.id.uuidString },
             name: { $0.primaryTitle }, date: { $0.modifiedAt }, equivalent: { a, b in
-                a == b && hash(a.artworkAssetID, archive) == hash(b.artworkAssetID, library)
+                a == (exportedGames[b.id] ?? b) && hash(a.artworkAssetID, archive) == hash(b.artworkAssetID, library)
                     && archive.gameProvenance.first { $0.ownerID == a.id } == library.gameProvenance.first { $0.ownerID == b.id }
                     && archive.manualPositions.first { $0.gameID == a.id } == library.manualPositions.first { $0.gameID == b.id }
             }, choices: choices)
@@ -60,11 +66,12 @@ struct BackupMerge {
         }
         result.builds = try records(archive.builds, library.builds, kind: "Build", key: { $0.id.uuidString },
             name: { $0.displayName }, date: { $0.modifiedAt }, equivalent: { a, b in
-                a == b && archive.buildProvenance.first { $0.ownerID == a.id } == library.buildProvenance.first { $0.ownerID == b.id }
+                a == (exportedBuilds[b.id] ?? b) && archive.buildProvenance.first { $0.ownerID == a.id } == library.buildProvenance.first { $0.ownerID == b.id }
             }, choices: choices)
         result.profiles = try records(archive.profiles, library.profiles, kind: "Save Profile", key: { $0.id.uuidString },
             name: { $0.displayName }, date: { $0.modifiedAt }, equivalent: { a, b in
-                a == b && hash(a.persistentSaveAssetID, archive) == hash(b.persistentSaveAssetID, library)
+                a == (exportedProfiles[b.id] ?? b)
+                    && hash(a.persistentSaveAssetID, archive) == hash(b.persistentSaveAssetID, library)
             }, keepBoth: true, explicit: true, choices: choices)
         result.states = try records(archive.states, library.states, kind: "Save State", key: { $0.id.uuidString },
             name: { $0.displayName }, date: { $0.createdAt }, equivalent: { a, b in

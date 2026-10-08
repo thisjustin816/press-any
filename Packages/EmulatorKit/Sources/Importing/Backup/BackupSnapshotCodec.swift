@@ -88,7 +88,10 @@ enum BackupSnapshotCodec {
         "\(declaration.firstBuildID.uuidString)/\(declaration.secondBuildID.uuidString)"
     }
 
-    static func validate(_ snapshot: LibraryBackupSnapshot, allowExternalLineage: Bool = false) throws {
+    /// `allowExternalLineage` accepts copy and Game lineage that leads outside the snapshot.
+    /// Optional pointers may also lead to `retainedIDs`, the destination's Recently Deleted records.
+    static func validate(_ snapshot: LibraryBackupSnapshot, allowExternalLineage: Bool = false,
+                         retainedIDs: Set<UUID> = []) throws {
         func unique<T>(_ values: [T], _ key: (T) -> String) throws {
             guard Set(values.map(key)).count == values.count else {
                 throw LibraryBackupError.invalidArchive("duplicate record identities")
@@ -117,6 +120,9 @@ enum BackupSnapshotCodec {
         func require(_ valid: Bool) throws {
             guard valid else { throw LibraryBackupError.invalidArchive("broken record references or invalid values") }
         }
+        func points(_ id: UUID?, into ids: Set<UUID>) -> Bool {
+            id.map { ids.contains($0) || retainedIDs.contains($0) } ?? true
+        }
         func asset(_ id: UUID?, kind: ManagedAssetKind? = nil) throws {
             guard let id else { return }
             try require(assets[id] != nil && (kind == nil || assets[id]?.kind == kind))
@@ -127,21 +133,21 @@ enum BackupSnapshotCodec {
         for game in snapshot.games {
             try asset(game.artworkAssetID, kind: .artwork)
             try require(allowExternalLineage || (game.lineage?.sourceGameID.map { games.contains($0) } ?? true))
-            try require(game.preferredBuildID == nil || snapshot.builds.contains { $0.id == game.preferredBuildID && $0.gameID == game.id })
-            try require(game.preferredSaveProfileID == nil || snapshot.profiles.contains { $0.id == game.preferredSaveProfileID && $0.gameID == game.id })
+            try require(points(game.preferredBuildID, into: Set(snapshot.builds.filter { $0.gameID == game.id }.map(\.id))))
+            try require(points(game.preferredSaveProfileID, into: Set(snapshot.profiles.filter { $0.gameID == game.id }.map(\.id))))
         }
         for build in snapshot.builds {
             try require(games.contains(build.gameID) && build.totalPlaytimeSeconds.isFinite && build.totalPlaytimeSeconds >= 0)
             try asset(build.imageAssetID, kind: build.sourceKind == .importedImage ? .sourceImage : .generatedImage)
             try require(assets[build.imageAssetID]?.contentSHA256 == build.imageSHA256)
-            try require(build.parentBuildID.map { builds.contains($0) } ?? true)
-            try require(build.preferredSaveProfileID.map { profiles.contains($0) } ?? true)
+            try require(points(build.parentBuildID, into: builds))
+            try require(points(build.preferredSaveProfileID, into: profiles))
         }
         for profile in snapshot.profiles {
             try require(allowExternalLineage || (profile.copiedFromProfileID.map { profiles.contains($0) } ?? true))
             try require(games.contains(profile.gameID) && profile.totalPlaytimeSeconds.isFinite && profile.totalPlaytimeSeconds >= 0 && profile.sessionCount >= 0)
             try asset(profile.persistentSaveAssetID, kind: .persistentSave)
-            try require(profile.saveWrittenByBuildID.map { builds.contains($0) } ?? true)
+            try require(points(profile.saveWrittenByBuildID, into: builds))
         }
         for state in snapshot.states {
             try require(builds.contains(state.buildID) && profiles.contains(state.saveProfileID) && state.kind != .crashRecovery)

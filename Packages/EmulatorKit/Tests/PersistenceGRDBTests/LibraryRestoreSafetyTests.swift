@@ -134,6 +134,31 @@ import Testing
         #expect(try library.repos.saveProfiles.fetchSaveProfiles(gameID: library.rom.game.id).count == 1)
     }
 
+    @Test func deletingTheBuildThatWroteASaveDoesNotBlockBackupOrMerge() throws {
+        let library = try RestoreLibrary()
+        defer { library.remove() }
+        let second = try library.importBuild(TestROM.make(title: "MOONGARDEN", payloadByte: 2), name: "Moon Garden v2")
+        let profile = try library.addProfile(bytes: Data([1, 2, 3]))
+        #expect(profile.saveWrittenByBuildID == library.rom.build.id)
+        var game = try #require(try library.repos.games.fetchGame(id: library.rom.game.id))
+        game.preferredBuildID = library.rom.build.id
+        try library.repos.games.updateGame(game)
+        let deletion = LibraryDeletionOperations(games: library.repos.games, builds: library.repos.builds,
+            profiles: library.repos.saveProfiles, states: library.repos.saveStates, recipes: library.repos.patchRecipes,
+            deletions: library.repos.deletions, assetStore: library.store, transactions: library.repos.transactions)
+        try deletion.delete(deletion.planBuildDeletion(buildID: library.rom.build.id))
+
+        let archive = try library.export()
+        let prepared = try library.service.prepare(from: archive)
+        #expect(prepared.snapshot.builds.map(\.id) == [second.build.id])
+        #expect(prepared.snapshot.profiles.first?.saveWrittenByBuildID == nil)
+        #expect(prepared.snapshot.games.first?.preferredBuildID == nil)
+        let review = try library.service.review(prepared)
+        #expect(review.conflicts.isEmpty)
+        _ = try library.service.restore(prepared, review: review, choices: [:])
+        #expect(try library.repos.saveProfiles.fetchSaveProfile(id: profile.id)?.saveWrittenByBuildID == library.rom.build.id)
+    }
+
     @Test func deletedRecordRefusalHasAReadableMessage() {
         let message = GRDBLibraryBackupError.deletedRecord(table: "save_profiles", id: UUID()).localizedDescription
         #expect(message.contains("Recently Deleted"))
@@ -169,6 +194,17 @@ struct RestoreLibrary {
             toolchainReports: repos.toolchainReports, fingerprints: repos.fingerprints, assetStore: store, transactions: repos.transactions)
         rom = try committer.commit(ROMImportPlan(analysis: analyzer.analyzeROM(at: picked, targetGameID: nil),
             disposition: .createGame(title: "Moon Garden"), buildDisplayName: "Base", markAsBase: true))
+    }
+
+    func importBuild(_ data: Data, name: String) throws -> ROMImportResult {
+        let picked = root.appendingPathComponent("\(name).gb")
+        try data.write(to: picked)
+        let analyzer = ROMImportAnalyzer(builds: repos.builds, games: repos.games, fingerprints: repos.fingerprints,
+            toolchainReports: repos.toolchainReports, assetStore: store)
+        let committer = ImportCommitter(games: repos.games, builds: repos.builds, assets: repos.assets,
+            toolchainReports: repos.toolchainReports, fingerprints: repos.fingerprints, assetStore: store, transactions: repos.transactions)
+        return try committer.commit(ROMImportPlan(analysis: analyzer.analyzeROM(at: picked, targetGameID: rom.game.id),
+            disposition: .addBuild(gameID: rom.game.id), buildDisplayName: name, markAsBase: false))
     }
 
     func remove() { if ownsRoot { try? FileManager.default.removeItem(at: root) } }
