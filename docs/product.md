@@ -600,7 +600,10 @@ claims reliability from just an old ROM, old save and new ROM.
   After only an overlay (Control Center, Notification Center, a call banner) it resumes on its own
   unless the player had paused it; after the background, Resume Games decides. Backgrounding
   clears the open-session marker only after the Auto State is written; returning to play marks
-  it open again.
+  it open again. An audio interruption from another app, or the output device going away
+  (headphones unplugged, a Bluetooth speaker lost), pauses the game as the game menu does, even
+  while the scene stays active. It stays paused until the player chooses Resume, so sound never
+  restarts on its own when the interruption ends. In the background, Resume Games decides.
 - **Crash recovery.** During library play, one hidden `SaveStateKind.crashRecovery` checkpoint
   for the exact Build and Save Profile refreshes about once a minute of play, replacing the
   previous one in the existing state storage. A successful Auto State or clean close removes it.
@@ -780,7 +783,10 @@ picture. A connected controller still hides the touch controls.
   refresh: each refresh adds the time since the last one, measured on the display's clock, and the
   game runs whole frames while it's owed one, then shows the newest. The game keeps its native
   59.73 Hz; on a 60 Hz screen one frame repeats about every four seconds. After a stall, a refresh
-  longer than four frames counts as one frame, so the game doesn't race to catch up.
+  longer than four frames counts as one frame, so the game doesn't race to catch up. A ProMotion
+  screen refreshes at up to 120 Hz, but while Low Power Mode is on or the device's thermal state
+  is serious or critical it's held to 60 Hz, and returns to 120 Hz when that ends, with no restart.
+  The game's speed is the same either way.
 - v1.1: a curated, RetroArch-compatible shader library chosen after a community survey and device
   comparison (LCD1x, LCD3x and pixel-transparency variants are candidates; PT-SkyWalker541 is a
   candidate to audit), downloaded from pinned, license-checked sources with hashes and preserved
@@ -798,7 +804,9 @@ picture. A connected controller still hides the touch controls.
 - **Sound** (app-wide): Follow Silent Switch by default, Always On, or Always Off, which mutes the
   game but leaves other apps' audio alone. It's in App Settings and in the game menu, where a
   change applies to the open game at once and becomes the app-wide setting.
-- Genuine audio interruptions pause; route changes are handled without restarting.
+- Genuine audio interruptions pause; route changes are handled without restarting. A started
+  interruption, or an output device that goes away, pauses the game and leaves it paused for
+  Resume. Other route changes, such as a device arriving, don't interrupt play.
 
 ### Speed
 
