@@ -183,7 +183,7 @@ struct SharedPatchView: View {
         }
         let matches = (try? Data(contentsOf: file.url)).map { patch in
             PatchBaseMatcher.builds(matchingPatch: patch, among: candidates) { build in
-                try Data(contentsOf: container.launchImageResolver.resolve(buildID: build.id))
+                try container.launchImageResolver.readImage(buildID: build.id)
             }
         } ?? []
         if let match = matches.first(where: \.isBase) ?? matches.first,

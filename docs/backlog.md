@@ -20,9 +20,8 @@ migrating later.
 2. Multi-signal development-build matching is built. Metadata provenance,
    Metadata Details and per-step patch input hashes are built, along with Game aliases, rename,
    Build notes, per-Build playtime, favorites, declared save compatibility and the cross-region save check.
-3. Library features on that data: the in-flight protection that remains under Persistence /
-   storage. Sorting, play statistics, the storage screen, verification on read and cache trimming
-   under storage pressure are built.
+3. Library features on that data are built: sorting, play statistics, the storage screen,
+   verification on read, cache trimming under storage pressure and in-flight protection.
 4. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
@@ -104,7 +103,7 @@ halt_bug, interrupt_time and sound tests) and SameSuite remain.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | done | Storage screen by category, source vs disposable, safe cleanup | v1 | Settings > Library > Storage shows asset categories, Quick Play disk usage and device free space; confirmed cache clearing preserves the running Build's ROM; Recently Deleted has no separate total because purgeable assets cannot be listed without purging |
-| partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | `InFlightFiles` holds files an import, patched Build or variable map places until they're recorded, and a running game's ROM; cache trimming, cache clearing and Check Library Files skip held files, and the sweep looks each orphan up again before removing it. Launch cleanup runs before anything can start. Remaining: other reads of a patched ROM (export, the save check, toolchain refresh, matching a shared patch to its base) aren't held, so trimming at the same moment fails that one action, and a retry rebuilds the ROM, and a patched-on-patched rebuild doesn't hold its intermediate ROM between writing and reading it |
+| done | GC coordination / in-flight protection / orphan sweep in the running app | v1 | `InFlightFiles` holds files an import, patched Build or variable map places until they're recorded, and a running game's ROM; the launch resolver holds every image it resolves, a patched Build's bases included, and `readImage` holds one until it's read, which export, the save check, toolchain refresh, patch matching and Technical Info use; cache trimming, cache clearing and Check Library Files skip held files, and the sweep looks each orphan up again before removing it. Launch cleanup runs before anything can start |
 
 Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed collision-
 safe relative paths; Source-asset dedup; Source vs userData vs cache vs temporary classes; Atomic
@@ -168,9 +167,10 @@ Done: Search by primary title and Game aliases.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; the parser recognizes numbered development flags and Sample, Kiosk and Debug, and drops Aftermarket and Unl; a repeated name gains the date the Build was added; Suggest Names reviews existing Build names and regional Game titles; broader real-world corpus tuning remains |
+| done | Automatic No-Intro / ROM-hack naming and structured fields | v1 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; the parser recognizes numbered development flags and Sample, Kiosk and Debug, drops Aftermarket and Unl, and reads GoodTools names: short regions, versions, dump codes and `[T+Eng1.03_Group]` translations; a repeated name gains the date the Build was added; Suggest Names reviews existing Build names and regional Game titles |
+| missing | Filename parsing tuned against a broader real-world corpus | v1.1 |  |
 | done | Header read/validate/display, no editing | v1 | GBROMHeaderParser validates header + global checksum; Import Review shows the checksum warning and a Build's Technical Info shows a read-only Header section: title, color support, named cartridge type, ROM and RAM size, revision number, and both checksums as Valid or Invalid |
-| partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
+| done | Normalized No-Intro / ROM-hack filename suggestion | v1 | shown in Import Review and used for ROM export: No-Intro's name for a known dump with GoodTools' `[!]` or `[b]`, otherwise No-Intro order and spelling, with a hack's own bracket and GoodTools' translation tag for modifications; original filenames are kept, and renaming the stored file is the v1.1 row below |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1.1 | physical renaming is an explicit action |
 | missing | Signed/validated downloadable database updates | v1.1 | needs a host and a signing key; the bundled file already carries its date |
 | done | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | matched by SHA-1; a known dump takes its canonical name, region, language, revision and status from the matched data; development statuses (Beta, Proto, Demo, Sample, Debug) are spelled as the filename parser spells them, and Aftermarket, Unl and Pirate describe the release, so they are never a status |

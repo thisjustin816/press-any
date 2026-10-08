@@ -105,6 +105,25 @@ struct PatchedROMCacheTrimTests {
         #expect(try h.store.hashFile(at: resolver.resolve(buildID: launched.id)) == launched.imageSHA256)
         #expect(!h.isCached(older))
     }
+
+    @Test("a patched Build's base stays held while the Build is rebuilt on top of it")
+    func holdsIntermediateImage() throws {
+        let h = try TrimHarness()
+        defer { h.cleanUp() }
+        let first = try h.patched(byte: 0x58, createdAt: h.day(1))
+        let second = try h.patched(byte: 0x59, createdAt: h.day(2), on: first)
+        try h.store.removeIfExists(h.store.generatedImageURL(sha256: second.imageSHA256))
+        let inFlight = InFlightFiles()
+        let resolver = ResolveImageForLaunch(builds: h.builds, recipes: h.recipes, assets: h.assets,
+            assetStore: h.store, trimCache: h.trim(free: 0, inFlight: inFlight), inFlight: inFlight)
+
+        let image = try resolver.readImage(buildID: second.id)
+
+        #expect(h.store.hashData(image) == second.imageSHA256)
+        #expect(h.isCached(first), "trimming before the write skipped the base it was built from")
+        let firstPath = try h.path(of: first), secondPath = try h.path(of: second)
+        #expect(!inFlight.isHeld(firstPath) && !inFlight.isHeld(secondPath), "nothing stays held once it's read")
+    }
 }
 
 @Suite("In-flight files")
@@ -209,14 +228,15 @@ private struct TrimHarness {
 
     func day(_ number: Int) -> Date { Date(timeIntervalSince1970: Double(number) * 86_400) }
 
-    /// A Build patched from the base by an IPS patch that writes `byte` at offset 1.
-    func patched(byte: UInt8, createdAt: Date) throws -> Build {
+    /// A Build patched from `on`, the base by default, by an IPS patch that writes `byte` at
+    /// offset 1.
+    func patched(byte: UInt8, createdAt: Date, on parent: Build? = nil) throws -> Build {
         let patchURL = root.appendingPathComponent("change-\(byte).ips")
         try Data([0x50, 0x41, 0x54, 0x43, 0x48, 0, 0, 1, 0, 1, byte, 0x45, 0x4f, 0x46]).write(to: patchURL)
         return try CreatePatchedBuild(games: games, builds: builds, recipes: recipes, assets: assets,
             toolchainReports: InMemoryToolchainReportRepository(), assetStore: store, now: { createdAt })
-            .execute(.init(gameID: game.id, baseBuildID: base.id, patchURLs: [patchURL], displayName: "Patch \(byte)",
-                makePreferred: false))
+            .execute(.init(gameID: game.id, baseBuildID: (parent ?? base).id, patchURLs: [patchURL],
+                displayName: "Patch \(byte)", makePreferred: false))
     }
 
     func played(_ build: Build, at date: Date) throws {
