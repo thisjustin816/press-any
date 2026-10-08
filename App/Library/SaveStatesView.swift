@@ -82,7 +82,12 @@ struct SaveStatesView: View {
         HStack(spacing: 12) {
             thumbnail(state)
             VStack(alignment: .leading, spacing: 3) {
-                Text(state.displayName)
+                HStack {
+                    Text(state.displayName)
+                    if state.isPinned {
+                        Image(systemName: "pin.fill").accessibilityLabel("Pinned")
+                    }
+                }
                 Text(details(state))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -90,12 +95,18 @@ struct SaveStatesView: View {
         }
         .accessibilityElement(children: .combine)
         .swipeActions(edge: .leading) {
+            Button(state.isPinned ? "Unpin" : "Pin", systemImage: state.isPinned ? "pin.slash" : "pin") {
+                model.togglePin(state)
+            }.tint(.orange)
             Button("Rename") { startRenaming(state) }
                 .tint(.blue)
         }
         .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: state) } }
         .contextMenu {
             if !model.selection.isSelecting {
+                Button(state.isPinned ? "Unpin" : "Pin", systemImage: state.isPinned ? "pin.slash" : "pin") {
+                    model.togglePin(state)
+                }
                 Button("Rename…") { startRenaming(state) }
                 Button("Delete…", role: .destructive) { model.requestDeletion(of: state) }
             }

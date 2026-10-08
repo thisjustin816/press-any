@@ -45,6 +45,7 @@ public struct LibraryDeletionOperations: Sendable {
     private let deletions: any LibraryDeletionRepository
     private let assetStore: any AssetStore
     private let transactions: any LibraryTransactionRunner
+    private let settings: SettingsResolver?
     private let makeID: @Sendable () -> UUID
     private let now: @Sendable () -> Date
 
@@ -57,6 +58,7 @@ public struct LibraryDeletionOperations: Sendable {
         deletions: any LibraryDeletionRepository,
         assetStore: any AssetStore,
         transactions: any LibraryTransactionRunner,
+        settings: SettingsResolver? = nil,
         makeID: @escaping @Sendable () -> UUID = UUID.init,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -68,6 +70,7 @@ public struct LibraryDeletionOperations: Sendable {
         self.deletions = deletions
         self.assetStore = assetStore
         self.transactions = transactions
+        self.settings = settings
         self.makeID = makeID
         self.now = now
     }
@@ -203,6 +206,27 @@ public struct LibraryDeletionOperations: Sendable {
         return deletion
     }
 
+    public func cleanManualStates(context: LaunchContext, keepCount: Int, keeping stateID: UUID? = nil) throws {
+        let manual = try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
+            .filter { $0.kind == .manual && !$0.isPinned }
+            .sorted {
+                if $0.id == $1.id { return false }
+                if $0.id == stateID { return true }
+                if $1.id == stateID { return false }
+                return $0.createdAt != $1.createdAt ? $0.createdAt > $1.createdAt : $0.id.uuidString < $1.id.uuidString
+            }
+        let expired = Array(manual.dropFirst(max(0, keepCount)))
+        guard !expired.isEmpty else { return }
+        try delete(DeletionPlan(
+            kind: .saveState,
+            title: "Cleaned-up Save States",
+            gameID: context.gameID,
+            records: LibraryRecordSet(saveStateIDs: expired.map(\.id)),
+            dependentBuilds: [],
+            emptiedGames: []
+        ))
+    }
+
     /// Recently Deleted, newest first.
     public func recentlyDeleted() throws -> [LibraryDeletion] {
         try deletions.fetchDeletions()
@@ -225,7 +249,22 @@ public struct LibraryDeletionOperations: Sendable {
                 throw LibraryDeletionError.baseBuildIsDeleted(recipe.baseBuildID)
             }
         }
-        try deletions.restoreDeletion(id: deletionID)
+        let pinManualStates: Bool
+        do {
+            pinManualStates = (try settings?.appValue(KeepSaveStates.self, key: .keepSaveStates) ?? .all) != .all
+        } catch {
+            pinManualStates = true
+        }
+        try transactions.run {
+            try deletions.restoreDeletion(id: deletionID)
+            if pinManualStates {
+                for id in deletion.records.saveStateIDs {
+                    guard var state = try states.fetchSaveState(id: id), state.kind == .manual else { continue }
+                    state.isPinned = true
+                    try states.updateSaveState(state)
+                }
+            }
+        }
     }
 
     /// Delete Now: purges one deletion before its 30 days are up.

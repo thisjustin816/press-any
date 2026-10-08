@@ -9,7 +9,7 @@ public struct AutoStateRetention: Sendable {
 
     public func expiredStates(from states: [SaveState]) -> [SaveState] {
         let autos = states
-            .filter { $0.kind == .auto }
+            .filter { $0.kind == .auto && !$0.isPinned }
             .sorted { lhs, rhs in
                 if let leftSequence = lhs.autoSequence, let rightSequence = rhs.autoSequence,
                    leftSequence != rightSequence {

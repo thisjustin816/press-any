@@ -87,8 +87,6 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
                 }
             }
         }
-        lock.withLock { _ = stashes.removeValue(forKey: id) }
-        lock.withLock { _ = deletions.removeValue(forKey: id) }
         for game in stash.games { try games.insertGame(game) }
         for var build in stash.builds {
             if build.isBase, try builds.fetchBuilds(gameID: build.gameID).contains(where: \.isBase) {
@@ -98,12 +96,16 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
         }
         for profile in stash.profiles { try profiles.insertSaveProfile(profile) }
         for var state in stash.states {
-            if state.kind == .quick,
-               try states.fetchSaveStates(buildID: state.buildID, saveProfileID: state.saveProfileID).contains(where: { $0.kind == .quick }) {
+            let live = try states.fetchSaveStates(buildID: state.buildID, saveProfileID: state.saveProfileID)
+            if (state.kind == .quick && live.contains { $0.kind == .quick }) ||
+                (state.slot != nil && live.contains { $0.slot == state.slot }) {
                 state.kind = .manual
+                state.slot = nil
             }
             try states.insertSaveState(state)
         }
+        lock.withLock { _ = stashes.removeValue(forKey: id) }
+        lock.withLock { _ = deletions.removeValue(forKey: id) }
     }
 
     public func purgeDeletion(id: UUID, at date: Date) throws -> [ManagedAsset] {

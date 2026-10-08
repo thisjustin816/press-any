@@ -17,6 +17,8 @@ final class GameplayViewController: UIViewController {
     private let rumble = RumbleRouter()
     private var renderer: MetalRenderer?
     private let autoResumePolicy: AutoResumePolicy
+    var saveStateSlots: SaveStateSlots
+    var nameNewStates: Bool
     private let launchMessage: String?
     private let pausedOverlay = UIButton(type: .system)
     /// Center the paused overlay on the game picture, which stays visible behind it.
@@ -70,6 +72,8 @@ final class GameplayViewController: UIViewController {
     init(
         runtime: any GameplayRuntime,
         autoResumePolicy: AutoResumePolicy,
+        saveStateSlots: SaveStateSlots = .off,
+        nameNewStates: Bool = false,
         launchMessage: String? = nil,
         firstFrameClock: UInt64? = nil,
         controlStyle: TouchControlStyle = .gameBoy,
@@ -89,6 +93,8 @@ final class GameplayViewController: UIViewController {
         controllerMonitor: PhysicalControllerMonitor = PhysicalControllerMonitor()
     ) {
         self.runtime = runtime
+        self.saveStateSlots = saveStateSlots
+        self.nameNewStates = nameNewStates
         self.controllerMonitor = controllerMonitor
         self.controlStyle = controlStyle
         self.orientation = orientation
@@ -256,7 +262,7 @@ final class GameplayViewController: UIViewController {
         let states = runtime as? any SaveStateRuntime
         let saved = (try? states?.saveStates()) ?? []
         var elements: [UIMenuElement] = [makeQuickControls(canSave: states != nil, quick: saved.first { $0.kind == .quick })]
-        if let states {
+        if states != nil || saveStateSlots != .off {
             elements.append(makeStatesMenu(states, saved: saved))
         } else {
             elements.append(UIAction(
@@ -338,28 +344,49 @@ final class GameplayViewController: UIViewController {
         return row
     }
 
-    /// Save New State first, then every state for this Build and Save Profile, newest first. The
-    /// Quick State is among them, named and dated like the rest.
-    private func makeStatesMenu(_ states: any SaveStateRuntime, saved: [SaveState]) -> UIMenu {
+    private func makeStatesMenu(_ states: (any SaveStateRuntime)?, saved: [SaveState]) -> UIMenu {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .medium
-        let saveNew = UIAction(title: "Save New State", image: UIImage(systemName: "plus")) { [weak self] _ in
-            self?.saveState()
+        let saveNew = UIAction(
+            title: "Save New State", image: UIImage(systemName: "plus"),
+            attributes: states == nil ? .disabled : []
+        ) { [weak self] _ in self?.saveState() }
+        var saves: [UIMenuElement] = [saveNew]
+        if saveStateSlots != .off {
+            let slots = (1...saveStateSlots.rawValue).map { slot in
+                let state = saved.first { $0.slot == slot }
+                let save = UIAction(title: "Save to Slot \(slot)", attributes: states == nil ? .disabled : []) { [weak self] _ in
+                    self?.saveState(slot: slot)
+                }
+                let load = UIAction(title: "Load Slot \(slot)", attributes: state == nil || states == nil ? .disabled : []) { [weak self] _ in
+                    if let state { self?.loadState(state) }
+                }
+                return UIMenu(
+                    title: "Slot \(slot)",
+                    subtitle: state.map { formatter.string(from: $0.createdAt) } ?? "Empty",
+                    image: state?.isPinned == true ? UIImage(systemName: "pin.fill") : nil,
+                    children: [save, load]
+                )
+            }
+            saves.append(UIMenu(title: "Slots", children: slots))
         }
-        let loads = saved.map { state in
+        let loads = saved.filter { state in
+            guard let slot = state.slot else { return true }
+            return slot > saveStateSlots.rawValue
+        }.map { state in
+            // A pin takes the subtitle, so the thumbnail still tells the states apart.
             UIAction(
                 title: state.displayName,
-                subtitle: formatter.string(from: state.createdAt),
-                image: states.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
-            ) { [weak self] _ in
-                self?.loadState(state)
-            }
+                subtitle: (state.isPinned ? "Pinned · " : "") + formatter.string(from: state.createdAt),
+                image: states?.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
+            ) { [weak self] _ in self?.loadState(state) }
         }
         return UIMenu(
             title: "States",
+            subtitle: states == nil ? "Add to Library to save states" : nil,
             image: UIImage(systemName: "square.stack"),
-            children: [UIMenu(options: .displayInline, children: [saveNew])] + loads
+            children: [UIMenu(options: .displayInline, children: saves)] + loads
         )
     }
 
@@ -373,13 +400,34 @@ final class GameplayViewController: UIViewController {
         }
     }
 
-    private func saveState(quick: Bool = false) {
-        guard let states = runtime as? any SaveStateRuntime else { return }
+    private func saveState(quick: Bool = false, slot: Int? = nil) {
+        guard runtime is any SaveStateRuntime else { return }
         holdFrames()
+        if !quick, slot == nil, nameNewStates {
+            let alert = UIAlertController(title: "Name This State", message: nil, preferredStyle: .alert)
+            alert.addTextField { $0.placeholder = "Save State" }
+            alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self, weak alert] _ in
+                let name = alert?.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                self?.finishSavingState(label: name.isEmpty ? nil : name)
+            })
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in self?.releaseFrames() })
+            present(alert, animated: true)
+        } else {
+            finishSavingState(quick: quick, slot: slot)
+        }
+    }
+
+    private func finishSavingState(quick: Bool = false, slot: Int? = nil, label: String? = nil) {
         defer { releaseFrames() }
+        guard let states = runtime as? any SaveStateRuntime else { return }
         do {
-            _ = try quick ? states.saveQuickState() : states.saveManualState(label: nil)
-            showTransientMessage("State saved.")
+            if let slot {
+                _ = try states.saveSlotState(slot: slot)
+                showTransientMessage("Saved to Slot \(slot).")
+            } else {
+                _ = try quick ? states.saveQuickState() : states.saveManualState(label: label)
+                showTransientMessage("State saved.")
+            }
         } catch {
             showTransientMessage("Couldn’t save the state: \(error)")
         }

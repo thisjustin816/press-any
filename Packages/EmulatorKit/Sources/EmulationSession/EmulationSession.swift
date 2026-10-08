@@ -85,6 +85,7 @@ public final class EmulationSession: @unchecked Sendable {
         launchHistory: SessionLaunchHistory? = nil,
         transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
         thumbnails: (any FrameImageEncoding)? = nil,
+        deletion: LibraryDeletionOperations? = nil,
         batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -101,6 +102,8 @@ public final class EmulationSession: @unchecked Sendable {
             states: states,
             assets: assets,
             assetStore: assetStore,
+            settings: settings,
+            deletion: deletion,
             transactions: transactions,
             thumbnails: thumbnails,
             now: now
@@ -380,7 +383,12 @@ public final class EmulationSession: @unchecked Sendable {
         try savePlayerState(kind: .quick)
     }
 
-    private func savePlayerState(kind: SaveStateKind, label: String? = nil) throws -> SaveState {
+    @discardableResult
+    public func saveSlotState(slot: Int) throws -> SaveState {
+        try savePlayerState(kind: .slot, slot: slot)
+    }
+
+    private func savePlayerState(kind: SaveStateKind, label: String? = nil, slot: Int? = nil) throws -> SaveState {
         let (worker, context, _) = try snapshotActive()
         // A failed write leaves the save unwritten, so loading warns more often, never less.
         _ = try? flushBatteryIfDirty()
@@ -389,6 +397,7 @@ public final class EmulationSession: @unchecked Sendable {
             context: context,
             kind: kind,
             label: label,
+            slot: slot,
             playtimeSeconds: playtimeSeconds,
             frame: currentFrame
         )

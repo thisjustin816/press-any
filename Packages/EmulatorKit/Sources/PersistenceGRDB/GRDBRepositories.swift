@@ -378,7 +378,22 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
     }
 
     public func reassignSaveStates(buildID: UUID, fromSaveProfileID: UUID, toSaveProfileID: UUID) throws {
+        guard fromSaveProfileID != toSaveProfileID else { return }
         try write { db in
+            try db.execute(
+                sql: """
+                UPDATE save_states SET kind = 'manual', slot = NULL
+                WHERE build_id = ? AND save_profile_id = ? AND deletion_id IS NULL AND EXISTS (
+                    SELECT 1 FROM save_states live
+                    WHERE live.build_id = save_states.build_id AND live.save_profile_id = ?
+                        AND live.deletion_id IS NULL AND (
+                            (save_states.kind = 'quick' AND live.kind = 'quick') OR
+                            (save_states.slot IS NOT NULL AND live.slot = save_states.slot)
+                        )
+                )
+                """,
+                arguments: [PersistenceCodec.uuid(buildID), PersistenceCodec.uuid(fromSaveProfileID), PersistenceCodec.uuid(toSaveProfileID)]
+            )
             try db.execute(
                 sql: "UPDATE save_states SET save_profile_id = ? WHERE build_id = ? AND save_profile_id = ?",
                 arguments: [

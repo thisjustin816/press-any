@@ -117,6 +117,18 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                 """,
                 arguments: [deletionID]
             )
+            try db.execute(
+                sql: """
+                UPDATE save_states SET kind = 'manual', slot = NULL
+                WHERE deletion_id = ? AND slot IS NOT NULL AND EXISTS (
+                    SELECT 1 FROM save_states live
+                    WHERE live.build_id = save_states.build_id
+                        AND live.save_profile_id = save_states.save_profile_id
+                        AND live.slot = save_states.slot AND live.deletion_id IS NULL
+                )
+                """,
+                arguments: [deletionID]
+            )
             for (table, _) in Self.tables {
                 try db.execute(sql: "UPDATE \(table) SET deletion_id = NULL WHERE deletion_id = ?", arguments: [deletionID])
             }
