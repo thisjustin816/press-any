@@ -122,7 +122,7 @@ public enum LibraryBackupError: LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .newerFormat: "This backup was made with a newer format. Update the app to restore it."
-        case .encrypted: "This backup needs password support. Update the app to restore it."
+        case .encrypted: "This backup is marked as encrypted, which backups never are. The library has not changed."
         case .invalidArchive(let reason): "This backup cannot be restored: \(reason)."
         case .missingFile(let path): "This backup is missing \(path). The library has not changed."
         case .checksumMismatch(let path): "The checksum for \(path) does not match. The library has not changed."

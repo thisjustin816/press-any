@@ -25,8 +25,9 @@ migrating later.
    under storage pressure are built.
 4. Library Backup export, reviewed merge restore, automatic safety backup before whole-library
    replacement, retained reports and Game packages are built on the settled schema. ROMs are
-   optional and archives use documented domain JSON with checksums. Password encryption is the
-   remaining backup follow-up. Save and ROM exports and the Files folder are built.
+   optional, backups up to 2 GB carry a library with its ROMs, and archives use documented
+   domain JSON with checksums. Backups have no password. Save and ROM exports and the Files
+   folder are built.
 
 The rest of the v1 core is built: save state slots, naming and cleanup, crash recovery, reopening
 the last game, Restart and Start Over, and the controller's Menu button.
@@ -191,7 +192,7 @@ altering a ROM.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Files default-open handling with another emulator installed | v1 | Owner/Viewer declarations for .gb/.gbc/.ips/.bps; cited Delta, Provenance, SameBoy and RetroArch ROM identifiers accepted (see product.md, Shared files); hosted app test covers rank, role, extensions and identifiers; physical-iPhone tap and Share > Press Any checks pending in mvp-verification.md; iOS chooses the default between claiming apps |
-| partial | ZIP + 7z with archive safety (size limits, traversal, password detect) | v1.1 | shared zips open each ROM, patch and save inside, read in memory with the system zlib (stored and deflate, per-kind size limits, CRC checked, encrypted and Zip64 refused); 7z remains |
+| partial | ZIP + 7z with archive safety (size limits, traversal, password detect) | v1.1 | shared zips open each ROM, patch and save inside, read in memory with the system zlib (stored and deflate, per-kind size limits, CRC checked, encrypted and Zip64 refused; other entries and links skipped); 7z remains |
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path only repairs the blob |
 | missing | Visual artwork comparison (existing/fetched/packaged) in review | v1.1 |  |
@@ -492,12 +493,12 @@ title placeholder fallback; Artwork follows Builds when a Game is emptied by pro
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| done | Export/import Library Backup | v1 | Settings export sheet, progress, zip restore picker and shared-file routing; domain records and manual positions; package and GRDB tests |
+| done | Export/import Library Backup | v1 | Settings export sheet, progress, zip restore picker and shared-file routing; domain records and manual positions; 2 GiB streamed archives, size check before export; package and GRDB tests |
 | done | Export one Game as a package in the Library Backup format: its Builds' patches and recipes, Save Profiles, states, artwork, documents and notes, ROMs only when asked; importing it merges like a restore | v1 | Game Details export, patch-base dependencies and reviewed merge; current schema has no documents model |
 | done | Documented versioned archive: manifest, ordinary files, checksums, schema version | v1 | docs/backup-format.md; format v1, migration ID, every payload checksummed; newer versions refused |
 | done | ROMs excluded by default, explicit personal full-backup option | v1 | Include ROMs defaults off; personal-backup footer; missing ROM rows restore and duplicate import repairs files |
-| partial | Optional password encryption | v1 | Readable manifest flag and safe refusal built; AES-GCM, PBKDF2-HMAC-SHA256, password entry, wrong-password and iOS encryption tests deferred after parts 1-4; no Password toggle in this build |
-| done | Merge restore by stable IDs/hashes with conflict review; Replace Entire Library | v1 | Per-item choices and independent save copies; automatic safety backup before destructive confirmation; atomic commit and rollback tests |
+| not planned | Optional password encryption | none | Backups have no password. The manifest's encrypted flag stays so an archive marked encrypted is refused before changes |
+| done | Merge restore by stable IDs/hashes with conflict review; Replace Entire Library | v1 | Per-item choices and independent save copies; Recently Deleted and purged records left alone; automatic safety backup with ROMs before destructive confirmation; atomic commit and rollback tests |
 | done | Migration Report before commit + retained summary | v1 | Review before writes, report after commit, Settings > Library > Last Restore retained in the database |
 | missing | Delta/Manic/Afterplay/Playtiles import adapters | future |  |
 

@@ -960,12 +960,13 @@ exposes them; custom border editing is later.
 | [RetroArch](https://github.com/libretro/RetroArch/blob/2a515ab854de947bd3dad625c66e145a9d1a400b/pkg/apple/iOS/Info.plist) | `com.retroarch.gb` | `com.retroarch.gbc` |
 
 - A shared zip, the way ROM hacks and homebrew are downloaded, opens each ROM, patch and save
-  inside it in turn, as if each were shared on its own; readmes, folders and macOS metadata are
-  skipped. Zip is registered at Alternate rank, so other zips keep opening where they did. It lists
+  inside it in turn, as if each were shared on its own; readmes, folders, links and macOS
+  metadata are skipped unread, even when the zip tool stored them in a form this app can't open. Zip is registered at Alternate rank, so other zips keep opening where they did. It lists
   `com.pkware.zip-archive`, the type Files gives a .zip, as well as `public.zip-archive`. The
   zip is read in memory and never kept: at most 32 MB, its entries stored or deflated, each held
-  to its own kind's size limit before it's inflated and checked against its CRC32. Encrypted,
-  Zip64 and damaged archives are refused.
+  to its own kind's size limit before it's inflated and checked against its CRC32. An encrypted,
+  Zip64 or damaged ROM, patch or save is refused. A zip with a root `backup-manifest.json` is a
+  Library Backup instead and opens Restore Review.
 - A shared ROM offers Quick Play or Import to Library. A shared patch opens Open Patch, which
   needs a Game and a base Build. A BPS patch records its base ROM's size and CRC32, so Open Patch
   preselects the Build whose image matches, checking only images of that size. Without one, a
@@ -1137,40 +1138,53 @@ community metadata aims for CC0, and imported data and media keep their own righ
 ### Backups
 
 Library Backup uses an ordinary zip with a root manifest, domain-model JSON and managed asset
-files. [The backup format](backup-format.md) documents its versions, inventory and checksums.
-It carries all live library records, provenance, notes, playtime, profiles, saves, states,
-thumbnails, recipes, patches, maps, artwork, reports, declarations, settings and region/language
-ordering. ROM files are optional. Generated patched ROMs, fingerprints, crash checkpoints,
-Quick Play, staging, Recently Deleted and device view preferences stay out.
+files. [The backup format](backup-format.md) documents its versions, inventory, checksums and
+limits. It carries all live library records, provenance, notes, playtime, profiles, saves,
+states, thumbnails, recipes, patches, maps, artwork, reports, declarations, settings and
+region/language ordering. ROM files are optional. Generated patched ROMs, fingerprints, crash
+checkpoints, Quick Play, staging, Recently Deleted and device view preferences stay out.
+
+A backup can be up to 2 GB, enough for a library with its ROMs; a zip of game files opened for
+import stays at 32 MB. The export sheet shows the approximate size and disables Back Up, with
+a note to turn off Include ROMs or export Games one at a time, when a backup would be larger.
+A ROM whose file is missing or changed is left out and listed. A missing or damaged save,
+state or artwork file stops the backup and names it. If a game is saving while the backup is
+written, the backup asks to try again in a moment.
 
 Settings > Library > Restore from Backup opens a file picker. Opening a backup zip from Files
 or a share sheet opens the same Restore Review. Its contents, additions, identical records,
-conflicts and Builds needing ROMs are shown before any changes. Close the running game first.
-Each file's length and SHA-256 must match the manifest, and a newer format asks for an app update.
+conflicts, Builds needing ROMs and items left alone are shown before any changes. Close the
+running game first. Each file's length and SHA-256 must match the manifest, and a newer format
+asks for an app update. If the library changes during review, restore stops and offers Review
+Again.
 
 Merge is the default: records match by stable ID and source files by hash. Identical records
-are skipped. Different versions are conflicts, with the newer timestamp suggested; the player
-can keep the library or backup version per item. Saves and states require an explicit choice.
-A Save Profile can be kept as a copy named `<name> from backup`; a Build cannot. Replacing a
-battery save keeps `<profile> before restore`, and replacing a state keeps a named manual copy.
-A new state for an occupied slot is kept as a manual state. A Build without its ROM is restored
-with its asset row: the report and Check Library Files list it, and importing that exact ROM
-later repairs its file through duplicate import.
+are skipped. Different versions are conflicts, named by Game, Build, profile or setting, with
+the newer timestamp suggested; the player can keep the library or backup version per item.
+Saves and states require an explicit choice. A Save Profile can be kept as a copy named
+`<name> from backup`; a Build cannot. Replacing a battery save keeps `<profile> before
+restore`, and replacing a state keeps a named manual copy. A library save or state that is
+already missing or damaged is repaired from the backup with no copy kept. A new state for an
+occupied slot, or a second Quick State, is kept as a manual state. Items the library has in
+Recently Deleted, or deleted for good, are left alone and listed. A Build without its ROM is
+restored with its asset row: the report and Check Library Files list it, and importing that
+exact ROM later repairs its file through duplicate import. A ROM file still on disk, such as
+one Replace left behind, is reconnected.
 
 Replace Entire Library is a separate destructive choice. It writes an automatic backup of the
-current library to Exports first, including ROMs when the incoming backup includes them, then
-names it in the confirmation. Restore rechecks the reviewed library and commits records and
-its report in one transaction, with files staged at unused paths. A failure leaves the library
-unchanged. The Migration Report shows additions, skips, conflict resolutions, Builds needing
-ROMs and exclusions; Settings > Library > Last Restore retains it until the next restore.
+current library, with its ROMs, to Exports first. The confirmation names that file and says
+that Replace removes every Game, Build, Save Profile and state and empties Recently Deleted
+for good. Restore rechecks the reviewed library and commits records and its report in one
+transaction, with files staged at unused paths. A failure leaves the library unchanged. The
+Migration Report shows additions, skips, conflict resolutions, Builds needing ROMs, items left
+alone and exclusions; Settings > Library > Last Restore retains it until the next restore.
 
 Game packages merge through the same review. They carry one Game and its data, plus any base
-Builds needed to rebuild its recipes, and offer ROMs only when asked. They do not replace the
-whole library or change App/System settings. Password encryption is a follow-up: archives are
-currently unencrypted, and an encrypted archive is refused before changes. Password support
-will use AES-GCM with PBKDF2-HMAC-SHA256 and warn that a forgotten password cannot be recovered.
-Adapters for Delta, Manic, Afterplay and Playtiles exports come later and report what they
-cannot carry over.
+Builds needed to rebuild its recipes, and offer ROMs only when asked. A package is named for its
+Game. It cannot replace the whole library, change App/System settings or add unrelated Games;
+a package holding such records is refused. Backups have no password, and none is planned; an
+archive marked encrypted is refused before changes. Adapters for Delta, Manic, Afterplay and
+Playtiles exports come later and report what they cannot carry over.
 
 ### Developer Mode (v1.1)
 
