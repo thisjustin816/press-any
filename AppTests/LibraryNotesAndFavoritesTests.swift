@@ -103,11 +103,15 @@ final class LibraryNotesAndFavoritesTests: XCTestCase {
         library.reload()
         XCTAssertEqual(library.visibleGames.map(\.id), [first.gameID, second.gameID])
         try container.repositories.builds.addPlaytime(buildID: second.id, seconds: 125)
-        var profile = try XCTUnwrap(details.saveProfiles.first)
-        profile.totalPlaytimeSeconds = 125
-        profile.sessionCount = 2
-        profile.lastPlayedAt = Date()
-        try container.repositories.saveProfiles.updateSaveProfile(profile)
+        // Import makes no Save Profile; the first Play does. Record the one a played session leaves.
+        let profile = SaveProfile(
+            id: UUID(), gameID: second.gameID, displayName: "Main",
+            totalPlaytimeSeconds: 125, sessionCount: 2,
+            // Whole seconds survive the database's millisecond dates unchanged.
+            lastPlayedAt: Date(timeIntervalSince1970: 1_800_000_000),
+            createdAt: Date(), modifiedAt: Date()
+        )
+        try container.repositories.saveProfiles.insertSaveProfile(profile)
         library.sort = .playtime
         library.reload()
         details.reload()
