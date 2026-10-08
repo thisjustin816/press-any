@@ -20,8 +20,9 @@ migrating later.
 2. Multi-signal development-build matching is built. Metadata provenance,
    Metadata Details and per-step patch input hashes are built, along with Game aliases, rename,
    Build notes, per-Build playtime, favorites, declared save compatibility and the cross-region save check.
-3. Library features on that data: broader cleanup and in-flight protection. Sorting, play
-   statistics, the storage screen and verification on read are built.
+3. Library features on that data: the in-flight protection that remains under Persistence /
+   storage. Sorting, play statistics, the storage screen, verification on read and cache trimming
+   under storage pressure are built.
 4. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
@@ -52,11 +53,11 @@ Open items in each area are in the table, finished ones on the line under it.
 |---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | TestFlight upload on every main build; a GitHub pre-release adds its build to the public group and submits it for Beta App Review, with notes since the previous release (docs/testflight.md); App Store submission, listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1.1 | none |
-| partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
+| done | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; the first game shows "Tap Press Any for the menu" once. v1 has nothing to opt into: crash reports and usage counts (v1.1) bring their own opt-in screens, and Developer Mode its introductions |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |
 | partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1.1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
-| missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow already seeds from `TestROMs/` |
+| partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow seeds from `TestROMs/` and checks 6.5-inch (iPhone 14 Plus) and 6.9-inch (iPhone 17 Pro Max) dimensions (docs/testflight.md); choosing the set, uploading it and any app preview remain with the App Store listing |
 
 Done: A Press Any folder in Files holding Exports, with the library kept in Application Support and
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
@@ -103,15 +104,16 @@ halt_bug, interrupt_time and sound tests) and SameSuite remain.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | done | Storage screen by category, source vs disposable, safe cleanup | v1 | Settings > Library > Storage shows asset categories, Quick Play disk usage and device free space; confirmed cache clearing preserves the running Build's ROM; Recently Deleted has no separate total because purgeable assets cannot be listed without purging |
-| partial | Automatic cleanup of disposable data only | v1 | expired Quick Play sessions and staged copies left by interrupted imports removed at launch (AppContainer init); no generated-cache eviction under pressure |
-| partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | Check Library Files runs the orphan sweep on demand and accepts absent generated ROMs; Storage cache clearing protects the active session's Build image, including shared copies; broader in-flight protection and GC coordination remain |
+| partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | `InFlightFiles` holds files an import, patched Build or variable map places until they're recorded, and a running game's ROM; cache trimming, cache clearing and Check Library Files skip held files, and the sweep looks each orphan up again before removing it. Launch cleanup runs before anything can start. Remaining: other reads of a patched ROM (export, the save check, toolchain refresh, matching a shared patch to its base) aren't held, so trimming at the same moment fails that one action, and a retry rebuilds the ROM, and a patched-on-patched rebuild doesn't hold its intermediate ROM between writing and reading it |
 
 Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed collision-
 safe relative paths; Source-asset dedup; Source vs userData vs cache vs temporary classes; Atomic
 save/state writes; Transactional commit, no orphaned permanent asset on failure; Verify important
 assets when read or used: launch rehashes the ROM and patches, battery saves and save states are
 checked against their recorded SHA-256 before they reach the core, and Check Library Files rehashes
-ROMs and patches on demand.
+ROMs and patches on demand; Automatic cleanup of disposable data only: expired Quick Play sessions
+and staged copies left by interrupted imports go at launch, and patched ROMs are trimmed, least
+recently played first, when less than 500 MB is free, at launch and before a patched ROM is written.
 
 ### Domain model
 
@@ -588,7 +590,7 @@ Add to Library, never before the first frame; Feeds the save compatibility check
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | no-intro-update, toolchain-fingerprints-update, shader-catalog-update, included-games-verify, fixtures, license-audit, privacy-audit, openvgdb-update (disabled) | v1 |  |
+| done | Data and audit pipelines: no-intro-update, toolchain-fingerprints-update, fixtures, license-audit, privacy-audit | v1 | No-Intro data stays a human refresh by policy, with a CI reminder at 90 days and generator tests; toolchain detection is checked against gbtoolsid on every push; `verify-repo-hygiene.sh` checks the test-ROM manifest; the iOS build verifies the privacy manifest; `verify-third-party-notices.py` fails when a pinned dependency or submodule commit is missing from THIRD_PARTY_NOTICES.md. shader-catalog-update and included-games-verify arrive with shaders and included games in v1.1; openvgdb-update stays disabled |
 | partial | MVP gate | MVP | package tests cover required tests 1-13 and 15, and an app test covers 14 (controller disconnect); every physical-iPhone (L4c) check is unchecked |
 
 Done: ci.yml (L1/L2/L3, gbtoolsid differential, test-coverage, hygiene) and ios-build.yml (simulator

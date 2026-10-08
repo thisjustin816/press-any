@@ -74,3 +74,5 @@ jobs:
         run: python3 Scripts/tests/test_generate_known_dumps.py
       - name: Remind when the No-Intro data is due for a refresh
         run: python3 Scripts/check-known-dumps-age.py
+      - name: Check the third-party notices name every pinned dependency
+        run: python3 Scripts/verify-third-party-notices.py

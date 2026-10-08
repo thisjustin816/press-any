@@ -115,6 +115,8 @@ public struct CreatePatchedBuild: Sendable {
     private let detectors: ToolchainDetectorRegistry
     private let patcher: any PatchApplying
     private let transactions: any LibraryTransactionRunner
+    private let trimCache: TrimPatchedROMCache?
+    private let inFlight: InFlightFiles?
     private let now: @Sendable () -> Date
     private let makeID: @Sendable () -> UUID
 
@@ -128,6 +130,8 @@ public struct CreatePatchedBuild: Sendable {
         detectors: ToolchainDetectorRegistry = .standard,
         patcher: any PatchApplying = PatchStackApplier(),
         transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
+        trimCache: TrimPatchedROMCache? = nil,
+        inFlight: InFlightFiles? = nil,
         now: @escaping @Sendable () -> Date = Date.init,
         makeID: @escaping @Sendable () -> UUID = UUID.init
     ) {
@@ -140,6 +144,8 @@ public struct CreatePatchedBuild: Sendable {
         self.detectors = detectors
         self.patcher = patcher
         self.transactions = transactions
+        self.trimCache = trimCache
+        self.inFlight = inFlight
         self.now = now
         self.makeID = makeID
     }
@@ -167,12 +173,16 @@ public struct CreatePatchedBuild: Sendable {
         )
         let baseURL = try resolver.resolve(buildID: baseBuild.id)
         var output = try assetStore.readData(at: baseURL)
+        // Held until the records are in, so Check Library Files doesn't take the placed files
+        // for orphans.
+        let lease = inFlight?.lease()
+        defer { lease?.end() }
         var imported: [ImportedPatch] = []
         var recipeItems: [PatchRecipeItem] = []
 
         do {
             for (position, patchInput) in input.patches.enumerated() {
-                var patch = try importPatch(at: patchInput.url)
+                var patch = try importPatch(at: patchInput.url, lease: lease)
                 // The same file twice in one stack is one source asset.
                 if let earlier = imported.first(where: { $0.asset.contentSHA256 == patch.asset.contentSHA256 }) {
                     patch = ImportedPatch(asset: earlier.asset, needsAssetInsert: false, newlyCommittedURL: nil)
@@ -212,11 +222,14 @@ public struct CreatePatchedBuild: Sendable {
                 throw CreatePatchedBuildError.resultAlreadyInGame(buildName: existing.displayName)
             }
             let generatedURL = assetStore.generatedImageURL(sha256: resultSHA)
+            let generatedPath = try assetStore.managedRelativePath(for: generatedURL)
+            lease?.hold(generatedPath)
             let generatedExistedBefore = assetStore.fileExists(at: generatedURL)
+            // Best effort: the write reports a full disk itself.
+            _ = try? trimCache?.execute(incomingBytes: Int64(output.count))
             try assetStore.writeDataAtomically(output, to: generatedURL)
 
             let timestamp = now()
-            let generatedPath = try assetStore.managedRelativePath(for: generatedURL)
             // Another Build with the same result already records this cache file; share it.
             let existingGenerated = try assets.fetchAsset(relativePath: generatedPath)
             let generatedAsset = existingGenerated ?? ManagedAsset(
@@ -305,7 +318,7 @@ public struct CreatePatchedBuild: Sendable {
         }
     }
 
-    private func importPatch(at sourceURL: URL) throws -> ImportedPatch {
+    private func importPatch(at sourceURL: URL, lease: InFlightFiles.Lease?) throws -> ImportedPatch {
         try ImportSizeLimit.patch.check(fileAt: sourceURL)
         let transactionID = makeID()
         let stagedURL = try assetStore.stageCopy(from: sourceURL, transactionID: transactionID)
@@ -320,9 +333,9 @@ public struct CreatePatchedBuild: Sendable {
         }
 
         let fileExtension = sourceURL.pathExtension.isEmpty ? "patch" : sourceURL.pathExtension
-        let destinationExisted = assetStore.fileExists(
-            at: try assetStore.sourcePatchURL(sha256: sha, extension: fileExtension)
-        )
+        let destinationURL = try assetStore.sourcePatchURL(sha256: sha, extension: fileExtension)
+        lease?.hold(try assetStore.managedRelativePath(for: destinationURL))
+        let destinationExisted = assetStore.fileExists(at: destinationURL)
         let destination = try assetStore.commitSourcePatch(
             stagedURL: stagedURL,
             sha256: sha,

@@ -176,8 +176,20 @@ not treat them as files.
   when asked, since rehashing a big library at every launch would slow startup. Missing generated
   ROMs aren't reported as missing or damaged because launch can rebuild them.
 - Automatic cleanup removes only disposable data: expired Quick Play sessions and staged copies
-  an interrupted import left. It never touches source ROMs, patches, saves, documents, artwork or
-  captures.
+  an interrupted import left, and patched ROMs when space is short. It never touches source ROMs,
+  patches, saves, documents, artwork or captures.
+- When the device has less than 500 MB free for important use, patched ROMs are removed from the
+  cache, least recently played first, until there's 500 MB free again or nothing more can go. A
+  patched ROM's last play is its Builds' newest save state, since every game closed normally
+  leaves an Auto State, or else when it was made. This runs at launch and before a patched ROM is
+  written, and follows Clear Patched ROM Cache's rules: it keeps the running game's ROM and one
+  whose base ROM or patch file is missing.
+- Cleanup leaves alone the files an operation is placing or playing. Expired Quick Play sessions
+  and staged copies go at launch, before any game, import or Quick Play session can start. Imports,
+  patched Builds and variable maps hold the files they place until the library records them, and a
+  running game holds its ROM, so cache trimming, Clear Patched ROM Cache and Check Library Files
+  skip them. Check Library Files also looks a file up again before removing it, since an import
+  may have recorded it during the check.
 - Settings > Library > Storage shows the library's total and the device's available space.
   Your Data lists Game ROMs, Patches, Saves, Save States (including thumbnails), Artwork and
   Other (including variable maps). Rebuildable and Temporary lists Patched ROM Cache and the
@@ -188,8 +200,8 @@ not treat them as files.
   stays, since it's then the only copy. It protects the running session's ROM, including copies
   of a Build that share the file, and refreshes the sizes. Launch and ROM export rebuild a missing
   patched ROM and check its recorded hash. Recently Deleted files count in their asset categories.
-- v1: eviction of generated ROMs under storage pressure and broader protection of in-flight
-  files from cleanup.
+- v1: holding a patched ROM while an export, the save check, toolchain refresh or patch matching
+  reads it, so trimming at that moment can't fail the action.
 
 ### Exports and the Files folder
 
@@ -989,8 +1001,9 @@ exposes them; custom border editing is later.
 - A welcome screen on first launch explains the library, Builds, saves, Quick Play, the game
   menu, exports, and that the app comes with no games. It shows once, again only when its
   content version rises, never in automated runs, and never ahead of a shared file or game.
-  Settings > How Press Any Works reopens it. v1 replaces it with onboarding that covers opt-ins
-  and introduces advanced features in context.
+  Settings > How Press Any Works reopens it, and the first game shows "Tap Press Any for the
+  menu" once. v1 has nothing to opt into; the v1.1 opt-ins (crash reports, usage counts) and
+  Developer Mode bring their own introductions.
 - v1: more sorting by year, developer, publisher, hack author, Build version and date, last
   Build change and manual order; a separate statistics screen (no permanent session log).
 - v1.1: SQLite FTS5 live search across titles, aliases, filenames, hack title, author, version,

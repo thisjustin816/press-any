@@ -55,6 +55,7 @@ public final class EmulationSession: @unchecked Sendable {
     private let settings: SettingsResolver?
     private let launchHistory: SessionLaunchHistory?
     private let transactions: any LibraryTransactionRunner
+    private let inFlight: InFlightFiles?
     private var lastCheckpointNanoseconds: UInt64 = 0
 
     private let lock = NSLock()
@@ -62,6 +63,8 @@ public final class EmulationSession: @unchecked Sendable {
     private var _state: EmulationSessionState = .idle
     private var worker: SessionWorker?
     private var activeContext: LaunchContext?
+    /// Holds the running game's image from launch until the session ends.
+    private var imageLease: InFlightFiles.Lease?
     private var sessionEmulatedNanoseconds: UInt64 = 0
     private var basePlaytimeSeconds: Double = 0
     /// Session time already added to the Build and profile, and whether this session has been counted.
@@ -86,6 +89,7 @@ public final class EmulationSession: @unchecked Sendable {
         transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
         thumbnails: (any FrameImageEncoding)? = nil,
         deletion: LibraryDeletionOperations? = nil,
+        inFlight: InFlightFiles? = nil,
         batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -111,6 +115,7 @@ public final class EmulationSession: @unchecked Sendable {
         self.settings = settings
         self.launchHistory = launchHistory
         self.transactions = transactions
+        self.inFlight = inFlight
         self.batteryCheckIntervalNanoseconds = UInt64(batteryCheckInterval * 1_000_000_000)
     }
 
@@ -144,6 +149,10 @@ public final class EmulationSession: @unchecked Sendable {
             guard profile.gameID == context.gameID else {
                 throw EmulationSessionError.profileGameMismatch
             }
+            // Held before the image is resolved, so trimming the patched ROM cache can't remove it
+            // between resolving and reading it, or while the game runs.
+            let lease = inFlight?.lease()
+            if let image = try assets.fetchAsset(id: build.imageAssetID) { lease?.hold(image.relativePath) }
             let romURL = try imageResolver.resolveImageURL(buildID: build.id)
             let rom = try assetStore.readData(at: romURL)
             let battery = try persistentSaveService.loadPersistentSave(for: profile)
@@ -193,6 +202,7 @@ public final class EmulationSession: @unchecked Sendable {
             lock.withLock {
                 worker = newWorker
                 activeContext = context
+                imageLease = lease
                 sessionEmulatedNanoseconds = 0
                 recordedNanoseconds = 0
                 sessionCounted = false
@@ -208,6 +218,7 @@ public final class EmulationSession: @unchecked Sendable {
             lock.withLock {
                 worker = nil
                 activeContext = nil
+                imageLease = nil
                 latestFrame = nil
                 _state = .idle
             }
@@ -576,6 +587,8 @@ public final class EmulationSession: @unchecked Sendable {
         lock.withLock {
             worker = nil
             activeContext = nil
+            imageLease?.end()
+            imageLease = nil
             latestFrame = nil
             _state = .stopped
         }
