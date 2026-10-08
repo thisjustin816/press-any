@@ -88,8 +88,11 @@ final class ImportReviewViewModel: ObservableObject {
         let initialDestination: Destination
         let titleMatch = analysis.knownDump != nil && analysis.familyGameIDs.count <= 1
             ? GameMatcher.matchingGameID(for: analysis.filenameMetadata, headerTitle: analysis.header.title, in: games) : nil
+        // Only a Game the review can show is preselected, as the title match above only searches it.
         let developmentMatch = analysis.knownDump == nil && analysis.familyGameIDs.isEmpty
-            ? analysis.developmentCandidates.first.flatMap { $0.confidence == .high ? $0.gameID : nil } : nil
+            ? analysis.developmentCandidates.first.flatMap { candidate in
+                candidate.confidence == .high && games.contains { $0.id == candidate.gameID } ? candidate.gameID : nil
+            } : nil
         if let suggested = analysis.suggestedGameID ?? titleMatch ?? developmentMatch {
             initialDestination = .existing(suggested)
         } else {

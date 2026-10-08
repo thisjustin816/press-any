@@ -60,12 +60,18 @@ public enum DevelopmentBuildMatcher {
     /// the analyzer so release-family evidence retains precedence.
     public static func match(arriving: ArrivingSignals, games: [GameSignals]) -> [Candidate] {
         var headerOwners: [String: Set<UUID>] = [:]
+        var bankOwners: [UInt64: Set<UUID>] = [:]
         for game in games {
             for build in game.builds {
                 guard let fingerprint = build.fingerprint else { continue }
                 headerOwners[GameMatcher.normalized(fingerprint.headerTitle), default: []].insert(game.game.id)
+                for hash in fingerprint.bankHashes { bankOwners[hash, default: []].insert(game.game.id) }
             }
         }
+        // A bank already in two Games is engine or library code, such as GB Studio's engine banks,
+        // which unrelated games built with one version share byte for byte. It says nothing about
+        // which project a ROM belongs to.
+        let commonBanks = Set(bankOwners.filter { $0.value.count > 1 }.keys)
         let incoming = arriving.fingerprint
         let headerKey = GameMatcher.normalized(incoming.headerTitle)
         let usableHeader = isDistinctiveHeader(incoming.headerTitle) && (headerOwners[headerKey]?.count ?? 0) <= 1
@@ -73,7 +79,7 @@ public enum DevelopmentBuildMatcher {
                               arriving.filenameMetadata.buildMetadata.baseTitle ?? ""]
             + (usableHeader ? [incoming.headerTitle] : []))
             .map(GameMatcher.normalized).filter { !$0.isEmpty })
-        let banks = Set(incoming.bankHashes)
+        let banks = Set(incoming.bankHashes).subtracting(commonBanks)
         let incomingTools = Tools(arriving.reports)
         var scored: [(candidate: Candidate, qualifiesHigh: Bool)] = []
         for entry in games {
@@ -97,13 +103,17 @@ public enum DevelopmentBuildMatcher {
                 strong.append("title or alias matches")
             }
             let sharedFraction = images.filter { $0.bankSize == incoming.bankSize }.map { image in
-                let other = Set(image.bankHashes)
+                let other = Set(image.bankHashes).subtracting(commonBanks)
                 let smaller = min(banks.count, other.count)
                 return smaller == 0 ? 0 : Double(banks.intersection(other).count) / Double(smaller)
             }.max() ?? 0
             let bankReason = "\(Int((sharedFraction * 100).rounded()))% of ROM banks shared"
-            if sharedFraction >= 0.5 { strong.append(bankReason) }
-            else if sharedFraction >= 0.25 { supporting.append(bankReason) }
+            // Games from one engine share its banks until a second Game makes them common, so with
+            // a shared engine, bank evidence only supports.
+            let sameEngine = tools.contains { !$0.engineKeys.isDisjoint(with: incomingTools.engineKeys) }
+            let banksSupport = sharedFraction >= 0.25 && (sharedFraction < 0.5 || sameEngine)
+            if sharedFraction >= 0.5 && !sameEngine { strong.append(bankReason) }
+            else if banksSupport { supporting.append(bankReason) }
             if images.contains(where: { $0.cartridgeType == incoming.cartridgeType && $0.ramSizeCode == incoming.ramSizeCode }) {
                 supporting.append("same cartridge and RAM")
             }
@@ -112,8 +122,7 @@ public enum DevelopmentBuildMatcher {
                 let engine = matchingTools.engineNames.sorted().first
                 supporting.append("both \(family)\(engine.map { " with \($0)" } ?? "")")
             }
-            let hasQuarter = sharedFraction >= 0.25 && sharedFraction < 0.5
-            guard !strong.isEmpty || (hasQuarter && supporting.count >= 3) else { continue }
+            guard !strong.isEmpty || (banksSupport && supporting.count >= 3) else { continue }
             let candidate = Candidate(gameID: entry.game.id, score: strong.count * strongWeight + supporting.count,
                 confidence: .medium, reasons: strong + supporting)
             scored.append((candidate, strong.count >= 2 || (strong.count == 1 && supporting.count >= 2)))
@@ -138,6 +147,7 @@ public enum DevelopmentBuildMatcher {
         let families: Set<String>
         let highFamilies: Set<String>
         let engineNames: Set<String>
+        let engineKeys: Set<String>
         let familyName: String?
 
         init(_ reports: [ToolchainDetectionReport]) {
@@ -146,6 +156,7 @@ public enum DevelopmentBuildMatcher {
             families = Set(detected.map { GameMatcher.normalized($0.name) })
             highFamilies = Set(detected.filter { $0.confidence == .high }.map { GameMatcher.normalized($0.name) })
             engineNames = Set(components.filter { $0.kind == .engine }.map(\.name))
+            engineKeys = Set(engineNames.map(GameMatcher.normalized))
             familyName = detected.map(\.name).sorted().first
         }
 

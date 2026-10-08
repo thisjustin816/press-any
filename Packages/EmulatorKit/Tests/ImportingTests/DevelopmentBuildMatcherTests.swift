@@ -75,6 +75,32 @@ struct DevelopmentBuildMatcherTests {
         return .init(detector: "synthetic", detectorVersion: "1", corpusRevision: "1", components: components)
     }
 
+    @Test("banks already in two Games don't count")
+    func commonBanks() {
+        // Banks 1 and 2 are in both library Games, so only 3 and 4 tell projects apart.
+        let incoming = fingerprint("SUN", hashes: [1, 2, 3, 4], cart: 9, ram: 9, cgb: 0x80)
+        let first = fingerprint("ONE", hashes: [1, 2, 5, 6])
+        let second = fingerprint("TWO", hashes: [1, 2, 7, 8])
+        let result = DevelopmentBuildMatcher.match(arriving: .init(fingerprint: incoming,
+            filenameMetadata: FilenameMetadataParser.parse(filename: "build.gb")),
+            games: [.init(game: game("First"), builds: [.init(fingerprint: first)]),
+                    .init(game: game("Second"), builds: [.init(fingerprint: second)])])
+        #expect(result.isEmpty)
+    }
+
+    @Test("one engine's shared banks only support")
+    func sameEngineBanks() throws {
+        let engine = report("GBDK", engine: "GB Studio")
+        let incoming = fingerprint("SUN", hashes: [1, 2, 3, 4])
+        let other = fingerprint("STAR", hashes: [1, 2, 3, 9])
+        let candidate = try #require(match(incoming, other, reports: [engine], otherReports: [engine]).first)
+        #expect(candidate.confidence == .medium, "an unrelated game on the same engine is never preselected from banks")
+        #expect(candidate.reasons.contains("75% of ROM banks shared"))
+        // The header title still decides a real rebuild.
+        let rebuild = try #require(match(incoming, fingerprint("SUN", hashes: [1, 2, 3, 9]), reports: [engine], otherReports: [engine]).first)
+        #expect(rebuild.confidence == .high)
+    }
+
     @Test("a header shared across Games is not a strong signal")
     func sharedHeader() {
         let input = fingerprint()
@@ -149,10 +175,11 @@ struct DevelopmentBuildMatcherTests {
     func closeScores() throws {
         let first = game("First")
         let second = game("Second")
+        // Banks 1 and 2 are common to both Games; each shares one of its own with the arriving ROM.
         let candidates = DevelopmentBuildMatcher.match(arriving: .init(fingerprint: fingerprint("NEW"),
             filenameMetadata: FilenameMetadataParser.parse(filename: "build.gb")), games: [
-                .init(game: second, builds: [.init(fingerprint: fingerprint("OLD", cart: 9))]),
-                .init(game: first, builds: [.init(fingerprint: fingerprint("OLD"))]),
+                .init(game: second, builds: [.init(fingerprint: fingerprint("OLD", hashes: [1, 2, 4, 11], cart: 9))]),
+                .init(game: first, builds: [.init(fingerprint: fingerprint("OLD", hashes: [1, 2, 3, 10]))]),
             ])
         #expect(candidates.map(\.gameID) == [first.id, second.id])
         #expect(candidates.allSatisfy { $0.confidence == .medium })
