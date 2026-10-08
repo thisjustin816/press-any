@@ -466,7 +466,7 @@ isn't stored.
   spaces, camel case splits into words and an all-lowercase name is capitalized. Hyphens stay, so
   "Pac-Man" keeps its title.
 - In a name joined by hyphens or underscores, a "v5" or "v1.2" word mid-name becomes the version
-  and the words after it the status: "Serve-Sisters-Coop-v5-Stability" is "Serve Sisters Coop",
+  and the words after it the status: "Moon-Garden-Coop-v5-Stability" is "Moon Garden Coop",
   version 5, status Stability. A dotted number needs no "v": "match-land-live-0.3.0+live1" is
   "Match Land Live", version 0.3.0+live1, with an all-lowercase name capitalized and words such as
   DX and SGB kept in capitals. Underscored or hyphenated numbers after a "v" word are its dotted

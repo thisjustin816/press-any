@@ -342,8 +342,8 @@ final class FilenameMetadataParserTests: XCTestCase {
     }
 
     func testAVersionWordMidNameBecomesTheVersionAndTheWordsAfterItTheVariant() {
-        let hyphenated = FilenameMetadataParser.parse(filename: "Serve-Sisters-Coop-v5-Stability.gbc")
-        XCTAssertEqual(hyphenated.suggestedTitle, "Serve Sisters Coop")
+        let hyphenated = FilenameMetadataParser.parse(filename: "Moon-Garden-Coop-v5-Stability.gbc")
+        XCTAssertEqual(hyphenated.suggestedTitle, "Moon Garden Coop")
         XCTAssertEqual(hyphenated.buildMetadata.versionString, "5")
         XCTAssertEqual(hyphenated.buildMetadata.status, "Stability")
         XCTAssertEqual(hyphenated.suggestedBuildName, "v5 · Stability")
@@ -370,7 +370,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertNil(bare.buildMetadata.status)
         XCTAssertEqual(bare.suggestedBuildName, "v0.3.0+live1")
 
-        for filename in ["Pac-Man.gb", "Serve-Sisters-Coop.gbc", "v2.gb", "Movie-vs-Book.gb", "Mega-Man-2.gb", "1.5.gb"] {
+        for filename in ["Pac-Man.gb", "Moon-Garden-Coop.gbc", "v2.gb", "Movie-vs-Book.gb", "Mega-Man-2.gb", "1.5.gb"] {
             XCTAssertNil(FilenameMetadataParser.parse(filename: filename).buildMetadata.versionString, filename)
         }
         XCTAssertEqual(FilenameMetadataParser.parse(filename: "Pac-Man.gb").suggestedTitle, "Pac-Man")
