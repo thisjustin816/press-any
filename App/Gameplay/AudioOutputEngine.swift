@@ -19,6 +19,10 @@ final class AudioOutputEngine: @unchecked Sendable {
     /// and this decides whether to start it again. Touched only on the main queue.
     private var wantsRunning = false
     private var observers: [NSObjectProtocol] = []
+    /// Called on the main queue when sound is cut off in a way the player should notice: another
+    /// app's audio interrupted the game, or the output device went away, as when headphones come
+    /// out. The owner pauses the game, and pausing keeps the engine from starting itself again.
+    @MainActor var onDisturbance: (() -> Void)?
 
     /// Sets how game sound relates to the silent switch and other apps' audio. Call before start.
     func apply(_ mode: SoundMode) {
@@ -131,7 +135,9 @@ final class AudioOutputEngine: @unchecked Sendable {
     }
 
     /// Headphones, Bluetooth and other route changes reconfigure the engine and stop it, and a call
-    /// or Siri interrupts it. Either way it stays silent until started again.
+    /// or Siri interrupts it. Either way it stays silent until started again, unless the game is
+    /// still meant to run, as when the scene alone was covered. An interruption that begins or an
+    /// output device that goes away also tells the owner, which pauses the game.
     private func observeSystemChanges() {
         guard observers.isEmpty else { return }
         let center = NotificationCenter.default
@@ -148,10 +154,27 @@ final class AudioOutputEngine: @unchecked Sendable {
             queue: .main
         ) { [weak self] notification in
             let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
-            if raw.flatMap(AVAudioSession.InterruptionType.init(rawValue:)) == .ended {
-                self?.restartIfWanted()
+            switch raw.flatMap(AVAudioSession.InterruptionType.init(rawValue:)) {
+            case .began: self?.notifyDisturbance()
+            case .ended: self?.restartIfWanted()
+            default: break
             }
         })
+        observers.append(center.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            let raw = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+            if raw.flatMap(AVAudioSession.RouteChangeReason.init(rawValue:)) == .oldDeviceUnavailable {
+                self?.notifyDisturbance()
+            }
+        })
+    }
+
+    /// Runs on the main queue, which the observers above ask for.
+    private func notifyDisturbance() {
+        MainActor.assumeIsolated { onDisturbance?() }
     }
 
     private func restartIfWanted() {

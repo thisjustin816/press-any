@@ -347,7 +347,7 @@ Done: Pause / Resume from menu with paused overlay.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; thermal or Low Power Mode rate changes not handled |
+| done | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check is still to run |
 | partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1.1 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
 | partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1.1 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v1.1 |  |
@@ -520,13 +520,13 @@ Save Profile and save state rows and to discard a Quick Play session, asking fir
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Audio interruptions pause safely; route changes don't restart the game | v1 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio-only interruption that leaves the scene active still runs silently |
+| done | Audio interruptions pause safely; route changes don't restart the game | v1 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio interruption that leaves the scene active, and an output device going away, pause it too and leave it paused until Resume; the device check is still to run |
 | missing | Thermal-aware degradation | v1.1 |  |
 | missing | Default shader sustains full speed on minimum QA device | v1.1 | no shader yet; device gate not recorded |
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
-after shortfalls); frames run on the display refresh at native speed, up to 120 Hz.
+after shortfalls); frames run on the display refresh at native speed, up to 120 Hz, or 60 Hz in Low Power Mode or under heat.
 
 ### Privacy and telemetry
 

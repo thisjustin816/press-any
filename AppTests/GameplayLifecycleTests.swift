@@ -1,6 +1,7 @@
 import EmulationCore
 import EmulatorDomain
 import GameplayInput
+import AVFoundation
 import GameController
 import UIKit
 import XCTest
@@ -374,6 +375,68 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertTrue(gameplay.isShowingPaused)
         XCTAssertEqual(runtime.foregrounds, 0, "Resume Games doesn't apply to a game the player paused")
         XCTAssertFalse(runtime.failedFrame)
+    }
+
+    /// Posts what iOS posts for an audio interruption or route change, then lets the main queue
+    /// deliver it: until `arrived` holds, or for a fixed wait when nothing is expected to change.
+    private func postAudioNotification(
+        _ name: Notification.Name,
+        _ userInfo: [AnyHashable: Any],
+        until arrived: @autoclosure () -> Bool = false
+    ) {
+        NotificationCenter.default.post(name: name, object: nil, userInfo: userInfo)
+        let deadline = Date().addingTimeInterval(arrived() ? 0 : 0.2)
+        while !arrived(), Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        }
+    }
+
+    func testAnAudioInterruptionPausesTheGameUntilThePlayerResumes() {
+        let (gameplay, runtime, monitor) = makeGameplay(policy: .always)
+        monitor.onInputChanged?(EmulatorInputState(start: true))
+        XCTAssertTrue(gameplay.isRunningFrames)
+
+        postAudioNotification(AVAudioSession.interruptionNotification, [
+            AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.began.rawValue,
+        ], until: !gameplay.isRunningFrames)
+        XCTAssertFalse(gameplay.isRunningFrames, "the scene is still active, but the sound is gone")
+        XCTAssertTrue(gameplay.isShowingPaused)
+        XCTAssertFalse(gameplay.heldInput.start)
+
+        postAudioNotification(AVAudioSession.interruptionNotification, [
+            AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.ended.rawValue,
+            AVAudioSessionInterruptionOptionKey: AVAudioSession.InterruptionOptions.shouldResume.rawValue,
+        ])
+        XCTAssertFalse(gameplay.isRunningFrames, "the player resumes, even when iOS says it may")
+        XCTAssertTrue(gameplay.isShowingPaused)
+        XCTAssertFalse(runtime.failedFrame)
+    }
+
+    func testHeadphonesComingOutPauseButOtherRouteChangesDoNot() {
+        let (gameplay, runtime, _) = makeGameplay(policy: .always)
+        postAudioNotification(AVAudioSession.routeChangeNotification, [
+            AVAudioSessionRouteChangeReasonKey: AVAudioSession.RouteChangeReason.newDeviceAvailable.rawValue,
+        ])
+        XCTAssertTrue(gameplay.isRunningFrames, "a device arriving doesn't interrupt play")
+
+        postAudioNotification(AVAudioSession.routeChangeNotification, [
+            AVAudioSessionRouteChangeReasonKey: AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue,
+        ], until: !gameplay.isRunningFrames)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertTrue(gameplay.isShowingPaused)
+        XCTAssertFalse(runtime.failedFrame)
+    }
+
+    func testAnInterruptionInTheBackgroundLeavesResumeGamesInCharge() {
+        let (gameplay, runtime, _) = makeGameplay(policy: .always)
+        gameplay.sceneWillDeactivate()
+        gameplay.sceneDidEnterBackground()
+        postAudioNotification(AVAudioSession.interruptionNotification, [
+            AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.began.rawValue,
+        ])
+        gameplay.sceneDidActivate()
+        XCTAssertEqual(runtime.foregrounds, 1)
+        XCTAssertTrue(gameplay.isRunningFrames, "a call that sent the app away doesn't also pause it")
     }
 
     func testDeactivatingLetsGoOfHeldButtons() {
