@@ -83,12 +83,31 @@ public enum FilenameMetadataParser {
         var isHack = false
         var recognizedGroups = Set<String>()
         for group in parenthetical + bracketed {
-            if let parts = firstMatchGroups(
+            // A translation as released: "T-En by Jane v1.0", or GoodTools' "T+Eng1.00_Group".
+            if let parts = optionalMatchGroups(
                 in: group,
-                pattern: #"(?i)^\s*(.+?\b(?:hack|patch|fix|translation|mod)\b.*?)\s+by\s+(.+?)\s+v("# + versionPattern + #")\s*$"#
-            ), parts.count == 3 {
-                hackTitle = hackTitle ?? parts[0]
+                pattern: #"(?i)^\s*T[+\-]([A-Za-z]{2,3})(?:\s+by\s+(.+?))?(?:\s+v("# + versionPattern + #"))?\s*$"#
+            ) ?? optionalMatchGroups(
+                in: group,
+                pattern: #"^\s*T[+\-]([A-Za-z]{2,3})([0-9]+(?:\.[0-9]+)*)(?:[_ ](.+?))?\s*$"#
+            ).map({ [$0[0], $0[2], $0[1]] }), parts[1] != nil || parts[2] != nil {
+                translation = translation ?? parts[0]
                 author = author ?? parts[1]
+                version = version ?? parts[2]
+                isHack = true
+                recognizedGroups.insert(group)
+                continue
+            }
+            // A hack as released: "Night patch by Jane v0.3", or "Hack by Jane" with no title of
+            // its own.
+            if let parts = optionalMatchGroups(
+                in: group,
+                pattern: #"(?i)^\s*(.+?)\s+by\s+(.+?)(?:\s+v("# + versionPattern + #"))?\s*$"#
+            ), let title = parts[0], let by = parts[1] {
+                if title.range(of: #"(?i)^(?:ROM\s+)?Hack(?:ed)?$"#, options: .regularExpression) == nil {
+                    hackTitle = hackTitle ?? title
+                }
+                author = author ?? by
                 version = version ?? parts[2]
                 isHack = true
                 recognizedGroups.insert(group)
@@ -356,48 +375,6 @@ public enum FilenameMetadataParser {
         return nil
     }
 
-    public static func canonicalFilename(
-        fileExtension: String,
-        title: String,
-        metadata: BuildImportMetadata,
-        unknownGroups: [String]
-    ) -> String {
-        var groups: [String] = []
-        if let region = metadata.region { groups.append("(\(region))") }
-        if let language = metadata.language { groups.append("(\(language))") }
-        if let revision = metadata.revision { groups.append("(Rev \(revision))") }
-        let normalizedTitle: String
-        if let hackGroup = hackGroup(for: metadata), let baseTitle = metadata.baseTitle {
-            // A hack keeps its base game's name and tags, then one group naming the hack, as hacks
-            // are released: "Base (USA) [Night patch by Jane v0.3]".
-            normalizedTitle = baseTitle
-            groups.append(hackGroup)
-        } else {
-            normalizedTitle = title
-            if let version = metadata.versionString { groups.append("[v\(version)]") }
-            if let author = metadata.author { groups.append("[by \(author)]") }
-        }
-        if let translation = metadata.translation { groups.append("[\(translation) Translation]") }
-        if let status = metadata.status { groups.append("[\(status)]") }
-        groups.append(contentsOf: unknownGroups.map { "[\($0)]" })
-        let stem = ([normalizedTitle] + groups).filter { !$0.isEmpty }.joined(separator: " ")
-        return fileExtension.isEmpty ? stem : "\(stem).\(fileExtension)"
-    }
-
-    /// "[Hack Title by Author v1.2]", leaving out what's unknown, or nil when the hack has neither
-    /// a title of its own nor an author, so the group would say nothing the base title doesn't.
-    private static func hackGroup(for metadata: BuildImportMetadata) -> String? {
-        guard let baseTitle = metadata.baseTitle else { return nil }
-        let ownTitle = metadata.hackTitle.flatMap {
-            $0.localizedCaseInsensitiveCompare(baseTitle) == .orderedSame ? nil : $0
-        }
-        guard ownTitle != nil || metadata.author != nil else { return nil }
-        var parts = [ownTitle ?? "Hack"]
-        if let author = metadata.author { parts.append("by \(author)") }
-        if let version = metadata.versionString { parts.append("v\(version)") }
-        return "[\(parts.joined(separator: " "))]"
-    }
-
     private static func canonicalStatus(_ value: String) -> String? {
         if let parts = firstMatchGroups(
             in: value,
@@ -422,6 +399,16 @@ public enum FilenameMetadataParser {
 
     private static func firstCapture(in value: String, patterns: [String]) -> String? {
         patterns.lazy.compactMap { captures(in: value, pattern: $0).first }.first
+    }
+
+    /// Every capture group of the first match, nil where a group took no part in it.
+    private static func optionalMatchGroups(in value: String, pattern: String) -> [String?]? {
+        guard let expression = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(value.startIndex..<value.endIndex, in: value)
+        guard let match = expression.firstMatch(in: value, range: range) else { return nil }
+        return (1..<match.numberOfRanges).map { index in
+            Range(match.range(at: index), in: value).map { String(value[$0]) }
+        }
     }
 
     private static func firstMatchGroups(in value: String, pattern: String) -> [String]? {

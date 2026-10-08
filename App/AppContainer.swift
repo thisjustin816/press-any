@@ -207,7 +207,8 @@ final class AppContainer {
             profiles: repositories.saveProfiles,
             assets: repositories.assets,
             assetStore: fileStore,
-            images: launchImageResolver
+            images: launchImageResolver,
+            knownDumps: knownDumps
         )
         exportsDirectory = URL.documentsDirectory.appendingPathComponent("Exports", isDirectory: true)
         toolchainRefresh = RefreshToolchainReports(
