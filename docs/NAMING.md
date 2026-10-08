@@ -8,6 +8,8 @@ technical identifiers, and which values must never carry a brand.
 | Kind | Value | Where it lives |
 |---|---|---|
 | Product name (user-facing) | Press Any | `INFOPLIST_KEY_CFBundleDisplayName` in `project.yml`; the app reads it through `AppBrand.displayName` |
+| App Store and TestFlight name | Press Any: Retro Game Emulator | App Store Connect, App Information. Up to 30 characters; Apple's search weighs the name heavily. Never names Game Boy, Nintendo or other trademarks |
+| App Store subtitle | Every build, every save | App Store Connect, App Information. Up to 30 characters, shown under the name |
 | Internal technical name | `PressAny` | Xcode project, app target, scheme and `PRODUCT_NAME` in `project.yml`; `PROJECT_NAME` in the `Makefile`; `App/PressAnyApp.swift` |
 | Test target | `PressAnyTests` | `project.yml`, `AppTests/PressAnyAppTests.swift` |
 | Bundle identifier | `com.thisjustin816.PressAny` | `PRODUCT_BUNDLE_IDENTIFIER` in `project.yml`; a developer can append a local `BUNDLE_ID_SUFFIX` in the git-ignored `Config/Signing.local.xcconfig` |
