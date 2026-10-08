@@ -10,6 +10,9 @@ struct BuildTechnicalInfoView: View {
 
     @State private var reports: [ToolchainDetectionReport]?
     @State private var errorMessage: String?
+    @State private var patchItems: [PatchRecipeItem] = []
+    @State private var patchStepsError: String?
+    @State private var patchFilenames: [UUID: String] = [:]
     @State private var variableMaps: [BuildVariableMap] = []
     @Environment(\.dismiss) private var dismiss
 
@@ -53,6 +56,26 @@ struct BuildTechnicalInfoView: View {
                     SHA256Row(hash: build.imageSHA256)
                 }
 
+                if build.sourceKind == .patchRecipe {
+                    if let patchStepsError {
+                        Section("Patch Steps") {
+                            Text(patchStepsError)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                    ForEach(patchItems, id: \.position) { item in
+                        Section("Patch Step \(item.position + 1)") {
+                            LabeledContent("File", value: patchFilenames[item.patchAssetID] ?? "Missing patch")
+                            LabeledContent("Status", value: item.enabled ? "Enabled" : "Disabled")
+                            if let hash = item.expectedInputSHA256 {
+                                SHA256Row(hash: hash, title: "Expected Input SHA-256")
+                            } else {
+                                LabeledContent("Expected Input SHA-256", value: "Not recorded")
+                            }
+                        }
+                    }
+                }
+
                 if let reports {
                     ToolchainSection(reports: reports)
                 } else if let errorMessage {
@@ -93,6 +116,20 @@ struct BuildTechnicalInfoView: View {
     }
 
     private func refresh() async {
+        if build.sourceKind == .patchRecipe {
+            do {
+                let recipe = try container.repositories.patchRecipes.fetchPatchRecipe(resultBuildID: build.id)
+                patchItems = (recipe?.items ?? []).sorted { $0.position < $1.position }
+                for item in patchItems {
+                    if let asset = try container.repositories.assets.fetchAsset(id: item.patchAssetID) {
+                        patchFilenames[item.patchAssetID] = asset.originalFilename
+                            ?? URL(fileURLWithPath: asset.relativePath).lastPathComponent
+                    }
+                }
+            } catch {
+                patchStepsError = "Could not read the patch recipe: \(error.localizedDescription)"
+            }
+        }
         variableMaps = (try? container.repositories.variableMaps.fetchVariableMaps(buildID: build.id)) ?? []
         let refresh = container.toolchainRefresh
         let build = build

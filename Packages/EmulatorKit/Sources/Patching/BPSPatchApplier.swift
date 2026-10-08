@@ -46,16 +46,16 @@ public struct BPSPatchApplier: Sendable {
         let targetSize = try reader.readInt()
         let metadataSize = try reader.readInt()
 
-        guard ignoringBaseMismatch || sourceSize == source.count else {
-            throw PatchError.sourceSizeMismatch(expected: sourceSize, actual: source.count)
-        }
         guard targetSize <= Self.maximumTargetSize else { throw PatchError.targetTooLarge(targetSize) }
         guard metadataSize <= trailerStart - reader.index else { throw PatchError.malformedPatch }
         reader.index += metadataSize
 
         let actualSourceCRC = CRC32.checksum(source)
-        guard ignoringBaseMismatch || actualSourceCRC == expectedSourceCRC else {
-            throw PatchError.sourceCRC32Mismatch(expected: expectedSourceCRC, actual: actualSourceCRC)
+        guard ignoringBaseMismatch || (sourceSize == source.count && actualSourceCRC == expectedSourceCRC) else {
+            throw PatchError.sourceMismatch(
+                expectedSize: sourceSize, actualSize: source.count,
+                expectedCRC32: expectedSourceCRC, actualCRC32: actualSourceCRC
+            )
         }
 
         let sourceBytes = [UInt8](source)

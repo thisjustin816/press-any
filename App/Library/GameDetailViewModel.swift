@@ -25,6 +25,7 @@ final class GameDetailViewModel: ObservableObject {
         let id = UUID()
         let urls: [URL]
         let build: Build
+        let details: String
     }
 
     let gameID: UUID
@@ -363,8 +364,8 @@ final class GameDetailViewModel: ObservableObject {
             ))
             reload()
             infoMessage = "Created \(patched.displayName) from \(build.displayName)."
-        } catch PatchError.sourceCRC32Mismatch, PatchError.sourceSizeMismatch {
-            baseMismatch = PendingPatch(urls: urls, build: build)
+        } catch let error as PatchError where error.baseMismatchDescription != nil {
+            baseMismatch = PendingPatch(urls: urls, build: build, details: error.baseMismatchDescription ?? "")
         } catch {
             errorMessage = error.localizedDescription
         }

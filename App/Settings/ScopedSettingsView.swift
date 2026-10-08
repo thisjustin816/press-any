@@ -189,17 +189,40 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     @State private var inherited: ResolvedSetting?
     @State private var errorMessage: String?
 
+    /// The value in effect stays on the right whatever the note says. A menu-style Picker moves its
+    /// value under the title once the title and note need the width, so the row is the label of a
+    /// menu that holds the Picker, and a tap anywhere on it opens the menu as before.
     var body: some View {
-        Picker(selection: $choice) {
-            Text("Inherit (\(label(for: inheritedValue)))").tag(Choice.inherit)
-            ForEach(options.indices, id: \.self) { index in
-                Text(options[index].1).tag(Choice.value(options[index].0))
+        Menu {
+            Picker(title, selection: $choice) {
+                Text("Inherit (\(label(for: inheritedValue)))").tag(Choice.inherit)
+                ForEach(options.indices, id: \.self) { index in
+                    Text(options[index].1).tag(Choice.value(options[index].0))
+                }
             }
         } label: {
-            Text(title)
-            Text(errorMessage ?? note)
-                .foregroundStyle(errorMessage == nil ? Color.secondary : Color.red)
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .foregroundStyle(Color.primary)
+                    Text(errorMessage ?? note)
+                        .font(.subheadline)
+                        .foregroundStyle(errorMessage == nil ? Color.secondary : Color.red)
+                }
+                .multilineTextAlignment(.leading)
+                Spacer(minLength: 12)
+                HStack(spacing: 4) {
+                    Text(label(for: effectiveValue))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .imageScale(.small)
+                }
+                .foregroundStyle(Color.secondary)
+                .fixedSize()
+            }
+            .contentShape(Rectangle())
         }
+        .accessibilityLabel(title)
+        .accessibilityValue("\(label(for: effectiveValue)), \(errorMessage ?? note)")
         .onAppear(perform: load)
         .onChange(of: choice) { _, newValue in save(newValue) }
     }
@@ -208,15 +231,22 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         inherited.flatMap { try? $0.decode(Value.self) } ?? defaultValue
     }
 
-    /// Where the value comes from, under the setting's title.
+    private var effectiveValue: Value {
+        switch choice {
+        case .inherit: inheritedValue
+        case .value(let value): value
+        }
+    }
+
+    /// Where the value comes from, under the setting's title. What it overrides shows in the menu,
+    /// as Inherit's value.
     private var note: String {
-        let source = inherited?.source
         switch choice {
         case .inherit:
+            let source = inherited?.source
             return source == nil ? "Default" : "From \(sourceName(source))"
         case .value:
-            let other = label(for: inheritedValue)
-            return source == nil ? "Set here; the default is \(other)" : "Set here, instead of \(other) from \(sourceName(source))"
+            return "Set here"
         }
     }
 

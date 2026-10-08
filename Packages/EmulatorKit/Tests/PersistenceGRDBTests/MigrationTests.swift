@@ -1,3 +1,4 @@
+import EmulatorApplication
 import EmulatorDomain
 import Foundation
 import GRDB
@@ -9,7 +10,7 @@ struct MigrationTests {
     @Test("provenance upgrade preserves every populated table and adds no rows", arguments: [false, true])
     func metadataProvenanceUpgrade(includingDeletedRecords: Bool) throws {
         let database = try AppDatabase.inMemory()
-        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v11-save-compatibility")
+        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v13-patch-step-inputs")
         let fixture = try legacyFixture(in: database, includingDeletedRecords: includingDeletedRecords)
         try database.writer.write { db in
             let declaration = BuildSaveDeclaration(between: fixture.build.id, and: fixture.patchedBuild.id, compatibility: .sharesSaves)
@@ -30,7 +31,7 @@ struct MigrationTests {
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM game_metadata_provenance") == 0)
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_metadata_provenance") == 0)
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").last == "v1-v14-metadata-provenance")
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").contains("v1-v14-metadata-provenance"))
         }
     }
 
@@ -62,8 +63,9 @@ struct MigrationTests {
                 #expect(upgraded == rows, "migration changed existing rows in \(table)")
             }
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(4) == [
-                "v1-v9-game-identity", "v1-v10-library-model", "v1-v11-save-compatibility", "v1-v14-metadata-provenance",
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(6) == [
+                "v1-v9-game-identity", "v1-v10-library-model", "v1-v11-save-compatibility",
+                "v1-v12-system-screen-colors", "v1-v13-patch-step-inputs", "v1-v14-metadata-provenance",
             ])
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_save_declarations") == 0)
         }
@@ -86,6 +88,29 @@ struct MigrationTests {
             try repositories.deletions.restoreDeletion(id: deletion.id)
         }
         #expect(try repositories.builds.fetchBuild(id: fixture.patchedBuild.id) == fixture.patchedBuild)
+    }
+
+    @Test("Screen Colors chosen in App Settings move to the system each applies to")
+    func systemScreenColorsUpgrade() throws {
+        let database = try AppDatabase.inMemory()
+        try AppDatabase.migrator.migrate(database.writer, upTo: "v1-v11-save-compatibility")
+        let store = database.makeRepositories().settings
+        try store.set(DMGPalette.pocket, key: SettingKey.dmgPalette.rawValue, scope: .app)
+        try store.set(ColorCorrection.off, key: SettingKey.colorCorrection.rawValue, scope: .app)
+        try store.set(ColorCorrection.accurate, key: SettingKey.colorCorrection.rawValue, scope: .system(.gameBoyColor))
+        try store.set(true, key: SettingKey.skipBootAnimation.rawValue, scope: .app)
+
+        try database.migrate()
+
+        let palette = try store.valueJSON(key: SettingKey.dmgPalette.rawValue, scope: .system(.gameBoy))
+        #expect(palette == String(decoding: try JSONEncoder().encode(DMGPalette.pocket), as: UTF8.self))
+        let correction = try store.valueJSON(key: SettingKey.colorCorrection.rawValue, scope: .system(.gameBoyColor))
+        #expect(correction == String(decoding: try JSONEncoder().encode(ColorCorrection.accurate), as: UTF8.self),
+            "a system's own value wins over the App Settings one")
+        #expect(try store.valueJSON(key: SettingKey.dmgPalette.rawValue, scope: .app) == nil)
+        #expect(try store.valueJSON(key: SettingKey.colorCorrection.rawValue, scope: .app) == nil)
+        #expect(try store.valueJSON(key: SettingKey.dmgPalette.rawValue, scope: .system(.gameBoyColor)) == nil)
+        #expect(try store.valueJSON(key: SettingKey.skipBootAnimation.rawValue, scope: .app) == "true")
     }
 
     @Test("existing Base markers collapse to one and the database enforces that role")
