@@ -93,10 +93,12 @@ public struct LibraryBackupService: Sendable {
 
     public func review(_ prepared: PreparedLibraryRestore) throws -> LibraryRestoreReview {
         try repository.readSnapshot { snapshot in
-            var merge = BackupMerge(archive: prepared.snapshot, library: snapshot)
+            let (archive, leftAlone) = prepared.snapshot.leavingOut(snapshot.retained.recordIDs)
+            var merge = BackupMerge(archive: archive, library: snapshot)
             _ = try merge.merged()
             return LibraryRestoreReview(snapshot: snapshot, added: merge.added, skipped: merge.skipped,
-                conflicts: merge.conflicts, missingROMs: missingROMs(in: prepared.snapshot, files: prepared.files, library: snapshot))
+                conflicts: merge.conflicts, missingROMs: missingROMs(in: archive, files: prepared.files, library: snapshot),
+                leftAlone: leftAlone)
         }
     }
 
@@ -118,14 +120,17 @@ public struct LibraryBackupService: Sendable {
         if replaceEntireLibrary {
             guard !prepared.manifest.isGamePackage, let safetyBackupURL else { throw LibraryBackupError.safetyBackupRequired }
             let safety = try prepare(from: safetyBackupURL)
-            try requireUnchanged(safety.snapshot, review.snapshot.backupOmittingExternalLineage())
+            try requireUnchanged(safety.snapshot, review.snapshot.backupOmittingExternalLineage(), includingRetained: false)
             guard safety.manifest.includesROMs == prepared.manifest.includesROMs else { throw LibraryBackupError.safetyBackupRequired }
         }
         let library = try repository.readSnapshot { $0 }
         try requireUnchanged(library, review.snapshot)
-        var merge = BackupMerge(archive: prepared.snapshot, library: replaceEntireLibrary ? LibraryBackupSnapshot() : library)
+        // Replacement clears Recently Deleted, so nothing in the backup has to be left alone.
+        let (archive, leftAlone) = replaceEntireLibrary
+            ? (prepared.snapshot, []) : prepared.snapshot.leavingOut(library.retained.recordIDs)
+        var merge = BackupMerge(archive: archive, library: replaceEntireLibrary ? LibraryBackupSnapshot() : library)
         if !replaceEntireLibrary {
-            for incoming in prepared.snapshot.builds {
+            for incoming in archive.builds {
                 if let existing = library.builds.first(where: { $0.id == incoming.id }),
                    existing.imageSHA256 != incoming.imageSHA256 || existing.sourceKind != incoming.sourceKind {
                     throw LibraryBackupError.invalidArchive("a Build identity refers to different ROM bytes")
@@ -133,7 +138,7 @@ public struct LibraryBackupService: Sendable {
             }
         }
         let merged = try merge.merged(choices: choices)
-        let plan = try BackupRestorePlanner(store: store).plan(prepared: prepared,
+        let plan = try BackupRestorePlanner(store: store).plan(prepared: prepared, archive: archive,
             library: library,
             merged: merged, choices: choices, replacing: replaceEntireLibrary)
         let lease = inFlight.lease()
@@ -166,10 +171,11 @@ public struct LibraryBackupService: Sendable {
                 resolutions: merge.conflicts.compactMap { conflict in
                     choices[conflict.id].map { RestoreResolution(record: "\(conflict.kind): \(conflict.name)", choice: $0) }
                 }, missingROMs: missingROMs(in: plan.snapshot, files: plan.files, library: plan.snapshot),
-                notCarriedOver: prepared.manifest.notCarriedOver)
+                notCarriedOver: prepared.manifest.notCarriedOver + leftAloneNote(leftAlone) + plan.notes)
             let result = try repository.commitSnapshot(replacingLibrary: replaceEntireLibrary) { current in
                 try requireUnchanged(current, review.snapshot)
-                try verifyCurrentUserFiles(current)
+                // The plan reuses rows that Recently Deleted records hold.
+                guard current.retained.assets == library.retained.assets else { throw LibraryBackupError.libraryChanged }
                 return (plan.snapshot, report, report)
             }
             progress(1)
@@ -237,19 +243,18 @@ public struct LibraryBackupService: Sendable {
             && (includesROMs || asset.kind != .sourceImage)
     }
 
-    private func requireUnchanged(_ current: LibraryBackupSnapshot, _ reviewed: LibraryBackupSnapshot) throws {
-        guard try BackupSnapshotCodec.canonical(current) == BackupSnapshotCodec.canonical(reviewed) else {
+    private func requireUnchanged(_ current: LibraryBackupSnapshot, _ reviewed: LibraryBackupSnapshot,
+                                  includingRetained: Bool = true) throws {
+        guard try BackupSnapshotCodec.canonical(current) == BackupSnapshotCodec.canonical(reviewed),
+              !includingRetained || current.retained.recordIDs == reviewed.retained.recordIDs else {
             throw LibraryBackupError.libraryChanged
         }
     }
 
-    private func verifyCurrentUserFiles(_ snapshot: LibraryBackupSnapshot) throws {
-        for asset in snapshot.assets where asset.storageClass == .userData {
-            guard let url = try? safeManagedURL(asset.relativePath),
-                  let bytes = try? store.readData(at: url), store.hashData(bytes) == asset.contentSHA256 else {
-                throw LibraryBackupError.libraryChanged
-            }
-        }
+    private func leftAloneNote(_ names: [String]) -> [String] {
+        guard !names.isEmpty else { return [] }
+        let count = names.count == 1 ? "1 item" : "\(names.count) items"
+        return ["\(count) in Recently Deleted or deleted for good were left alone: \(names.joined(separator: ", "))"]
     }
 
     private func missingROMs(in snapshot: LibraryBackupSnapshot, files: [String: Data],

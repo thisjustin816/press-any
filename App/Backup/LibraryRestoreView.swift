@@ -83,6 +83,13 @@ struct LibraryRestoreView: View {
                 } header: { Text("Conflicts") } footer: { Text("Replacing a save keeps its current version as before restore. Both creates a separate copy.") }
             }
             MissingROMSection(builds: review.missingROMs)
+            if !review.leftAlone.isEmpty {
+                Section {
+                    ForEach(review.leftAlone, id: \.self) { Text($0) }
+                } header: { Text("Left Alone (\(review.leftAlone.count))") } footer: {
+                    Text("These items are in Recently Deleted or were deleted for good. Merge leaves them alone.")
+                }
+            }
             if !prepared.manifest.isGamePackage {
                 Section {
                     Button("Replace Entire Library...", role: .destructive) { Task { await model.prepareReplacement() } }

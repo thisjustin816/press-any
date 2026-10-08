@@ -5,57 +5,66 @@ import Foundation
 struct BackupRestorePlan {
     var snapshot: LibraryBackupSnapshot
     var files: [String: Data]
+    /// Player-facing notes for the report, such as a damaged library file that had no copy kept.
+    var notes: [String] = []
 }
 
 struct BackupRestorePlanner {
     let store: any AssetStore
 
-    func plan(prepared: PreparedLibraryRestore, library: LibraryBackupSnapshot,
+    /// `archive` is the backup's snapshot without the records the library left alone.
+    func plan(prepared: PreparedLibraryRestore, archive: LibraryBackupSnapshot, library: LibraryBackupSnapshot,
               merged: LibraryBackupSnapshot, choices: [String: RestoreChoice], replacing: Bool) throws -> BackupRestorePlan {
-        let archive = prepared.snapshot
         var result = merged
         var files: [String: Data] = [:]
+        var notes: [String] = []
         var assets = library.assets
+        // Recently Deleted records keep their rows, which still own their paths and hashes.
+        let retained = library.retained.assets
         var mapping: [UUID: UUID] = [:]
         func selected(_ kind: String, _ id: UUID, _ existingIDs: Set<UUID>) -> Bool {
             replacing || !existingIDs.contains(id) || choices["\(kind)/\(id.uuidString)"] == .archive
         }
+        func pathIsTaken(_ path: String) -> Bool {
+            (assets + retained).contains { $0.relativePath.lowercased() == path.lowercased() } || files[path] != nil
+        }
+        /// Puts archive bytes back for a row whose file is missing or damaged. A damaged file is
+        /// never overwritten, so the row moves to a new path.
+        func repair(_ row: ManagedAsset, with incoming: ManagedAsset) throws {
+            guard let bytes = prepared.files[incoming.relativePath], !validFile(row) else { return }
+            var repaired = row
+            if store.fileExists(at: try store.managedURL(relativePath: row.relativePath)) {
+                repaired = row.backupCopy(path: restoredPath(incoming))
+            }
+            assets.removeAll { $0.id == repaired.id }
+            assets.append(repaired)
+            files[repaired.relativePath] = bytes
+        }
         for incoming in archive.assets {
             let existing = assets.first { $0.id == incoming.id }
-            if let same = assets.first(where: {
-                ($0.kind == .sourceImage || $0.kind == .sourcePatch || $0.kind == .variableMap || $0.kind == .generatedImage)
-                    && $0.kind == incoming.kind && $0.contentSHA256 == incoming.contentSHA256
-            }) {
+            if incoming.storageClass == .source || incoming.kind == .generatedImage,
+               let same = (assets + retained).first(where: { $0.kind == incoming.kind && $0.contentSHA256 == incoming.contentSHA256 }) {
                 mapping[incoming.id] = same.id
-                if let bytes = prepared.files[incoming.relativePath], !validFile(same) {
-                    let url = try store.managedURL(relativePath: same.relativePath)
-                    guard !store.fileExists(at: url) else { throw LibraryBackupError.missingLibraryFile(same.relativePath) }
-                    files[same.relativePath] = bytes
-                }
+                if !assets.contains(where: { $0.id == same.id }) { assets.append(same) }
+                try repair(same, with: incoming)
                 continue
             }
             if let existing, existing.contentSHA256 == incoming.contentSHA256 && existing.kind == incoming.kind {
                 mapping[incoming.id] = existing.id
-                if let bytes = prepared.files[incoming.relativePath], !validFile(existing) {
-                    // Repair to a new path so a failed database write leaves the old file alone.
-                    let path = restoredPath(incoming)
-                    let replacement = existing.backupCopy(path: path)
-                    assets.removeAll { $0.id == replacement.id }
-                    assets.append(replacement)
-                    files[path] = bytes
-                }
+                try repair(existing, with: incoming)
                 continue
             }
-            let id = existing == nil ? incoming.id : UUID()
+            let id = existing == nil && !retained.contains(where: { $0.id == incoming.id }) ? incoming.id : UUID()
             var path = incoming.relativePath
             let url = try store.managedURL(relativePath: path)
-            if store.fileExists(at: url) || assets.contains(where: { $0.relativePath.lowercased() == path.lowercased() }) {
+            let adoptable = !pathIsTaken(path) && validFile(incoming)
+            if !adoptable && (store.fileExists(at: url) || pathIsTaken(path)) {
                 path = restoredPath(incoming)
             }
             let imported = incoming.backupCopy(id: id, path: path)
             mapping[incoming.id] = imported.id
             assets.append(imported)
-            if let bytes = prepared.files[incoming.relativePath] { files[path] = bytes }
+            if !adoptable, let bytes = prepared.files[incoming.relativePath] { files[path] = bytes }
         }
         func mapped(_ id: UUID) -> UUID { mapping[id] ?? id }
         let gameIDs = Set(library.games.map(\.id)), buildIDs = Set(library.builds.map(\.id))
@@ -67,7 +76,8 @@ struct BackupRestorePlanner {
             return value
         }
         result.builds = result.builds.map { value in
-            selected("Build", value.id, buildIDs) ? value.backupCopy(imageAssetID: mapped(value.imageAssetID)) : value
+            selected("Build", value.id, buildIDs)
+                ? value.backupCopy(imageAssetID: mapped(value.imageAssetID), parentBuildID: value.parentBuildID) : value
         }
         result.profiles = result.profiles.map { value in
             var value = value
@@ -97,9 +107,11 @@ struct BackupRestorePlanner {
             files[path] = bytes
             return copy.id
         }
-        func savedBytes(_ asset: ManagedAsset) throws -> Data {
-            let bytes = try store.readData(at: store.managedURL(relativePath: asset.relativePath))
-            guard store.hashData(bytes) == asset.contentSHA256 else { throw LibraryBackupError.missingLibraryFile(asset.relativePath) }
+        /// The library's current bytes, checked against the reviewed hash. A missing or damaged
+        /// file has nothing left to keep, so the restore can repair over it.
+        func savedBytes(_ asset: ManagedAsset) -> Data? {
+            guard let url = try? store.managedURL(relativePath: asset.relativePath), store.fileExists(at: url),
+                  let bytes = try? store.readData(at: url), store.hashData(bytes) == asset.contentSHA256 else { return nil }
             return bytes
         }
         if !replacing {
@@ -117,7 +129,13 @@ struct BackupRestorePlanner {
                     if choice == .keepBoth {
                         guard let file = prepared.files[sourceAsset.relativePath] else { throw LibraryBackupError.missingFile(sourceAsset.relativePath) }
                         bytes = file
-                    } else { bytes = try savedBytes(sourceAsset) }
+                    } else {
+                        guard let saved = savedBytes(sourceAsset) else {
+                            notes.append("The library's save for \(current.displayName) was missing or damaged, so no before restore copy was kept.")
+                            continue
+                        }
+                        bytes = saved
+                    }
                     assetID = copyAsset(sourceAsset, path: try store.managedRelativePath(for: store.persistentSaveURL(profileID: id)), bytes: bytes)
                 }
                 let suffix = choice == .keepBoth ? " from backup" : " before restore"
@@ -150,13 +168,19 @@ struct BackupRestorePlanner {
                 if choice == .keepBoth {
                     guard let file = prepared.files[original.relativePath] else { throw LibraryBackupError.missingFile(original.relativePath) }
                     bytes = file
-                } else { bytes = try savedBytes(original) }
+                } else {
+                    guard let saved = savedBytes(original) else {
+                        notes.append("The library's state \(current.displayName) was missing or damaged, so no before restore copy was kept.")
+                        continue
+                    }
+                    bytes = saved
+                }
                 let id = UUID()
                 let assetID = copyAsset(original, path: try store.managedRelativePath(for: store.stateURL(stateID: id)), bytes: bytes)
                 var thumbnailID: UUID?
-                if let oldID = state.screenshotAssetID, let thumbnail = sourceAssets.first(where: { $0.id == oldID }) {
-                    let bytes = try choice == .keepBoth ? prepared.files[thumbnail.relativePath] : savedBytes(thumbnail)
-                    if let bytes { thumbnailID = copyAsset(thumbnail, path: restoredPath(thumbnail), bytes: bytes) }
+                if let oldID = state.screenshotAssetID, let thumbnail = sourceAssets.first(where: { $0.id == oldID }),
+                   let bytes = choice == .keepBoth ? prepared.files[thumbnail.relativePath] : savedBytes(thumbnail) {
+                    thumbnailID = copyAsset(thumbnail, path: restoredPath(thumbnail), bytes: bytes)
                 }
                 result.states.append(state.backupCopy(id: id, assetID: assetID, thumbnailID: thumbnailID,
                     asManual: true, label: "\(state.displayName)\(choice == .keepBoth ? " from backup" : " before restore")"))
@@ -172,7 +196,7 @@ struct BackupRestorePlanner {
         let paths = Set(result.assets.map(\.relativePath))
         files = files.filter { paths.contains($0.key) }
         try BackupSnapshotCodec.validate(result, allowExternalLineage: !replacing)
-        return BackupRestorePlan(snapshot: result, files: files)
+        return BackupRestorePlan(snapshot: result, files: files, notes: notes)
     }
 
     private func validFile(_ asset: ManagedAsset) -> Bool {

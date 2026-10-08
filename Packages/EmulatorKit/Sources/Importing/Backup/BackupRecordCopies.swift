@@ -11,20 +11,6 @@ extension ManagedAsset {
     }
 }
 
-extension Build {
-    func backupCopy(imageAssetID: UUID) -> Build {
-        Build(id: id, gameID: gameID, system: system, displayName: displayName,
-            imageAssetID: imageAssetID, imageSHA256: imageSHA256, imageSHA1: imageSHA1,
-            sourceKind: sourceKind, parentBuildID: parentBuildID,
-            isBase: isBase, region: region, language: language, revision: revision,
-            versionString: versionString, versionSortKey: versionSortKey,
-            baseGameReference: baseGameReference, baseTitle: baseTitle, hackTitle: hackTitle,
-            author: author, translation: translation, status: status, notes: notes,
-            totalPlaytimeSeconds: totalPlaytimeSeconds, preferredSaveProfileID: preferredSaveProfileID,
-            corePin: corePin, createdAt: createdAt, modifiedAt: modifiedAt)
-    }
-}
-
 extension SaveProfile {
     func backupCopy(id: UUID, name: String, assetID: UUID?) -> SaveProfile {
         SaveProfile(id: id, gameID: gameID, displayName: name, badge: badge,
@@ -102,6 +88,55 @@ extension LibraryBackupSnapshot {
         }
         result.assets = assets.filter { result.referencedAssetIDs.contains($0.id) }
         return result
+    }
+
+    /// Drops records the library keeps in Recently Deleted or deleted for good, with everything
+    /// that depends on them, and names the dropped records the player would recognize.
+    func leavingOut(_ deletedIDs: Set<UUID>) -> (snapshot: LibraryBackupSnapshot, leftAlone: [String]) {
+        var leftAlone: [String] = []
+        leftAlone += games.filter { deletedIDs.contains($0.id) }.map { "\($0.primaryTitle) (Game)" }
+        leftAlone += builds.filter { deletedIDs.contains($0.id) }.map { "\($0.displayName) (Build)" }
+        leftAlone += profiles.filter { deletedIDs.contains($0.id) }.map { "\($0.displayName) (Save Profile)" }
+        leftAlone += states.filter { deletedIDs.contains($0.id) }.map { "\($0.displayName) (Save State)" }
+        guard !leftAlone.isEmpty || recipes.contains(where: { deletedIDs.contains($0.id) })
+                || variableMaps.contains(where: { deletedIDs.contains($0.id) }) else { return (self, []) }
+        var result = self
+        result.games = games.filter { !deletedIDs.contains($0.id) }
+        var gameIDs = Set(result.games.map(\.id))
+        result.builds = builds.filter { !deletedIDs.contains($0.id) && gameIDs.contains($0.gameID) }
+        result.recipes = recipes.filter { !deletedIDs.contains($0.id) }
+        // A patched Build cannot stay without its recipe, nor a recipe without both Builds.
+        while true {
+            let buildIDs = Set(result.builds.map(\.id))
+            result.recipes = result.recipes.filter { buildIDs.contains($0.resultBuildID) && buildIDs.contains($0.baseBuildID) }
+            let resultIDs = Set(result.recipes.map(\.resultBuildID))
+            let kept = result.builds.filter { $0.sourceKind != .patchRecipe || resultIDs.contains($0.id) }
+            if kept.count == result.builds.count { break }
+            result.builds = kept
+        }
+        gameIDs = Set(result.games.map(\.id))
+        let buildIDs = Set(result.builds.map(\.id))
+        result.manualPositions = manualPositions.filter { gameIDs.contains($0.gameID) }
+        result.profiles = profiles.filter { !deletedIDs.contains($0.id) && gameIDs.contains($0.gameID) }
+        let profileIDs = Set(result.profiles.map(\.id))
+        result.states = states.filter {
+            !deletedIDs.contains($0.id) && buildIDs.contains($0.buildID) && profileIDs.contains($0.saveProfileID)
+        }
+        result.variableMaps = variableMaps.filter { !deletedIDs.contains($0.id) && buildIDs.contains($0.buildID) }
+        result.gameProvenance = gameProvenance.filter { gameIDs.contains($0.ownerID) }
+        result.buildProvenance = buildProvenance.filter { buildIDs.contains($0.ownerID) }
+        result.reports = reports.filter { buildIDs.contains($0.buildID) }
+        result.declarations = declarations.filter { buildIDs.contains($0.firstBuildID) && buildIDs.contains($0.secondBuildID) }
+        result.settings = settings.filter { setting in
+            switch setting.scopeType {
+            case "game": UUID(uuidString: setting.scopeID).map { gameIDs.contains($0) } ?? false
+            case "build": UUID(uuidString: setting.scopeID).map { buildIDs.contains($0) } ?? false
+            default: true
+            }
+        }
+        result = result.backupOmittingExternalLineage()
+        result.assets = assets.filter { result.referencedAssetIDs.contains($0.id) }
+        return (result, leftAlone)
     }
 
     var referencedAssetIDs: Set<UUID> {

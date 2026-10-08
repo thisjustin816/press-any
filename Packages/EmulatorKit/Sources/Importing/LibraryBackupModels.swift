@@ -87,6 +87,8 @@ public struct LibraryRestoreReview: Equatable, Sendable {
     public let skipped: Int
     public let conflicts: [LibraryRestoreConflict]
     public let missingROMs: [RestoreMissingROM]
+    /// Backup records the library has in Recently Deleted or deleted for good. Restore skips them.
+    public let leftAlone: [String]
 }
 
 public enum LibraryBackupError: LocalizedError, Equatable {

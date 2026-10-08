@@ -3,8 +3,15 @@ import EmulatorDomain
 import Foundation
 import GRDB
 
-public enum GRDBLibraryBackupError: Error, Equatable {
+public enum GRDBLibraryBackupError: LocalizedError, Equatable {
     case deletedRecord(table: String, id: UUID)
+
+    public var errorDescription: String? {
+        switch self {
+        case .deletedRecord:
+            "This backup would bring back an item that is in Recently Deleted or was deleted for good. The library has not changed."
+        }
+    }
 }
 
 public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRepositoryBacking, @unchecked Sendable {
@@ -31,7 +38,8 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
     ) throws -> T {
         try write { db in
             try GRDBTransactionContext.withDatabase(db) {
-                let (restored, report, result) = try operation(snapshot(db: db))
+                let current = try snapshot(db: db)
+                let (restored, report, result) = try operation(current)
                 try db.execute(sql: "PRAGMA defer_foreign_keys = ON")
                 if replacingLibrary {
                     try clearLibrary(db: db)
@@ -39,6 +47,7 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
                     try refuseDeletedIDs(in: restored, db: db)
                 }
                 try persist(restored, db: db)
+                if !replacingLibrary { try releaseReplacedAssets(current: current, restored: restored, db: db) }
                 try GRDBSettingsStore(writer: writer).set(report, key: Self.reportKey, scope: .app)
                 return result
             }
@@ -123,8 +132,40 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
         assetIDs.formUnion(value.states.compactMap(\.screenshotAssetID))
         assetIDs.formUnion(value.recipes.flatMap { $0.items.map(\.patchAssetID) })
         assetIDs.formUnion(value.variableMaps.map(\.assetID))
-        value.assets = try repositories.assets.fetchAssets().filter { assetIDs.contains($0.id) }
+        let inventory = try repositories.assets.fetchAssets()
+        value.assets = inventory.filter { assetIDs.contains($0.id) }
+        value.retained = RetainedLibraryRecords(recordIDs: try deletedRecordIDs(db: db),
+            assets: inventory.filter { !assetIDs.contains($0.id) }.sorted { $0.id.uuidString < $1.id.uuidString })
         return value
+    }
+
+    private func deletedRecordIDs(db: Database) throws -> Set<UUID> {
+        let ids = try String.fetchAll(db, sql: """
+            SELECT id FROM games WHERE deletion_id IS NOT NULL
+            UNION SELECT id FROM builds WHERE deletion_id IS NOT NULL
+            UNION SELECT id FROM save_profiles WHERE deletion_id IS NOT NULL
+            UNION SELECT id FROM save_states WHERE deletion_id IS NOT NULL
+            UNION SELECT record_id FROM tombstones
+            UNION SELECT recipe.id FROM patch_recipes recipe
+                JOIN builds result ON result.id = recipe.result_build_id
+                JOIN builds base ON base.id = recipe.base_build_id
+                WHERE result.deletion_id IS NOT NULL OR base.deletion_id IS NOT NULL
+            UNION SELECT map.id FROM build_variable_maps map JOIN builds build ON build.id = map.build_id
+                WHERE build.deletion_id IS NOT NULL
+            """)
+        return Set(try ids.map { try PersistenceCodec.uuid($0) })
+    }
+
+    /// A replaced save or state leaves its old row behind, still holding the profile's or state's
+    /// canonical path; the next write to that path would then fail. Its bytes were already copied
+    /// to a "before restore" record, so the row goes unless a Recently Deleted record uses it.
+    private func releaseReplacedAssets(current: LibraryBackupSnapshot, restored: LibraryBackupSnapshot, db: Database) throws {
+        let kept = Set(restored.assets.map(\.id))
+        for asset in current.assets where !kept.contains(asset.id) {
+            let id = PersistenceCodec.uuid(asset.id)
+            guard try !GRDBLibraryDeletionRepository.isReferenced(id, db: db) else { continue }
+            try db.execute(sql: "DELETE FROM managed_assets WHERE id = ?", arguments: [id])
+        }
     }
 
     private static let portableSettingsPredicate = """
@@ -288,14 +329,14 @@ enum BackupCoverage {
         "patch_recipes": "Recipes whose result and base Builds are live.",
         "patch_recipe_items": "All steps of included recipes, including disabled steps and input hashes.",
         "build_variable_maps": "Maps attached to live Builds.",
-        "managed_assets": "Assets referenced by included records, including source and generated images.",
+        "managed_assets": "Assets referenced by included records, including source and generated images. Rows held only by Recently Deleted records stay in the destination and are reused by hash.",
         "game_metadata_provenance": "Canonical provenance of live Games.",
         "build_metadata_provenance": "Canonical provenance of live Builds.",
         "build_toolchain_reports": "Domain reports of live Builds with their stored detection timestamps.",
         "build_save_declarations": "Canonical pairs whose two Builds are live, even across Games.",
         "settings_overrides": "App, System, and live Game/Build settings, including release preferences and manual sorting; excludes launch markers, the last restore report, and No-Intro backfill markers.",
-        "library_deletions": "Excluded; preserved by merge and cleared by replacement.",
-        "tombstones": "Excluded; preserved by merge and cleared by replacement.",
+        "library_deletions": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
+        "tombstones": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
         "image_fingerprints": "Excluded derived matching cache; cleared by replacement.",
     ]
 
