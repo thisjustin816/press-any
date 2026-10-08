@@ -7,25 +7,53 @@ import XCTest
 final class GameplayDriverTests: XCTestCase {
     func testPeriodicSaveDoesNotBlockFramePacing() throws {
         let runtime = BlockingSaveRuntime()
+        let refreshes = ManualRefreshes()
         let driver = GameplayDriver(
             runtime: runtime,
             input: GameplayInputAccumulator(),
-            savePollNanoseconds: 1
+            savePollNanoseconds: 1,
+            makeRefreshes: { refreshes.attach($0) }
         )
         driver.start()
-        // A busy simulator can take seconds to deliver the first display refresh, so the waits
-        // allow for that. What the test checks is that frames keep coming while the save is held.
-        XCTAssertEqual(runtime.saveStarted.wait(timeout: .now() + 10), .success)
+        defer {
+            runtime.allowSaveToFinish.signal()
+            driver.stop()
+        }
+        // The test sends its own refreshes, so it doesn't depend on when a busy simulator's display
+        // link starts. What it checks is that frames keep coming while the save is held.
+        XCTAssertTrue(refreshes.send(until: { runtime.saveStarted.wait(timeout: .now()) == .success }))
         let framesBeforeWait = runtime.frameCount
+        XCTAssertTrue(refreshes.send(until: { runtime.frameCount > framesBeforeWait }))
+    }
+}
 
+/// Stands in for the display link: each `send` reports one 60 Hz refresh.
+private final class ManualRefreshes: DisplayRefreshSource, @unchecked Sendable {
+    private let lock = NSLock()
+    private var handler: DisplayRefreshHandler?
+    private var cancelled = false
+
+    func attach(_ handler: @escaping DisplayRefreshHandler) -> any DisplayRefreshSource {
+        lock.withLock { self.handler = handler }
+        return self
+    }
+
+    func start() {}
+
+    func cancel() {
+        lock.withLock { cancelled = true }
+    }
+
+    /// Sends refreshes until `condition` holds, for up to 10 seconds, and returns whether it did.
+    func send(until condition: () -> Bool) -> Bool {
+        let interval: UInt64 = 16_742_706
         let deadline = Date().addingTimeInterval(10)
-        while runtime.frameCount <= framesBeforeWait, Date() < deadline {
+        while Date() < deadline {
+            if condition() { return true }
+            lock.withLock { if !cancelled { handler?(interval, interval) } }
             Thread.sleep(forTimeInterval: 0.01)
         }
-        XCTAssertGreaterThan(runtime.frameCount, framesBeforeWait)
-
-        runtime.allowSaveToFinish.signal()
-        driver.stop()
+        return condition()
     }
 }
 
