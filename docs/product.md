@@ -968,8 +968,9 @@ exposes them; custom border editing is later.
   preferred save, which Play uses unless a Build picks its own.
 - Build Info opens Build Details, which links to Technical Info. Technical Info shows hashes (four
   groups of 16 on two lines, copied by touch and hold), the stored metadata, verification, when
-  the Build was added, the cartridge header, read-only, and Made With: an engine such as GB Studio above the toolchain it runs on,
-  names as their projects spell them, version ranges as "x to y" or "x or later".
+  the Build was added, the cartridge header, read-only, and Made With: an engine such as GB
+  Studio above the toolchain it runs on, names as their projects spell them, version ranges as
+  "x to y" or "x or later".
   The Header section reads the Build's resolved image, so a patched Build shows its own header:
   title, Game Boy, Game Boy Color compatible or Game Boy Color only, the cartridge type by name
   such as "MBC5 + RAM + Battery", ROM and RAM size, revision number, and the header and global
