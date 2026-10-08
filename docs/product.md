@@ -29,8 +29,8 @@ change. There is no separate decision log.
   and v1.1. Other systems aren't planned, but the library, storage, input and core abstractions
   mustn't rule them out.
 - Light and Dark appearance.
-- TestFlight first, then the App Store. The App Store release may be paid up front or unlock
-  features with in-app purchase; the project's own source stays Apache-2.0 (`LICENSE`).
+- TestFlight first, then the App Store. The app is free, with one optional in-app purchase,
+  Press Any Plus (see Pricing); the project's own source stays Apache-2.0 (`LICENSE`).
 - The library, Game Details, Settings and every sheet are portrait. Gameplay also turns to
   landscape (see Landscape).
 
@@ -40,7 +40,62 @@ landscape and the built-in layouts. Everything else waits for v1.1: iCloud sync,
 Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
 artwork and documents, rewind, slow motion, frame advance and Quick Actions, the model override,
 curated shaders, the layout editor and skin import, screenshots and gameplay notes, external displays,
-crash reporting and usage counts, and Developer Mode.
+crash reporting and usage counts, and Developer Mode. The Plus screen's roadmap lists these
+features, so change it with this paragraph (see Pricing).
+
+## Pricing
+
+Press Any is free to download and play. **Press Any Plus** is one non-consumable in-app purchase,
+product ID `com.thisjustin816.PressAny.plus`, with Family Sharing on. It costs $0.99 during v1 and
+$2.99 once v1.1 ships. The price lives in App Store Connect, never in code: the app shows the App
+Store's localized price.
+
+In v1, Plus includes:
+
+- **LCD filters**: LCD 1× and LCD 3× (see Picture).
+- **App icons**: Berry, Grape, Teal, Kiwi and Dandelion colorways of the home-screen icon, in
+  Settings > App Icon. The default icon is always available.
+- **Auto State history**: Keep Auto States at 3, 5 or 10 (see Save states and lifecycle). Without
+  Plus a game keeps its latest Auto State.
+
+Everything else is free: play, saves and states, Library Backup and every export, patches,
+cheats, controllers, landscape, Quick Play, Fast Forward, Frame Blending, Screen Colors and the
+layouts.
+
+Plus also includes everything on its roadmap and anything added later, at no extra cost. Some of
+it will be free for everyone, too. The roadmap on the Plus screen is the v1.1 list above, without
+crash reporting and usage counts, followed by timed Auto States (one every few minutes of play),
+a later Plus addition. GBA isn't on it. `App/Plus/PlusRoadmap.swift` holds the list.
+
+Plus follows these rules:
+
+- No pop-up at launch or during play, no countdowns and no fake discounts.
+- Nothing that's free is taken away.
+- Data safety is never gated: saves, states, backups and exports stay free, and losing Plus never
+  deletes or hides anything the player made.
+- Plus is one entry in Settings, Settings > Press Any Plus. Each Plus setting shows a small Plus
+  badge, and a Plus choice in a menu reads "(Plus)".
+- Without Plus, Plus choices stay listed. Choosing one opens the Plus screen once and saves
+  nothing; nothing reminds the player after it closes.
+- A stored Plus choice is kept without Plus, so buying or restoring brings it back. A stored LCD
+  filter plays as Off, and Keep Auto States reads 1.
+- Losing Plus, through a refund, a revocation or leaving Family Sharing, deletes nothing at that
+  moment. The next Auto State write prunes to the latest unpinned one, as pruning always does. The
+  chosen app icon stays until the player changes it, since iOS shows an alert for every icon
+  change; the picker just locks.
+
+The Plus screen lists what Plus includes now, the roadmap with its promise, and, until it's owned,
+the price with Buy and Restore Purchases and a line saying the price goes up when v1.1 ships. Once
+owned it thanks the player. If the product can't load, offline or without an App Store account,
+it says so calmly with Try Again.
+
+Ownership comes from StoreKit 2: `Transaction.currentEntitlements` at launch, then
+`Transaction.updates`. Verified transactions are finished, and revoked or refunded ones don't
+count. Restore Purchases calls `AppStore.sync()`. StoreKit's own on-device cache keeps Plus
+working offline; there's no receipt storage, no server and no analytics, and StoreKit makes the
+only network calls. Debug builds take `-GrantPlus YES` for screenshots and UI tests, and
+`-ScreenshotLCDFilter` implies it. `Config/PressAnyPlus.storekit` defines the product for Xcode
+runs and the StoreKitTest app tests.
 
 ## Library model
 
@@ -608,8 +663,11 @@ claims reliability from just an old ROM, old save and new ROM.
   deleting a pinned state still works. Crash-recovery checkpoints are hidden from both state
   lists.
 - **Auto State.** Backgrounding, closing and switching sessions write the battery save and an
-  Auto State. Keep Auto States in Settings > Playing keeps 3, 5 (the default) or 10 unpinned
-  Auto States per Build + Save Profile. Pinned Auto States survive and do not count toward the
+  Auto State. With Plus, Keep Auto States in Settings > Playing keeps 3, 5 (the default) or 10
+  unpinned Auto States per Build + Save Profile; without it, the latest one is kept, the row reads
+  1 with a Plus badge, and choosing a number opens the Plus screen. The stored choice is kept for
+  when Plus returns. Pruning runs at each Auto State write, so losing Plus deletes nothing until
+  the next one. Pinning is free, and pinned Auto States survive and do not count toward the
   limit. Pruned Auto States are removed permanently. Each step is attempted even if an earlier
   one fails, so the Auto State can recover progress a failed battery write lost. A close that
   fails keeps the game open, to retry or close without saving.
@@ -815,7 +873,9 @@ picture. A connected controller still hides the touch controls.
 
   Both change the open picture at once, including behind a paused Settings sheet, and stay
   applied through reset and state loads.
-- **LCD filter**: LCD 1× and LCD 3×, the first of the display effects.
+- **LCD filter** (Plus): LCD 1× and LCD 3×, the first of the display effects. Without Plus both
+  stay listed with a Plus badge wherever the filter is chosen, and choosing one opens the Plus
+  screen. A stored filter plays as Off and comes back with Plus, changing an open game at once.
 - **Frame Blending** (inheritable, Off by default): Blend averages each frame with the one before,
   as the slow LCD does, so a sprite drawn on alternate frames stays steady; LCD Ghosting weights
   the newest frame 0.5 and the two before 0.3 and 0.2. Both mix emulated frames, so 60 Hz and
@@ -913,9 +973,11 @@ Game's or Build's settings use:
   Touch; Hide Touch Controls under With a Controller.
 - **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo; Save States
   (Slots, Name New States, Keep Save States and Keep Auto States, all App-only).
+- **App Icon** (Plus): the default icon and its colorways, each with a preview.
 - **Systems**: Game Boy and Game Boy Color, each a page with that system's settings.
 - **Library**: Regions and Languages, Recently Deleted, Check Library Files, Storage, and the
   Suggest Names and Suggest Game Merges reviews.
+- **Press Any Plus**: the Plus screen, with Restore Purchases (see Pricing).
 - **About**: How Press Any Works, the Privacy Policy and Acknowledgements.
 
 The settings for a system, a Game, a Build or the open game are one form: a page in App Settings
@@ -1223,8 +1285,9 @@ Builds per Game, profiles shared by Builds, Quick Play sessions promoted), never
 filenames or library contents; where they go and the privacy copy are still open. Nothing
 automatic ever uploads ROM, save or state bytes, screenshots, memory, filenames, notes or library
 contents. Provider queries and catalog uploads describe their consent accurately. Service keys
-stay on servers and user keys in secure storage. The privacy manifest declares file timestamp
-access (C617.1) for cleaning stale temporary files.
+stay on servers and user keys in secure storage. Press Any Plus talks only to the App Store,
+through StoreKit, and needs nothing in the privacy manifest. The privacy manifest declares file
+timestamp access (C617.1) for cleaning stale temporary files.
 
 ### Accessibility
 
@@ -1252,8 +1315,9 @@ silently. The default shader must hold full speed on the slowest supported devic
 - A Build pins the core version it first launched with. v1.1 shows a quiet notice when a newer core
   is available and makes migration an explicit, reversible checkpoint that starts a new state
   lineage; rolling back is offered only when the old core can actually run.
-- `FeatureEntitlementProvider` keeps StoreKit out of the domain, core, storage and import code.
-  Losing an entitlement never locks away saves, exports or anything the player made.
+- `FeatureEntitlementProvider` keeps StoreKit in the app target, out of the domain, core, storage
+  and import code; a game session gets only a yes or no for Auto State history. Losing an
+  entitlement never locks away saves, exports or anything the player made.
 - Optional Included Games: a small set of rights-cleared homebrew, imported through the normal
   path from a manifest with permission records; a release fails if it packages an unapproved ROM.
 

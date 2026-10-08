@@ -1,6 +1,6 @@
 # Press Any Privacy Policy
 
-Last updated: October 5, 2026
+Last updated: October 8, 2026
 
 Press Any is a Game Boy and Game Boy Color emulator for iPhone, developed by
 Justin Beeson. This policy describes the current app, including builds
@@ -38,6 +38,12 @@ settings. Apple also handles App Store downloads and may collect diagnostics
 according to your settings. When you use TestFlight, Apple may provide the
 developer with beta diagnostics or feedback under TestFlight's terms and your
 choices. Press Any does not operate a separate diagnostics collection service.
+
+Press Any Plus is an optional in-app purchase. Apple handles the purchase, payment,
+refunds and Family Sharing through the App Store. The app asks the App Store, through
+Apple's StoreKit, whether Plus is owned on your Apple Account, and keeps no record of
+its own. Nothing about the purchase is sent to the developer by the app; Apple gives
+developers sales reports under its own terms.
 
 For information about these services, see
 [Apple's privacy policy](https://www.apple.com/legal/privacy/).
