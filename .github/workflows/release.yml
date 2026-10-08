@@ -192,6 +192,8 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: |
+          # Without pipefail, tee's success would hide a failed submission.
+          set -o pipefail
           if [[ -z $GROUP ]]; then
             echo "::error::Set the TESTFLIGHT_PUBLIC_GROUP repository variable to the public group's name."
             exit 1
