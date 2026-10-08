@@ -250,7 +250,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     /// "Default" when no level above sets the value, since there is nothing to inherit then;
     /// otherwise the level it comes from.
     private var inheritNote: String {
-        inherited?.source.map { "From \(sourceName($0))" } ?? "Default"
+        (inherited?.source).map { "From \(sourceName($0))" } ?? "Default"
     }
 
     private func label(for value: Value) -> String {
