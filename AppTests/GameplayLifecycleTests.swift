@@ -10,6 +10,12 @@ import XCTest
 /// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
+    func testGameMenuOffersRestartBesideCloseGame() throws {
+        let (gameplay, _, _) = makeGameplay()
+        let group = try XCTUnwrap(gameplay.prepareGameMenu().last as? UIMenu)
+        XCTAssertEqual(group.children.compactMap { ($0 as? UIAction)?.title }, ["Restart", "Close Game"])
+    }
+
     func testQuickPlayMenuDisablesQuickSaveAndQuickLoad() throws {
         let (gameplay, _, _) = makeGameplay()
         let items = gameplay.prepareGameMenu().compactMap { $0 as? UIAction }
@@ -508,4 +514,5 @@ private final class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     func stop(createAutoState: Bool) throws {}
     func stop(createAutoState: Bool, discardUnsaved: Bool) throws {}
     func flushBatteryIfChanged() throws -> Bool { false }
+    func restart() throws {}
 }

@@ -2,10 +2,18 @@ import EmulatorApplication
 import EmulatorDomain
 import Foundation
 
+/// How a library launch begins: as Resume Games says, or from the game's save, with the place the
+/// player left off kept for later.
+enum LaunchStart {
+    case resumeGames
+    case startOver
+}
+
 struct RiskyLaunch {
     let context: LaunchContext
     let assessment: SaveCompatibilityAssessment
     let profileName: String
+    var start: LaunchStart = .resumeGames
 
     var canDeclareCompatibility: Bool {
         assessment.writtenBy?.gameID == context.gameID

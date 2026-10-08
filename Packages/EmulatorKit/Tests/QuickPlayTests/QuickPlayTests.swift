@@ -457,6 +457,25 @@ extension QuickPlayTests {
 }
 
 extension QuickPlayTests {
+    func testRestartBootsTheGameAgainAndKeepsItsSave() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1, 2, 3]))
+        let rom = try harness.writeExternalROM(TestROM.make(title: "AGAIN", cgb: false))
+        let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
+        let factory = CapturingQuickPlayFactory()
+        let runtime = harness.makeRuntime(session, factory: factory)
+        try runtime.start(resumeAutoState: false)
+        for _ in 0..<3 { _ = try runtime.stepFrame() }
+
+        try runtime.restart()
+
+        XCTAssertEqual(try runtime.stepFrame().bgra8888[0], 1, "the game booted again")
+        XCTAssertEqual(factory.cores.map(\.bootAnimationSkips), [2], "a restart skips the boot logo as a fresh start does")
+        try runtime.flushBattery()
+        XCTAssertEqual(try harness.workspace.temporaryBatteryData(sessionID: session.id), Data([1, 2, 3]))
+    }
+}
+
+extension QuickPlayTests {
     func testFreshStartSkipsBootAnimationButResumeDoesNot() throws {
         let harness = try QuickPlayHarness.make()
         let rom = try harness.writeExternalROM(TestROM.make(title: "BOOT", cgb: false))

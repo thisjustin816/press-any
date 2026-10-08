@@ -42,7 +42,7 @@ struct LibraryView: View {
     @AppStorage("library.showsGridTitles") private var showsGridTitles = true
 
     let container: AppContainer
-    let onPlay: (LaunchContext) -> Void
+    let onPlay: (LaunchContext, LaunchStart) -> Void
     let onQuickPlay: (QuickPlayRequest) -> Void
     let onResumeQuickPlay: (QuickPlaySession) -> Void
     /// Files chosen with Import File, handled as if shared to the app.
@@ -52,7 +52,7 @@ struct LibraryView: View {
 
     init(
         container: AppContainer,
-        onPlay: @escaping (LaunchContext) -> Void,
+        onPlay: @escaping (LaunchContext, LaunchStart) -> Void,
         onQuickPlay: @escaping (QuickPlayRequest) -> Void,
         onResumeQuickPlay: @escaping (QuickPlaySession) -> Void,
         onImportFiles: @escaping ([URL]) -> Void
@@ -344,6 +344,7 @@ struct LibraryView: View {
     @ViewBuilder
     private func gameActions(_ game: Game) -> some View {
         Button("Play", systemImage: "play.fill") { launch(game) }
+        Button("Start Over", systemImage: "arrow.counterclockwise") { launch(game, start: .startOver) }
         Button(game.isFavorite ? "Remove from Favorites" : "Add to Favorites",
                systemImage: game.isFavorite ? "star.slash" : "star") {
             model.toggleFavorite(game)
@@ -355,10 +356,10 @@ struct LibraryView: View {
         }
     }
 
-    private func launch(_ game: Game) {
+    private func launch(_ game: Game, start: LaunchStart = .resumeGames) {
         guard !model.selection.isSelecting else { return }
         do {
-            onPlay(try model.launchContext(for: game))
+            onPlay(try model.launchContext(for: game), start)
         } catch {
             model.report("Couldn’t start \(game.primaryTitle): \(error.localizedDescription)")
         }

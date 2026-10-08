@@ -55,9 +55,9 @@ struct GameDetailView: View {
     }
 
     let container: AppContainer
-    let onPlay: (LaunchContext) -> Void
+    let onPlay: (LaunchContext, LaunchStart) -> Void
 
-    init(container: AppContainer, gameID: UUID, onPlay: @escaping (LaunchContext) -> Void) {
+    init(container: AppContainer, gameID: UUID, onPlay: @escaping (LaunchContext, LaunchStart) -> Void) {
         self.container = container
         self.onPlay = onPlay
         _model = StateObject(wrappedValue: GameDetailViewModel(
@@ -167,6 +167,11 @@ struct GameDetailView: View {
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("game.play")
             .disabled(model.preferredBuild == nil)
+            .contextMenu {
+                Button("Start Over", systemImage: "arrow.counterclockwise") {
+                    launch(build: model.preferredBuild, start: .startOver)
+                }
+            }
         }
     }
 
@@ -478,6 +483,7 @@ struct GameDetailView: View {
     @ViewBuilder
     private func buildMenu(_ build: Build) -> some View {
         Button("Play") { launch(build: build) }
+        Button("Start Over") { launch(build: build, start: .startOver) }
         Menu("Play with Save") {
             ForEach(model.saveProfiles) { profile in
                 Button(profile.title) { launch(build: build, profile: profile) }
@@ -614,10 +620,10 @@ struct GameDetailView: View {
         model.setArtwork(data, fileExtension: fileExtension)
     }
 
-    private func launch(build: Build?, profile: SaveProfile? = nil) {
+    private func launch(build: Build?, profile: SaveProfile? = nil, start: LaunchStart = .resumeGames) {
         guard !model.selection.isSelecting else { return }
         do {
-            onPlay(try model.launchContext(build: build, saveProfile: profile))
+            onPlay(try model.launchContext(build: build, saveProfile: profile), start)
         } catch {
             model.report(error)
         }

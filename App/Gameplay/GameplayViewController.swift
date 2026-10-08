@@ -344,6 +344,9 @@ final class GameplayViewController: UIViewController {
                 self?.addToLibraryTapped()
             })
         }
+        let restart = UIAction(title: "Restart", image: UIImage(systemName: "arrow.counterclockwise")) { [weak self] _ in
+            self?.restartTapped()
+        }
         let close = UIAction(title: "Close Game", image: UIImage(systemName: "xmark"), attributes: .destructive) { [weak self] _ in
             self?.closeTapped()
         }
@@ -352,7 +355,7 @@ final class GameplayViewController: UIViewController {
             fatalError("Device crash-recovery check")
         })
         #endif
-        elements.append(UIMenu(options: .displayInline, children: [close]))
+        elements.append(UIMenu(options: .displayInline, children: [restart, close]))
         return elements
     }
 
@@ -784,6 +787,30 @@ final class GameplayViewController: UIViewController {
         } catch {
             presentRuntimeError(error)
         }
+    }
+
+    /// Restarting asks first, since it leaves where the player is. A library game keeps that
+    /// moment as an Auto State; Quick Play keeps only what the game itself saved.
+    private func restartTapped() {
+        holdFrames()
+        let message = runtime is any SaveStateRuntime
+            ? "The game starts again from the beginning, and its save is kept. Where you are now is kept as an Auto State, so Load State can bring you back."
+            : "The game starts again from the beginning, and its save is kept. Progress since the game last saved is lost."
+        let alert = UIAlertController(title: "Restart the Game?", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.releaseFrames()
+        })
+        alert.addAction(UIAlertAction(title: "Restart", style: .destructive) { [weak self] _ in
+            guard let self else { return }
+            defer { self.releaseFrames() }
+            do {
+                try self.runtime.restart()
+                self.resumeTapped()
+            } catch {
+                self.showTransientMessage("Couldn’t restart the game: \(error)")
+            }
+        })
+        present(alert, animated: true)
     }
 
     private enum Exit {
