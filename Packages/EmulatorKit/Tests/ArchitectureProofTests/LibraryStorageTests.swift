@@ -94,9 +94,34 @@ struct LibraryStorageTests {
         #expect(try h.usage.execute().bytes(in: .patchedROMCache) == 2)
         #expect(try h.checker.inspect().isClean)
 
+        // These Builds have no recipe to rebuild from, so their ROM is kept.
         try h.clear.execute()
-        #expect(try h.usage.execute().bytes(in: .patchedROMCache) == 0)
+        #expect(try h.usage.execute().bytes(in: .patchedROMCache) == 2)
         #expect(try h.checker.inspect(cleanup: .removeProvableOrphans).isClean)
+    }
+
+    @Test("a patched ROM whose patch file is gone is the only copy, so clearing keeps it")
+    func unrebuildableKept() throws {
+        let h = try StorageHarness()
+        defer { try? FileManager.default.removeItem(at: h.root) }
+        let game = Game(id: UUID(), primaryTitle: "Test", systemFamily: "gameboy", createdAt: Date(), modifiedAt: Date())
+        let source = try h.insert(kind: .sourceImage, storageClass: .source, bytes: TestROM.make(title: "BASE"))
+        let base = h.build(image: source, gameID: game.id)
+        try h.builds.insertBuild(base)
+        let patchURL = h.root.appendingPathComponent("change.ips")
+        try Data([0x50, 0x41, 0x54, 0x43, 0x48, 0, 0, 1, 0, 1, 0x58, 0x45, 0x4f, 0x46]).write(to: patchURL)
+        let patched = try CreatePatchedBuild(games: InMemoryGameRepository([game]), builds: h.builds, recipes: h.recipes,
+            assets: h.assets, toolchainReports: InMemoryToolchainReportRepository(), assetStore: h.store)
+            .execute(.init(gameID: game.id, baseBuildID: base.id, patchURLs: [patchURL], displayName: "Patched"))
+        let generated = h.store.generatedImageURL(sha256: patched.imageSHA256)
+        let patch = try #require(try h.assets.fetchAssets().first { $0.kind == .sourcePatch })
+        try h.store.removeIfExists(h.url(for: patch))
+
+        try h.clear.execute()
+
+        #expect(try h.store.hashFile(at: generated) == patched.imageSHA256)
+        let resolver = ResolveImageForLaunch(builds: h.builds, recipes: h.recipes, assets: h.assets, assetStore: h.store)
+        #expect(try resolver.resolve(buildID: patched.id) == generated)
     }
 
     @Test("a missing running Build stops clearing before any file is removed")
@@ -119,7 +144,7 @@ struct LibraryStorageTests {
         try h.builds.insertBuild(base)
         let patchURL = h.root.appendingPathComponent("change.ips")
         try Data([0x50, 0x41, 0x54, 0x43, 0x48, 0, 0, 1, 0, 1, 0x58, 0x45, 0x4f, 0x46]).write(to: patchURL)
-        let recipes = InMemoryPatchRecipeRepository()
+        let recipes = h.recipes
         let patched = try CreatePatchedBuild(games: games, builds: h.builds, recipes: recipes, assets: h.assets,
             toolchainReports: InMemoryToolchainReportRepository(), assetStore: h.store)
             .execute(.init(gameID: game.id, baseBuildID: base.id, patchURLs: [patchURL], displayName: "Patched"))
@@ -168,6 +193,7 @@ private struct StorageHarness {
     let assets = InMemoryAssetRepository()
     let builds = InMemoryBuildRepository()
     let profiles = InMemorySaveProfileRepository()
+    let recipes = InMemoryPatchRecipeRepository()
 
     init() throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("Storage-\(UUID())")
@@ -175,7 +201,9 @@ private struct StorageHarness {
     }
 
     var usage: MeasureLibraryStorage { MeasureLibraryStorage(assets: assets, assetStore: store) }
-    var clear: ClearPatchedROMCache { ClearPatchedROMCache(assets: assets, builds: builds, assetStore: store) }
+    var clear: ClearPatchedROMCache {
+        ClearPatchedROMCache(assets: assets, builds: builds, recipes: recipes, assetStore: store)
+    }
     var checker: ManagedAssetIntegrityChecker { ManagedAssetIntegrityChecker(assets: assets, assetStore: store) }
 
     func url(for asset: ManagedAsset) throws -> URL { try store.managedURL(relativePath: asset.relativePath) }

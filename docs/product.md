@@ -165,7 +165,8 @@ status. Source assets are irreplaceable; generated patched ROMs are rebuildable 
   Quick Play workspace, including kept sessions. Empty categories read None. Quick Play opens
   the existing Sessions list for resume, promotion and discard.
 - Clear Patched ROM Cache asks first, then removes generated ROM files while keeping their
-  asset records, base ROMs and patches. It protects the running session's ROM, including copies
+  asset records, base ROMs and patches. A generated ROM whose base ROM or patch file is missing
+  stays, since it's then the only copy. It protects the running session's ROM, including copies
   of a Build that share the file, and refreshes the sizes. Launch and ROM export rebuild a missing
   patched ROM and check its recorded hash. Recently Deleted files count in their asset categories.
 - v1: eviction of generated ROMs under storage pressure and broader protection of in-flight

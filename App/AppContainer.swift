@@ -66,7 +66,8 @@ final class AppContainer {
         default:
             activeBuildID = nil
         }
-        try ClearPatchedROMCache(assets: repositories.assets, builds: repositories.builds, assetStore: fileStore)
+        try ClearPatchedROMCache(assets: repositories.assets, builds: repositories.builds,
+            recipes: repositories.patchRecipes, assetStore: fileStore)
             .execute(activeBuildID: activeBuildID)
     }
 
