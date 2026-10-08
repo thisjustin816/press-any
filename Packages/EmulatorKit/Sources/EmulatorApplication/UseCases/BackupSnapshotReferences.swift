@@ -56,6 +56,7 @@ extension LibraryBackupSnapshot {
             return game
         }
         result.declarations = declarations.filter { buildIDs.contains($0.firstBuildID) && buildIDs.contains($0.secondBuildID) }
+        result.cheats = cheats.filter { buildIDs.contains($0.buildID) }
         return result
     }
 }

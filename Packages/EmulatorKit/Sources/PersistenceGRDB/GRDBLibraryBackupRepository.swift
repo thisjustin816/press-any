@@ -107,6 +107,10 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
             ($0.firstBuildID.uuidString, $0.secondBuildID.uuidString)
                 < ($1.firstBuildID.uuidString, $1.secondBuildID.uuidString)
         }
+        value.cheats = try BuildCheatRecord.fetchAll(db, sql: """
+            SELECT cheat.* FROM build_cheats cheat JOIN builds build ON build.id = cheat.build_id
+            WHERE build.deletion_id IS NULL ORDER BY cheat.build_id, \(GRDBBuildCheatRepository.order)
+            """).map { try $0.domain() }
         value.reports = try Row.fetchAll(db, sql: """
             SELECT report.* FROM build_toolchain_reports report
             JOIN builds build ON build.id = report.build_id
@@ -151,6 +155,8 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
                 JOIN builds base ON base.id = recipe.base_build_id
                 WHERE result.deletion_id IS NOT NULL OR base.deletion_id IS NOT NULL
             UNION SELECT map.id FROM build_variable_maps map JOIN builds build ON build.id = map.build_id
+                WHERE build.deletion_id IS NOT NULL
+            UNION SELECT cheat.id FROM build_cheats cheat JOIN builds build ON build.id = cheat.build_id
                 WHERE build.deletion_id IS NOT NULL
             """)
         return Set(try ids.map { try PersistenceCodec.uuid($0) })
@@ -201,6 +207,10 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
                 """),
             ("build_variable_maps", value.variableMaps.map(\.id), """
                 SELECT map.id FROM build_variable_maps map JOIN builds build ON build.id = map.build_id
+                WHERE build.deletion_id IS NOT NULL
+                """),
+            ("build_cheats", value.cheats.map(\.id), """
+                SELECT cheat.id FROM build_cheats cheat JOIN builds build ON build.id = cheat.build_id
                 WHERE build.deletion_id IS NOT NULL
                 """),
         ]
@@ -275,6 +285,8 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
                     map.originalFilename, PersistenceCodec.date(map.attachedAt)])
         }
 
+        for cheat in value.cheats { try BuildCheatRecord(cheat).save(db) }
+
         for game in value.games {
             try db.execute(sql: "DELETE FROM game_metadata_provenance WHERE game_id = ?", arguments: [PersistenceCodec.uuid(game.id)])
         }
@@ -338,7 +350,7 @@ enum BackupCoverage {
         "library_deletions": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
         "tombstones": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
         "image_fingerprints": "Excluded derived matching cache; cleared by replacement.",
-        "build_cheats": "Excluded until backups carry cheats; replacement clears it.",
+        "build_cheats": "Cheats of live Builds, with their codes, switches and order.",
     ]
 
     /// Every column of every table, as the decisions above cover them. Columns that hold
@@ -403,7 +415,7 @@ enum BackupCoverage {
         "SaveStateRepository": "Live states except crash recovery.",
         "PatchRecipeRepository": "Live recipes and their steps.",
         "BuildVariableMapRepository": "Maps of live Builds.",
-        "BuildCheatRepository": "Excluded until backups carry cheats.",
+        "BuildCheatRepository": "Cheats of live Builds.",
         "ManagedAssetRepository": "Referenced assets.",
         "ManagedAssetInventoryRepository": "Inventory filtered to referenced assets.",
         "MetadataProvenanceRepository": "Live Game and Build provenance.",

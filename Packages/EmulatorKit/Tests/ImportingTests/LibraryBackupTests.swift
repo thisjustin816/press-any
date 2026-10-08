@@ -268,6 +268,8 @@ import Testing
         #expect(Set(package.snapshot.games.map(\.id)) == Set([gameID, baseGame.id]))
         #expect(package.snapshot.manualPositions.allSatisfy { Set([gameID, baseGame.id]).contains($0.gameID) })
         #expect(package.snapshot.builds.count == 2)
+        // The base Build travels for the patch; its cheats belong to the other Game.
+        #expect(package.snapshot.cheats.map(\.name) == ["Patched Jump"])
         let destination = try fixture.destination()
         _ = try destination.service.restore(package, review: destination.service.review(package), choices: [:])
         #expect(try destination.repository.readSnapshot { $0.recipes } == package.snapshot.recipes)
@@ -303,6 +305,34 @@ import Testing
         #expect(prepared.manifest.appBuild == "")
         #expect(!prepared.manifest.isGamePackage)
         #expect(prepared.snapshot.games == fixture.snapshot.games)
+    }
+
+    @Test func aBackupFromBeforeCheatsRestoresWithNone() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        var entries = try ZipArchiveReader.backupEntries(in: Data(contentsOf: fixture.export()))
+        entries.removeAll { $0.relativePath == "cheats.json" }
+        let buildsIndex = try #require(entries.firstIndex { $0.relativePath == "builds.json" })
+        var builds = try #require(try JSONSerialization.jsonObject(with: entries[buildsIndex].data) as? [[String: Any]])
+        builds = builds.map { $0.filter { $0.key != "cheatsEnabled" } }
+        entries[buildsIndex] = ZipArchiveEntry(relativePath: "builds.json", data: try JSONSerialization.data(withJSONObject: builds))
+        let manifestIndex = try #require(entries.firstIndex { $0.relativePath == "backup-manifest.json" })
+        var manifest = try JSONDecoder().decode(LibraryBackupManifest.self, from: entries[manifestIndex].data)
+        manifest.files["cheats.json"] = nil
+        manifest.recordCounts["cheats"] = nil
+        manifest.files["builds.json"] = BackupFileInfo(sha256: fixture.store.hashData(entries[buildsIndex].data),
+            byteLength: Int64(entries[buildsIndex].data.count))
+        entries[manifestIndex] = ZipArchiveEntry(relativePath: "backup-manifest.json", data: try JSONEncoder().encode(manifest))
+        let url = fixture.root.appendingPathComponent("before-cheats.zip")
+        try ZipArchiveWriter.archive(entries: entries).write(to: url)
+
+        let destination = try fixture.destination()
+        let prepared = try destination.service.prepare(from: url)
+        #expect(prepared.snapshot.cheats.isEmpty)
+        #expect(prepared.snapshot.builds.allSatisfy { $0.cheatsEnabled })
+        _ = try destination.service.restore(prepared, review: destination.service.review(prepared), choices: [:])
+        #expect(try destination.repository.readSnapshot { $0.cheats.isEmpty })
+        #expect(try destination.repository.readSnapshot { $0.builds.count } == fixture.snapshot.builds.count)
     }
 
     @Test func libraryWithROMsLargerThanTheROMZipLimitBacksUpAndRestores() throws {
@@ -668,6 +698,9 @@ private struct BackupFixture {
             items: [PatchRecipeItem(position: 0, patchAssetID: patch.id, expectedInputSHA256: source.contentSHA256)], createdAt: date)]
         value.variableMaps = [BuildVariableMap(id: UUID(), buildID: baseID, assetID: map.id, format: .symbolFile,
             source: .userImport, originalFilename: "test.sym", attachedAt: date)]
+        value.cheats = [BuildCheat(id: UUID(), buildID: baseID, name: "Base Lives", codes: ["010900C0"], position: 0, createdAt: date, modifiedAt: date),
+            BuildCheat(id: UUID(), buildID: patchedID, name: "Patched Jump", codes: ["010100C1", "990-00B"], isEnabled: false,
+                position: 0, createdAt: date, modifiedAt: date)]
         value.gameProvenance = [BackupProvenance(ownerID: gameID, values: [MetadataProvenance(field: .title, source: .player, providedValue: "Backup Game", recordedAt: date)])]
         value.buildProvenance = [BackupProvenance(ownerID: baseID, values: [MetadataProvenance(field: .region, source: .filename, providedValue: "USA", recordedAt: date)])]
         value.reports = [BackupToolchainReport(buildID: baseID, report: ToolchainDetectionReport(detector: "test", detectorVersion: "1", corpusRevision: "1", components: []), detectedAt: date)]

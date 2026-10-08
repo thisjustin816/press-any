@@ -58,8 +58,8 @@ public struct BackupToolchainReport: Codable, Equatable, Sendable {
 /// Destination records outside the live library. They never travel in a backup; restore uses
 /// them to leave deleted records alone and to reuse asset rows that already hold a file.
 public struct RetainedLibraryRecords: Equatable, Sendable {
-    /// Games, Builds, Save Profiles, Save States, recipes and variable maps that are in Recently
-    /// Deleted or were deleted for good.
+    /// Games, Builds, Save Profiles, Save States, recipes, variable maps and cheats that are in
+    /// Recently Deleted or were deleted for good.
     public var recordIDs: Set<UUID>
     /// Every asset row the live records don't reference, ordered by ID.
     public var assets: [ManagedAsset]
@@ -79,6 +79,7 @@ public struct LibraryBackupSnapshot: Equatable, Sendable {
     public var states: [SaveState] = []
     public var recipes: [PatchRecipe] = []
     public var variableMaps: [BuildVariableMap] = []
+    public var cheats: [BuildCheat] = []
     public var assets: [ManagedAsset] = []
     public var gameProvenance: [BackupProvenance] = []
     public var buildProvenance: [BackupProvenance] = []

@@ -86,6 +86,9 @@ extension LibraryBackupSnapshot {
         result.states = states.filter { buildIDs.contains($0.buildID) && profileIDs.contains($0.saveProfileID) }
         result.recipes = recipes.filter { buildIDs.contains($0.resultBuildID) }
         result.variableMaps = variableMaps.filter { buildIDs.contains($0.buildID) }
+        // A patch's base Build travels only so the patch can be rebuilt; its cheats stay behind.
+        let ownBuildIDs = Set(builds.filter { $0.gameID == gameID }.map(\.id))
+        result.cheats = cheats.filter { ownBuildIDs.contains($0.buildID) }
         result.gameProvenance = gameProvenance.filter { gameIDs.contains($0.ownerID) }
         result.buildProvenance = buildProvenance.filter { buildIDs.contains($0.ownerID) }
         result.reports = reports.filter { buildIDs.contains($0.buildID) }
@@ -111,7 +114,10 @@ extension LibraryBackupSnapshot {
         leftAlone += profiles.filter { deletedIDs.contains($0.id) }.map { "\($0.displayName) (Save Profile)" }
         leftAlone += states.filter { deletedIDs.contains($0.id) }.map { "\($0.displayName) (Save State)" }
         guard !leftAlone.isEmpty || recipes.contains(where: { deletedIDs.contains($0.id) })
-                || variableMaps.contains(where: { deletedIDs.contains($0.id) }) else { return (self, []) }
+                || variableMaps.contains(where: { deletedIDs.contains($0.id) })
+                || cheats.contains(where: { deletedIDs.contains($0.id) || deletedIDs.contains($0.buildID) }) else {
+            return (self, [])
+        }
         var result = self
         result.games = games.filter { !deletedIDs.contains($0.id) }
         var gameIDs = Set(result.games.map(\.id))
@@ -135,6 +141,9 @@ extension LibraryBackupSnapshot {
             !deletedIDs.contains($0.id) && buildIDs.contains($0.buildID) && profileIDs.contains($0.saveProfileID)
         }
         result.variableMaps = variableMaps.filter { !deletedIDs.contains($0.id) && buildIDs.contains($0.buildID) }
+        result.cheats = cheats.filter { !deletedIDs.contains($0.id) && buildIDs.contains($0.buildID) }
+        let keptCheats = Set(result.cheats.map(\.id))
+        leftAlone += cheats.filter { !keptCheats.contains($0.id) }.map { "\($0.name) (Cheat)" }
         result.gameProvenance = gameProvenance.filter { gameIDs.contains($0.ownerID) }
         result.buildProvenance = buildProvenance.filter { buildIDs.contains($0.ownerID) }
         result.reports = reports.filter { buildIDs.contains($0.buildID) }
