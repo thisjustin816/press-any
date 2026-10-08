@@ -343,6 +343,7 @@ private final class MappedImages: BuildImageResolving, @unchecked Sendable {
 }
 
 private struct UnreadableReports: ToolchainReportRepository {
+    func fetchAllReports() throws -> [UUID: [ToolchainDetectionReport]] { throw CocoaError(.fileReadCorruptFile) }
     func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport] { throw CocoaError(.fileReadCorruptFile) }
     func saveReport(_ report: ToolchainDetectionReport, buildID: UUID, detectedAt: Date) throws { throw CocoaError(.fileWriteUnknown) }
 }

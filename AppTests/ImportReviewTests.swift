@@ -215,6 +215,8 @@ final class ImportReviewTests: XCTestCase {
         let index = try KnownDumpIndex(catalog: KnownDumpCatalog(source: "synthetic", generated: "", systems: [], games: dumps))
         let coordinator = ImportCoordinator(
             analyzer: ROMImportAnalyzer(builds: container.repositories.builds, games: container.repositories.games,
+                fingerprints: container.repositories.fingerprints,
+                toolchainReports: container.repositories.toolchainReports,
                 assetStore: container.fileStore, knownDumps: index),
             committer: container.importCommitter,
             assetStore: container.fileStore

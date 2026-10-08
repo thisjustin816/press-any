@@ -172,6 +172,10 @@ struct ImportDestinationSection: View {
                 }
                 .onChange(of: model.destination) { _, _ in model.destinationChanged() }
 
+                if let evidence = model.developmentEvidence {
+                    Text(evidence).font(.footnote).foregroundStyle(.secondary)
+                }
+
                 if model.destination == .newGame {
                     LabeledContent("Game Title") {
                         TextField("Game Title", text: $model.gameTitle)

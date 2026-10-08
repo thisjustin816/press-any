@@ -316,6 +316,10 @@ public final class InMemoryToolchainReportRepository: ToolchainReportRepository,
     public func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport] {
         lock.withLock { (values[buildID] ?? [:]).values.sorted { $0.detector < $1.detector } }
     }
+
+    public func fetchAllReports() throws -> [UUID: [ToolchainDetectionReport]] {
+        lock.withLock { values.mapValues { $0.values.sorted { $0.detector < $1.detector } } }
+    }
 }
 
 public final class InMemoryBuildVariableMapRepository: BuildVariableMapRepository, @unchecked Sendable {
@@ -358,7 +362,9 @@ public final class InMemoryAssetRepository: ManagedAssetInventoryRepository, @un
     private let lock = NSLock()
     private var values: [UUID: ManagedAsset] = [:]
 
-    public init() {}
+    private let fingerprints: (any ImageFingerprintRepository)?
+
+    public init(fingerprints: (any ImageFingerprintRepository)? = nil) { self.fingerprints = fingerprints }
 
     public func fetchAsset(id: UUID) throws -> ManagedAsset? { lock.withLock { values[id] } }
 
@@ -388,7 +394,13 @@ public final class InMemoryAssetRepository: ManagedAssetInventoryRepository, @un
         }
     }
     public func updateMutableAsset(_ asset: ManagedAsset) throws { lock.withLock { values[asset.id] = asset } }
-    public func deleteAsset(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+    public func deleteAsset(id: UUID) throws {
+        let removed = lock.withLock { values.removeValue(forKey: id) }
+        if let removed, removed.kind == .sourceImage,
+           !lock.withLock({ values.values.contains { $0.kind == .sourceImage && $0.contentSHA256 == removed.contentSHA256 } }) {
+            try fingerprints?.deleteFingerprint(imageSHA256: removed.contentSHA256)
+        }
+    }
 }
 
 public final class InMemorySettingsStore: SettingsStore, @unchecked Sendable {

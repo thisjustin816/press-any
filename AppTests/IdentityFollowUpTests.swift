@@ -258,7 +258,10 @@ final class IdentityFollowUpTests: XCTestCase {
             index = try KnownDumpIndex(catalog: KnownDumpCatalog(source: "synthetic", generated: "", systems: [], games: dumps))
             files = urls
             coordinator = ImportCoordinator(analyzer: ROMImportAnalyzer(builds: container.repositories.builds, games: container.repositories.games,
-                assetStore: container.fileStore, knownDumps: index), committer: container.importCommitter, assetStore: container.fileStore)
+                fingerprints: container.repositories.fingerprints,
+                toolchainReports: container.repositories.toolchainReports,
+                assetStore: container.fileStore, knownDumps: index), committer: container.importCommitter,
+                assetStore: container.fileStore)
         }
 
         func review(_ number: Int, preference: ReleasePreference = ReleasePreference()) throws -> ImportReviewViewModel {

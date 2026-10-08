@@ -26,7 +26,7 @@ struct MigrationTests {
         try database.writer.read { db throws -> Void in
             #expect(try Row.fetchAll(db, sql: "SELECT \(before.0.joined(separator: ",")) FROM save_states ORDER BY id") == before.1)
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM save_states WHERE slot IS NOT NULL OR is_pinned != 0") == 0)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").last == "v1-v15-save-state-slots")
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").contains("v1-v15-save-state-slots") == true)
         }
         if !deleted { #expect(try database.makeRepositories().saveStates.fetchSaveState(id: fixture.state.id) == fixture.state) }
     }
@@ -116,10 +116,10 @@ struct MigrationTests {
                 #expect(upgraded == rows, "migration changed existing rows in \(table)")
             }
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(7) == [
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(8) == [
                 "v1-v9-game-identity", "v1-v10-library-model", "v1-v11-save-compatibility",
                 "v1-v12-system-screen-colors", "v1-v13-patch-step-inputs", "v1-v14-metadata-provenance",
-                "v1-v15-save-state-slots",
+                "v1-v15-save-state-slots", "v1-v16-image-fingerprints",
             ])
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_save_declarations") == 0)
         }

@@ -64,11 +64,11 @@ final class ImportReviewViewModel: ObservableObject {
         self.analysis = analysis
         self.knownDumps = knownDumps
         self.releasePreference = releasePreference
-        // Games holding the release's No-Intro family, or a Build with its header title, come first,
-        // so a choice among them is at hand.
-        let family = Set(analysis.familyGameIDs + analysis.headerTitleGameIDs)
+        let family = Set(analysis.familyGameIDs)
+        let ranks = Dictionary(uniqueKeysWithValues: analysis.developmentCandidates.enumerated().map { ($0.element.gameID, $0.offset) })
         self.games = games.sorted {
             if family.contains($0.id) != family.contains($1.id) { return family.contains($0.id) }
+            if ranks[$0.id] != ranks[$1.id] { return (ranks[$0.id] ?? Int.max) < (ranks[$1.id] ?? Int.max) }
             return $0.primaryTitle.localizedCaseInsensitiveCompare($1.primaryTitle) == .orderedAscending
         }
         self.coordinator = coordinator
@@ -86,20 +86,11 @@ final class ImportReviewViewModel: ObservableObject {
         status = metadata.status ?? ""
 
         let initialDestination: Destination
-        // A family split across Games is the player's choice; a title match mustn't make it for them.
-        // A Game title match and a Build sharing the ROM's header title must agree, or neither is
-        // suggested.
-        var titleMatch: UUID?
-        if analysis.familyGameIDs.count <= 1 {
-            let byTitle = GameMatcher.matchingGameID(for: analysis.filenameMetadata, headerTitle: analysis.header.title, in: games)
-            let byHeader = analysis.headerTitleGameIDs.count == 1 ? analysis.headerTitleGameIDs[0] : nil
-            if let byTitle, let byHeader, byTitle != byHeader {
-                titleMatch = nil
-            } else {
-                titleMatch = byTitle ?? byHeader
-            }
-        }
-        if let suggested = analysis.suggestedGameID ?? titleMatch {
+        let titleMatch = analysis.knownDump != nil && analysis.familyGameIDs.count <= 1
+            ? GameMatcher.matchingGameID(for: analysis.filenameMetadata, headerTitle: analysis.header.title, in: games) : nil
+        let developmentMatch = analysis.knownDump == nil && analysis.familyGameIDs.isEmpty
+            ? analysis.developmentCandidates.first.flatMap { $0.confidence == .high ? $0.gameID : nil } : nil
+        if let suggested = analysis.suggestedGameID ?? titleMatch ?? developmentMatch {
             initialDestination = .existing(suggested)
         } else {
             initialDestination = .newGame
@@ -134,6 +125,17 @@ final class ImportReviewViewModel: ObservableObject {
     }
 
     var isExactDuplicate: Bool { analysis.exactExistingBuildID != nil }
+    var developmentEvidence: String? {
+        guard !isExactDuplicate, analysis.knownDump == nil, analysis.familyGameIDs.isEmpty, baseGameReference == nil else { return nil }
+        let candidate: DevelopmentBuildMatcher.Candidate?
+        switch destination {
+        case .newGame: candidate = analysis.developmentCandidates.first
+        case .existing(let id): candidate = analysis.developmentCandidates.first { $0.gameID == id }
+        }
+        guard let candidate, let game = games.first(where: { $0.id == candidate.gameID }) else { return nil }
+        let likelihood = candidate.confidence == .high ? "Likely" : "Possibly"
+        return "\(likelihood) another build of \(game.primaryTitle): \(candidate.reasons.joined(separator: ", "))"
+    }
     var shortHash: String { String(analysis.sha256.prefix(12)) }
     var normalizedFilename: String {
         // A known dump's canonical name is No-Intro's.

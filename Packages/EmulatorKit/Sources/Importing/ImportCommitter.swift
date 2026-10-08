@@ -13,6 +13,7 @@ public struct ImportCommitter: Sendable {
     private let builds: any BuildRepository
     private let assets: any ManagedAssetRepository
     private let toolchainReports: any ToolchainReportRepository
+    private let fingerprints: any ImageFingerprintRepository
     private let assetStore: any AssetStore
     private let transactions: any LibraryTransactionRunner
     private let now: @Sendable () -> Date
@@ -23,6 +24,7 @@ public struct ImportCommitter: Sendable {
         builds: any BuildRepository,
         assets: any ManagedAssetRepository,
         toolchainReports: any ToolchainReportRepository,
+        fingerprints: any ImageFingerprintRepository,
         assetStore: any AssetStore,
         transactions: any LibraryTransactionRunner,
         now: @escaping @Sendable () -> Date = Date.init,
@@ -32,6 +34,7 @@ public struct ImportCommitter: Sendable {
         self.builds = builds
         self.assets = assets
         self.toolchainReports = toolchainReports
+        self.fingerprints = fingerprints
         self.assetStore = assetStore
         self.transactions = transactions
         self.now = now
@@ -54,6 +57,7 @@ public struct ImportCommitter: Sendable {
             // repaired: committing checks the stored file and replaces it if it doesn't match.
             if asset.storageClass == .source {
                 _ = try assetStore.commitSourceROM(stagedURL: plan.analysis.stagedURL, sha256: plan.analysis.sha256)
+                if let fingerprint = plan.analysis.fingerprint { try fingerprints.saveFingerprint(fingerprint) }
             }
             // The same image gives the same findings, but a newer detector may find more.
             for report in plan.analysis.toolchainReports {
@@ -88,7 +92,7 @@ public struct ImportCommitter: Sendable {
         let createdUnreferencedFile = existingAsset == nil && !fileExistedBeforeCommit
 
         do {
-            let result = try transactions.run { [games, builds, assets, toolchainReports, assetStore, now, makeID] in
+            let result = try transactions.run { [games, builds, assets, toolchainReports, fingerprints, assetStore, now, makeID] in
                 let timestamp = now()
                 let sourceAsset: ManagedAsset
                 if let existingAsset {
@@ -107,6 +111,8 @@ public struct ImportCommitter: Sendable {
                     )
                     try assets.insertAsset(sourceAsset)
                 }
+
+                if let fingerprint = plan.analysis.fingerprint { try fingerprints.saveFingerprint(fingerprint) }
 
                 let game: Game
                 let createdNewGame: Bool

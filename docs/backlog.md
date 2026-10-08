@@ -17,7 +17,7 @@ migrating later.
 1. Identity: the ROM-hack naming work that remains. Bundled No-Intro data,
    hash matching, family grouping, regional proposals, reviewed family merges and Match Game
    with absent-base lineage are built. "No-Intro data" in `docs/product.md` describes the behavior.
-2. Multi-signal development-build matching, the one import item left in v1. Metadata provenance,
+2. Multi-signal development-build matching is built. Metadata provenance,
    Metadata Details and per-step patch input hashes are built, along with Game aliases, rename,
    Build notes, per-Build playtime, favorites, declared save compatibility and the cross-region save check.
 3. Library features on that data: broader cleanup and in-flight protection. Sorting, play
@@ -175,7 +175,7 @@ Done: Search by primary title and Game aliases.
 | done | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Names | v1 | Settings > Library review selects Games, survivor and title; confirmation uses the existing merge path, preserving lineage, profiles, states and artwork; overlapping images refused before moving a group |
 | done | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 | Settings > Library > Regions and Languages supports reordering both lists; better regional title and Preferred mark are separate import proposals; ties stay put; player titles and preexisting titles without provenance are protected during import; Suggest Names opts into the regional title order on acceptance, protects edits, leaves skips and Preferred Builds unchanged |
 | done | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | explicit library and bundled No-Intro search in Import Review; records the base title, system and known family/release without a ROM; a later base import offers the destination and Base mark; manual matching leaves verification Unknown |
-| partial | Multi-signal development-build matching, never silently attach | v1 | exact hash/family and whole-title, alias, header or hack-base suggestions exist; broader development signals and confidence ranking remain |
+| done | Multi-signal development-build matching, never silently attach | v1 | stored bank fingerprints, unique header and whole-title/alias evidence, hardware and toolchain support rank candidates; high confidence preselects, medium keeps New Game selected, review explains the evidence and Import confirms the destination |
 | partial | Quiet provider metadata refresh never overwriting user overrides | v1.1 | No-Intro refreshes matched Builds at launch when each system's bundled version changes; player fields, missing provenance and names stay protected; other providers remain |
 
 Done: SHA-256 identity for every ROM; Original imported filename preserved permanently; the bundled

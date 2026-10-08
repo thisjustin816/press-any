@@ -63,6 +63,7 @@ public protocol ToolchainReportRepository: Sendable {
     /// Inserts the report, or replaces the Build's earlier report from the same detector.
     func saveReport(_ report: ToolchainDetectionReport, buildID: UUID, detectedAt: Date) throws
     func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport]
+    func fetchAllReports() throws -> [UUID: [ToolchainDetectionReport]]
 }
 
 public protocol BuildVariableMapRepository: Sendable {

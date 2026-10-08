@@ -197,17 +197,23 @@ private struct ArchitectureHarness {
         let builds = InMemoryBuildRepository()
         let profiles = InMemorySaveProfileRepository()
         let states = InMemorySaveStateRepository()
-        let assets = InMemoryAssetRepository()
+        let fingerprints = InMemoryImageFingerprintRepository()
+        let reports = InMemoryToolchainReportRepository()
+        let assets = InMemoryAssetRepository(fingerprints: fingerprints)
         let recipes = InMemoryPatchRecipeRepository()
         let timestamp = Date(timeIntervalSince1970: 1_800_000_000)
         let now: @Sendable () -> Date = { timestamp }
 
-        let analyzer = ROMImportAnalyzer(builds: builds, assetStore: store)
+        let analyzer = ROMImportAnalyzer(builds: builds,
+            fingerprints: fingerprints,
+            toolchainReports: reports,
+            assetStore: store)
         let committer = ImportCommitter(
             games: games,
             builds: builds,
             assets: assets,
-            toolchainReports: InMemoryToolchainReportRepository(),
+            toolchainReports: reports,
+            fingerprints: fingerprints,
             assetStore: store,
             transactions: PassthroughTransactionRunner(),
             now: now

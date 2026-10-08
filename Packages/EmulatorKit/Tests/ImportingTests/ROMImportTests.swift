@@ -267,7 +267,7 @@ final class ROMImportTests: XCTestCase {
 
         let next = try harness.writeExternalROM(TestROM.make(title: "gametitleNIS", cgb: true, payloadByte: 3))
         let analysis = try harness.analyzer.analyzeROM(at: next, targetGameID: nil)
-        XCTAssertEqual(analysis.headerTitleGameIDs, [project.game.id])
+        XCTAssertEqual(analysis.developmentCandidates.map(\.gameID), [project.game.id])
 
         // A header title shared by Builds in two Games suggests neither.
         _ = try importNewGame(title: "gametitleNIS", payload: 4)
@@ -275,7 +275,7 @@ final class ROMImportTests: XCTestCase {
             at: try harness.writeExternalROM(TestROM.make(title: "gametitleNIS", cgb: true, payloadByte: 5)),
             targetGameID: nil
         )
-        XCTAssertEqual(ambiguous.headerTitleGameIDs.count, 2)
+        XCTAssertTrue(ambiguous.developmentCandidates.isEmpty)
 
         // Titles too short to tell projects apart match nothing.
         _ = try importNewGame(title: "AB", payload: 6)
@@ -283,7 +283,7 @@ final class ROMImportTests: XCTestCase {
             at: try harness.writeExternalROM(TestROM.make(title: "AB", cgb: true, payloadByte: 7)),
             targetGameID: nil
         )
-        XCTAssertEqual(short.headerTitleGameIDs, [])
+        XCTAssertTrue(short.developmentCandidates.isEmpty)
     }
 
     func testFailedTransactionRemovesOnlyNewlyCreatedManagedFile() throws {
@@ -313,6 +313,7 @@ private struct ImportHarness {
     let builds: InMemoryBuildRepository
     let assets: InMemoryAssetRepository
     let toolchainReports: InMemoryToolchainReportRepository
+    let fingerprints: InMemoryImageFingerprintRepository
     let analyzer: ROMImportAnalyzer
     let committer: ImportCommitter
 
@@ -324,14 +325,17 @@ private struct ImportHarness {
         let store = try ManagedFileStore(rootURL: root.appendingPathComponent("Managed", isDirectory: true))
         let games = InMemoryGameRepository()
         let builds = InMemoryBuildRepository()
-        let assets = InMemoryAssetRepository()
+        let fingerprints = InMemoryImageFingerprintRepository()
+        let assets = InMemoryAssetRepository(fingerprints: fingerprints)
         let toolchainReports = InMemoryToolchainReportRepository()
-        let analyzer = ROMImportAnalyzer(builds: builds, assetStore: store)
+        let analyzer = ROMImportAnalyzer(builds: builds, games: games, fingerprints: fingerprints,
+            toolchainReports: toolchainReports, assetStore: store)
         let committer = ImportCommitter(
             games: games,
             builds: builds,
             assets: assets,
             toolchainReports: toolchainReports,
+            fingerprints: fingerprints,
             assetStore: store,
             transactions: transactionRunner,
             now: { Date(timeIntervalSince1970: 100) }
@@ -344,6 +348,7 @@ private struct ImportHarness {
             builds: builds,
             assets: assets,
             toolchainReports: toolchainReports,
+            fingerprints: fingerprints,
             analyzer: analyzer,
             committer: committer
         )
@@ -491,7 +496,10 @@ struct ROMMetadataProvenanceTests {
             title: "Catalog", region: "USA", languages: "En", status: "Beta", version: "v1.2",
             files: [KnownDumpFile(sha1: SHA1Digest.data(rom), size: Int64(rom.count))])
         let index = try KnownDumpIndex(catalog: KnownDumpCatalog(source: "test", generated: "2026-10-07", systems: [], games: [dump]))
-        let analyzer = ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store, knownDumps: matched ? index : nil)
+        let analyzer = ROMImportAnalyzer(builds: harness.builds,
+            fingerprints: InMemoryImageFingerprintRepository(),
+            toolchainReports: InMemoryToolchainReportRepository(),
+            assetStore: harness.store, knownDumps: matched ? index : nil)
         let analysis = try analyzer.analyzeROM(at: url, targetGameID: nil)
         let result = try harness.committer.commit(ROMImportPlan(analysis: analysis,
             disposition: .createGame(title: analysis.filenameMetadata.suggestedTitle),
