@@ -20,7 +20,8 @@ final class GameplayDriver: @unchecked Sendable {
 
     private var running = false
     private var requestedSpeed: EmulationSpeed = .normal
-    private var refreshes: DisplayRefreshThread?
+    private let makeRefreshes: @Sendable (@escaping DisplayRefreshHandler) -> any DisplayRefreshSource
+    private var refreshes: (any DisplayRefreshSource)?
     /// Refresh time not yet handed to the driver queue. Refreshes that arrive while the queue is
     /// busy merge into one, so a stall reaches the scheduler as a single long refresh and its lag
     /// limit applies.
@@ -43,18 +44,21 @@ final class GameplayDriver: @unchecked Sendable {
     init(
         runtime: any GameplayRuntime,
         input: GameplayInputAccumulator,
-        savePollNanoseconds: UInt64 = 250_000_000
+        savePollNanoseconds: UInt64 = 250_000_000,
+        makeRefreshes: @escaping @Sendable (@escaping DisplayRefreshHandler) -> any DisplayRefreshSource
+            = { DisplayRefreshThread(handler: $0) }
     ) {
         self.runtime = runtime
         self.input = input
         self.savePollNanoseconds = savePollNanoseconds
+        self.makeRefreshes = makeRefreshes
     }
 
     /// Whether the frame loop is running. It stops on its own when a frame fails.
     var isRunning: Bool { stateLock.withLock { running } }
 
     func start() {
-        let (shouldStart, stale) = stateLock.withLock { () -> (Bool, DisplayRefreshThread?) in
+        let (shouldStart, stale) = stateLock.withLock { () -> (Bool, (any DisplayRefreshSource)?) in
             guard !running else { return (false, nil) }
             running = true
             pendingRefresh = nil
@@ -67,7 +71,7 @@ final class GameplayDriver: @unchecked Sendable {
         queue.async { [weak self] in
             self?.scheduler = FrameScheduler()
         }
-        let refreshes = DisplayRefreshThread { [weak self] elapsed, interval in
+        let refreshes = makeRefreshes { [weak self] elapsed, interval in
             guard let self else { return }
             let isFirst = self.stateLock.withLock { () -> Bool in
                 let pending = self.pendingRefresh
@@ -91,7 +95,7 @@ final class GameplayDriver: @unchecked Sendable {
     /// frame still in flight. A frame stepped after the pause would fail and end the game.
     /// Never call this from the driver's own queue.
     func stop() {
-        let refreshes = stateLock.withLock { () -> DisplayRefreshThread? in
+        let refreshes = stateLock.withLock { () -> (any DisplayRefreshSource)? in
             running = false
             defer { self.refreshes = nil }
             return self.refreshes
@@ -139,7 +143,7 @@ final class GameplayDriver: @unchecked Sendable {
                 }
             }
         } catch {
-            let refreshes = stateLock.withLock { () -> DisplayRefreshThread? in
+            let refreshes = stateLock.withLock { () -> (any DisplayRefreshSource)? in
                 running = false
                 defer { self.refreshes = nil }
                 return self.refreshes
@@ -232,20 +236,29 @@ struct FrameScheduler {
     }
 }
 
+/// Reports each refresh with the time since the previous one and the length of the next, in
+/// nanoseconds.
+typealias DisplayRefreshHandler = @Sendable (_ elapsed: UInt64, _ interval: UInt64) -> Void
+
+/// What paces the frame loop. `cancel()` is safe from any thread, and no refresh is reported after
+/// it returns.
+protocol DisplayRefreshSource: AnyObject, Sendable {
+    func start()
+    func cancel()
+}
+
 /// Reports each display refresh from its own thread, with the time since the previous refresh and
 /// the length of the next one, both from the display's clock. A busy main thread can't delay it.
 /// Allows up to 120 Hz on ProMotion screens, where a repeated frame lasts half as long.
-final class DisplayRefreshThread: NSObject, @unchecked Sendable {
-    typealias Handler = @Sendable (_ elapsed: UInt64, _ interval: UInt64) -> Void
-
-    private let handler: Handler
+final class DisplayRefreshThread: NSObject, DisplayRefreshSource, @unchecked Sendable {
+    private let handler: DisplayRefreshHandler
     private let lock = NSLock()
     private var cancelled = false
     private var link: CADisplayLink?
     private var runLoop: CFRunLoop?
     private var lastTimestamp: CFTimeInterval?
 
-    init(handler: @escaping Handler) {
+    init(handler: @escaping DisplayRefreshHandler) {
         self.handler = handler
     }
 
@@ -256,7 +269,6 @@ final class DisplayRefreshThread: NSObject, @unchecked Sendable {
         thread.start()
     }
 
-    /// Safe from any thread. No refresh is reported after it returns.
     func cancel() {
         let (link, runLoop) = lock.withLock { () -> (CADisplayLink?, CFRunLoop?) in
             cancelled = true

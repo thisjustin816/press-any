@@ -10,6 +10,20 @@ import XCTest
 /// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
+    func testQuickPlayMenuDisablesQuickSaveAndQuickLoad() throws {
+        let (gameplay, _, _) = makeGameplay()
+        let items = gameplay.prepareGameMenu().compactMap { $0 as? UIAction }
+        let titles = items.map(\.title)
+        let saveIndex = try XCTUnwrap(titles.firstIndex(of: "Save State"))
+        XCTAssertEqual(titles.firstIndex(of: "Quick Save"), saveIndex - 2)
+        XCTAssertEqual(titles.firstIndex(of: "Quick Load"), saveIndex - 1)
+        for title in ["Quick Save", "Quick Load", "Save State"] {
+            let action = try XCTUnwrap(items.first { $0.title == title })
+            XCTAssertTrue(action.attributes.contains(.disabled))
+            XCTAssertEqual(action.subtitle, "Add to Library to save states")
+        }
+    }
+
     private func makeGameplay(
         policy: AutoResumePolicy = .always
     ) -> (GameplayViewController, LifecycleRuntime, PhysicalControllerMonitor) {

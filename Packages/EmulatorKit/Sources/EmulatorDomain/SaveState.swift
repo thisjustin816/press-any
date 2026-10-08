@@ -15,7 +15,7 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
     public let stateSerializationVersion: String
     public let stateAssetID: UUID
     public let screenshotAssetID: UUID?
-    public let kind: SaveStateKind
+    public var kind: SaveStateKind
     public let autoSequence: Int?
     public var label: String?
     public let playtimeSeconds: Double
@@ -53,7 +53,11 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
 extension SaveState {
     /// What a state is called without a label.
     public var kindName: String {
-        kind == .auto ? "Auto State" : "Save State"
+        switch kind {
+        case .quick: "Quick Save"
+        case .auto: "Auto State"
+        case .manual, .crashRecovery: "Save State"
+        }
     }
 
     /// Its label, or its kind when it has none.

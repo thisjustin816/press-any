@@ -8,6 +8,54 @@ import XCTest
 @testable import EmulationSession
 
 final class EmulationSessionTests: XCTestCase {
+    func testQuickSaveFlushesTheBatteryAndQuickLoadKeepsANewerSave() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1]))
+        let session = harness.makeSession(thumbnails: FrameSizeEncoder())
+        try session.start(context: harness.contextA)
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        core.writeBattery(Data([2]))
+        let frame = try session.stepFrame()
+        let quick = try session.saveQuickState()
+        XCTAssertEqual(quick.displayName, "Quick Save")
+        XCTAssertEqual(session.thumbnailData(for: quick), FrameSizeEncoder.bytes(of: frame))
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([2]))
+        XCTAssertFalse(try session.loadingWouldRollBackSave(quick))
+        core.writeBattery(Data([3]))
+        XCTAssertTrue(try session.loadingWouldRollBackSave(quick))
+
+        let copy = try session.loadStateKeepingCopy(quick)
+
+        XCTAssertEqual(try harness.batteryData(of: copy), Data([3]))
+        XCTAssertEqual(try core.persistentSaveData(), Data([2]))
+        try session.loadState(quick)
+        XCTAssertEqual(try core.persistentSaveData(), Data([2]))
+    }
+
+    func testAutoResumeAndCrashRecoveryIgnoreQuickStates() throws {
+        let harness = try SessionHarness.make()
+        let history = SessionLaunchHistory(store: InMemorySettingsStore())
+        let session = harness.makeSession(history: history)
+        try session.start(context: harness.contextA)
+        let quick = try session.saveQuickState()
+        XCTAssertNil(try session.resumableAutoState(for: harness.contextA))
+        XCTAssertEqual(try history.launchAction(checkpoint: quick), .library)
+
+        let auto = try session.saveAutoState()
+        for _ in 0..<3584 { _ = try session.stepFrame() }
+        XCTAssertTrue(try session.saveCrashRecoveryIfDue())
+        let checkpoint = try XCTUnwrap(harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
+            .first { $0.kind == .crashRecovery })
+        let newerQuick = try session.saveQuickState()
+        XCTAssertEqual(try session.resumableAutoState(for: harness.contextA), auto)
+        XCTAssertEqual(try history.launchAction(checkpoint: newerQuick), .library)
+        XCTAssertEqual(try history.launchAction(checkpoint: checkpoint), .recover(harness.contextA, checkpoint))
+        XCTAssertEqual(try session.saveStates().filter { $0.kind == .quick }, [newerQuick])
+        XCTAssertFalse(try session.saveStates().contains { $0.kind == .crashRecovery })
+        for _ in 0..<7 { _ = try session.saveAutoState() }
+        XCTAssertEqual(try session.saveStates().filter { $0.kind == .quick }, [newerQuick])
+        XCTAssertEqual(try session.saveStates().filter { $0.kind == .auto }.count, 5)
+    }
+
     func testIntactPersistentSaveLoadsWithItsRecordedHash() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
         let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
@@ -833,6 +881,7 @@ private final class UndeletableSaveStateRepository: SaveStateRepository, @unchec
     struct Refused: Error {}
 
     func insertSaveState(_ state: SaveState) throws { try inner.insertSaveState(state) }
+    func updateSaveState(_ state: SaveState) throws { try inner.updateSaveState(state) }
     func fetchSaveStates(buildID: UUID, saveProfileID: UUID) throws -> [SaveState] {
         try inner.fetchSaveStates(buildID: buildID, saveProfileID: saveProfileID)
     }
