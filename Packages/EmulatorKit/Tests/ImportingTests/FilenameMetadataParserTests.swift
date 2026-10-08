@@ -127,7 +127,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.hackTitle, "PureRed")
         XCTAssertEqual(parsed.buildMetadata.author, "Vortyne")
         XCTAssertEqual(parsed.buildMetadata.status, "Beta")
-        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Red - PureRed [v4.7.0] [by Vortyne] [Beta].gb")
+        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Red [PureRed by Vortyne v4.7.0] [Beta].gb")
     }
 
     func testLabeledHackMetadataAndTranslationNormalizeWithoutInventingUnknownFields() {
@@ -140,7 +140,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.hackTitle, "Crystal Clear")
         XCTAssertEqual(parsed.buildMetadata.translation, "Spanish")
         XCTAssertEqual(parsed.buildMetadata.author, "ShockSlayer")
-        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Crystal - Crystal Clear [v2.5.10] [by ShockSlayer] [Spanish Translation].gbc")
+        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Crystal [Crystal Clear by ShockSlayer v2.5.10] [Spanish Translation].gbc")
         XCTAssertEqual(parsed.unknownGroups, [])
     }
 
@@ -164,7 +164,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.hackTitle, "Nueva")
         XCTAssertEqual(parsed.buildMetadata.translation, "Spa")
         XCTAssertEqual(parsed.unknownGroups, [])
-        XCTAssertEqual(parsed.normalizedFilename, "Base Game - Nueva [v1.0] [Spa Translation].gb")
+        XCTAssertEqual(parsed.normalizedFilename, "Base Game [Nueva v1.0] [Spa Translation].gb")
     }
 
     func testPercentEncodedDescriptiveHackNameIsDecodedAndSplitIntoFields() {
@@ -181,7 +181,24 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.versionString, "1.1")
         XCTAssertEqual(
             parsed.normalizedFilename,
-            "Bubble Bobble Part 2 - Tearing fix & save patch (USA, Europe) [v1.1] [by thisJUSTin816].gb"
+            "Bubble Bobble Part 2 (USA, Europe) [Tearing fix & save patch by thisJUSTin816 v1.1].gb"
+        )
+    }
+
+    func testAHackReleasedUnderItsOwnNamingKeepsThatNameAndReadsBackTheSame() {
+        let filename = "Moon Garden (USA) [Night patch by Jane v0.3].gbc"
+        let parsed = FilenameMetadataParser.parse(filename: filename)
+
+        XCTAssertEqual(parsed.normalizedFilename, filename)
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: parsed.normalizedFilename).buildMetadata, parsed.buildMetadata)
+    }
+
+    func testAHackWithoutItsOwnTitleIsNamedForItsAuthor() {
+        let metadata = BuildImportMetadata(versionString: "1.3", baseTitle: "Moon Garden", hackTitle: "Moon Garden", author: "Jane")
+
+        XCTAssertEqual(
+            FilenameMetadataParser.canonicalFilename(fileExtension: "gb", title: "Moon Garden", metadata: metadata, unknownGroups: []),
+            "Moon Garden [Hack by Jane v1.3].gb"
         )
     }
 

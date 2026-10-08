@@ -207,7 +207,9 @@ not treat them as files.
 
 Press Any has a folder in the Files app for what it writes out. Exports go to its Exports folder:
 a Save Profile's battery save as a `.sav`, and a Build's ROM (the original, or the rebuilt patched
-ROM) under its canonical name. Exporting a whole Game as a package, in the Library Backup format
+ROM) under its canonical name. A hack keeps its base game's name and tags, then one group naming
+the hack the way hacks are released, as in "Moon Garden (USA) [Night patch by Jane v0.3].gbc";
+Import Review suggests the same name. Exporting a whole Game as a package, in the Library Backup format
 with ROMs only when asked, comes with the backup work. Later captures (recordings, bug reports)
 land in the same folder.
 

@@ -362,25 +362,40 @@ public enum FilenameMetadataParser {
         metadata: BuildImportMetadata,
         unknownGroups: [String]
     ) -> String {
-        let normalizedTitle: String
-        if let baseTitle = metadata.baseTitle,
-           let hackTitle = metadata.hackTitle,
-           baseTitle.localizedCaseInsensitiveCompare(hackTitle) != .orderedSame {
-            normalizedTitle = "\(baseTitle) - \(hackTitle)"
-        } else {
-            normalizedTitle = title
-        }
         var groups: [String] = []
         if let region = metadata.region { groups.append("(\(region))") }
         if let language = metadata.language { groups.append("(\(language))") }
         if let revision = metadata.revision { groups.append("(Rev \(revision))") }
-        if let version = metadata.versionString { groups.append("[v\(version)]") }
-        if let author = metadata.author { groups.append("[by \(author)]") }
+        let normalizedTitle: String
+        if let hackGroup = hackGroup(for: metadata), let baseTitle = metadata.baseTitle {
+            // A hack keeps its base game's name and tags, then one group naming the hack, as hacks
+            // are released: "Base (USA) [Night patch by Jane v0.3]".
+            normalizedTitle = baseTitle
+            groups.append(hackGroup)
+        } else {
+            normalizedTitle = title
+            if let version = metadata.versionString { groups.append("[v\(version)]") }
+            if let author = metadata.author { groups.append("[by \(author)]") }
+        }
         if let translation = metadata.translation { groups.append("[\(translation) Translation]") }
         if let status = metadata.status { groups.append("[\(status)]") }
         groups.append(contentsOf: unknownGroups.map { "[\($0)]" })
         let stem = ([normalizedTitle] + groups).filter { !$0.isEmpty }.joined(separator: " ")
         return fileExtension.isEmpty ? stem : "\(stem).\(fileExtension)"
+    }
+
+    /// "[Hack Title by Author v1.2]", leaving out what's unknown, or nil when the hack has neither
+    /// a title of its own nor an author, so the group would say nothing the base title doesn't.
+    private static func hackGroup(for metadata: BuildImportMetadata) -> String? {
+        guard let baseTitle = metadata.baseTitle else { return nil }
+        let ownTitle = metadata.hackTitle.flatMap {
+            $0.localizedCaseInsensitiveCompare(baseTitle) == .orderedSame ? nil : $0
+        }
+        guard ownTitle != nil || metadata.author != nil else { return nil }
+        var parts = [ownTitle ?? "Hack"]
+        if let author = metadata.author { parts.append("by \(author)") }
+        if let version = metadata.versionString { parts.append("v\(version)") }
+        return "[\(parts.joined(separator: " "))]"
     }
 
     private static func canonicalStatus(_ value: String) -> String? {
