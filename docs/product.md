@@ -83,6 +83,9 @@ Plus follows these rules:
   moment. The next Auto State write prunes to the latest unpinned one, as pruning always does. The
   chosen app icon stays until the player changes it, since iOS shows an alert for every icon
   change; the picker just locks.
+- Until the App Store has answered at launch, Auto State history is kept, so a state written in
+  that moment never prunes a paying player's history. Without an answer, features still show
+  locked.
 
 The Plus screen lists what Plus includes now, the roadmap with its promise, and, until it's owned,
 the price with Buy and Restore Purchases and a line saying the price goes up when v1.1 ships. Once

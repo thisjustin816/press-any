@@ -67,6 +67,18 @@ final class PlusTests: XCTestCase {
         XCTAssertFalse(answers.1)
     }
 
+    func testAutoStateHistoryIsKeptUntilStoreKitHasAnswered() {
+        let unasked = PlusOwnership(false, resolved: false)
+        XCTAssertFalse(unasked.isOwned)
+        XCTAssertTrue(unasked.keepsAutoStateHistory, "an unanswered question deletes nothing")
+        unasked.set(false)
+        XCTAssertFalse(unasked.keepsAutoStateHistory, "a refund or no purchase prunes to the newest")
+        unasked.set(true)
+        XCTAssertTrue(unasked.keepsAutoStateHistory)
+        XCTAssertTrue(PlusStore.fixed(ownsPlus: true).ownership.keepsAutoStateHistory)
+        XCTAssertFalse(PlusStore.fixed(ownsPlus: false).ownership.keepsAutoStateHistory)
+    }
+
     func testAppIconsNeedPlusExceptTheDefaultAndAreBundled() throws {
         XCTAssertFalse(AppIconChoice.standard.needsPlus)
         XCTAssertNil(AppIconChoice.standard.iconName)

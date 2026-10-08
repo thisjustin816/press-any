@@ -31,7 +31,9 @@ final class PlusStore: ObservableObject {
     /// `ownsPlus` is what shows until the provider first answers.
     init(provider: any FeatureEntitlementProvider, ownsPlus: Bool = false) {
         self.provider = provider
-        ownership = PlusOwnership(ownsPlus)
+        // Only a provider that already knows its answer starts resolved. StoreKit's isn't known
+        // until it has been asked.
+        ownership = PlusOwnership(ownsPlus, resolved: provider is FixedEntitlementProvider)
         isUnlocked = ownsPlus
         // Subscribed before the first read, so a change between the two isn't missed.
         let changes = provider.ownershipChanges()
@@ -118,15 +120,27 @@ final class PlusStore: ObservableObject {
 final class PlusOwnership: @unchecked Sendable {
     private let lock = NSLock()
     private var owned: Bool
+    private var resolved: Bool
 
-    init(_ owned: Bool) {
+    init(_ owned: Bool, resolved: Bool = true) {
         self.owned = owned
+        self.resolved = resolved
     }
 
     var isOwned: Bool { lock.withLock { owned } }
 
+    /// Whether the provider has answered yet. Until it has, `isOwned` only means "not asked".
+    var isResolved: Bool { lock.withLock { resolved } }
+
+    /// Whether to keep more than the newest Auto State. Deleting a paying owner's states because
+    /// StoreKit hasn't answered yet at launch can't be undone, so an unanswered question keeps them.
+    var keepsAutoStateHistory: Bool { lock.withLock { owned || !resolved } }
+
     func set(_ owned: Bool) {
-        lock.withLock { self.owned = owned }
+        lock.withLock {
+            self.owned = owned
+            resolved = true
+        }
     }
 }
 
