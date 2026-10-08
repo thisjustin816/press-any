@@ -117,6 +117,7 @@ public enum LibraryBackupError: LocalizedError, Equatable {
     case backupTooLarge(Int64)
     case damagedLibraryFile(String)
     case gameIsSaving
+    case conflictingChoices(String)
 
     public var errorDescription: String? {
         switch self {
@@ -135,6 +136,7 @@ public enum LibraryBackupError: LocalizedError, Equatable {
             "This backup would be about \(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)), more than the \(ByteCountFormatter.string(fromByteCount: LibraryBackupService.maximumArchiveBytes, countStyle: .file)) a backup can hold. Turn off Include ROMs, or export Games one at a time."
         case .damagedLibraryFile(let name): "\(name) is damaged. Check Library Files, then back up again."
         case .gameIsSaving: "A game is saving. Try again in a moment."
+        case .conflictingChoices(let reason): "These choices can't be restored together: \(reason). Change a choice and try again."
         }
     }
 }

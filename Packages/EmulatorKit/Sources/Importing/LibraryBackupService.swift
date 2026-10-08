@@ -30,7 +30,10 @@ public struct LibraryBackupService: Sendable {
                        progress: @escaping @Sendable (Double) -> Void = { _ in }) throws -> URL {
         try BackupExporter(repository: repository, store: store).write(BackupExporter.Request(
             gameID: gameID, includeROMs: includeROMs, keepsDamagedFiles: false,
-            filenameStem: { _ in "\(displayName) Backup" }, appVersion: appVersion, appBuild: appBuild),
+            filenameStem: { snapshot in
+                // A Game package is named for its Game, so it never reads as a whole-library backup.
+                gameID.flatMap { id in snapshot.games.first { $0.id == id }?.primaryTitle } ?? "\(displayName) Backup"
+            }, appVersion: appVersion, appBuild: appBuild),
             to: directory, progress: progress)
     }
 
@@ -75,6 +78,12 @@ public struct LibraryBackupService: Sendable {
         if manifest.isGamePackage {
             guard let id = manifest.gameID, snapshot.games.contains(where: { $0.id == id }) else {
                 throw LibraryBackupError.invalidArchive("the Game package has no matching Game")
+            }
+            // A package holds only what exporting its Game would write: no App or System settings
+            // and no Game the package doesn't depend on.
+            let scope = try snapshot.scoped(to: id).backupOmittingExternalLineage()
+            guard try BackupSnapshotCodec.canonical(scope) == BackupSnapshotCodec.canonical(snapshot) else {
+                throw LibraryBackupError.invalidArchive("the Game package holds records outside its Game")
             }
         }
         let assetPaths = Set(snapshot.assets.map(\.relativePath))
@@ -177,7 +186,9 @@ public struct LibraryBackupService: Sendable {
                 if let source = staged[path] { try store.copyFileAtomically(from: source, to: destination) }
                 progress(Double(index + 1) / Double(max(1, ordered.count)) * 0.8)
             }
-            let report = RestoreReport(restoredAt: Date(), added: merge.added, skipped: merge.skipped,
+            let report = RestoreReport(restoredAt: Date(),
+                added: Self.addedCount(plan.snapshot, comparedWith: replaceEntireLibrary ? LibraryBackupSnapshot() : library),
+                skipped: merge.skipped,
                 resolutions: merge.conflicts.compactMap { conflict in
                     choices[conflict.id].map { RestoreResolution(record: "\(conflict.kind): \(conflict.name)", choice: $0) }
                 }, missingROMs: missingROMs(in: plan.snapshot, hasFile: { plan.files[$0] != nil }, library: plan.snapshot),
@@ -202,6 +213,23 @@ public struct LibraryBackupService: Sendable {
               !includingRetained || current.retained.recordIDs == reviewed.retained.recordIDs else {
             throw LibraryBackupError.libraryChanged
         }
+    }
+
+    /// Records the restore creates, including copies kept as before restore or from backup.
+    private static func addedCount(_ result: LibraryBackupSnapshot, comparedWith library: LibraryBackupSnapshot) -> Int {
+        func count<T>(_ values: [T], _ existing: [T], _ key: (T) -> String) -> Int {
+            let keys = Set(existing.map(key))
+            return values.filter { !keys.contains(key($0)) }.count
+        }
+        return count(result.games, library.games) { $0.id.uuidString }
+            + count(result.builds, library.builds) { $0.id.uuidString }
+            + count(result.profiles, library.profiles) { $0.id.uuidString }
+            + count(result.states, library.states) { $0.id.uuidString }
+            + count(result.recipes, library.recipes) { $0.id.uuidString }
+            + count(result.variableMaps, library.variableMaps) { $0.id.uuidString }
+            + count(result.reports, library.reports) { $0.identity }
+            + count(result.declarations, library.declarations, BackupSnapshotCodec.declarationID)
+            + count(result.settings, library.settings) { $0.identity }
     }
 
     private func leftAloneNote(_ names: [String]) -> [String] {

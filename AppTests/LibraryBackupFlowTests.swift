@@ -30,12 +30,16 @@ final class LibraryBackupFlowTests: XCTestCase {
         XCTAssertTrue(try container.libraryBackup.prepare(from: url).manifest.includesROMs)
         XCTAssertTrue(url.lastPathComponent.hasPrefix("Test App Backup "))
         XCTAssertEqual(url.pathExtension, "zip")
+        model.includeROMs = false
+        await model.loadSummary()
+        XCTAssertNil(model.exportedURL)
 
         let package = LibraryBackupViewModel(service: container.libraryBackup, directory: root, gameID: build.gameID,
             appInfo: LibraryBackupAppInfo(displayName: "Test App", version: "1", build: "2"))
         await package.loadSummary()
         await package.export()
         let packageURL = try XCTUnwrap(package.exportedURL)
+        XCTAssertFalse(packageURL.lastPathComponent.hasPrefix("Test App Backup "))
         XCTAssertTrue(try container.libraryBackup.prepare(from: packageURL).manifest.isGamePackage)
         XCTAssertFalse(try container.libraryBackup.prepare(from: packageURL).manifest.includesROMs)
     }
@@ -97,6 +101,25 @@ final class LibraryBackupFlowTests: XCTestCase {
         XCTAssertNil(model.errorMessage)
         XCTAssertNotNil(model.report)
         XCTAssertTrue(FileManager.default.fileExists(atPath: try XCTUnwrap(model.safetyBackupURL).path))
+    }
+
+    func testLibraryChangeAfterReviewOffersReviewAgain() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        var build = try importROM(container, root: root)
+        let archive = try container.libraryBackup.export(to: root, displayName: "Test", appVersion: "1", appBuild: "1")
+        let model = LibraryRestoreViewModel(service: container.libraryBackup, url: archive, directory: root, isSessionActive: { false })
+        await model.load()
+        build.notes = "Changed after review"
+        try container.repositories.builds.updateBuildMetadata(build)
+        await model.merge()
+        XCTAssertTrue(model.needsNewReview)
+        XCTAssertNil(model.report)
+        await model.load()
+        XCTAssertFalse(model.needsNewReview)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertNotNil(model.review)
     }
 
     func testRunningGameBlocksRestoreAndBuildCannotBeKeptBoth() async throws {

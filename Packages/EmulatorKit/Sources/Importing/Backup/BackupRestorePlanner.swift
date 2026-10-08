@@ -170,6 +170,8 @@ struct BackupRestorePlanner {
                 let choice = choices["Save State/\(incoming.id.uuidString)"]
                 guard choice == .archive || choice == .keepBoth,
                       let current = library.states.first(where: { $0.id == incoming.id }) else { continue }
+                // Keeping both versions of the profile already copies its backup states.
+                if choice == .keepBoth && choices["Save Profile/\(incoming.saveProfileID.uuidString)"] == .keepBoth { continue }
                 let state = choice == .keepBoth ? incoming : current
                 let sourceAssets = choice == .keepBoth ? archive.assets : library.assets
                 guard let original = sourceAssets.first(where: { $0.id == state.stateAssetID }) else { continue }
@@ -195,17 +197,30 @@ struct BackupRestorePlanner {
                     asManual: true, label: "\(state.displayName)\(choice == .keepBoth ? " from backup" : " before restore")"))
             }
         }
+        // Library states come first, so a backup state that takes an occupied slot or a second
+        // Quick State place for the same Build and profile is kept as a manual state.
         for index in result.states.indices {
             let state = result.states[index]
-            guard let slot = state.slot,
-                  result.states[..<index].contains(where: { $0.buildID == state.buildID && $0.saveProfileID == state.saveProfileID && $0.slot == slot }) else { continue }
+            let occupied = result.states[..<index].contains { other in
+                guard other.buildID == state.buildID, other.saveProfileID == state.saveProfileID else { return false }
+                switch state.kind {
+                case .slot: return other.slot == state.slot
+                case .quick: return other.kind == .quick
+                default: return false
+                }
+            }
+            guard occupied else { continue }
             result.states[index] = state.backupCopy(asManual: true, label: state.displayName + " from backup")
         }
         result.assets = assets.filter { result.referencedAssetIDs.contains($0.id) }
         let paths = Set(result.assets.map(\.relativePath))
         files = files.filter { paths.contains($0.key) }
-        try BackupSnapshotCodec.validate(result, allowExternalLineage: !replacing,
-            retainedIDs: replacing ? [] : library.retained.recordIDs)
+        do {
+            try BackupSnapshotCodec.validate(result, allowExternalLineage: !replacing,
+                retainedIDs: replacing ? [] : library.retained.recordIDs)
+        } catch LibraryBackupError.invalidArchive(let reason) {
+            throw LibraryBackupError.conflictingChoices(reason)
+        }
         return BackupRestorePlan(snapshot: result, files: files, notes: notes)
     }
 

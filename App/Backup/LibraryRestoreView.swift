@@ -27,7 +27,12 @@ struct LibraryRestoreView: View {
                 if model.isLoading { ProgressView("Verifying backup...") }
                 if model.isMakingSafetyBackup { ProgressView("Backing up the current library...") }
                 if model.isRestoring { ProgressView("Restoring...", value: model.progress) }
-                if let message = model.errorMessage { Section { Text(message).foregroundStyle(.red) } }
+                if let message = model.errorMessage {
+                    Section {
+                        Text(message).foregroundStyle(.red)
+                        if model.needsNewReview { Button("Review Again") { Task { await model.load() } } }
+                    }
+                }
             }
             .navigationTitle(model.report == nil ? "Restore Review" : "Migration Report")
             .navigationBarTitleDisplayMode(.inline)

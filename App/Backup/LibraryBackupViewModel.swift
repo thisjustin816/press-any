@@ -49,6 +49,8 @@ final class LibraryBackupViewModel: ObservableObject {
         isLoading = true
         summary = nil
         errorMessage = nil
+        // The last export no longer matches the options, so its Share link goes.
+        exportedURL = nil
         let service = service, gameID = gameID, includeROMs = includeROMs
         do {
             let result = try await Task.detached(priority: .userInitiated) {

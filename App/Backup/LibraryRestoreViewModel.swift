@@ -16,6 +16,8 @@ final class LibraryRestoreViewModel: ObservableObject {
     @Published private(set) var safetyBackupURL: URL?
     @Published var isReplacementConfirmationPresented = false
     @Published private(set) var errorMessage: String?
+    /// The library changed after review, so the review must be read again before restoring.
+    @Published private(set) var needsNewReview = false
 
     let url: URL
     private let service: LibraryBackupService
@@ -51,6 +53,7 @@ final class LibraryRestoreViewModel: ObservableObject {
         guard !isBusy, report == nil else { return }
         isLoading = true
         errorMessage = nil
+        needsNewReview = false
         prepared = nil
         review = nil
         choices = [:]
@@ -103,7 +106,7 @@ final class LibraryRestoreViewModel: ObservableObject {
                 replacementIsPending = true
                 isReplacementConfirmationPresented = true
             }
-        } catch { errorMessage = error.localizedDescription }
+        } catch { show(error) }
     }
 
     func cancelReplacement() {
@@ -153,6 +156,11 @@ final class LibraryRestoreViewModel: ObservableObject {
             }.value
             progress = 1
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
-        } catch { errorMessage = error.localizedDescription }
+        } catch { show(error) }
+    }
+
+    private func show(_ error: any Error) {
+        errorMessage = error.localizedDescription
+        needsNewReview = error as? LibraryBackupError == .libraryChanged
     }
 }

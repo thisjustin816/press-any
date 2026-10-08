@@ -100,6 +100,12 @@ enum BackupSnapshotCodec {
         try unique(snapshot.games) { $0.id.uuidString }
         try unique(snapshot.manualPositions) { $0.gameID.uuidString }
         try unique(snapshot.builds) { $0.id.uuidString }
+        for game in snapshot.games {
+            let images = snapshot.builds.filter { $0.gameID == game.id }.map(\.imageSHA256)
+            guard Set(images).count == images.count else {
+                throw LibraryBackupError.invalidArchive("\(game.primaryTitle) would have two Builds of the same ROM")
+            }
+        }
         try unique(snapshot.builds) { "\($0.gameID)/\($0.imageSHA256)" }
         try unique(snapshot.profiles) { $0.id.uuidString }
         try unique(snapshot.states) { $0.id.uuidString }
@@ -117,8 +123,8 @@ enum BackupSnapshotCodec {
         let builds = Set(snapshot.builds.map(\.id))
         let profiles = Set(snapshot.profiles.map(\.id))
         let assets = Dictionary(uniqueKeysWithValues: snapshot.assets.map { ($0.id, $0) })
-        func require(_ valid: Bool) throws {
-            guard valid else { throw LibraryBackupError.invalidArchive("broken record references or invalid values") }
+        func require(_ valid: Bool, _ reason: @autoclosure () -> String = "broken record references or invalid values") throws {
+            guard valid else { throw LibraryBackupError.invalidArchive(reason()) }
         }
         func points(_ id: UUID?, into ids: Set<UUID>) -> Bool {
             id.map { ids.contains($0) || retainedIDs.contains($0) } ?? true
@@ -133,8 +139,10 @@ enum BackupSnapshotCodec {
         for game in snapshot.games {
             try asset(game.artworkAssetID, kind: .artwork)
             try require(allowExternalLineage || (game.lineage?.sourceGameID.map { games.contains($0) } ?? true))
-            try require(points(game.preferredBuildID, into: Set(snapshot.builds.filter { $0.gameID == game.id }.map(\.id))))
-            try require(points(game.preferredSaveProfileID, into: Set(snapshot.profiles.filter { $0.gameID == game.id }.map(\.id))))
+            try require(points(game.preferredBuildID, into: Set(snapshot.builds.filter { $0.gameID == game.id }.map(\.id))),
+                "the preferred Build of \(game.primaryTitle) would belong to another Game")
+            try require(points(game.preferredSaveProfileID, into: Set(snapshot.profiles.filter { $0.gameID == game.id }.map(\.id))),
+                "the preferred Save Profile of \(game.primaryTitle) would belong to another Game")
         }
         for build in snapshot.builds {
             try require(games.contains(build.gameID) && build.totalPlaytimeSeconds.isFinite && build.totalPlaytimeSeconds >= 0)
@@ -150,13 +158,15 @@ enum BackupSnapshotCodec {
             try require(points(profile.saveWrittenByBuildID, into: builds))
         }
         for state in snapshot.states {
-            try require(builds.contains(state.buildID) && profiles.contains(state.saveProfileID) && state.kind != .crashRecovery)
+            try require(builds.contains(state.buildID) && profiles.contains(state.saveProfileID) && state.kind != .crashRecovery,
+                "the state \(state.displayName) would lose its Build or Save Profile")
             try asset(state.stateAssetID, kind: .saveState)
             try asset(state.screenshotAssetID, kind: .stateThumbnail)
             try require(state.slot.map { state.kind == .slot && $0 > 0 } ?? true)
         }
         for recipe in snapshot.recipes {
-            try require(builds.contains(recipe.resultBuildID) && builds.contains(recipe.baseBuildID) && recipe.resultBuildID != recipe.baseBuildID)
+            try require(builds.contains(recipe.resultBuildID) && builds.contains(recipe.baseBuildID) && recipe.resultBuildID != recipe.baseBuildID,
+                "a patched Build would lose its base Build")
             try unique(recipe.items) { String($0.position) }
             for item in recipe.items {
                 try asset(item.patchAssetID, kind: .sourcePatch)
@@ -201,7 +211,8 @@ enum BackupSnapshotCodec {
             _ = try JSONSerialization.jsonObject(with: Data(value.valueJSON.utf8), options: [.fragmentsAllowed])
         }
         for game in snapshot.games {
-            try require(snapshot.builds.filter { $0.gameID == game.id && $0.isBase }.count <= 1)
+            try require(snapshot.builds.filter { $0.gameID == game.id && $0.isBase }.count <= 1,
+                "\(game.primaryTitle) would have two Base Builds")
         }
     }
 }

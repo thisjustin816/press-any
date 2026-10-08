@@ -422,6 +422,112 @@ import Testing
         _ = try fixture.service.restore(prepared, review: review, choices: [:], replaceEntireLibrary: true, safetyBackupURL: safety)
     }
 
+    @Test func aSecondQuickStateFromTheBackupIsKeptAsAManualState() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        var archive = fixture.snapshot
+        archive.states[0] = archive.states[0].backupCopy(id: UUID())
+        archive.states[0].kind = .quick
+        archive.states[0].slot = nil
+        var library = fixture.snapshot
+        library.states[0].kind = .quick
+        library.states[0].slot = nil
+        let url = try LibraryBackupService(repository: InMemoryLibraryBackupRepository(archive), assetStore: fixture.store)
+            .export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1")
+        let repository = InMemoryLibraryBackupRepository(library)
+        let service = LibraryBackupService(repository: repository, assetStore: fixture.store)
+        let prepared = try service.prepare(from: url)
+        _ = try service.restore(prepared, review: service.review(prepared), choices: [:])
+        let states = try repository.readSnapshot { $0.states }
+        #expect(states.filter { $0.kind == .quick }.map(\.id) == [library.states[0].id])
+        #expect(states.contains { $0.kind == .manual && $0.label == "Quick Save from backup" })
+    }
+
+    @Test func keepingBothOfAProfileAndItsStateCopiesTheStateOnceAndCountsIt() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let prepared = try fixture.service.prepare(from: fixture.export())
+        var library = fixture.snapshot
+        library.profiles[0].displayName = "Jane"
+        library.states[0].label = "Jane's state"
+        let repository = InMemoryLibraryBackupRepository(library)
+        let service = LibraryBackupService(repository: repository, assetStore: fixture.store)
+        let review = try service.review(prepared)
+        let choices = Dictionary(uniqueKeysWithValues: review.conflicts.map { ($0.id, RestoreChoice.keepBoth) })
+        #expect(choices.count == 2)
+        let report = try service.restore(prepared, review: review, choices: choices)
+        let restored = try repository.readSnapshot { $0 }
+        #expect(restored.profiles.count == 2)
+        #expect(restored.states.count == 2)
+        #expect(!restored.states.contains { $0.label?.hasSuffix("from backup") == true && $0.saveProfileID == library.profiles[0].id })
+        #expect(report.added == 2)
+    }
+
+    @Test func contradictoryRecordsNameTheConflict() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        var archive = fixture.snapshot
+        let rom = Data(repeating: 3, count: 64)
+        let romURL = try fixture.store.sourceImageURL(sha256: fixture.store.hashData(rom))
+        try fixture.store.writeDataAtomically(rom, to: romURL)
+        let asset = ManagedAsset(id: UUID(), kind: .sourceImage, storageClass: .source, contentSHA256: fixture.store.hashData(rom),
+            byteLength: Int64(rom.count), relativePath: try fixture.store.managedRelativePath(for: romURL), createdAt: fixture.date)
+        archive.assets.append(asset)
+        archive.builds[0].isBase = false
+        archive.builds.append(Build(id: UUID(), gameID: archive.games[0].id, system: .gameBoy, displayName: "Moon Garden",
+            imageAssetID: asset.id, imageSHA256: asset.contentSHA256, sourceKind: .importedImage, isBase: true,
+            createdAt: fixture.date, modifiedAt: fixture.date))
+        let url = try LibraryBackupService(repository: InMemoryLibraryBackupRepository(archive), assetStore: fixture.store)
+            .export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1")
+        let prepared = try fixture.service.prepare(from: url)
+        let review = try fixture.service.review(prepared)
+        let choices = Dictionary(uniqueKeysWithValues: review.conflicts.map { ($0.id, RestoreChoice.library) })
+        #expect(throws: LibraryBackupError.conflictingChoices("Backup Game would have two Base Builds")) {
+            try fixture.service.restore(prepared, review: review, choices: choices)
+        }
+    }
+
+    @Test func conflictsAreNamedForPeople() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let prepared = try fixture.service.prepare(from: fixture.export())
+        var library = fixture.snapshot
+        library.settings[1].valueJSON = "false"
+        let declaration = library.declarations[0]
+        library.declarations[0] = BuildSaveDeclaration(between: declaration.firstBuildID, and: declaration.secondBuildID,
+            compatibility: .doesNotShareSaves)
+        let recipe = library.recipes[0]
+        library.recipes[0] = PatchRecipe(id: recipe.id, resultBuildID: recipe.resultBuildID, baseBuildID: recipe.baseBuildID,
+            expectedResultSHA256: recipe.expectedResultSHA256,
+            items: [PatchRecipeItem(position: 0, patchAssetID: recipe.items[0].patchAssetID, enabled: false)], createdAt: recipe.createdAt)
+        let service = LibraryBackupService(repository: InMemoryLibraryBackupRepository(library), assetStore: fixture.store)
+        let names = Set(try service.review(prepared).conflicts.map(\.name))
+        #expect(names == ["Skip boot animation (Backup Game)", "Base and Patched", "Recipe for Patched"])
+    }
+
+    @Test func gamePackagesAreNamedForTheirGameAndMayNotCarryOtherRecords() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let gameID = try #require(fixture.snapshot.games.first?.id)
+        let package = try fixture.export(gameID: gameID)
+        #expect(package.lastPathComponent.hasPrefix("Backup Game "))
+        #expect(try fixture.export().lastPathComponent.hasPrefix("Test App Backup "))
+        var entries = try ZipArchiveReader.backupEntries(in: Data(contentsOf: package))
+        let index = try #require(entries.firstIndex { $0.relativePath == "settings.json" })
+        let manifestIndex = try #require(entries.firstIndex { $0.relativePath == "backup-manifest.json" })
+        let settings = Data(#"[{"key":"releasePreference","scopeID":"app","scopeType":"app","valueJSON":"{}"}]"#.utf8)
+        entries[index] = ZipArchiveEntry(relativePath: "settings.json", data: settings)
+        var manifest = try JSONDecoder().decode(LibraryBackupManifest.self, from: entries[manifestIndex].data)
+        manifest.files["settings.json"] = BackupFileInfo(sha256: fixture.store.hashData(settings), byteLength: Int64(settings.count))
+        manifest.recordCounts["settings"] = 1
+        entries[manifestIndex] = ZipArchiveEntry(relativePath: "backup-manifest.json", data: try JSONEncoder().encode(manifest))
+        let widened = fixture.root.appendingPathComponent("widened.zip")
+        try ZipArchiveWriter.archive(entries: entries).write(to: widened)
+        #expect(throws: LibraryBackupError.invalidArchive("the Game package holds records outside its Game")) {
+            try fixture.service.prepare(from: widened)
+        }
+    }
+
     private func allFiles(_ root: URL) throws -> [URL] {
         let enumerator = try #require(FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]))
         return enumerator.compactMap { $0 as? URL }.filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }

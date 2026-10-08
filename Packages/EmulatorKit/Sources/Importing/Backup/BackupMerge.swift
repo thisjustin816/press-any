@@ -43,6 +43,7 @@ struct BackupMerge {
     mutating func merged(choices: [String: RestoreChoice]? = nil) throws -> LibraryBackupSnapshot {
         var result = library
         let archive = archive, library = library
+        let names = RecordNames(archive: archive, library: library)
         func hash(_ id: UUID?, _ snapshot: LibraryBackupSnapshot) -> String? {
             snapshot.assets.first { $0.id == id }?.contentSHA256
         }
@@ -79,16 +80,16 @@ struct BackupMerge {
                     && hash(a.screenshotAssetID, archive) == hash(b.screenshotAssetID, library)
             }, keepBoth: true, explicit: true, choices: choices)
         result.recipes = try records(archive.recipes, library.recipes, kind: "Patch Recipe", key: { $0.id.uuidString },
-            name: { $0.id.uuidString }, date: { $0.createdAt }, choices: choices)
+            name: { "Recipe for \(names.build($0.resultBuildID))" }, date: { $0.createdAt }, choices: choices)
         result.variableMaps = try records(archive.variableMaps, library.variableMaps, kind: "Variable Map", key: { $0.id.uuidString },
             name: { $0.originalFilename }, date: { $0.attachedAt }, choices: choices)
         result.reports = try records(archive.reports, library.reports, kind: "Toolchain Report", key: { $0.identity },
-            name: { $0.report.detector }, date: { $0.detectedAt }, choices: choices)
+            name: { "\($0.report.detector) for \(names.build($0.buildID))" }, date: { $0.detectedAt }, choices: choices)
         result.declarations = try records(archive.declarations, library.declarations, kind: "Save Declaration",
-            key: BackupSnapshotCodec.declarationID, name: BackupSnapshotCodec.declarationID,
+            key: BackupSnapshotCodec.declarationID, name: { [names.build($0.firstBuildID), names.build($0.secondBuildID)].sorted().joined(separator: " and ") },
             date: { _ in .distantPast }, choices: choices)
         result.settings = try records(archive.settings, library.settings, kind: "Setting", key: { $0.identity },
-            name: { $0.identity }, date: { _ in .distantPast }, choices: choices)
+            name: names.setting, date: { _ in .distantPast }, choices: choices)
         result.gameProvenance = ownerProvenance(archive.gameProvenance, library.gameProvenance, kind: "Game", choices: choices)
         result.buildProvenance = ownerProvenance(archive.buildProvenance, library.buildProvenance, kind: "Build", choices: choices)
         return result
@@ -104,5 +105,42 @@ struct BackupMerge {
             result += incoming.filter { $0.ownerID == id }
         }
         return result
+    }
+}
+
+/// Player-facing names for conflicts, looked up in both snapshots.
+private struct RecordNames {
+    let archive: LibraryBackupSnapshot
+    let library: LibraryBackupSnapshot
+
+    func build(_ id: UUID) -> String {
+        (archive.builds + library.builds).first { $0.id == id }?.displayName ?? "a Build"
+    }
+
+    /// "Skip boot animation (Moon Garden)" for a stored key such as `skipBootAnimation`.
+    func setting(_ setting: BackupSetting) -> String {
+        var words = ""
+        for character in setting.key {
+            if character == "." || character == "_" {
+                words.append(" ")
+            } else if character.isUppercase, !words.isEmpty, words.last != " " {
+                words.append(" ")
+                words.append(contentsOf: character.lowercased())
+            } else {
+                words.append(character)
+            }
+        }
+        let label = words.prefix(1).uppercased() + words.dropFirst()
+        let scope: String
+        switch setting.scopeType {
+        case "app": scope = "App"
+        case "system": scope = setting.scopeID == GameSystem.gameBoyColor.rawValue ? "Game Boy Color" : "Game Boy"
+        case "game":
+            let id = UUID(uuidString: setting.scopeID)
+            scope = (archive.games + library.games).first { $0.id == id }?.primaryTitle ?? "a Game"
+        case "build": scope = UUID(uuidString: setting.scopeID).map(build) ?? "a Build"
+        default: scope = setting.scopeType
+        }
+        return "\(label) (\(scope))"
     }
 }
