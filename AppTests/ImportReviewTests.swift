@@ -116,7 +116,7 @@ final class ImportReviewTests: XCTestCase {
 
         XCTAssertEqual(hack.destination, .existing(original.game.id))
         XCTAssertEqual(hack.gameTitle, "Better")
-        XCTAssertEqual(hack.buildDisplayName, "v1.3 · Beta")
+        XCTAssertEqual(hack.buildDisplayName, "Better v1.3 · Beta", "the Game keeps its title, so the Build carries the hack's")
         XCTAssertFalse(hack.markAsBase)
         XCTAssertTrue(hack.markAsPreferred)
         XCTAssertEqual(hack.baseTitle, "Example")

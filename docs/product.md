@@ -48,13 +48,13 @@ crash reporting and usage counts, and Developer Mode.
 
 A Game is what the player thinks of as the game. It survives ROM replacement, patching, new
 versions, regional and revision variants, and Builds moving in or out. It has a UUID, a primary
-title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its
-own name; the base game's title stays as lineage. A hack that becomes an existing Game's
-Preferred Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title:
-Mole Mania DX"), on by default, only when that title is the Game's followed by more words. A hack
-titled "Better" or "Co-op sync patch" names its Build and leaves the Game's title alone. Accepting
-keeps the old title as an alias and makes the new one the player's, so regional title proposals
-leave it alone.
+title, a system, a preferred Build and a default Save Profile. A promoted hack is titled by its own
+name; the base game's title stays as lineage. A hack that becomes an existing Game's Preferred
+Build, in Import Review or Open Patch, offers its title for the Game ("Use Game Title: Mole Mania
+DX"), on by default, only when that title is the Game's followed by more words. A hack titled
+"Better" or "Co-op sync patch" leaves the Game's title alone and leads its Build's name instead
+("Co-op sync patch v0.1"). Accepting keeps the old title as an alias and makes the new one the
+player's, so regional title proposals leave it alone.
 Moving that hack out with Make Separate Game, which suggests the hack's title for
 the new Game, gives the original Game back the title the hack was made from, as long as it still
 holds it as an alias; a copy leaves the title alone. A patch without hack tags offers its title only

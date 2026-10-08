@@ -112,7 +112,7 @@ final class ImportReviewViewModel: ObservableObject {
         gameTitle = analysis.filenameMetadata.suggestedTitle.isEmpty
             ? analysis.header.title
             : analysis.filenameMetadata.suggestedTitle
-        let suggestion = Self.buildName(for: analysis, destination: initialDestination, existingBuilds: existingBuilds)
+        let suggestion = Self.buildName(for: analysis, destination: initialDestination, games: games, existingBuilds: existingBuilds)
         suggestedBuildName = suggestion
         buildDisplayName = analysis.exactExistingBuildID == nil ? suggestion : "Existing"
         previousBaseSuggestion = markAsBase
@@ -122,15 +122,23 @@ final class ImportReviewViewModel: ObservableObject {
     private static func buildName(
         for analysis: ROMImportAnalysis,
         destination: Destination,
+        games: [Game],
         existingBuilds: (UUID) -> [Build]
     ) -> String {
-        let existing: [String]
-        if case .existing(let gameID) = destination {
-            existing = existingBuilds(gameID).map(\.displayName)
-        } else {
-            existing = []
+        guard case .existing(let gameID) = destination else {
+            return BuildNaming.distinctName(analysis.filenameMetadata.suggestedBuildName, existing: [], addedAt: .now)
         }
-        return BuildNaming.distinctName(analysis.filenameMetadata.suggestedBuildName, existing: existing, addedAt: .now)
+        var name = analysis.filenameMetadata.suggestedBuildName
+        // A hack joining a Game whose title it doesn't continue keeps its own title in the Build's
+        // name, since the Game won't take it: "Co-op sync patch v0.1".
+        if analysis.filenameMetadata.releaseKind == .romHack,
+           let hack = analysis.filenameMetadata.buildMetadata.hackTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !hack.isEmpty, let game = games.first(where: { $0.id == gameID }),
+           GameMatcher.normalized(hack) != GameMatcher.normalized(game.primaryTitle),
+           !BuildNaming.offersTitle(hack, for: game.primaryTitle) {
+            name = ["Original", "Hack"].contains(name) ? hack : "\(hack) \(name)"
+        }
+        return BuildNaming.distinctName(name, existing: existingBuilds(gameID).map(\.displayName), addedAt: .now)
     }
 
     var isExactDuplicate: Bool { analysis.exactExistingBuildID != nil }
@@ -163,7 +171,7 @@ final class ImportReviewViewModel: ObservableObject {
 
     func destinationChanged() {
         if !isExactDuplicate, buildDisplayName == suggestedBuildName {
-            suggestedBuildName = Self.buildName(for: analysis, destination: destination, existingBuilds: existingBuilds)
+            suggestedBuildName = Self.buildName(for: analysis, destination: destination, games: games, existingBuilds: existingBuilds)
             buildDisplayName = suggestedBuildName
         }
         // Like the name, a role the player set stays; only an untouched suggestion follows the Game.
