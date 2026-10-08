@@ -588,11 +588,10 @@ claims reliability from just an old ROM, old save and new ROM.
   After only an overlay (Control Center, Notification Center, a call banner) it resumes on its own
   unless the player had paused it; after the background, Resume Games decides. Backgrounding
   clears the open-session marker only after the Auto State is written; returning to play marks
-  it open again. Another app's audio interrupting the game, and the output device going away (a
-  headphone unplugged, a Bluetooth speaker lost), pause it as the game menu does, even while the
-  scene stays active, and the game stays paused until the player chooses Resume, as after the
-  game menu. The sound isn't restarted behind the player's back when the interruption ends.
-  An interruption that arrives with the app in the background leaves Resume Games in charge.
+  it open again. An audio interruption from another app, or the output device going away
+  (headphones unplugged, a Bluetooth speaker lost), pauses the game as the game menu does, even
+  while the scene stays active. It stays paused until the player chooses Resume, so sound never
+  restarts on its own when the interruption ends. In the background, Resume Games decides.
 - **Crash recovery.** During library play, one hidden `SaveStateKind.crashRecovery` checkpoint
   for the exact Build and Save Profile refreshes about once a minute of play, replacing the
   previous one in the existing state storage. A successful Auto State or clean close removes it.

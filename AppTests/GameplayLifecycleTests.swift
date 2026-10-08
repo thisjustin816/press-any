@@ -427,6 +427,16 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertFalse(runtime.failedFrame)
     }
 
+    func testAnInterruptionReportedForAnEndedSuspensionDoesNotPause() {
+        let (gameplay, _, _) = makeGameplay(policy: .always)
+        postAudioNotification(AVAudioSession.interruptionNotification, [
+            AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.began.rawValue,
+            AVAudioSessionInterruptionReasonKey: AVAudioSession.InterruptionReason.appWasSuspended.rawValue,
+        ])
+        XCTAssertTrue(gameplay.isRunningFrames)
+        XCTAssertFalse(gameplay.isShowingPaused)
+    }
+
     func testAnInterruptionInTheBackgroundLeavesResumeGamesInCharge() {
         let (gameplay, runtime, _) = makeGameplay(policy: .always)
         gameplay.sceneWillDeactivate()

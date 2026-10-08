@@ -526,7 +526,8 @@ Save Profile and save state rows and to discard a Quick Play session, asking fir
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
-after shortfalls); frames run on the display refresh at native speed, up to 120 Hz, or 60 Hz in Low Power Mode or under heat.
+after shortfalls); frames run on the display refresh at native speed, up to 120 Hz, or 60 Hz in
+Low Power Mode or under heat.
 
 ### Privacy and telemetry
 

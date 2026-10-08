@@ -155,7 +155,12 @@ final class AudioOutputEngine: @unchecked Sendable {
         ) { [weak self] notification in
             let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
             switch raw.flatMap(AVAudioSession.InterruptionType.init(rawValue:)) {
-            case .began: self?.notifyDisturbance()
+            case .began:
+                // iOS reports a suspension that already ended as an interruption when the app
+                // returns. The scene events and Resume Games handled that one.
+                let reason = (notification.userInfo?[AVAudioSessionInterruptionReasonKey] as? UInt)
+                    .flatMap(AVAudioSession.InterruptionReason.init(rawValue:))
+                if reason != .appWasSuspended { self?.notifyDisturbance() }
             case .ended: self?.restartIfWanted()
             default: break
             }
