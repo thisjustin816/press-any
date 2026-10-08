@@ -22,7 +22,8 @@ final class AudioOutputEngine: @unchecked Sendable {
     /// Called on the main queue when sound is cut off in a way the player should notice: another
     /// app's audio interrupted the game, or the output device went away, as when headphones come
     /// out. The owner pauses the game, and pausing keeps the engine from starting itself again.
-    @MainActor var onDisturbance: (() -> Void)?
+    /// Set and called on the main queue.
+    var onDisturbance: (@MainActor () -> Void)?
 
     /// Sets how game sound relates to the silent switch and other apps' audio. Call before start.
     func apply(_ mode: SoundMode) {
