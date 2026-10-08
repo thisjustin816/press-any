@@ -14,18 +14,24 @@ final class PlusStore: ObservableObject {
         case unavailable
     }
 
-    @Published private(set) var isUnlocked: Bool
+    @Published private(set) var isUnlocked: Bool {
+        didSet { ownership.set(isUnlocked) }
+    }
     @Published private(set) var offer: Offer = .loading
     /// A purchase or restore is running.
     @Published private(set) var isBusy = false
     /// What the last purchase or restore found, when there's something to say.
     @Published private(set) var notice: String?
 
+    /// The same as `isUnlocked`, for a game session to read off the main actor.
+    nonisolated let ownership: PlusOwnership
+
     private let provider: any FeatureEntitlementProvider
 
     /// `ownsPlus` is what shows until the provider first answers.
     init(provider: any FeatureEntitlementProvider, ownsPlus: Bool = false) {
         self.provider = provider
+        ownership = PlusOwnership(ownsPlus)
         isUnlocked = ownsPlus
         // Subscribed before the first read, so a change between the two isn't missed.
         let changes = provider.ownershipChanges()
@@ -108,6 +114,22 @@ final class PlusStore: ObservableObject {
     }
 }
 
+/// Plus ownership behind a lock, so a game session's thread can check it at each Auto State write.
+final class PlusOwnership: @unchecked Sendable {
+    private let lock = NSLock()
+    private var owned: Bool
+
+    init(_ owned: Bool) {
+        self.owned = owned
+    }
+
+    var isOwned: Bool { lock.withLock { owned } }
+
+    func set(_ owned: Bool) {
+        lock.withLock { self.owned = owned }
+    }
+}
+
 /// How a setting with Plus values behaves without Plus: those values stay listed, marked Plus, and
 /// choosing one opens the Plus screen instead of saving it.
 struct PlusGate: Equatable {
@@ -120,5 +142,10 @@ struct PlusGate: Equatable {
     /// A menu item's text. Menus show text only, so the badge is the word.
     func label(_ name: String, needsPlus: Bool) -> String {
         isLocked(needsPlus) ? "\(name) (Plus)" : name
+    }
+
+    /// How many unpinned Auto States a game keeps: the chosen number with Plus, the newest without.
+    func keptAutoStates(_ choice: KeepAutoStates) -> Int {
+        isLocked(choice.needsPlus) ? 1 : choice.rawValue
     }
 }

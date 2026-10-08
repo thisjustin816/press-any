@@ -9,7 +9,7 @@ import XCTest
 final class PlusTests: XCTestCase {
     func testRoadmapListsWhatPlusHoldsAndWhatsComing() {
         XCTAssertFalse(PlusRoadmap.upcoming.isEmpty)
-        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters"])
+        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "Auto State History"])
         let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming
         XCTAssertEqual(Set(items.map(\.id)).count, items.count, "titles are unique")
         for item in items {
@@ -43,6 +43,27 @@ final class PlusTests: XCTestCase {
         XCTAssertEqual(PlusStore.fixed(ownsPlus: true).effective(.lcd3x), .lcd3x)
         XCTAssertTrue(DisplaySettingsPage.effectsFooter(locked).contains("a filter you already chose is kept"))
         XCTAssertFalse(DisplaySettingsPage.effectsFooter(PlusGate(isUnlocked: true)).contains("Plus"))
+    }
+
+    func testKeepAutoStatesIsLockedToTheNewestWithoutPlus() {
+        let locked = PlusGate(isUnlocked: false)
+        for choice in KeepAutoStates.allCases {
+            XCTAssertTrue(locked.isLocked(choice.needsPlus), "\(choice) opens the Plus screen")
+            XCTAssertEqual(locked.keptAutoStates(choice), 1)
+            XCTAssertEqual(PlusGate(isUnlocked: true).keptAutoStates(choice), choice.rawValue)
+        }
+        XCTAssertEqual(locked.label(KeepAutoStates.ten.displayName, needsPlus: true), "10 (Plus)")
+        XCTAssertTrue(PlayingSettingsPage.saveStatesFooter(locked)
+            .hasPrefix("Without Plus, \(AppBrand.displayName) keeps your latest Auto State."))
+        XCTAssertFalse(PlayingSettingsPage.saveStatesFooter(PlusGate(isUnlocked: true)).contains("Without Plus"))
+    }
+
+    func testGameSessionsReadOwnershipOffTheMainActor() async {
+        let owned = PlusStore.fixed(ownsPlus: true).ownership
+        let notOwned = PlusStore.fixed(ownsPlus: false).ownership
+        let answers = await Task.detached { (owned.isOwned, notOwned.isOwned) }.value
+        XCTAssertTrue(answers.0)
+        XCTAssertFalse(answers.1)
     }
 }
 

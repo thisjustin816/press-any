@@ -1,7 +1,8 @@
 import Foundation
 
 /// What Plus holds today and what's coming, as the Plus screen lists it. The upcoming list follows
-/// the v1.1 scope paragraph in docs/product.md, without its non-features, and changes with it.
+/// the v1.1 scope paragraph in docs/product.md, without its non-features, then the later additions
+/// its Pricing section names, and changes with them.
 enum PlusRoadmap {
     struct Item: Identifiable, Equatable {
         let title: String
@@ -11,6 +12,7 @@ enum PlusRoadmap {
 
     static let includedToday = [
         Item(title: "LCD Filters", detail: "LCD 1× adds a subtle pixel grid, and LCD 3× red, green and blue subpixels."),
+        Item(title: "Auto State History", detail: "Keep 3, 5 or 10 Auto States for each save. Without Plus, the latest is kept."),
     ]
 
     static let upcoming = [
@@ -29,5 +31,6 @@ enum PlusRoadmap {
         Item(title: "Screenshots and Notes", detail: "Captures and timestamped notes kept with each Build."),
         Item(title: "External Displays", detail: "Play on an AirPlay or wired display, with the phone as the controller."),
         Item(title: "Developer Mode", detail: "Memory search and editing, watches and other tools for making and testing games."),
+        Item(title: "Timed Auto States", detail: "An Auto State every few minutes of play, as well as when you leave a game."),
     ]
 }

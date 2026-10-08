@@ -127,3 +127,8 @@ extension LCDFilter {
     /// LCD 1× and LCD 3× are Plus features. Off stays free.
     var needsPlus: Bool { self != .off }
 }
+
+extension KeepAutoStates {
+    /// Keeping more than the newest Auto State is a Plus feature, so every choice here needs it.
+    var needsPlus: Bool { true }
+}

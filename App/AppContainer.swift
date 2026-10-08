@@ -52,7 +52,7 @@ final class AppContainer {
     let coreRegistry: CoreRegistry
     let settingsResolver: SettingsResolver
     let launchHistory: SessionLaunchHistory
-    /// Plus ownership. LCD filters follow it; nothing else here does.
+    /// Plus ownership. LCD filters and Auto State history follow it; nothing else here does.
     let plus: PlusStore
     /// Files an import or the running game is using, which cache trimming and Check Library Files
     /// leave alone.
@@ -335,7 +335,8 @@ final class AppContainer {
     }
 
     func makeEmulationSession() -> EmulationSession {
-        EmulationSession(
+        let ownership = plus.ownership
+        return EmulationSession(
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
@@ -349,7 +350,8 @@ final class AppContainer {
             thumbnails: PNGFrameEncoder(),
             deletion: libraryDeletion,
             inFlight: inFlightFiles,
-            cheats: repositories.cheats
+            cheats: repositories.cheats,
+            keepsAutoStateHistory: { ownership.isOwned }
         )
     }
 

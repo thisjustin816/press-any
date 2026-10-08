@@ -54,7 +54,7 @@ struct AppSettingsView: View {
                         Label("Controls", systemImage: "gamecontroller")
                     }
                     NavigationLink {
-                        PlayingSettingsPage(storage: storage)
+                        PlayingSettingsPage(storage: storage, plus: plus)
                     } label: {
                         Label("Playing", systemImage: "play.circle")
                     }
