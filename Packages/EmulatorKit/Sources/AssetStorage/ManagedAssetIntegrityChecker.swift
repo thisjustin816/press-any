@@ -54,6 +54,7 @@ public struct ManagedAssetIntegrityChecker: Sendable {
         for var asset in inventory {
             let url = try assetStore.managedURL(relativePath: asset.relativePath)
             guard assetStore.fileExists(at: url) else {
+                if asset.kind == .generatedImage { continue }
                 switch asset.storageClass {
                 case .source:
                     issues.append(.missingSource(assetID: asset.id, relativePath: asset.relativePath))

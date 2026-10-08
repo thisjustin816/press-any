@@ -20,8 +20,8 @@ migrating later.
 2. Multi-signal development-build matching, the one import item left in v1. Metadata provenance,
    Metadata Details and per-step patch input hashes are built, along with Game aliases, rename,
    Build notes, per-Build playtime, favorites, declared save compatibility and the cross-region save check.
-3. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
-   with cleanup, in-flight protection and verification on read.
+3. Library features on that data: FTS5 search, sorting, play statistics, broader cleanup and
+   in-flight protection. The storage screen and verification on read are built.
 4. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
@@ -101,9 +101,9 @@ halt_bug, interrupt_time and sound tests) and SameSuite remain.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Storage screen by category, source vs disposable, safe cleanup | v1 | none |
+| done | Storage screen by category, source vs disposable, safe cleanup | v1 | Settings > Library > Storage shows asset categories, Quick Play disk usage and device free space; confirmed cache clearing preserves the running Build's ROM; Recently Deleted has no separate total because purgeable assets cannot be listed without purging |
 | partial | Automatic cleanup of disposable data only | v1 | expired Quick Play sessions and staged copies left by interrupted imports removed at launch (AppContainer init); no generated-cache eviction under pressure |
-| partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | Check Library Files runs the orphan sweep on demand; in-flight protection and GC coordination remain |
+| partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | Check Library Files runs the orphan sweep on demand and accepts absent generated ROMs; Storage cache clearing protects the active session's Build image, including shared copies; broader in-flight protection and GC coordination remain |
 
 Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed collision-
 safe relative paths; Source-asset dedup; Source vs userData vs cache vs temporary classes; Atomic

@@ -91,6 +91,15 @@ struct RootView: View {
                     onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) },
                     onImportFiles: { urls in urls.forEach { receiveSharedFile($0, opensImportReview: true) } }
                 )
+                .environment(\.libraryStorageContext, LibraryStorageContext(container: container) { session in
+                    Task { @MainActor in
+                        // Settings must finish dismissing before gameplay can present its cover.
+                        while hasOtherPresentation {
+                            try await Task.sleep(for: .milliseconds(100))
+                        }
+                        resumeQuickPlay(session, container: container)
+                    }
+                })
             } else {
                 ContentUnavailableView {
                     Label("\(AppBrand.displayName) Couldn’t Start", systemImage: "exclamationmark.triangle")

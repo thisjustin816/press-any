@@ -154,13 +154,22 @@ status. Source assets are irreplaceable; generated patched ROMs are rebuildable 
 - Launch rehashes the ROM and patches it's about to use. Settings > Check Library Files rehashes
   every ROM and patch on demand, marks damaged ones, reports missing files, and removes files
   nothing uses and temporary files an interrupted write left over ten minutes ago. It runs only
-  when asked, since rehashing a big library at every launch would slow startup.
+  when asked, since rehashing a big library at every launch would slow startup. Missing generated
+  ROMs aren't reported as missing or damaged because launch can rebuild them.
 - Automatic cleanup removes only disposable data: expired Quick Play sessions and staged copies
   an interrupted import left. It never touches source ROMs, patches, saves, documents, artwork or
   captures.
-- v1: a storage screen by category that separates source data from rebuildable cache, safe
-  cleanup, eviction of generated ROMs under pressure, and protection of in-flight files from
-  cleanup.
+- Settings > Library > Storage shows the library's total and the device's available space.
+  Your Data lists Game ROMs, Patches, Saves, Save States (including thumbnails), Artwork and
+  Other (including variable maps). Rebuildable and Temporary lists Patched ROM Cache and the
+  Quick Play workspace, including kept sessions. Empty categories read None. Quick Play opens
+  the existing Sessions list for resume, promotion and discard.
+- Clear Patched ROM Cache asks first, then removes generated ROM files while keeping their
+  asset records, base ROMs and patches. It protects the running session's ROM, including copies
+  of a Build that share the file, and refreshes the sizes. Launch and ROM export rebuild a missing
+  patched ROM and check its recorded hash. Recently Deleted files count in their asset categories.
+- v1: eviction of generated ROMs under storage pressure and broader protection of in-flight
+  files from cleanup.
 
 ### Exports and the Files folder
 
@@ -410,7 +419,7 @@ isn't stored.
 - A patched Build's system comes from the patched ROM's own header, so a patch can turn a GB game
   into a GBC one or the reverse. A result too short for a header is refused.
 - Generated ROMs are cache: kept for launch speed, evicted safely, rebuilt and hash-checked
-  before launch. An output whose base or patch is missing isn't disposable.
+  before launch. Rebuilding requires the preserved base ROM and patches.
 - Open Patch (from a Game or a shared patch) requires choosing a Game and an explicit base Build.
 - Each enabled step records the SHA-256 of the bytes it receives. Disabled steps have no input
   hash. Rebuilds check each recorded hash before applying its step and stop on a mismatch,
@@ -780,7 +789,7 @@ App Settings is a short list of pages, like the iPhone's own Settings:
 - **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
 - **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo.
 - **Systems**: Game Boy and Game Boy Color, each opening that system's settings.
-- **Library**: Regions and Languages, Recently Deleted and Check Library.
+- **Library**: Regions and Languages, Recently Deleted, Check Library Files and Storage.
 - **About**: How Press Any Works, the Privacy Policy and Acknowledgements.
 
 The settings for a system, a Game, a Build or the open game are one sheet, short enough to sit at

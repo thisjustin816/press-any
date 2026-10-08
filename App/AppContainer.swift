@@ -54,6 +54,22 @@ final class AppContainer {
 
     private(set) var activeSession: EmulationSession?
 
+    var storageUsage: MeasureLibraryStorage {
+        MeasureLibraryStorage(assets: repositories.assets, assetStore: fileStore)
+    }
+
+    func clearPatchedROMCache() throws {
+        let activeBuildID: UUID?
+        switch activeSession?.state {
+        case .loading(let context), .running(let context), .paused(let context):
+            activeBuildID = context.buildID
+        default:
+            activeBuildID = nil
+        }
+        try ClearPatchedROMCache(assets: repositories.assets, builds: repositories.builds, assetStore: fileStore)
+            .execute(activeBuildID: activeBuildID)
+    }
+
     static func live(fileManager: FileManager = .default) throws -> AppContainer {
         let support = try fileManager.url(
             for: .applicationSupportDirectory,

@@ -14,6 +14,7 @@ struct AppSettingsView: View {
 
     @State private var systemSettings: SystemSettingsTarget?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.libraryStorageContext) private var libraryStorageContext
 
     init(
         store: any SettingsStore,
@@ -67,7 +68,7 @@ struct AppSettingsView: View {
                     Text("Settings for every game on one system, including its Screen Colors. A Game or Build can still set its own.")
                 }
 
-                if (libraryDeletion != nil && games != nil) || integrityChecker != nil {
+                if (libraryDeletion != nil && games != nil) || integrityChecker != nil || libraryStorageContext != nil {
                     Section("Library") {
                         NavigationLink("Regions and Languages") { ReleasePreferenceView(store: store) }
                         if let libraryDeletion, let games {
@@ -76,10 +77,18 @@ struct AppSettingsView: View {
                             }
                         }
                         if let integrityChecker {
-                            NavigationLink("Check Library") {
+                            NavigationLink("Check Library Files") {
                                 Form { LibraryCheckSection(checker: integrityChecker) }
-                                    .navigationTitle("Check Library")
+                                    .navigationTitle("Check Library Files")
                                     .navigationBarTitleDisplayMode(.inline)
+                            }
+                        }
+                        if let context = libraryStorageContext {
+                            NavigationLink("Storage") {
+                                StorageView(container: context.container) { session in
+                                    dismiss()
+                                    context.onResumeQuickPlay(session)
+                                }
                             }
                         }
                     }
