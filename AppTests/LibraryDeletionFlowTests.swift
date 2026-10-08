@@ -63,6 +63,7 @@ final class LibraryDeletionFlowTests: XCTestCase {
         try container.buildOperations.renameGame(gameID: second.gameID, title: "Beta")
         let model = LibraryViewModel(
             gameRepository: container.repositories.games, buildRepository: container.repositories.builds,
+            profiles: container.repositories.saveProfiles,
             launchResolver: container.preferredLaunchResolver, buildOperations: container.buildOperations,
             deletion: container.libraryDeletion
         )

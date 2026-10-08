@@ -50,6 +50,7 @@ final class LibraryNotesAndFavoritesTests: XCTestCase {
 
         let library = LibraryViewModel(
             gameRepository: container.repositories.games, buildRepository: container.repositories.builds,
+            profiles: container.repositories.saveProfiles,
             launchResolver: container.preferredLaunchResolver, buildOperations: container.buildOperations,
             deletion: container.libraryDeletion
         )
@@ -82,6 +83,50 @@ final class LibraryNotesAndFavoritesTests: XCTestCase {
         let reopened = try AppContainer(rootURL: root)
         XCTAssertEqual(try reopened.repositories.games.fetchGame(id: first.gameID)?.isFavorite, true)
         XCTAssertEqual(try reopened.repositories.games.fetchGame(id: second.gameID)?.isFavorite, false)
+    }
+
+    func testLibraryAndGameStatisticsRefreshAndSortingPreservesFilters() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let first = try importROM(into: container, root: root, title: "Alpha")
+        let second = try importROM(into: container, root: root, title: "Beta", byte: 1)
+        let details = detailModel(container, gameID: second.gameID)
+        details.reload()
+        XCTAssertFalse(try XCTUnwrap(details.statistics).hasBeenPlayed)
+        let library = LibraryViewModel(
+            gameRepository: container.repositories.games, buildRepository: container.repositories.builds,
+            profiles: container.repositories.saveProfiles,
+            launchResolver: container.preferredLaunchResolver, buildOperations: container.buildOperations,
+            deletion: container.libraryDeletion
+        )
+        library.reload()
+        XCTAssertEqual(library.visibleGames.map(\.id), [first.gameID, second.gameID])
+        try container.repositories.builds.addPlaytime(buildID: second.id, seconds: 125)
+        var profile = try XCTUnwrap(details.saveProfiles.first)
+        profile.totalPlaytimeSeconds = 125
+        profile.sessionCount = 2
+        profile.lastPlayedAt = Date()
+        try container.repositories.saveProfiles.updateSaveProfile(profile)
+        library.sort = .playtime
+        library.reload()
+        details.reload()
+        XCTAssertEqual(library.visibleGames.map(\.id), [second.gameID, first.gameID])
+        XCTAssertEqual(library.statistics[second.gameID], details.statistics)
+        XCTAssertEqual(details.statistics?.totalPlaytimeSeconds, 125)
+        XCTAssertEqual(details.statistics?.sessionCount, 2)
+        XCTAssertEqual(details.statistics?.lastPlayedAt, profile.lastPlayedAt)
+        XCTAssertEqual(details.saveProfiles.first?.totalPlaytimeSeconds, 125)
+        library.searchText = "Alpha"
+        XCTAssertEqual(library.visibleGames.map(\.id), [first.gameID])
+        library.searchText = ""
+        library.toggleFavorite(try XCTUnwrap(details.game))
+        library.favoritesOnly = true
+        XCTAssertEqual(library.visibleGames.map(\.id), [second.gameID])
+        XCTAssertFalse(PlayStatisticsDisplay.played(profile.lastPlayedAt).isEmpty)
+        XCTAssertEqual(PlayStatisticsDisplay.played(nil), "Never Played")
+        XCTAssertEqual(PlayStatisticsDisplay.played(nil, hasBeenPlayed: true), "Last Played Unknown")
+        XCTAssertEqual(PlayStatisticsDisplay.lastPlayed(nil), "Unknown")
     }
 
     private func importROM(into container: AppContainer, root: URL, title: String, byte: UInt8 = 0) throws -> Build {

@@ -116,6 +116,8 @@ struct LibraryDeletionTests {
         try repositories.deletions.insertDeletion(deleted)
 
         #expect(try repositories.games.fetchGames().isEmpty)
+        #expect(try repositories.builds.fetchAllBuilds().isEmpty)
+        #expect(try repositories.saveProfiles.fetchAllSaveProfiles().isEmpty)
         #expect(try repositories.games.fetchGame(id: fixture.game.id) == nil)
         #expect(try repositories.builds.fetchBuild(id: fixture.build.id) == nil)
         #expect(try repositories.builds.fetchBuild(imageSHA256: fixture.build.imageSHA256) == nil)
@@ -130,6 +132,8 @@ struct LibraryDeletionTests {
         #expect(try repositories.games.fetchGame(id: fixture.game.id) == fixture.game)
         #expect(try repositories.builds.fetchBuilds(gameID: fixture.game.id) == [fixture.build, fixture.patchedBuild])
         #expect(try repositories.saveStates.fetchSaveStates(buildID: fixture.build.id, saveProfileID: fixture.profile.id) == [fixture.state])
+        #expect(try repositories.builds.fetchAllBuilds() == [fixture.build, fixture.patchedBuild])
+        #expect(try repositories.saveProfiles.fetchAllSaveProfiles() == [fixture.profile])
         #expect(try repositories.deletions.fetchDeletions().isEmpty)
         #expect(try repositories.builds.fetchSaveDeclarations(buildID: fixture.build.id) == [declaration])
     }

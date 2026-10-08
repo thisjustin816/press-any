@@ -653,6 +653,7 @@ struct RootView: View {
         switch presentation.kind {
         case .library:
             bootstrap.container?.stopActiveSession(createAutoState: false)
+            NotificationCenter.default.post(name: .libraryDidChange, object: nil)
         case .quickPlay(let id):
             closingQuickPlayID = id
         }

@@ -909,6 +909,7 @@ private struct InsertRefusingProfiles: SaveProfileRepository {
 
     func fetchSaveProfile(id: UUID) throws -> SaveProfile? { try inner.fetchSaveProfile(id: id) }
     func fetchSaveProfiles(gameID: UUID) throws -> [SaveProfile] { try inner.fetchSaveProfiles(gameID: gameID) }
+    func fetchAllSaveProfiles() throws -> [SaveProfile] { try inner.fetchAllSaveProfiles() }
     func insertSaveProfile(_ profile: SaveProfile) throws { throw Refused() }
     func updateSaveProfile(_ profile: SaveProfile) throws { try inner.updateSaveProfile(profile) }
     func deleteSaveProfile(id: UUID) throws { try inner.deleteSaveProfile(id: id) }
@@ -921,6 +922,7 @@ private struct UpdateRefusingProfiles: SaveProfileRepository {
 
     func fetchSaveProfile(id: UUID) throws -> SaveProfile? { try inner.fetchSaveProfile(id: id) }
     func fetchSaveProfiles(gameID: UUID) throws -> [SaveProfile] { try inner.fetchSaveProfiles(gameID: gameID) }
+    func fetchAllSaveProfiles() throws -> [SaveProfile] { try inner.fetchAllSaveProfiles() }
     func insertSaveProfile(_ profile: SaveProfile) throws { try inner.insertSaveProfile(profile) }
     func updateSaveProfile(_ profile: SaveProfile) throws { throw Refused() }
     func deleteSaveProfile(id: UUID) throws { try inner.deleteSaveProfile(id: id) }

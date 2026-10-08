@@ -40,6 +40,7 @@ struct LibraryView: View {
     @State private var renameTitle = ""
     /// Off hides the titles under grid tiles, for libraries whose box art carries the name.
     @AppStorage("library.showsGridTitles") private var showsGridTitles = true
+    @AppStorage("library.sort") private var sort: LibrarySort = .title
 
     let container: AppContainer
     let onPlay: (LaunchContext, LaunchStart) -> Void
@@ -71,6 +72,7 @@ struct LibraryView: View {
         _model = StateObject(wrappedValue: LibraryViewModel(
             gameRepository: container.repositories.games,
             buildRepository: container.repositories.builds,
+            profiles: container.repositories.saveProfiles,
             launchResolver: container.preferredLaunchResolver,
             buildOperations: container.buildOperations,
             deletion: container.libraryDeletion
@@ -119,6 +121,17 @@ struct LibraryView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Sort", selection: $sort) {
+                            ForEach(LibrarySort.allCases, id: \.self) { order in
+                                Text(order.displayName).tag(order)
+                            }
+                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                    }
+                    .accessibilityIdentifier("library.sortMenu")
+
                     Menu {
                         Picker("Library View", selection: $displayMode) {
                             Label("Grid", systemImage: "square.grid.2x2").tag(DisplayMode.grid)
@@ -179,7 +192,11 @@ struct LibraryView: View {
                 model.requestSelectedDeletion()
             }
             .batchDeletionAlert(plan: $model.pendingBatchDeletion, noun: "Games", confirm: model.confirm)
-            .onAppear { model.reload() }
+            .onAppear {
+                model.sort = sort
+                model.reload()
+            }
+            .onChange(of: sort) { _, value in model.sort = value }
             .task { openScreenshotScene() }
             .navigationDestination(item: $screenshotGameID) { gameID in
                 GameDetailView(container: container, gameID: gameID, onPlay: onPlay)
@@ -334,10 +351,26 @@ struct LibraryView: View {
                             .accessibilityLabel("Favorite")
                     }
                 }
-                Text(model.system(of: game).displayName)
+                Text(listSubtitle(for: game))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private func listSubtitle(for game: Game) -> String {
+        switch sort {
+        case .title, .system:
+            model.system(of: game).displayName
+        case .recentlyPlayed:
+            PlayStatisticsDisplay.played(
+                model.statistics[game.id]?.lastPlayedAt,
+                hasBeenPlayed: model.statistics[game.id]?.hasBeenPlayed ?? false
+            )
+        case .recentlyAdded:
+            "Added \(game.createdAt.formatted(date: .abbreviated, time: .omitted))"
+        case .playtime:
+            BuildPlaytime.formatted(model.statistics[game.id]?.totalPlaytimeSeconds ?? 0)
         }
     }
 
@@ -408,6 +441,18 @@ struct LibraryView: View {
             importReview = ImportReviewPresentation(model: reviewModel)
         } catch {
             model.report("Couldn’t read \(url.lastPathComponent): \(error.localizedDescription)")
+        }
+    }
+}
+
+private extension LibrarySort {
+    var displayName: String {
+        switch self {
+        case .title: "Title"
+        case .recentlyPlayed: "Recently Played"
+        case .recentlyAdded: "Recently Added"
+        case .playtime: "Playtime"
+        case .system: "System"
         }
     }
 }

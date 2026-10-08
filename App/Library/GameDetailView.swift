@@ -103,6 +103,7 @@ struct GameDetailView: View {
                 lineageSection
                 baseGameSection
                 playSection
+                statisticsSection
             }
             buildsSection
             profilesSection
@@ -172,6 +173,18 @@ struct GameDetailView: View {
                     launch(build: model.preferredBuild, start: .startOver)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var statisticsSection: some View {
+        if let statistics = model.statistics, statistics.hasBeenPlayed {
+            Section("Statistics") {
+                LabeledContent("Playtime", value: BuildPlaytime.formatted(statistics.totalPlaytimeSeconds))
+                LabeledContent("Sessions", value: statistics.sessionCount.formatted())
+                LabeledContent("Last Played", value: PlayStatisticsDisplay.lastPlayed(statistics.lastPlayedAt))
+            }
+            .accessibilityIdentifier("game.statistics")
         }
     }
 
@@ -548,6 +561,11 @@ struct GameDetailView: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(profile.title)
+                if profile.totalPlaytimeSeconds > 0 || profile.sessionCount > 0 || profile.lastPlayedAt != nil {
+                    Text("\(BuildPlaytime.formatted(profile.totalPlaytimeSeconds)) · \(PlayStatisticsDisplay.played(profile.lastPlayedAt, hasBeenPlayed: true))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 // A copy brought from another Game by a promote or merge has its original there.
                 if let parent = model.profileName(id: profile.copiedFromProfileID) {
                     Text("Copied from \(parent)")
