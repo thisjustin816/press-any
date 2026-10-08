@@ -305,24 +305,227 @@ import Testing
         #expect(prepared.snapshot.games == fixture.snapshot.games)
     }
 
+    @Test func libraryWithROMsLargerThanTheROMZipLimitBacksUpAndRestores() throws {
+        let fixture = try BackupFixture(hashing: QuickHashStore.self)
+        defer { fixture.remove() }
+        var library = fixture.snapshot
+        let gameID = library.games[0].id
+        for index in 0..<5 {
+            var rom = Data(repeating: UInt8(index), count: 8 << 20)
+            rom[0] = 0xff
+            let url = try fixture.assetStore.sourceImageURL(sha256: fixture.assetStore.hashData(rom))
+            try fixture.store.writeDataAtomically(rom, to: url)
+            let asset = ManagedAsset(id: UUID(), kind: .sourceImage, storageClass: .source, contentSHA256: fixture.assetStore.hashData(rom),
+                byteLength: Int64(rom.count), relativePath: try fixture.store.managedRelativePath(for: url),
+                originalFilename: "Moon Garden \(index).gbc", integrityStatus: .verified, createdAt: fixture.date)
+            library.assets.append(asset)
+            library.builds.append(Build(id: UUID(), gameID: gameID, system: .gameBoyColor, displayName: "Moon Garden \(index)",
+                imageAssetID: asset.id, imageSHA256: asset.contentSHA256, sourceKind: .importedImage,
+                createdAt: fixture.date, modifiedAt: fixture.date))
+        }
+        let service = LibraryBackupService(repository: InMemoryLibraryBackupRepository(library), assetStore: fixture.assetStore)
+        let summary = try service.summary(includeROMs: true)
+        #expect(summary.approximateByteLength > ImportSizeLimit.archive.bytes)
+        #expect(!summary.isTooLarge)
+        let url = try service.export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1", includeROMs: true)
+        #expect(try fixture.store.fileByteLength(at: url) > ImportSizeLimit.archive.bytes)
+        let destinationStore = QuickHashStore(try ManagedFileStore(rootURL: fixture.root.appendingPathComponent("Destination")))
+        let destination = LibraryBackupService(repository: InMemoryLibraryBackupRepository(), assetStore: destinationStore)
+        let prepared = try destination.prepare(from: url)
+        let report = try destination.restore(prepared, review: destination.review(prepared), choices: [:])
+        #expect(report.missingROMs.isEmpty)
+        for asset in library.assets where asset.kind == .sourceImage {
+            #expect(try destinationStore.hashFile(at: destinationStore.managedURL(relativePath: asset.relativePath)) == asset.contentSHA256)
+        }
+    }
+
+    @Test func backupOverTheSizeLimitIsRefusedBeforeAnyFileIsRead() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        var library = fixture.snapshot
+        let index = try #require(library.assets.firstIndex { $0.kind == .sourceImage })
+        let rom = library.assets[index]
+        library.assets[index] = ManagedAsset(id: rom.id, kind: rom.kind, storageClass: rom.storageClass, contentSHA256: rom.contentSHA256,
+            byteLength: LibraryBackupService.maximumArchiveBytes, relativePath: rom.relativePath, createdAt: rom.createdAt)
+        let service = LibraryBackupService(repository: InMemoryLibraryBackupRepository(library), assetStore: fixture.store)
+        #expect(try service.summary(includeROMs: true).isTooLarge)
+        #expect(try !service.summary(includeROMs: false).isTooLarge)
+        #expect {
+            try service.export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1", includeROMs: true)
+        } throws: { error in
+            guard case LibraryBackupError.backupTooLarge = error else { return false }
+            return error.localizedDescription.contains("Turn off Include ROMs")
+        }
+    }
+
+    @Test func aSaveWrittenDuringExportIsReadAgainAndOtherwiseReportedAsSaving() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let battery = try #require(fixture.snapshot.assets.first { $0.kind == .persistentSave })
+        let newBytes = Data([7, 7, 7, 7])
+        try fixture.store.writeDataAtomically(newBytes, to: fixture.store.managedURL(relativePath: battery.relativePath))
+        var finished = fixture.snapshot
+        finished.assets[finished.assets.firstIndex { $0.id == battery.id }!] = ManagedAsset(id: battery.id, kind: battery.kind,
+            storageClass: battery.storageClass, contentSHA256: fixture.store.hashData(newBytes), byteLength: Int64(newBytes.count),
+            relativePath: battery.relativePath, createdAt: battery.createdAt)
+        // The first read sees the old row while the file already holds the new save.
+        let saving = SnapshotSequenceRepository([fixture.snapshot, finished])
+        let service = LibraryBackupService(repository: saving, assetStore: fixture.store)
+        let url = try service.export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1")
+        #expect(saving.reads == 2)
+        let prepared = try service.prepare(from: url)
+        #expect(prepared.snapshot.assets.first { $0.id == battery.id }?.contentSHA256 == fixture.store.hashData(newBytes))
+
+        let stuck = LibraryBackupService(repository: SnapshotSequenceRepository([fixture.snapshot]), assetStore: fixture.store)
+        #expect(throws: LibraryBackupError.gameIsSaving) {
+            try stuck.export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1")
+        }
+        #expect(LibraryBackupError.gameIsSaving.localizedDescription == "A game is saving. Try again in a moment.")
+    }
+
+    @Test func aChangedROMIsLeftOutAndListedLikeAMissingOne() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let rom = try #require(fixture.snapshot.assets.first { $0.kind == .sourceImage })
+        try fixture.store.writeDataAtomically(Data([1]), to: fixture.store.managedURL(relativePath: rom.relativePath))
+        let prepared = try fixture.service.prepare(from: fixture.export(includeROMs: true))
+        #expect(!prepared.hasFile(rom.relativePath))
+        #expect(prepared.manifest.notCarriedOver.contains { $0.hasPrefix("Changed ROM left out") })
+    }
+
+    @Test func theZipIsWrittenAfterTheSnapshotReadEnds() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let repository = SnapshotSequenceRepository([fixture.snapshot])
+        let service = LibraryBackupService(repository: repository, assetStore: fixture.store)
+        let readingWhileWriting = LockedFlag()
+        _ = try service.export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1", includeROMs: true) { value in
+            if value >= 0.6, repository.isReading { readingWhileWriting.set() }
+        }
+        #expect(!readingWhileWriting.value)
+    }
+
+    @Test func safetyBackupLeavesDamagedFilesOutSoReplaceStillWorks() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let state = try #require(fixture.snapshot.assets.first { $0.kind == .saveState })
+        let earlier = try fixture.export()
+        try fixture.store.removeIfExists(fixture.store.managedURL(relativePath: state.relativePath))
+        #expect(throws: LibraryBackupError.self) { try fixture.export() }
+        let prepared = try fixture.service.prepare(from: earlier)
+        let review = try fixture.service.review(prepared)
+        let safety = try fixture.service.makeSafetyBackup(for: prepared, review: review, to: fixture.root,
+            displayName: "Test", appVersion: "1", appBuild: "1")
+        let safetyBackup = try fixture.service.prepare(from: safety)
+        #expect(safetyBackup.manifest.missingFiles == [state.relativePath])
+        #expect(safetyBackup.manifest.notCarriedOver.contains { $0.hasPrefix("Missing file left out") })
+        _ = try fixture.service.restore(prepared, review: review, choices: [:], replaceEntireLibrary: true, safetyBackupURL: safety)
+    }
+
     private func allFiles(_ root: URL) throws -> [URL] {
         let enumerator = try #require(FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]))
         return enumerator.compactMap { $0 as? URL }.filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
     }
 }
 
+/// Serves one snapshot per read, repeating the last, and records whether a read is running.
+private final class SnapshotSequenceRepository: LibraryBackupRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var snapshots: [LibraryBackupSnapshot]
+    private var readCount = 0
+    private var reading = false
+
+    init(_ snapshots: [LibraryBackupSnapshot]) { self.snapshots = snapshots }
+
+    var reads: Int { lock.withLock { readCount } }
+    var isReading: Bool { lock.withLock { reading } }
+
+    func readSnapshot<T: Sendable>(_ operation: @Sendable (LibraryBackupSnapshot) throws -> T) throws -> T {
+        let snapshot = lock.withLock {
+            reading = true
+            readCount += 1
+            return snapshots.count > 1 ? snapshots.removeFirst() : snapshots[0]
+        }
+        defer { lock.withLock { reading = false } }
+        return try operation(snapshot)
+    }
+
+    func commitSnapshot<T: Sendable>(replacingLibrary: Bool,
+        _ operation: @Sendable (LibraryBackupSnapshot) throws -> (LibraryBackupSnapshot, RestoreReport, T)) throws -> T {
+        try lock.withLock { try operation(snapshots[0]).2 }
+    }
+
+    func lastRestoreReport() throws -> RestoreReport? { nil }
+}
+
+private final class LockedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored = false
+    var value: Bool { lock.withLock { stored } }
+    func set() { lock.withLock { stored = true } }
+}
+
+/// Forwards to a managed store but hashes quickly. The Linux SHA-256 fallback takes minutes for
+/// the tens of megabytes a size-limit test moves; the backup logic only needs consistent hashes.
+private struct QuickHashStore: AssetStore {
+    let base: ManagedFileStore
+    init(_ base: ManagedFileStore) { self.base = base }
+
+    var rootURL: URL { base.rootURL }
+    func stageCopy(from sourceURL: URL, transactionID: UUID) throws -> URL { try base.stageCopy(from: sourceURL, transactionID: transactionID) }
+    func hashFile(at url: URL) throws -> String { hashData(try Data(contentsOf: url, options: .alwaysMapped)) }
+    func hashData(_ data: Data) -> String {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        data.withUnsafeBytes { bytes in
+            for byte in bytes { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
+        }
+        hash ^= UInt64(data.count)
+        return String(repeating: String(format: "%016llx", hash), count: 4)
+    }
+    func sourceImageURL(sha256: String) throws -> URL { try base.sourceImageURL(sha256: sha256) }
+    func sourcePatchURL(sha256: String, extension fileExtension: String) throws -> URL { try base.sourcePatchURL(sha256: sha256, extension: fileExtension) }
+    func commitSourceROM(stagedURL: URL, sha256: String) throws -> URL { try base.commitSourceROM(stagedURL: stagedURL, sha256: sha256) }
+    func commitSourcePatch(stagedURL: URL, sha256: String, extension fileExtension: String) throws -> URL {
+        try base.commitSourcePatch(stagedURL: stagedURL, sha256: sha256, extension: fileExtension)
+    }
+    func variableMapURL(sha256: String, extension fileExtension: String) throws -> URL { try base.variableMapURL(sha256: sha256, extension: fileExtension) }
+    func commitVariableMap(stagedURL: URL, sha256: String, extension fileExtension: String) throws -> URL {
+        try base.commitVariableMap(stagedURL: stagedURL, sha256: sha256, extension: fileExtension)
+    }
+    func generatedImageURL(sha256: String) -> URL { base.generatedImageURL(sha256: sha256) }
+    func persistentSaveURL(profileID: UUID) -> URL { base.persistentSaveURL(profileID: profileID) }
+    func artworkURL(gameID: UUID, sha256: String, extension fileExtension: String) throws -> URL {
+        try base.artworkURL(gameID: gameID, sha256: sha256, extension: fileExtension)
+    }
+    func stateURL(stateID: UUID) -> URL { base.stateURL(stateID: stateID) }
+    func stateThumbnailURL(stateID: UUID, extension fileExtension: String) throws -> URL { try base.stateThumbnailURL(stateID: stateID, extension: fileExtension) }
+    func quickPlayRoot(sessionID: UUID) -> URL { base.quickPlayRoot(sessionID: sessionID) }
+    func quickPlaySessionIDs() throws -> [UUID] { try base.quickPlaySessionIDs() }
+    func managedRelativePath(for url: URL) throws -> String { try base.managedRelativePath(for: url) }
+    func managedURL(relativePath: String) throws -> URL { try base.managedURL(relativePath: relativePath) }
+    func readData(at url: URL) throws -> Data { try base.readData(at: url) }
+    func writeDataAtomically(_ data: Data, to url: URL) throws { try base.writeDataAtomically(data, to: url) }
+    func copyFileAtomically(from source: URL, to destination: URL) throws { try base.copyFileAtomically(from: source, to: destination) }
+    func fileByteLength(at url: URL) throws -> Int64 { try base.fileByteLength(at: url) }
+    func fileExists(at url: URL) -> Bool { base.fileExists(at: url) }
+    func removeIfExists(_ url: URL) throws { try base.removeIfExists(url) }
+}
+
 private struct BackupFixture {
     let root: URL
     let store: ManagedFileStore
+    /// `store`, or a wrapper around it that the fixture's hashes come from.
+    let assetStore: any AssetStore
     let snapshot: LibraryBackupSnapshot
     let repository: InMemoryLibraryBackupRepository
     let service: LibraryBackupService
     let date = Date(timeIntervalSince1970: 1_700_000_000)
 
-    init() throws {
+    init(hashing wrapper: QuickHashStore.Type? = nil) throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         store = try ManagedFileStore(rootURL: root.appendingPathComponent("Library"))
-        let store = store, date = date
+        assetStore = wrapper == nil ? store : QuickHashStore(store)
+        let store = assetStore, date = date
         let gameID = UUID(), baseID = UUID(), patchedID = UUID(), profileID = UUID(), stateID = UUID()
         var value = LibraryBackupSnapshot(migrationID: "test-migration")
         func asset(kind: ManagedAssetKind, path: URL, bytes: Data, storage: ManagedAssetStorageClass = .userData) throws -> ManagedAsset {
@@ -367,7 +570,7 @@ private struct BackupFixture {
             BackupSetting(scopeType: "game", scopeID: gameID.uuidString.lowercased(), key: "skipBootAnimation", valueJSON: "true")]
         snapshot = value
         repository = InMemoryLibraryBackupRepository(value)
-        service = LibraryBackupService(repository: repository, assetStore: store)
+        service = LibraryBackupService(repository: repository, assetStore: assetStore)
     }
 
     func remove() { try? FileManager.default.removeItem(at: root) }

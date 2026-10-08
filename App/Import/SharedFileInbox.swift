@@ -67,17 +67,19 @@ final class SharedFileInbox {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         guard attributes[.type] as? FileAttributeType == .typeRegular else { throw SharedFileError.notAFile }
-        try ImportSizeLimit.archive.check(fileAt: url)
+        // A backup may be far larger than a zip of game files, so it is identified first.
+        try ImportSizeLimit.backupArchive.check(fileAt: url)
         let staged = try store.stageCopy(from: url, transactionID: UUID())
         let directory = staged.deletingLastPathComponent()
         defer { try? store.removeIfExists(directory) }
-        try ImportSizeLimit.archive.check(fileAt: staged)
-        let data = try Data(contentsOf: staged)
-        if try ZipArchiveReader.isLibraryBackup(data) {
+        try ImportSizeLimit.backupArchive.check(fileAt: staged)
+        if try ZipArchiveReader.isLibraryBackup(Data(contentsOf: staged, options: .alwaysMapped)) {
             let filename = url.lastPathComponent.removingPercentEncoding ?? url.lastPathComponent
             guard !filename.contains("/"), !filename.contains("\\") else { throw SharedFileError.notAFile }
-            return [try stage(staged, filename: filename, kind: .backup, limit: .archive)]
+            return [try stage(staged, filename: filename, kind: .backup, limit: .backupArchive)]
         }
+        try ImportSizeLimit.archive.check(fileAt: staged)
+        let data = try Data(contentsOf: staged)
         let entries = try ZipArchiveReader.entries(
             in: data,
             extensions: Set(Self.extensions.keys)

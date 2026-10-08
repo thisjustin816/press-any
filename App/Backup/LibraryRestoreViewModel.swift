@@ -135,7 +135,7 @@ final class LibraryRestoreViewModel: ObservableObject {
         let id = UUID()
         restoreID = id
         defer { isRestoring = false }
-        let service = service, choices = choices
+        let service = service, choices = choices, url = url
         let safetyURL = replacingLibrary ? safetyBackupURL : nil
         let onProgress: @Sendable (Double) -> Void = { [weak self] value in
             Task { @MainActor in
@@ -145,7 +145,10 @@ final class LibraryRestoreViewModel: ObservableObject {
         }
         do {
             report = try await Task.detached(priority: .userInitiated) {
-                try service.restore(prepared, review: review, choices: choices,
+                // Restore extracts files from the picked archive as it places them.
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                return try service.restore(prepared, review: review, choices: choices,
                     replaceEntireLibrary: replacingLibrary, safetyBackupURL: safetyURL, progress: onProgress)
             }.value
             progress = 1

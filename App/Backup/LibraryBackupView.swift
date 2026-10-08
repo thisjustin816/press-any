@@ -26,6 +26,11 @@ struct LibraryBackupView: View {
                     BackupCountsSection(counts: summary.recordCounts)
                     Section {
                         LabeledContent("Approximate Size", value: ByteCountFormatter.string(fromByteCount: summary.approximateByteLength, countStyle: .file))
+                    } footer: {
+                        if summary.isTooLarge {
+                            Text("A backup can hold up to \(ByteCountFormatter.string(fromByteCount: LibraryBackupService.maximumArchiveBytes, countStyle: .file)). Turn off Include ROMs, or export Games one at a time.")
+                                .foregroundStyle(.red)
+                        }
                     }
                 }
                 if model.isLoading { ProgressView("Reading library...") }

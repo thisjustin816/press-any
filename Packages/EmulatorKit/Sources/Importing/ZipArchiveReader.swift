@@ -52,18 +52,52 @@ public enum ZipArchiveError: LocalizedError, Equatable {
     }
 }
 
-/// Reads classic, single-disk ZIP archives in memory. Stored and deflated entries are supported;
+/// Reads classic, single-disk ZIP archives. Stored and deflated entries are supported;
 /// encryption and Zip64 (including newer required versions and Zip64 extra fields) are refused.
 public enum ZipArchiveReader {
     /// Archive entry cap, including folders. ROM imports separately allow at most 32 matches.
     public static let maximumEntries = 4_096
-    /// Maximum encoded archive size: the 32 MiB import cap. Also enforced by the writer.
+    /// Maximum encoded size of a zip of ROMs, patches or saves: the 32 MiB import cap.
     public static let maximumArchiveBytes = Int(ImportSizeLimit.archive.bytes)
+    /// Maximum encoded size of a backup: 2 GiB. Also enforced by the writer.
+    public static let maximumBackupArchiveBytes = Int(ImportSizeLimit.backupArchive.bytes)
     /// Maximum backup entry size: 64 MiB, checked before allocation or inflation.
     public static let maximumEntryBytes = 64 << 20
-    /// Maximum aggregate backup payload: 256 MiB. The writer uses the same payload limits.
-    public static let maximumTotalBytes = 256 << 20
+    /// Maximum expanded backup payload, the same 2 GiB. The writer uses the same payload limits.
+    public static let maximumTotalBytes = maximumBackupArchiveBytes
     static let maximumMatchingEntries = 32
+
+    /// A backup archive whose entries are validated up front and extracted one at a time, so
+    /// memory holds at most one entry beyond the mapped file.
+    public struct BackupArchive: Sendable {
+        private let archive: Data
+        private let entries: [String: ArchivedEntry]
+        /// Every entry path in archive order, including folders.
+        public let paths: [String]
+
+        /// Maps the file instead of reading it, after checking its size against the backup limit.
+        public init(contentsOf url: URL) throws {
+            try ImportSizeLimit.backupArchive.check(fileAt: url)
+            try self.init(data: Data(contentsOf: url, options: .alwaysMapped))
+        }
+
+        public init(data: Data) throws {
+            let data = data.startIndex == 0 ? data : Data(data)
+            let directory = try backupDirectory(in: data)
+            archive = data
+            paths = directory.map(\.path)
+            entries = Dictionary(directory.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
+        }
+
+        public func contains(_ path: String) -> Bool { entries[path] != nil }
+
+        public func byteLength(of path: String) -> Int? { entries[path]?.size }
+
+        public func data(at path: String) throws -> Data {
+            guard let entry = entries[path] else { throw ZipArchiveError.damaged }
+            return try extract(entry, from: archive)
+        }
+    }
 
     /// ROM imports keep only basenames, skip folders and macOS metadata, and apply extension limits.
     public static func entries(
@@ -72,7 +106,7 @@ public enum ZipArchiveReader {
         limit: (String) -> Int64
     ) throws -> [ZipArchiveEntry] {
         let archive = Data(archive)
-        let directory = try directory(in: archive)
+        let directory = try directory(in: archive, limit: maximumArchiveBytes)
         var entries: [ZipArchiveEntry] = []
         for entry in directory {
             guard let filename = filename(of: entry.path), extensions.contains((filename as NSString).pathExtension.lowercased()) else {
@@ -90,18 +124,17 @@ public enum ZipArchiveReader {
     /// Reads every backup entry with its relative path, including folders and empty files.
     /// Paths and the full declared payload budget are validated before any file is extracted.
     public static func backupEntries(in archive: Data) throws -> [ZipArchiveEntry] {
-        let archive = Data(archive)
-        let directory = try backupDirectory(in: archive)
-        return try directory.map { ZipArchiveEntry(relativePath: $0.path, data: try extract($0, from: archive)) }
+        let backup = try BackupArchive(data: archive)
+        return try backup.paths.map { ZipArchiveEntry(relativePath: $0, data: try backup.data(at: $0)) }
     }
 
     /// Checks for the exact root `backup-manifest.json` using metadata only, with no extraction
     /// or ROM matching cap. This identifies the container, not the validity of its manifest data.
     public static func isLibraryBackup(_ archive: Data) throws -> Bool {
-        try directory(in: Data(archive)).contains { $0.name == Data("backup-manifest.json".utf8) }
+        try directory(in: archive, limit: maximumBackupArchiveBytes).contains { $0.name == Data("backup-manifest.json".utf8) }
     }
 
-    private struct ArchivedEntry {
+    private struct ArchivedEntry: Sendable {
         let name: Data
         let path: String
         let method: UInt16
@@ -113,7 +146,7 @@ public enum ZipArchiveReader {
     }
 
     private static func backupDirectory(in archive: Data) throws -> [ArchivedEntry] {
-        let entries = try directory(in: archive)
+        let entries = try directory(in: archive, limit: maximumBackupArchiveBytes)
         for entry in entries {
             guard String(data: entry.name, encoding: .utf8) != nil else { throw ZipArchiveError.damaged }
         }
@@ -139,8 +172,8 @@ public enum ZipArchiveReader {
         return data
     }
 
-    private static func directory(in archive: Data) throws -> [ArchivedEntry] {
-        guard archive.count <= maximumArchiveBytes else { throw ZipArchiveError.archiveTooLarge }
+    private static func directory(in archive: Data, limit: Int) throws -> [ArchivedEntry] {
+        guard archive.count <= limit else { throw ZipArchiveError.archiveTooLarge }
         let end = try endOfCentralDirectory(in: archive)
         guard end.entryCount <= maximumEntries else { throw ZipArchiveError.tooManyEntries }
         let directoryEnd = end.directoryOffset + end.directorySize
@@ -346,9 +379,9 @@ enum ZipArchiveFormat {
         total += size
     }
 
-    static func checksum(_ data: Data) -> UInt32 {
+    static func checksum(_ data: Data, continuing previous: UInt32 = 0) -> UInt32 {
         data.withUnsafeBytes { buffer in
-            UInt32(crc32(0, buffer.bindMemory(to: Bytef.self).baseAddress, uInt(buffer.count)))
+            UInt32(crc32(uLong(previous), buffer.bindMemory(to: Bytef.self).baseAddress, uInt(buffer.count)))
         }
     }
 }

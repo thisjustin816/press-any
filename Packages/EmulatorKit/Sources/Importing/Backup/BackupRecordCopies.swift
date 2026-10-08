@@ -2,6 +2,18 @@ import EmulatorApplication
 import EmulatorDomain
 import Foundation
 
+extension AssetStore {
+    /// A managed URL that stays inside the managed folder after following links.
+    func backupManagedURL(_ path: String) throws -> URL {
+        let url = try managedURL(relativePath: path)
+        let root = rootURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
+        guard url.resolvingSymlinksInPath().standardizedFileURL.path.hasPrefix(root) else {
+            throw LibraryBackupError.invalidArchive("an asset path leaves the managed folder")
+        }
+        return url
+    }
+}
+
 extension ManagedAsset {
     func backupCopy(id: UUID? = nil, path: String? = nil) -> ManagedAsset {
         ManagedAsset(id: id ?? self.id, kind: kind, storageClass: storageClass,
@@ -137,6 +149,23 @@ extension LibraryBackupSnapshot {
         result = result.backupOmittingExternalLineage()
         result.assets = assets.filter { result.referencedAssetIDs.contains($0.id) }
         return (result, leftAlone)
+    }
+
+    /// Names an asset by what uses it, for messages and the report.
+    func describe(_ asset: ManagedAsset) -> String {
+        func game(_ id: UUID) -> String { games.first { $0.id == id }?.primaryTitle ?? "a Game" }
+        if let profile = profiles.first(where: { $0.persistentSaveAssetID == asset.id }) {
+            return "The save for \(profile.displayName) in \(game(profile.gameID))"
+        }
+        if let state = states.first(where: { $0.stateAssetID == asset.id || $0.screenshotAssetID == asset.id }) {
+            let build = builds.first { $0.id == state.buildID }
+            let owner = build.map { " in \(game($0.gameID))" } ?? ""
+            return state.stateAssetID == asset.id ? "The state \(state.displayName)\(owner)" : "The picture for state \(state.displayName)\(owner)"
+        }
+        if let owner = games.first(where: { $0.artworkAssetID == asset.id }) { return "The artwork for \(owner.primaryTitle)" }
+        if let build = builds.first(where: { $0.imageAssetID == asset.id }) { return "The ROM for \(build.displayName) in \(game(build.gameID))" }
+        if let map = variableMaps.first(where: { $0.assetID == asset.id }) { return "The variable map \(map.originalFilename)" }
+        return asset.originalFilename.map { "The file \($0)" } ?? "A library file"
     }
 
     var referencedAssetIDs: Set<UUID> {

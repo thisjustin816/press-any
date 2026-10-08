@@ -40,7 +40,7 @@ final class LibraryBackupViewModel: ObservableObject {
         self.appInfo = appInfo
     }
 
-    var canExport: Bool { summary != nil && !isLoading && !isExporting }
+    var canExport: Bool { summary.map { !$0.isTooLarge } ?? false && !isLoading && !isExporting }
 
     func loadSummary() async {
         guard !isExporting else { return }

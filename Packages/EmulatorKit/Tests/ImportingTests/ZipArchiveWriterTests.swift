@@ -37,6 +37,29 @@ import Testing
         damaged[30 + entry.filename.utf8.count] ^= 1
         #expect(throws: ZipArchiveError.damaged) { try ZipArchiveReader.backupEntries(in: damaged) }
         #expect(throws: ZipArchiveError.tooManyEntries) { try ZipArchiveWriter.archive(entries: (0...4096).map { ZipArchiveEntry(filename: "\($0)", data: Data()) }) }
-        #expect(throws: ZipArchiveError.archiveTooLarge) { try ZipArchiveWriter.archive(entries: [ZipArchiveEntry(filename: "large", data: Data(count: ZipArchiveReader.maximumArchiveBytes))]) }
+        #expect(throws: ZipArchiveError.archiveTooLarge) {
+            try ZipArchiveWriter.archive(entries: [ZipArchiveEntry(filename: "large", data: Data(count: 1_000))], maximumBytes: 1_000)
+        }
+    }
+
+    @Test func streamedFilesRoundTripAndBackupsMayExceedTheROMZipLimit() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        var large = Data(repeating: 0xa5, count: ZipArchiveReader.maximumArchiveBytes + 3 << 20)
+        for offset in stride(from: 0, to: large.count, by: 1 << 20) { large[offset] = UInt8(truncatingIfNeeded: offset >> 20) }
+        let source = root.appendingPathComponent("rom")
+        try large.write(to: source)
+        let archive = root.appendingPathComponent("backup.zip")
+        try ZipArchiveWriter.write([
+            ZipArchiveWriter.Item(relativePath: "Source/ROM/moon.rom", content: .file(source)),
+            ZipArchiveWriter.Item(relativePath: "backup-manifest.json", content: .data(Data("{}".utf8))),
+        ], to: archive)
+        let backup = try ZipArchiveReader.BackupArchive(contentsOf: archive)
+        #expect(backup.paths == ["Source/ROM/moon.rom", "backup-manifest.json"])
+        #expect(try backup.data(at: "Source/ROM/moon.rom") == large)
+        let bytes = try Data(contentsOf: archive)
+        #expect(try ZipArchiveReader.isLibraryBackup(bytes))
+        #expect(throws: ZipArchiveError.archiveTooLarge) { try ZipArchiveReader.entries(in: bytes, extensions: ["rom"]) { _ in .max } }
     }
 }

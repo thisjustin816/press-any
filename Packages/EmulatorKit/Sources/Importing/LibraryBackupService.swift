@@ -14,53 +14,59 @@ public struct LibraryBackupService: Sendable {
         self.inFlight = inFlight
     }
 
+    /// The largest backup or Game package this app writes or opens.
+    public static let maximumArchiveBytes = Int64(ZipArchiveReader.maximumBackupArchiveBytes)
+
     public func summary(gameID: UUID? = nil, includeROMs: Bool = false) throws -> BackupSummary {
         try repository.readSnapshot { snapshot in
-            let snapshot = try snapshot.scoped(to: gameID)
-            let records = try BackupSnapshotCodec.records(snapshot)
-            let fileBytes = snapshot.assets.filter { carriesFile($0, includesROMs: includeROMs) }
-                .reduce(Int64(0)) { $0 + $1.byteLength }
+            let snapshot = try snapshot.scoped(to: gameID).backupOmittingExternalLineage()
             return BackupSummary(recordCounts: BackupSnapshotCodec.counts(snapshot),
-                approximateByteLength: fileBytes + Int64(records.values.reduce(0) { $0 + $1.count }))
+                approximateByteLength: try BackupExporter.estimatedArchiveBytes(snapshot, includesROMs: includeROMs))
         }
     }
 
     public func export(to directory: URL, displayName: String, appVersion: String, appBuild: String,
                        includeROMs: Bool = false, gameID: UUID? = nil,
                        progress: @escaping @Sendable (Double) -> Void = { _ in }) throws -> URL {
-        try repository.readSnapshot { snapshot in
-            try writeBackup(snapshot.scoped(to: gameID), to: directory, displayName: displayName,
-                appVersion: appVersion, appBuild: appBuild, includeROMs: includeROMs, gameID: gameID, progress: progress)
-        }
+        try BackupExporter(repository: repository, store: store).write(BackupExporter.Request(
+            gameID: gameID, includeROMs: includeROMs, keepsDamagedFiles: false,
+            filenameStem: { _ in "\(displayName) Backup" }, appVersion: appVersion, appBuild: appBuild),
+            to: directory, progress: progress)
     }
 
     public func prepare(from url: URL) throws -> PreparedLibraryRestore {
-        try ImportSizeLimit.archive.check(fileAt: url)
-        let bytes = try Data(contentsOf: url)
-        let entries = try ZipArchiveReader.backupEntries(in: bytes)
-        guard let manifestEntry = entries.first(where: { $0.relativePath == "backup-manifest.json" }) else {
+        let archive = try ZipArchiveReader.BackupArchive(contentsOf: url)
+        guard archive.contains("backup-manifest.json") else {
             throw LibraryBackupError.invalidArchive("no root manifest")
         }
+        let manifestData = try archive.data(at: "backup-manifest.json")
         struct Version: Decodable { let formatVersion: Int }
-        let version = try JSONDecoder().decode(Version.self, from: manifestEntry.data).formatVersion
+        let version = try JSONDecoder().decode(Version.self, from: manifestData).formatVersion
         guard version <= LibraryBackupManifest.currentFormatVersion else { throw LibraryBackupError.newerFormat }
         guard version >= 1 else { throw LibraryBackupError.invalidArchive("invalid format version") }
-        let manifest = try JSONDecoder().decode(LibraryBackupManifest.self, from: manifestEntry.data)
+        let manifest = try JSONDecoder().decode(LibraryBackupManifest.self, from: manifestData)
         guard !manifest.isEncrypted else { throw LibraryBackupError.encrypted }
-        let files = Dictionary(uniqueKeysWithValues: entries.filter { !$0.relativePath.hasSuffix("/") }.map { ($0.relativePath, $0.data) })
-        guard !manifest.files.keys.contains("backup-manifest.json"),
-              Set(files.keys).subtracting(["backup-manifest.json"]) == Set(manifest.files.keys) else {
-            let missing = manifest.files.keys.first { files[$0] == nil }
-            if let missing { throw LibraryBackupError.missingFile(missing) }
+        let payload = Set(archive.paths.filter { !$0.hasSuffix("/") }).subtracting(["backup-manifest.json"])
+        guard !manifest.files.keys.contains("backup-manifest.json"), payload == Set(manifest.files.keys) else {
+            if let missing = manifest.files.keys.sorted().first(where: { !payload.contains($0) }) {
+                throw LibraryBackupError.missingFile(missing)
+            }
             throw LibraryBackupError.invalidArchive("the file inventory does not match the manifest")
         }
-        for (path, info) in manifest.files {
-            guard let data = files[path] else { throw LibraryBackupError.missingFile(path) }
-            guard info.byteLength >= 0, Int64(data.count) == info.byteLength, store.hashData(data) == info.sha256 else {
+        guard Set(manifest.missingFiles).isDisjoint(with: manifest.files.keys) else {
+            throw LibraryBackupError.invalidArchive("a file is listed as both present and missing")
+        }
+        // One entry at a time, so memory holds a single file however large the backup is.
+        var records: [String: Data] = [:]
+        for (path, info) in manifest.files.sorted(by: { $0.key < $1.key }) {
+            guard info.byteLength >= 0, archive.byteLength(of: path).map(Int64.init) == info.byteLength else {
                 throw LibraryBackupError.checksumMismatch(path)
             }
+            let data = try archive.data(at: path)
+            guard store.hashData(data) == info.sha256 else { throw LibraryBackupError.checksumMismatch(path) }
+            if BackupSnapshotCodec.recordFilenames.contains(path) { records[path] = data }
         }
-        let snapshot = try BackupSnapshotCodec.decode(files, migrationID: manifest.migrationID)
+        let snapshot = try BackupSnapshotCodec.decode(records, migrationID: manifest.migrationID)
         try BackupSnapshotCodec.validate(snapshot)
         let counts = BackupSnapshotCodec.counts(snapshot)
         for (kind, count) in manifest.recordCounts {
@@ -76,19 +82,19 @@ public struct LibraryBackupService: Sendable {
             throw LibraryBackupError.invalidArchive("unrecognized file \(path); update the app")
         }
         for asset in snapshot.assets {
-            if carriesFile(asset, includesROMs: manifest.includesROMs) {
-                guard let data = files[asset.relativePath] else {
-                    if asset.kind == .sourceImage { continue }
+            if BackupExporter.carriesFile(asset, includesROMs: manifest.includesROMs) {
+                guard let info = manifest.files[asset.relativePath] else {
+                    if asset.kind == .sourceImage || manifest.missingFiles.contains(asset.relativePath) { continue }
                     throw LibraryBackupError.missingFile(asset.relativePath)
                 }
-                guard Int64(data.count) == asset.byteLength, store.hashData(data) == asset.contentSHA256 else {
+                guard info.byteLength == asset.byteLength, info.sha256 == asset.contentSHA256 else {
                     throw LibraryBackupError.checksumMismatch(asset.relativePath)
                 }
-            } else if files[asset.relativePath] != nil {
+            } else if manifest.files[asset.relativePath] != nil {
                 throw LibraryBackupError.invalidArchive("an excluded asset is present")
             }
         }
-        return PreparedLibraryRestore(manifest: manifest, snapshot: snapshot, files: files)
+        return PreparedLibraryRestore(manifest: manifest, snapshot: snapshot, archive: archive)
     }
 
     public func review(_ prepared: PreparedLibraryRestore) throws -> LibraryRestoreReview {
@@ -97,7 +103,7 @@ public struct LibraryBackupService: Sendable {
             var merge = BackupMerge(archive: archive, library: snapshot)
             _ = try merge.merged()
             return LibraryRestoreReview(snapshot: snapshot, added: merge.added, skipped: merge.skipped,
-                conflicts: merge.conflicts, missingROMs: missingROMs(in: archive, files: prepared.files, library: snapshot),
+                conflicts: merge.conflicts, missingROMs: missingROMs(in: archive, hasFile: prepared.hasFile, library: snapshot),
                 leftAlone: leftAlone)
         }
     }
@@ -107,12 +113,11 @@ public struct LibraryBackupService: Sendable {
     public func makeSafetyBackup(for prepared: PreparedLibraryRestore, review: LibraryRestoreReview,
                                  to directory: URL, displayName: String, appVersion: String, appBuild: String) throws -> URL {
         guard !prepared.manifest.isGamePackage else { throw LibraryBackupError.unsafeChoice("Game package replacement") }
-        return try repository.readSnapshot { snapshot in
-            try requireUnchanged(snapshot, review.snapshot)
-            return try writeBackup(snapshot, to: directory, displayName: displayName,
-                appVersion: appVersion, appBuild: appBuild, includeROMs: true,
-                gameID: nil, progress: { _ in })
-        }
+        return try BackupExporter(repository: repository, store: store).write(BackupExporter.Request(
+            gameID: nil, includeROMs: true, keepsDamagedFiles: true,
+            filenameStem: { _ in "\(displayName) Backup" }, appVersion: appVersion, appBuild: appBuild,
+            check: { try requireUnchanged($0, review.snapshot) }),
+            to: directory, progress: { _ in })
     }
 
     public func restore(_ prepared: PreparedLibraryRestore, review: LibraryRestoreReview,
@@ -152,16 +157,19 @@ public struct LibraryBackupService: Sendable {
         try FileManager.default.createDirectory(at: stagingRoot, withIntermediateDirectories: true)
         defer { try? store.removeIfExists(stagingRoot) }
         var staged: [String: URL] = [:]
-        for (path, bytes) in plan.files {
+        for (path, source) in plan.files {
             let temporary = stagingRoot.appendingPathComponent(UUID().uuidString)
-            try store.writeDataAtomically(bytes, to: temporary)
+            switch source {
+            case .archive(let archived): try store.writeDataAtomically(prepared.fileData(archived), to: temporary)
+            case .bytes(let bytes): try store.writeDataAtomically(bytes, to: temporary)
+            }
             staged[path] = temporary
         }
         var created: [URL] = []
         do {
             let ordered = staged.keys.sorted()
             for (index, path) in ordered.enumerated() {
-                let destination = try safeManagedURL(path)
+                let destination = try store.backupManagedURL(path)
                 // A new path is mandatory even when an existing file is damaged. Rollback must
                 // never have to recreate a file the player already owned.
                 guard !store.fileExists(at: destination) else { throw LibraryBackupError.libraryChanged }
@@ -172,7 +180,7 @@ public struct LibraryBackupService: Sendable {
             let report = RestoreReport(restoredAt: Date(), added: merge.added, skipped: merge.skipped,
                 resolutions: merge.conflicts.compactMap { conflict in
                     choices[conflict.id].map { RestoreResolution(record: "\(conflict.kind): \(conflict.name)", choice: $0) }
-                }, missingROMs: missingROMs(in: plan.snapshot, files: plan.files, library: plan.snapshot),
+                }, missingROMs: missingROMs(in: plan.snapshot, hasFile: { plan.files[$0] != nil }, library: plan.snapshot),
                 notCarriedOver: prepared.manifest.notCarriedOver + leftAloneNote(leftAlone) + plan.notes)
             let result = try repository.commitSnapshot(replacingLibrary: replaceEntireLibrary) { current in
                 try requireUnchanged(current, review.snapshot)
@@ -188,67 +196,6 @@ public struct LibraryBackupService: Sendable {
         }
     }
 
-    private func writeBackup(_ snapshot: LibraryBackupSnapshot, to directory: URL, displayName: String,
-                             appVersion: String, appBuild: String, includeROMs: Bool, gameID: UUID?,
-                             progress: @Sendable (Double) -> Void) throws -> URL {
-        let snapshot = snapshot.backupOmittingExternalLineage()
-        do {
-            try BackupSnapshotCodec.validate(snapshot)
-        } catch LibraryBackupError.invalidArchive(let reason) {
-            throw LibraryBackupError.cannotBackUp(reason)
-        }
-        var files = try BackupSnapshotCodec.records(snapshot)
-        var omissions = ["Generated patched ROMs and image fingerprints", "Crash recovery checkpoints",
-                         "Quick Play sessions, staged files, and Recently Deleted", "Device view preferences and launch markers"]
-        if !includeROMs { omissions.append("Source ROM files") }
-        let included = snapshot.assets.filter { carriesFile($0, includesROMs: includeROMs) }
-        var total = files.values.reduce(0) { $0 + $1.count }
-        for (index, asset) in included.enumerated() {
-            let url = try safeManagedURL(asset.relativePath)
-            if !store.fileExists(at: url), asset.kind == .sourceImage {
-                omissions.append("Missing ROM: \(asset.originalFilename ?? asset.contentSHA256)")
-                continue
-            }
-            guard store.fileExists(at: url) else { throw LibraryBackupError.missingLibraryFile(asset.relativePath) }
-            let bytes = try store.readData(at: url)
-            guard Int64(bytes.count) == asset.byteLength, store.hashData(bytes) == asset.contentSHA256 else {
-                throw LibraryBackupError.missingLibraryFile(asset.relativePath)
-            }
-            total += bytes.count
-            try ImportSizeLimit.archive.check(byteCount: Int64(total))
-            files[asset.relativePath] = bytes
-            progress(Double(index + 1) / Double(max(1, included.count)) * 0.8)
-        }
-        let manifest = LibraryBackupManifest(appVersion: appVersion, appBuild: appBuild,
-            migrationID: snapshot.migrationID, createdAt: Date(), includesROMs: includeROMs,
-            gameID: gameID, recordCounts: BackupSnapshotCodec.counts(snapshot),
-            files: files.mapValues { BackupFileInfo(sha256: store.hashData($0), byteLength: Int64($0.count)) },
-            notCarriedOver: omissions)
-        files["backup-manifest.json"] = try BackupSnapshotCodec.encoder().encode(manifest)
-        let zip = try ZipArchiveWriter.archive(entries: files.sorted { $0.key < $1.key }.map { ZipArchiveEntry(relativePath: $0.key, data: $0.value) })
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let date = ISO8601DateFormatter().string(from: manifest.createdAt).replacingOccurrences(of: ":", with: "-")
-        let filename = ExportLibraryFiles.safeFilename("\(displayName) Backup \(date).zip")
-        let url = ExportLibraryFiles.availableURL(for: filename, in: directory)
-        try store.writeDataAtomically(zip, to: url)
-        progress(1)
-        return url
-    }
-
-    private func safeManagedURL(_ path: String) throws -> URL {
-        let url = try store.managedURL(relativePath: path)
-        let root = store.rootURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
-        guard url.resolvingSymlinksInPath().standardizedFileURL.path.hasPrefix(root) else {
-            throw LibraryBackupError.invalidArchive("an asset path leaves the managed folder")
-        }
-        return url
-    }
-
-    private func carriesFile(_ asset: ManagedAsset, includesROMs: Bool) -> Bool {
-        asset.kind != .generatedImage && asset.storageClass != .cache
-            && (includesROMs || asset.kind != .sourceImage)
-    }
-
     private func requireUnchanged(_ current: LibraryBackupSnapshot, _ reviewed: LibraryBackupSnapshot,
                                   includingRetained: Bool = true) throws {
         guard try BackupSnapshotCodec.canonical(current) == BackupSnapshotCodec.canonical(reviewed),
@@ -259,17 +206,18 @@ public struct LibraryBackupService: Sendable {
 
     private func leftAloneNote(_ names: [String]) -> [String] {
         guard !names.isEmpty else { return [] }
-        let count = names.count == 1 ? "1 item" : "\(names.count) items"
-        return ["\(count) in Recently Deleted or deleted for good were left alone: \(names.joined(separator: ", "))"]
+        let count = names.count == 1 ? "1 item in Recently Deleted or deleted for good was" : "\(names.count) items in Recently Deleted or deleted for good were"
+        return ["\(count) left alone: \(names.joined(separator: ", "))"]
     }
 
-    private func missingROMs(in snapshot: LibraryBackupSnapshot, files: [String: Data],
+    /// `hasFile` says whether the restore brings bytes for a path; they were checked in prepare.
+    private func missingROMs(in snapshot: LibraryBackupSnapshot, hasFile: (String) -> Bool,
                              library: LibraryBackupSnapshot) -> [RestoreMissingROM] {
         func available(_ asset: ManagedAsset) -> Bool {
-            if let data = files[asset.relativePath], store.hashData(data) == asset.contentSHA256 { return true }
-            let matches = library.assets.filter { $0.contentSHA256 == asset.contentSHA256 }
+            if hasFile(asset.relativePath) { return true }
+            let matches = (library.assets + library.retained.assets).filter { $0.contentSHA256 == asset.contentSHA256 }
             return ([asset] + matches).contains { candidate in
-                guard let url = try? safeManagedURL(candidate.relativePath), store.fileExists(at: url) else { return false }
+                guard let url = try? store.backupManagedURL(candidate.relativePath), store.fileExists(at: url) else { return false }
                 return (try? store.hashFile(at: url)) == candidate.contentSHA256
             }
         }
