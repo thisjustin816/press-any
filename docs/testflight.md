@@ -257,6 +257,10 @@ The workflow checks every PNG's dimensions, and each set fits only its own slot.
 image shows a loaded app, readable content, and features present in the Release build;
 screenshot seeding runs in Debug.
 
+A new simulator can show a system notification, such as one about Apple Intelligence, at any
+moment. The script compares each portrait shot with another taken seven seconds later and takes
+the scene again when a banner covered one of them, so check the landscape shots for one.
+
 In **Apps → Press Any → the iOS version page → App Previews and Screenshots**,
 select the iPhone display-size group and drag in the chosen PNGs. Screenshots
 belong to the App Store version page; they are not required for internal

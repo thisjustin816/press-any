@@ -256,15 +256,75 @@ collect_diagnostics() {
   echo "Launch failed; see $output/simulator.log." >&2
 }
 
+# A fresh simulator can show a system notification banner, such as one about Apple Intelligence,
+# at any time, and nothing simctl offers turns those off. A banner stays about five seconds, so
+# each shot is compared with a second one taken after that: a difference along the screen's left
+# edge, below the status bar, where the banner's end sits and every scene holds still, means one
+# of them was covered, and the scene is taken again. This exits 1 for a difference.
+banner_check="build/screenshots/banner-check.py"
+cat >"$banner_check" <<'PY'
+import struct, sys, zlib
+
+# Pixels near the screen's left edge, below the status bar: where a notification banner's left end
+# sits, and where every scene shows something that holds still.
+LEFT, WIDTH, TOP, BOTTOM = 8, 48, 120, 440
+
+def strip(path):
+    data = open(path, "rb").read()
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    pos, idat, header = 8, [], None
+    while pos < len(data):
+        length, kind = struct.unpack(">I4s", data[pos:pos + 8])
+        if kind == b"IHDR":
+            header = struct.unpack(">IIBBBBB", data[pos + 8:pos + 8 + length])
+        elif kind == b"IDAT":
+            idat.append(data[pos + 8:pos + 8 + length])
+        pos += 12 + length
+    width, height, depth, color, _, _, interlace = header
+    if depth != 8 or interlace or color not in (2, 6) or height < BOTTOM:
+        return None
+    bpp = 4 if color == 6 else 3
+    stride = width * bpp + 1
+    raw = zlib.decompressobj().decompress(b"".join(idat), stride * BOTTOM)
+    count = (LEFT + WIDTH) * bpp
+    previous, rows = bytearray(count), []
+    for y in range(BOTTOM):
+        kind, line = raw[y * stride], bytearray(raw[y * stride + 1:y * stride + 1 + count])
+        for i in range(count):
+            a = line[i - bpp] if i >= bpp else 0
+            b = previous[i]
+            c = previous[i - bpp] if i >= bpp else 0
+            if kind == 1:
+                line[i] = (line[i] + a) & 255
+            elif kind == 2:
+                line[i] = (line[i] + b) & 255
+            elif kind == 3:
+                line[i] = (line[i] + (a + b) // 2) & 255
+            elif kind == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        previous = line
+        if y >= TOP:
+            rows.append(line[LEFT * bpp:])
+    return bpp, rows
+
+shot, later = strip(sys.argv[1]), strip(sys.argv[2])
+if not shot or not later or shot[0] != later[0]:
+    sys.exit(0)
+bpp = shot[0]
+changed = sum(1 for one, two in zip(shot[1], later[1]) for x in range(0, len(one), bpp)
+              if max(abs(one[x + i] - two[x + i]) for i in range(3)) > 8)
+sys.exit(1 if changed > WIDTH * (BOTTOM - TOP) // 50 else 0)
+PY
+
 shot=0
-# capture <scene> <seconds to wait> <name> [launch arguments...]
-capture() {
-  local scene="$1" wait="$2" name="$3"
+# shoot <file> <scene> <seconds to wait> [launch arguments...]: launches the scene and saves the
+# screen to <file> once it has waited, leaving the app running.
+shoot() {
+  local file="$1" scene="$2" wait="$3"
   shift 3
-  shot=$((shot + 1))
-  local file
-  file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$name")"
-  echo "== $scene $*" >>"$log"
   # simctl doesn't truncate the output file, so a launch that prints nothing would repeat the last.
   rm -f "$log.tmp"
   local attempt
@@ -287,8 +347,32 @@ capture() {
     sleep 6
     xcrun simctl io "$udid" screenshot "$file" >/dev/null
   done
-  xcrun simctl terminate "$udid" "$bundle_id" || true
-  cat "$log.tmp" >>"$log" 2>/dev/null || true
+}
+
+# capture <scene> <seconds to wait> <name> [launch arguments...]
+capture() {
+  local scene="$1" wait="$2" name="$3"
+  shift 3
+  shot=$((shot + 1))
+  local file check arguments attempt
+  file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$name")"
+  check="$output/banner-check.png"
+  arguments=("$@")
+  echo "== $scene $*" >>"$log"
+  for attempt in 1 2 3; do
+    shoot "$file" "$scene" "$wait" ${arguments[@]+"${arguments[@]}"} || return 1
+    sleep 7
+    xcrun simctl io "$udid" screenshot "$check" >/dev/null
+    xcrun simctl terminate "$udid" "$bundle_id" || true
+    cat "$log.tmp" >>"$log" 2>/dev/null || true
+    python3 "$banner_check" "$file" "$check" && break
+    if ((attempt == 3)); then
+      echo "$file may still show a notification banner." >&2
+    else
+      echo "$file may show a notification banner; taking it again ($attempt)." >&2
+    fi
+  done
+  rm -f "$check"
   echo "$file"
 }
 
