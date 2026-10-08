@@ -15,6 +15,7 @@ public struct AttachVariableMap: Sendable {
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
     private let transactions: any LibraryTransactionRunner
+    private let inFlight: InFlightFiles?
     private let now: @Sendable () -> Date
     private let makeID: @Sendable () -> UUID
 
@@ -24,6 +25,7 @@ public struct AttachVariableMap: Sendable {
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
         transactions: any LibraryTransactionRunner,
+        inFlight: InFlightFiles? = nil,
         now: @escaping @Sendable () -> Date = Date.init,
         makeID: @escaping @Sendable () -> UUID = UUID.init
     ) {
@@ -32,6 +34,7 @@ public struct AttachVariableMap: Sendable {
         self.assets = assets
         self.assetStore = assetStore
         self.transactions = transactions
+        self.inFlight = inFlight
         self.now = now
         self.makeID = makeID
     }
@@ -51,7 +54,13 @@ public struct AttachVariableMap: Sendable {
         if let existingAsset, let attached = try maps.fetchVariableMaps(buildID: buildID).first(where: { $0.assetID == existingAsset.id }) {
             return attached
         }
-        let destinationExisted = assetStore.fileExists(at: try assetStore.variableMapURL(sha256: sha, extension: fileExtension))
+        let destination = try assetStore.variableMapURL(sha256: sha, extension: fileExtension)
+        // Held until the records are in, so Check Library Files doesn't take the placed file for
+        // an orphan.
+        let lease = inFlight?.lease()
+        defer { lease?.end() }
+        lease?.hold(try assetStore.managedRelativePath(for: destination))
+        let destinationExisted = assetStore.fileExists(at: destination)
         // Committing checks a stored file against its hash and replaces it if it was damaged.
         let committed = try assetStore.commitVariableMap(stagedURL: staged, sha256: sha, extension: existingAsset.map {
             URL(fileURLWithPath: $0.relativePath).pathExtension

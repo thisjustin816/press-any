@@ -16,6 +16,7 @@ public struct ImportCommitter: Sendable {
     private let fingerprints: any ImageFingerprintRepository
     private let assetStore: any AssetStore
     private let transactions: any LibraryTransactionRunner
+    private let inFlight: InFlightFiles?
     private let now: @Sendable () -> Date
     private let makeID: @Sendable () -> UUID
 
@@ -27,6 +28,7 @@ public struct ImportCommitter: Sendable {
         fingerprints: any ImageFingerprintRepository,
         assetStore: any AssetStore,
         transactions: any LibraryTransactionRunner,
+        inFlight: InFlightFiles? = nil,
         now: @escaping @Sendable () -> Date = Date.init,
         makeID: @escaping @Sendable () -> UUID = UUID.init
     ) {
@@ -37,6 +39,7 @@ public struct ImportCommitter: Sendable {
         self.fingerprints = fingerprints
         self.assetStore = assetStore
         self.transactions = transactions
+        self.inFlight = inFlight
         self.now = now
         self.makeID = makeID
     }
@@ -84,6 +87,11 @@ public struct ImportCommitter: Sendable {
 
         let existingAsset = try assets.fetchSourceAsset(kind: .sourceImage, sha256: plan.analysis.sha256)
         let destination = try assetStore.sourceImageURL(sha256: plan.analysis.sha256)
+        // Held until the records are in, so Check Library Files doesn't take the placed file for
+        // an orphan.
+        let lease = inFlight?.lease()
+        defer { lease?.end() }
+        lease?.hold(try assetStore.managedRelativePath(for: destination))
         let fileExistedBeforeCommit = assetStore.fileExists(at: destination)
         let committedURL = try assetStore.commitSourceROM(
             stagedURL: plan.analysis.stagedURL,

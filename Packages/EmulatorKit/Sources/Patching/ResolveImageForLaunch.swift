@@ -18,19 +18,22 @@ public struct ResolveImageForLaunch: Sendable {
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
     private let patcher: any PatchApplying
+    private let trimCache: TrimPatchedROMCache?
 
     public init(
         builds: any BuildRepository,
         recipes: any PatchRecipeRepository,
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
-        patcher: any PatchApplying = PatchStackApplier()
+        patcher: any PatchApplying = PatchStackApplier(),
+        trimCache: TrimPatchedROMCache? = nil
     ) {
         self.builds = builds
         self.recipes = recipes
         self.assets = assets
         self.assetStore = assetStore
         self.patcher = patcher
+        self.trimCache = trimCache
     }
 
     public func resolve(buildID: UUID) throws -> URL {
@@ -118,6 +121,8 @@ public struct ResolveImageForLaunch: Sendable {
         }
 
         let generatedURL = assetStore.generatedImageURL(sha256: actualResultHash)
+        // Best effort: the write reports a full disk itself.
+        _ = try? trimCache?.execute(incomingBytes: Int64(output.count))
         try assetStore.writeDataAtomically(output, to: generatedURL)
         return generatedURL
     }
