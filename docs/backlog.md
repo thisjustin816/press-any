@@ -280,8 +280,8 @@ states.
 
 Done: Basic manual save + load state (menu hides crash checkpoints); States
 never cross Build/Profile/core/serialization context; Auto State on background, close and session
-switch; configurable retention (default 5); Resume Games Always/Ask/Never (default Always), inheritable System/Game/Build,
-Ask prompt, foreground policy; Auto State not restored once the profile's save is newer; Failed
+switch; configurable retention (default 5); Resume Games Always/Ask/Never (default Always),
+inheritable System/Game/Build, Ask prompt, foreground policy; Auto State not restored once the profile's save is newer; Failed
 restore boots normally, keeps state, tells user; Backgrounding pauses emulation/audio; One active
 emulator session; Each state keeps a PNG thumbnail of its frame, shown in Load State; A failed
 battery write still saves the Auto State, and a failed close can be retried or closed without

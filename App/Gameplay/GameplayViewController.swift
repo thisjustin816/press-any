@@ -375,15 +375,16 @@ final class GameplayViewController: UIViewController {
             guard let slot = state.slot else { return true }
             return slot > saveStateSlots.rawValue
         }.map { state in
+            // A pin takes the subtitle, so the thumbnail still tells the states apart.
             UIAction(
                 title: state.displayName,
-                subtitle: formatter.string(from: state.createdAt),
-                image: state.isPinned ? UIImage(systemName: "pin.fill")
-                    : states?.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
+                subtitle: (state.isPinned ? "Pinned · " : "") + formatter.string(from: state.createdAt),
+                image: states?.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
             ) { [weak self] _ in self?.loadState(state) }
         }
         return UIMenu(
             title: "States",
+            subtitle: states == nil ? "Add to Library to save states" : nil,
             image: UIImage(systemName: "square.stack"),
             children: [UIMenu(options: .displayInline, children: saves)] + loads
         )
@@ -428,7 +429,7 @@ final class GameplayViewController: UIViewController {
                 showTransientMessage("State saved.")
             }
         } catch {
-            showTransientMessage("Couldn't save the state: \(error)")
+            showTransientMessage("Couldn’t save the state: \(error)")
         }
     }
 

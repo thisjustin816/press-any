@@ -123,10 +123,9 @@ A save state belongs to one exact context: Build, Save Profile, image hash, core
 serialization version. States never load across Builds, even when the Builds share a battery
 save. Each state records its time and playtime. Manual, Quick, slot and Auto States also keep a
 thumbnail and an optional name. Each Build + Save Profile can keep one Quick State, replaced by
-Quick Save.
-Each Build + Save Profile can also keep one state per numbered slot. A state records its optional
-slot number and whether it is pinned against automatic cleanup. Manual states, Quick States,
-slot states, lifecycle Auto States and crash-recovery checkpoints are separate kinds.
+Quick Save, and one state per numbered slot. A state records its slot number, if it has one, and
+whether it is pinned against automatic cleanup. Manual states, Quick States, slot states,
+lifecycle Auto States and crash-recovery checkpoints are separate kinds.
 
 ### Patch recipe
 
@@ -497,16 +496,16 @@ claims reliability from just an old ROM, old save and new ROM.
 
 - **Saving and loading.** Taking a manual, Quick, slot or Auto State writes the battery save first.
   Manual, Quick and slot state actions stop frames until they finish. Loading asks first when the
-  game has saved since the battery save was last written, or when the state is older than the profile's
-  save. Continuing keeps the current save as "<profile> before loading state". A state that fails
+  game has saved since the battery save was last written, or when the state is older than the
+  profile's save. Continuing keeps the current save as "<profile> before loading state". A state that fails
   partway puts the latest save back in the game.
 - **Quick Save and Quick Load.** In the game menu's icon row, Quick Save replaces the exact
   Build + Save Profile's Quick State in place, with no naming prompt, and confirms "State saved."
   Quick Load uses the same load checks and backup prompt as loading any state, and is disabled
   when there is no Quick State. Quick States appear as "Quick Save" with their date in the game
   menu's States and in Save States. Later Quick Saves keep its name and pin. Deleting sends the
-  state to Recently Deleted; restoring
-  it when another Quick State exists makes the restored state ordinary and keeps both.
+  state to Recently Deleted; restoring it when another Quick State exists makes the restored
+  state ordinary and keeps both.
   Quick States are never chosen automatically at launch, by Resume Games, or for crash recovery.
 - **Slots.** Settings > Playing > Save States offers Slots Off (the default), 3, 5 or 10, at App
   scope only. When on, the game menu's States shows Slots after Save New State. Each numbered
@@ -517,7 +516,8 @@ claims reliability from just an old ROM, old save and new ROM.
   remain in Save States and the game menu's list, and return to Slots when the count increases.
   Restoring or reassigning a state into an occupied slot makes it manual with no slot, keeping
   both states. Slots are never chosen by launch, Resume Games or crash recovery. Quick Play
-  shows Slots when enabled, with its save and load actions disabled.
+  shows Slots when enabled, with its save and load actions disabled, and States still says "Add
+  to Library to save states".
 - **Naming new states.** Name New States in Settings > Playing is App-only and off by default.
   When on, Save New State opens "Name This State", with a "Save State" text-field placeholder,
   Save and Cancel. Empty text saves without a name; Cancel saves nothing. The game stays paused
@@ -525,17 +525,18 @@ claims reliability from just an old ROM, old save and new ROM.
 - **Save States screen.** A profile's menu opens its states on every Build, newest first, with
   picture, Build and date. A state can be renamed (an empty name gives back "Save State", "Quick
   Save", "Slot <n>" or "Auto State") or deleted to Recently Deleted. Loading stays in the game
-  menu, where the Build and profile are already chosen. Select shows checkboxes and a Delete (n) bottom
-  button for one confirmation across the selection. Pin and Unpin are in each row's context menu
-  and leading swipe. Pinned rows show a pin here and in the game menu. A pin prevents automatic
-  cleanup; deleting a pinned state still works. Crash-recovery checkpoints are hidden from
-  both state lists.
+  menu, where the Build and profile are already chosen. Select shows checkboxes and a Delete (n)
+  bottom button for one confirmation across the selection. Pin and Unpin are in each row's
+  context menu and leading swipe. Pinned rows show a pin here, and the game menu's list marks
+  them "Pinned" beside their date, keeping their pictures. A pin prevents automatic cleanup;
+  deleting a pinned state still works. Crash-recovery checkpoints are hidden from both state
+  lists.
 - **Auto State.** Backgrounding, closing and switching sessions write the battery save and an
   Auto State. Keep Auto States in Settings > Playing keeps 3, 5 (the default) or 10 unpinned
   Auto States per Build + Save Profile. Pinned Auto States survive and do not count toward the
   limit. Pruned Auto States are removed permanently. Each step is attempted even if an earlier
-  one fails, so the Auto State can recover progress a failed battery write lost. A close that fails keeps the game
-  open, to retry or close without saving.
+  one fails, so the Auto State can recover progress a failed battery write lost. A close that
+  fails keeps the game open, to retry or close without saving.
 - **Cleanup.** Keep Save States in Settings > Playing is App-only: All (the default), 10, 25 or
   50 unpinned manual states per Build + Save Profile. After a successful manual save, the oldest
   unpinned manual states beyond the limit move to Recently Deleted in one entry per cleanup.
@@ -703,7 +704,7 @@ picture. A connected controller still hides the touch controls.
 - Opening the menu stops frames and audio and releases held input. A row of icons at the top
   holds Resume, Fast Forward (highlighted while on), Quick Save and Quick Load. Below it, States
   opens Save New State, Slots when enabled, and the remaining states, newest first, with their
-  pictures or pin glyphs and dates; then Sound,
+  pictures and dates; then Sound,
   Settings, and Restart beside Close Game, in red, in their own section. The game stays paused after the menu closes, after changing Fast Forward
   and after returning from another app, until the player chooses Resume. A paused game's Resume
   button sits centered on the game picture.

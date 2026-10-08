@@ -36,12 +36,15 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertFalse(gameplay.prepareGameMenu().allActions.contains { $0.title == "Slot 5" })
         gameplay.saveStateSlots = .off
         XCTAssertTrue(gameplay.prepareGameMenu().allActions.contains { $0.title == "Slot 2" })
-        XCTAssertNotNil(try XCTUnwrap(gameplay.prepareGameMenu().allActions.first { $0.title == "Pinned manual" }).image)
+        let pinned = try XCTUnwrap(gameplay.prepareGameMenu().allActions.first { $0.title == "Pinned manual" })
+        XCTAssertTrue(pinned.subtitle?.hasPrefix("Pinned · ") == true)
     }
 
     func testQuickPlayShowsDisabledSlotsWhenEnabled() throws {
         let gameplay = GameplayViewController(runtime: LifecycleRuntime(), autoResumePolicy: .always, saveStateSlots: .three)
-        let slots = try XCTUnwrap(gameplay.prepareGameMenu().allMenus.first { $0.title == "Slots" })
+        let items = gameplay.prepareGameMenu()
+        XCTAssertEqual(items.allMenus.first { $0.title == "States" }?.subtitle, "Add to Library to save states")
+        let slots = try XCTUnwrap(items.allMenus.first { $0.title == "Slots" })
         XCTAssertEqual(slots.children.count, 3)
         XCTAssertEqual(slots.children.allActions.count, 6)
         XCTAssertTrue(slots.children.allActions.allSatisfy { $0.attributes.contains(.disabled) })
