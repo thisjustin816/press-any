@@ -83,6 +83,8 @@ struct BackupMerge {
             name: { "Recipe for \(names.build($0.resultBuildID))" }, date: { $0.createdAt }, choices: choices)
         result.variableMaps = try records(archive.variableMaps, library.variableMaps, kind: "Variable Map", key: { $0.id.uuidString },
             name: { $0.originalFilename }, date: { $0.attachedAt }, choices: choices)
+        result.cheats = try records(archive.cheats, library.cheats, kind: "Cheat", key: { $0.id.uuidString },
+            name: { "\($0.name) for \(names.build($0.buildID))" }, date: { $0.modifiedAt }, choices: choices)
         result.reports = try records(archive.reports, library.reports, kind: "Toolchain Report", key: { $0.identity },
             name: { "\($0.report.detector) for \(names.build($0.buildID))" }, date: { $0.detectedAt }, choices: choices)
         result.declarations = try records(archive.declarations, library.declarations, kind: "Save Declaration",

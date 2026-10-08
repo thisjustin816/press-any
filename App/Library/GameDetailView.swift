@@ -36,6 +36,7 @@ struct GameDetailView: View {
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
     @State private var buildDetails: Build?
+    @State private var cheatsBuild: Build?
     @State private var pendingReplacement: PendingReplacement?
     @State private var badgeTarget: SaveProfile?
     @State private var statesProfile: SaveProfile?
@@ -335,6 +336,9 @@ struct GameDetailView: View {
             .sheet(item: $buildDetails) { build in
                 BuildDetailView(build: build, container: container)
             }
+            .sheet(item: $cheatsBuild) { build in
+                CheatListView(buildID: build.id, container: container)
+            }
             .sheet(item: $statesProfile) { profile in
                 SaveStatesView(profile: profile, container: container)
             }
@@ -533,6 +537,7 @@ struct GameDetailView: View {
                 renamingBuild = build
             }
             Button("Build Info", systemImage: "info.circle") { buildDetails = build }
+            Button("Cheats", systemImage: "wand.and.stars") { cheatsBuild = build }
             Button("Build Settings", systemImage: "gearshape") {
                 settingsTarget = SettingsTarget(
                     title: "\(build.displayName) Settings",

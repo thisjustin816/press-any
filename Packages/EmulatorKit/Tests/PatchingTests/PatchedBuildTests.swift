@@ -170,6 +170,7 @@ final class PatchedBuildTests: XCTestCase {
             profiles: InMemorySaveProfileRepository(),
             states: InMemorySaveStateRepository(),
             recipes: harness.recipes,
+            cheats: InMemoryBuildCheatRepository(builds: harness.builds),
             assets: harness.assets,
             assetStore: harness.store
         )
@@ -225,6 +226,7 @@ final class PatchedBuildTests: XCTestCase {
             profiles: InMemorySaveProfileRepository(),
             states: InMemorySaveStateRepository(),
             recipes: harness.recipes,
+            cheats: InMemoryBuildCheatRepository(builds: harness.builds),
             assets: harness.assets,
             assetStore: harness.store
         )
@@ -673,7 +675,8 @@ struct PatchStepInputTests {
         let recipe = try #require(try h.recipes.fetchPatchRecipe(resultBuildID: build.id))
         let operations = BuildOperations(
             games: h.games, builds: h.builds, profiles: InMemorySaveProfileRepository(),
-            states: InMemorySaveStateRepository(), recipes: h.recipes, assets: h.assets, assetStore: h.store
+            states: InMemorySaveStateRepository(), recipes: h.recipes,
+            cheats: InMemoryBuildCheatRepository(builds: h.builds), assets: h.assets, assetStore: h.store
         )
         let game = try operations.promoteBuild(buildID: build.id, title: "Copy", mode: .copy)
         let copy = try #require(try h.builds.fetchBuilds(gameID: game.id).first)

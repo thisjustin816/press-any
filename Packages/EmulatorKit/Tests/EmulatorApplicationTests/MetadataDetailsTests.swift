@@ -140,7 +140,8 @@ private struct MetadataEditFixture {
         let timestamp = now
         return BuildOperations(games: games, builds: builds,
             profiles: InMemorySaveProfileRepository(), states: InMemorySaveStateRepository(),
-            recipes: InMemoryPatchRecipeRepository(), assets: InMemoryAssetRepository(), assetStore: store,
+            recipes: InMemoryPatchRecipeRepository(), cheats: InMemoryBuildCheatRepository(builds: builds),
+            assets: InMemoryAssetRepository(), assetStore: store,
             transactions: transactions, now: { timestamp })
     }
 

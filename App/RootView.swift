@@ -63,6 +63,8 @@ struct RootView: View {
     @State private var sharedFileRetryScheduled = false
     /// The open game's settings, from its menu.
     @State private var showsGameplaySettings = false
+    /// The open game's cheats, from its menu.
+    @State private var showsGameplayCheats = false
     @State private var showsWelcome = false
 
     var body: some View {
@@ -151,7 +153,7 @@ struct RootView: View {
                 hidesTouchControlsWithController: bootstrap.container?.hidesTouchControlsWithController() ?? true,
                 touchHaptics: bootstrap.container?.touchHaptics() ?? .light,
                 controllerMonitor: controllerMonitor,
-                isCoveredBySheet: sharedFile != nil || showsGameplaySettings,
+                isCoveredBySheet: sharedFile != nil || showsGameplaySettings || showsGameplayCheats,
                 closeRequested: closesGameForSharedQuickPlay,
                 onClose: { endGameplay(presentation) },
                 onAddToLibrary: presentation.isQuickPlay
@@ -161,6 +163,7 @@ struct RootView: View {
                     }
                     : nil,
                 onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true },
+                onOpenCheats: presentation.cheatsBuildID == nil ? nil : { showsGameplayCheats = true },
                 onSoundModeChange: { try bootstrap.container?.setSoundMode($0) }
             )
             .ignoresSafeArea()
@@ -168,6 +171,9 @@ struct RootView: View {
             .preferredColorScheme(bootstrap.container?.controllerTheme().colorScheme)
             .sheet(isPresented: $showsGameplaySettings, onDismiss: presentNextSharedFile) {
                 gameplaySettingsView(presentation)
+            }
+            .sheet(isPresented: $showsGameplayCheats, onDismiss: presentNextSharedFile) {
+                gameplayCheatsView(presentation)
             }
             // The library's sheet can't show over this cover, so a file shared mid-game opens here.
             .sheet(item: sharedFileBinding(overGameplay: true), onDismiss: finishSharedFile) { file in
@@ -304,7 +310,7 @@ struct RootView: View {
             style: gameplay?.display.controlStyle,
             orientation: gameplay?.display.orientation ?? .automatic,
             controllerConnected: controllerMonitor.isConnected,
-            coveredBySheet: showsGameplaySettings || sharedFile != nil || sharedFileError != nil
+            coveredBySheet: showsGameplaySettings || showsGameplayCheats || sharedFile != nil || sharedFileError != nil
         )
     }
 
@@ -332,6 +338,18 @@ struct RootView: View {
                     gameplay?.display = container.gameplayDisplay(for: target)
                 }
             )
+            .presentationDetents([.medium, .large])
+        }
+    }
+
+    /// The open game's cheats, at half height over the paused game. Each change reaches the game
+    /// before it resumes.
+    @ViewBuilder
+    private func gameplayCheatsView(_ presentation: GameplayPresentation) -> some View {
+        if let container = bootstrap.container, let buildID = presentation.cheatsBuildID {
+            CheatListView(buildID: buildID, container: container) {
+                try (presentation.runtime as? EmulationSession)?.reloadCheats()
+            }
             .presentationDetents([.medium, .large])
         }
     }
@@ -552,6 +570,7 @@ struct RootView: View {
                 launchMessage: message,
                 firstFrameClock: nil,
                 settings: container.gameplaySettingsTarget(for: launch.context),
+                cheatsBuildID: launch.context.buildID,
                 display: GameplayDisplaySettings(
                     controlStyle: container.controllerStyle(for: launch.context),
                     orientation: container.orientation(for: launch.context),
@@ -618,6 +637,7 @@ struct RootView: View {
                 : nil,
             firstFrameClock: firstFrameClock,
             settings: container.gameplaySettingsTarget(system: session.system),
+            cheatsBuildID: nil,
             display: container.gameplayDisplay(for: container.gameplaySettingsTarget(system: session.system))
         )
     }
@@ -661,6 +681,7 @@ struct RootView: View {
     private func endGameplay(_ presentation: GameplayPresentation) {
         closesGameForSharedQuickPlay = false
         showsGameplaySettings = false
+        showsGameplayCheats = false
         switch presentation.kind {
         case .library:
             bootstrap.container?.stopActiveSession(createAutoState: false)
@@ -692,6 +713,8 @@ private struct GameplayPresentation: Identifiable {
     let firstFrameClock: UInt64?
     /// Where the game menu's Settings saves, or nil when the game's Build couldn't be read.
     let settings: GameplaySettingsTarget?
+    /// The Build whose cheats the game menu's Cheats lists. Nil for Quick Play, which has none.
+    let cheatsBuildID: UUID?
     /// Updated as the settings sheet changes them.
     var display: GameplayDisplaySettings
 

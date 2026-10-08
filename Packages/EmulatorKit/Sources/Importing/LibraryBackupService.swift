@@ -227,6 +227,7 @@ public struct LibraryBackupService: Sendable {
             + count(result.states, library.states) { $0.id.uuidString }
             + count(result.recipes, library.recipes) { $0.id.uuidString }
             + count(result.variableMaps, library.variableMaps) { $0.id.uuidString }
+            + count(result.cheats, library.cheats) { $0.id.uuidString }
             + count(result.reports, library.reports) { $0.identity }
             + count(result.declarations, library.declarations, BackupSnapshotCodec.declarationID)
             + count(result.settings, library.settings) { $0.identity }

@@ -29,7 +29,8 @@ migrating later.
    folder are built.
 
 The rest of the v1 core is built: save state slots, naming and cleanup, crash recovery, reopening
-the last game, Restart and Start Over, and the controller's Menu button.
+the last game, Restart and Start Over, the controller's Menu button, and per-Build Game Genie and
+GameShark cheats.
 
 v1 is a good core experience; everything else waits for v1.1: 7z and multi-asset import,
 artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
@@ -91,7 +92,7 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 Done: SameBoy 1.0.3 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest compatible core on
 first launch, then pinned per Build; Open SameBoy boot ROMs incl. cgb_boot_fast; Skip Boot Logo:
 Quick Play always, library via inheritable setting (default shows logo); Optional capability
-protocols: rumble and boot skipping implemented, rewind, cheats, memory access, RTC, link cable,
+protocols: rumble, boot skipping and cheats implemented, rewind, memory access, RTC, link cable,
 camera and printer declared, and a missing one is a failed cast. Accuracy test ROMs: Blargg's
 tests and the Mooneye Test Suite run through the bridge on DMG-B and CGB-E in CI whenever the core
 or bridge changes, against recorded results; every test for those models passes except Mooneye's
@@ -313,7 +314,6 @@ the Build's Auto State; 24 h default retention, expired sessions purged.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Cheat management add/remove/enable/disable/persist; Game Genie/GameShark/SameBoy formats | v1.1 | no CheatCapability |
 | missing | Pluggable verified-ROM cheat database, selective add, never auto-enable | v1.1 |  |
 | missing | Cheat groups/categories + search | v1.1 |  |
 | missing | Cheat search: exact/unknown/changed/unchanged/inc/dec/delta/greater/less, signed/unsigned 8/16-bit, hex | v1.1 |  |
@@ -324,6 +324,12 @@ the Build's Auto State; 24 h default retention, expired sessions purged.
 | missing | Immediate Developer Mode memory writes with Undo Last Write, frozen indication | v1.1 |  |
 | missing | Frame advance + frame counter (bindable) | v1.1 |  |
 | missing | Full debugger/disassembler/VRAM viewer | later |  |
+
+Done: Cheat management add/remove/enable/disable/persist in Game Genie and GameShark formats, v1:
+`CheatCapability` on the SameBoy adapter through SameBoy's own parser; cheats per Build in
+`build_cheats` with a Cheats On switch per Build; Cheats in the game menu and the Build's menu;
+applied at launch and mid-game; carried by Library Backup and Game packages. SameBoy's own cheat
+file format isn't imported.
 
 ### Screenshots, notes, debug context
 

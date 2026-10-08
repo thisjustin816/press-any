@@ -470,6 +470,7 @@ struct PersistenceGRDBTests {
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
             recipes: repositories.patchRecipes,
+            cheats: repositories.cheats,
             assets: repositories.assets,
             assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
                 .appendingPathComponent("grdb-operations-\(UUID().uuidString)", isDirectory: true)),
@@ -501,6 +502,7 @@ struct PersistenceGRDBTests {
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
             recipes: repositories.patchRecipes,
+            cheats: repositories.cheats,
             assets: repositories.assets,
             assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
                 .appendingPathComponent("grdb-operations-\(UUID().uuidString)", isDirectory: true)),
@@ -533,6 +535,7 @@ struct PersistenceGRDBTests {
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
             recipes: repositories.patchRecipes,
+            cheats: repositories.cheats,
             assets: repositories.assets,
             assetStore: store,
             transactions: repositories.transactions,
@@ -645,6 +648,7 @@ struct PersistenceGRDBTests {
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
             recipes: repositories.patchRecipes,
+            cheats: repositories.cheats,
             assets: repositories.assets,
             assetStore: try ManagedFileStore(rootURL: FileManager.default.temporaryDirectory
                 .appendingPathComponent("grdb-operations-\(UUID().uuidString)", isDirectory: true)),

@@ -56,6 +56,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v17-manual-order") { db in
             try db.execute(sql: V1V17ManualOrderSchema.sql)
         }
+        migrator.registerMigration("v1-v18-build-cheats") { db in
+            try db.execute(sql: V1V18BuildCheatsSchema.sql)
+        }
         return migrator
     }
 }
@@ -460,5 +463,25 @@ enum V1V17ManualOrderSchema {
         game_id TEXT PRIMARY KEY NOT NULL REFERENCES games(id) ON DELETE CASCADE,
         position INTEGER NOT NULL CHECK (position >= 0)
     );
+    """
+}
+
+/// Each Build's cheats in the player's order, and the Build's Cheats On switch. A cheat's codes
+/// are one per line. Cheats have no deletion mark of their own: they are hidden while their Build
+/// is in Recently Deleted and go with it when it is purged.
+enum V1V18BuildCheatsSchema {
+    static let sql = """
+    ALTER TABLE builds ADD COLUMN cheats_enabled INTEGER NOT NULL DEFAULT 1 CHECK (cheats_enabled IN (0, 1));
+    CREATE TABLE build_cheats (
+        id TEXT PRIMARY KEY NOT NULL,
+        build_id TEXT NOT NULL REFERENCES builds(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        codes TEXT NOT NULL,
+        is_enabled INTEGER NOT NULL DEFAULT 1 CHECK (is_enabled IN (0, 1)),
+        position INTEGER NOT NULL CHECK (position >= 0),
+        created_at TEXT NOT NULL,
+        modified_at TEXT NOT NULL
+    );
+    CREATE INDEX build_cheats_build ON build_cheats(build_id, position);
     """
 }

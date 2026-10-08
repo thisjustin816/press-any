@@ -205,6 +205,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
     var pinnedCoreID: String?
     var pinnedCoreVersion: String?
     var corePinnedAt: String?
+    var cheatsEnabled: Bool
     var createdAt: String
     var modifiedAt: String
 
@@ -229,6 +230,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         case pinnedCoreID = "pinned_core_id"
         case pinnedCoreVersion = "pinned_core_version"
         case corePinnedAt = "core_pinned_at"
+        case cheatsEnabled = "cheats_enabled"
         case createdAt = "created_at"
         case modifiedAt = "modified_at"
     }
@@ -263,6 +265,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         container[CodingKeys.pinnedCoreID.rawValue] = pinnedCoreID
         container[CodingKeys.pinnedCoreVersion.rawValue] = pinnedCoreVersion
         container[CodingKeys.corePinnedAt.rawValue] = corePinnedAt
+        container[CodingKeys.cheatsEnabled.rawValue] = cheatsEnabled
         container[CodingKeys.createdAt.rawValue] = createdAt
         container[CodingKeys.modifiedAt.rawValue] = modifiedAt
     }
@@ -295,6 +298,7 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
         pinnedCoreID = value.corePin?.descriptor.identifier
         pinnedCoreVersion = value.corePin?.descriptor.version
         corePinnedAt = value.corePin.map { PersistenceCodec.date($0.pinnedAt) }
+        cheatsEnabled = value.cheatsEnabled
         createdAt = PersistenceCodec.date(value.createdAt)
         modifiedAt = PersistenceCodec.date(value.modifiedAt)
     }
@@ -344,6 +348,53 @@ struct BuildRecord: Codable, FetchableRecord, PersistableRecord {
             totalPlaytimeSeconds: totalPlaytimeSeconds,
             preferredSaveProfileID: try PersistenceCodec.optionalUUID(preferredSaveProfileID),
             corePin: pin,
+            cheatsEnabled: cheatsEnabled,
+            createdAt: try PersistenceCodec.date(createdAt),
+            modifiedAt: try PersistenceCodec.date(modifiedAt)
+        )
+    }
+}
+
+struct BuildCheatRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "build_cheats"
+
+    var id: String
+    var buildID: String
+    var name: String
+    /// One code per line.
+    var codes: String
+    var isEnabled: Bool
+    var position: Int
+    var createdAt: String
+    var modifiedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, codes, position
+        case buildID = "build_id"
+        case isEnabled = "is_enabled"
+        case createdAt = "created_at"
+        case modifiedAt = "modified_at"
+    }
+
+    init(_ value: BuildCheat) {
+        id = PersistenceCodec.uuid(value.id)
+        buildID = PersistenceCodec.uuid(value.buildID)
+        name = value.name
+        codes = value.codes.joined(separator: "\n")
+        isEnabled = value.isEnabled
+        position = value.position
+        createdAt = PersistenceCodec.date(value.createdAt)
+        modifiedAt = PersistenceCodec.date(value.modifiedAt)
+    }
+
+    func domain() throws -> BuildCheat {
+        BuildCheat(
+            id: try PersistenceCodec.uuid(id),
+            buildID: try PersistenceCodec.uuid(buildID),
+            name: name,
+            codes: codes.split(separator: "\n").map(String.init),
+            isEnabled: isEnabled,
+            position: position,
             createdAt: try PersistenceCodec.date(createdAt),
             modifiedAt: try PersistenceCodec.date(modifiedAt)
         )

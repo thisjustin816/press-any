@@ -154,6 +154,7 @@ public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable
             }
             var updated = build
             updated.totalPlaytimeSeconds = values[build.id]?.totalPlaytimeSeconds ?? build.totalPlaytimeSeconds
+            updated.cheatsEnabled = values[build.id]?.cheatsEnabled ?? build.cheatsEnabled
             values[build.id] = updated
         }
     }
@@ -179,6 +180,13 @@ public final class InMemoryBuildRepository: BuildRepository, @unchecked Sendable
         try lock.withLock {
             guard values[buildID] != nil else { throw BuildOperationError.buildNotFound(buildID) }
             values[buildID]?.totalPlaytimeSeconds += seconds
+        }
+    }
+
+    public func setCheatsEnabled(buildID: UUID, enabled: Bool) throws {
+        try lock.withLock {
+            guard values[buildID] != nil else { throw BuildOperationError.buildNotFound(buildID) }
+            values[buildID]?.cheatsEnabled = enabled
         }
     }
 
@@ -356,6 +364,48 @@ public final class InMemoryBuildVariableMapRepository: BuildVariableMapRepositor
 
     var all: [BuildVariableMap] { lock.withLock { Array(values.values) } }
     func removeMaps(buildID: UUID) { lock.withLock { values = values.filter { $0.value.buildID != buildID } } }
+}
+
+/// Reads only the cheats of Builds the Build repository still has, so a Build moved to Recently
+/// Deleted hides its cheats as the database does.
+public final class InMemoryBuildCheatRepository: BuildCheatRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private let builds: InMemoryBuildRepository
+    private var values: [UUID: BuildCheat] = [:]
+
+    public init(builds: InMemoryBuildRepository) {
+        self.builds = builds
+    }
+
+    public func fetchCheats(buildID: UUID) throws -> [BuildCheat] {
+        guard try builds.fetchBuild(id: buildID) != nil else { return [] }
+        return lock.withLock {
+            values.values.filter { $0.buildID == buildID }
+                .sorted { ($0.position, $0.createdAt, $0.id.uuidString) < ($1.position, $1.createdAt, $1.id.uuidString) }
+        }
+    }
+
+    public func fetchCheat(id: UUID) throws -> BuildCheat? {
+        guard let cheat = lock.withLock({ values[id] }), try builds.fetchBuild(id: cheat.buildID) != nil else { return nil }
+        return cheat
+    }
+
+    public func insertCheat(_ cheat: BuildCheat) throws {
+        guard try builds.fetchBuild(id: cheat.buildID) != nil else { throw BuildOperationError.buildNotFound(cheat.buildID) }
+        lock.withLock { values[cheat.id] = cheat }
+    }
+
+    public func updateCheat(_ cheat: BuildCheat) throws {
+        guard try fetchCheat(id: cheat.id) != nil else { throw BuildCheatError.cheatNotFound(cheat.id) }
+        lock.withLock { values[cheat.id] = cheat }
+    }
+
+    public func deleteCheat(id: UUID) throws { _ = lock.withLock { values.removeValue(forKey: id) } }
+
+    func removeCheats(buildID: UUID) { lock.withLock { values = values.filter { $0.value.buildID != buildID } } }
+
+    /// Every cheat, including those of hidden Builds.
+    public var all: [BuildCheat] { lock.withLock { Array(values.values) } }
 }
 
 public final class InMemoryPatchRecipeRepository: PatchRecipeRepository, @unchecked Sendable {

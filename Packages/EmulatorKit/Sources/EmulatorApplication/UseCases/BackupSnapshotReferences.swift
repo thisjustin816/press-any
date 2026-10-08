@@ -20,7 +20,7 @@ extension Build {
             baseGameReference: baseGameReference, baseTitle: baseTitle, hackTitle: hackTitle,
             author: author, translation: translation, status: status, notes: notes,
             totalPlaytimeSeconds: totalPlaytimeSeconds, preferredSaveProfileID: preferredSaveProfileID,
-            corePin: corePin, createdAt: createdAt, modifiedAt: modifiedAt)
+            corePin: corePin, cheatsEnabled: cheatsEnabled, createdAt: createdAt, modifiedAt: modifiedAt)
     }
 }
 
@@ -56,6 +56,7 @@ extension LibraryBackupSnapshot {
             return game
         }
         result.declarations = declarations.filter { buildIDs.contains($0.firstBuildID) && buildIDs.contains($0.secondBuildID) }
+        result.cheats = cheats.filter { buildIDs.contains($0.buildID) }
         return result
     }
 }

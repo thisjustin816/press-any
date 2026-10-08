@@ -18,6 +18,7 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
     private let states: InMemorySaveStateRepository
     private let recipes: InMemoryPatchRecipeRepository
     private let variableMaps: InMemoryBuildVariableMapRepository
+    private let cheats: InMemoryBuildCheatRepository?
     private let assets: InMemoryAssetRepository
     private let lock = NSLock()
     private var deletions: [UUID: LibraryDeletion] = [:]
@@ -31,6 +32,7 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
         states: InMemorySaveStateRepository,
         recipes: InMemoryPatchRecipeRepository,
         variableMaps: InMemoryBuildVariableMapRepository = InMemoryBuildVariableMapRepository(),
+        cheats: InMemoryBuildCheatRepository? = nil,
         assets: InMemoryAssetRepository
     ) {
         self.games = games
@@ -39,6 +41,7 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
         self.states = states
         self.recipes = recipes
         self.variableMaps = variableMaps
+        self.cheats = cheats
         self.assets = assets
     }
 
@@ -153,6 +156,7 @@ public final class InMemoryLibraryDeletionRepository: LibraryDeletionRepository,
                 }
                 candidates.formUnion(variableMaps.all.filter { $0.buildID == build.id }.map(\.assetID))
                 variableMaps.removeMaps(buildID: build.id)
+                cheats?.removeCheats(buildID: build.id)
             }
             for profile in stash.profiles { if let save = profile.persistentSaveAssetID { candidates.insert(save) } }
             for state in stash.states {

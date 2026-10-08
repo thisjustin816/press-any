@@ -73,6 +73,22 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(states.subtitle, "Add to Library to save states")
     }
 
+    func testGameMenuOffersCheatsAfterStatesAndQuickPlayShowsThemDisabled() throws {
+        let library = GameplayViewController(runtime: StateMenuRuntime(), autoResumePolicy: .always)
+        library.onOpenCheats = {}
+        let items = library.prepareGameMenu()
+        let states = try XCTUnwrap(items.firstIndex { $0.title == "States" })
+        XCTAssertEqual(items[states + 1].title, "Cheats")
+        let cheats = try XCTUnwrap(items[states + 1] as? UIAction)
+        XCTAssertFalse(cheats.attributes.contains(.disabled))
+
+        let quickPlay = GameplayViewController(runtime: LifecycleRuntime(), autoResumePolicy: .always)
+        quickPlay.onAddToLibrary = {}
+        let disabled = try XCTUnwrap(quickPlay.prepareGameMenu().allActions.first { $0.title == "Cheats" })
+        XCTAssertTrue(disabled.attributes.contains(.disabled))
+        XCTAssertEqual(disabled.subtitle, "Add to Library to use cheats")
+    }
+
     private func makeGameplay(
         policy: AutoResumePolicy = .always
     ) -> (GameplayViewController, LifecycleRuntime, PhysicalControllerMonitor) {

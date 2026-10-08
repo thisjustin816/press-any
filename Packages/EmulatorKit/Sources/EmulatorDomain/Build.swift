@@ -59,6 +59,8 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
     public var totalPlaytimeSeconds: Double
     public var preferredSaveProfileID: UUID?
     public var corePin: CorePin?
+    /// The Build's Cheats On switch, which turns all of its cheats on or off at once.
+    public var cheatsEnabled: Bool
     public let createdAt: Date
     public var modifiedAt: Date
 
@@ -88,6 +90,7 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         totalPlaytimeSeconds: Double = 0,
         preferredSaveProfileID: UUID? = nil,
         corePin: CorePin? = nil,
+        cheatsEnabled: Bool = true,
         createdAt: Date,
         modifiedAt: Date
     ) {
@@ -116,6 +119,7 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
         self.totalPlaytimeSeconds = totalPlaytimeSeconds
         self.preferredSaveProfileID = preferredSaveProfileID
         self.corePin = corePin
+        self.cheatsEnabled = cheatsEnabled
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt
     }
@@ -148,6 +152,7 @@ public struct Build: Identifiable, Codable, Equatable, Sendable {
             totalPlaytimeSeconds: try values.decodeIfPresent(Double.self, forKey: .totalPlaytimeSeconds) ?? 0,
             preferredSaveProfileID: try values.decodeIfPresent(UUID.self, forKey: .preferredSaveProfileID),
             corePin: try values.decodeIfPresent(CorePin.self, forKey: .corePin),
+            cheatsEnabled: try values.decodeIfPresent(Bool.self, forKey: .cheatsEnabled) ?? true,
             createdAt: try values.decode(Date.self, forKey: .createdAt),
             modifiedAt: try values.decode(Date.self, forKey: .modifiedAt)
         )

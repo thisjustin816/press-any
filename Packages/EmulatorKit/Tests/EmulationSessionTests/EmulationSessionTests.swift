@@ -1089,6 +1089,7 @@ private struct SessionHarness {
         settings: SettingsResolver? = nil,
         history: SessionLaunchHistory? = nil,
         thumbnails: (any FrameImageEncoding)? = nil,
+        cheats: (any BuildCheatRepository)? = nil,
         now: Date = Date(timeIntervalSince1970: 1_700_000_000)
     ) -> EmulationSession {
         EmulationSession(
@@ -1102,6 +1103,7 @@ private struct SessionHarness {
             settings: settings,
             launchHistory: history,
             thumbnails: thumbnails,
+            cheats: cheats,
             now: { now }
         )
     }
@@ -1202,4 +1204,67 @@ struct SlotResumeTests {
 
 private extension AutoResumePolicy {
     static let allCasesForTesting: [Self] = [.always, .ask, .never]
+}
+
+// The Build's cheats reach the core once the image loads, before any frame, and again after each
+// change, on the session's emulation queue.
+extension EmulationSessionTests {
+    func testCheatsApplyBeforeTheFirstFrameAndFollowEveryChange() throws {
+        let harness = try SessionHarness.make()
+        let repository = InMemoryBuildCheatRepository(builds: harness.builds)
+        let cheats = BuildCheatOperations(builds: harness.builds, cheats: repository)
+        let accept: (String) -> Bool = { _ in true }
+        try cheats.add(buildID: harness.buildA.id, name: "Lives", codes: "010900C0", isValid: accept)
+        let jump = try cheats.add(buildID: harness.buildA.id, name: "Moon Jump", codes: "010100C1\n010200C2", isValid: accept)
+        try cheats.setEnabled(cheatID: jump.id, false)
+        try cheats.add(buildID: harness.buildB.id, name: "Other Build", codes: "010300C3", isValid: accept)
+        try cheats.add(buildID: harness.buildA.id, name: "Unreadable", codes: "010400C4\nNOT A CODE", isValid: accept)
+        let session = harness.makeSession(cheats: repository)
+
+        try session.start(context: harness.contextA)
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        XCTAssertEqual(core.cheatCodes, ["010900C0"], "only this Build's cheats that are on and read")
+        XCTAssertTrue(core.cheatsEnabled)
+        XCTAssertEqual(core.framesRunAtCheatChanges, [0, 0], "applied before the first frame")
+
+        _ = try session.stepFrame()
+        try cheats.setEnabled(cheatID: jump.id, true)
+        try session.reloadCheats()
+        XCTAssertEqual(core.cheatCodes, ["010900C0", "010100C1", "010200C2"])
+        XCTAssertEqual(core.framesRunAtCheatChanges.last, 1, "applied mid-game without a restart")
+
+        try cheats.reorder(buildID: harness.buildA.id, orderedIDs: [jump.id])
+        try session.reloadCheats()
+        XCTAssertEqual(core.cheatCodes, ["010100C1", "010200C2", "010900C0"])
+
+        try cheats.setCheatsEnabled(buildID: harness.buildA.id, enabled: false)
+        try session.reloadCheats()
+        XCTAssertEqual(core.cheatCodes, [], "Cheats On off clears them from the core")
+        XCTAssertFalse(core.cheatsEnabled)
+
+        try cheats.setCheatsEnabled(buildID: harness.buildA.id, enabled: true)
+        try cheats.delete(cheatID: jump.id)
+        try session.reloadCheats()
+        XCTAssertEqual(core.cheatCodes, ["010900C0"])
+        XCTAssertTrue(core.cheatsEnabled)
+        XCTAssertEqual(harness.factory.cores.count, 1, "no restart")
+    }
+
+    func testCheatsApplyWhenResumingAnAutoStateAndAfterRestart() throws {
+        let harness = try SessionHarness.make()
+        let repository = InMemoryBuildCheatRepository(builds: harness.builds)
+        try BuildCheatOperations(builds: harness.builds, cheats: repository)
+            .add(buildID: harness.buildA.id, name: "Lives", codes: "010900C0", isValid: { _ in true })
+        let first = harness.makeSession(cheats: repository)
+        try first.start(context: harness.contextA)
+        let auto = try first.saveAutoState()
+        try first.stop()
+
+        let resumed = harness.makeSession(cheats: repository)
+        XCTAssertEqual(try resumed.start(context: harness.contextA, resumeFrom: auto), .restored(auto))
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        XCTAssertEqual(core.cheatCodes, ["010900C0"])
+        try resumed.restart()
+        XCTAssertEqual(core.cheatCodes, ["010900C0"], "a restart keeps the core's cheats")
+    }
 }

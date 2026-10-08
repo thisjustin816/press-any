@@ -557,6 +557,7 @@ private struct Harness {
             profiles: profiles,
             states: states,
             recipes: InMemoryPatchRecipeRepository(),
+            cheats: InMemoryBuildCheatRepository(builds: builds),
             assets: assets,
             assetStore: store,
             now: { now }
