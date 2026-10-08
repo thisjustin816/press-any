@@ -172,6 +172,10 @@ final class GameDetailViewModel: ObservableObject {
         perform { try buildOperations.setPreferredBuild(gameID: gameID, buildID: build.id) }
     }
 
+    func setPreferredSave(_ profile: SaveProfile) {
+        perform { try buildOperations.setPreferredSaveProfile(gameID: gameID, profileID: profile.id) }
+    }
+
     func setFavorite(_ isFavorite: Bool) {
         do {
             try buildOperations.setFavorite(gameID: gameID, isFavorite: isFavorite)

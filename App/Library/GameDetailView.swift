@@ -35,7 +35,6 @@ struct GameDetailView: View {
     @State private var settingsTarget: SettingsTarget?
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
-    @State private var technicalInfo: Build?
     @State private var buildDetails: Build?
     @State private var pendingReplacement: PendingReplacement?
     @State private var badgeTarget: SaveProfile?
@@ -103,10 +102,12 @@ struct GameDetailView: View {
                 lineageSection
                 baseGameSection
                 playSection
-                statisticsSection
             }
             buildsSection
             profilesSection
+            if !model.selection.isSelecting {
+                statisticsSection
+            }
         }
     }
 
@@ -146,11 +147,6 @@ struct GameDetailView: View {
 
     private var playSection: some View {
         Section {
-            Toggle("Favorite", isOn: Binding(
-                get: { model.game?.isFavorite ?? false },
-                set: { model.setFavorite($0) }
-            ))
-            .accessibilityIdentifier("game.favorite")
             Button {
                 launch(build: model.preferredBuild)
             } label: {
@@ -211,23 +207,34 @@ struct GameDetailView: View {
                     newProfileName = "New Save"
                     showNewProfile = true
                 } label: {
-                    Label("New Blank Save", systemImage: "plus.circle")
+                    Label("New Blank Save…", systemImage: "plus.circle")
                 }
                 Button {
                     request(.batterySave)
                 } label: {
-                    Label("Import Save File", systemImage: "square.and.arrow.down")
+                    Label("Import Save File…", systemImage: "square.and.arrow.down")
                 }
             }
         } header: {
             Text("Save Profiles")
         } footer: {
-            Text("\(Image(systemName: "star.fill")) Play uses this save unless a Build picks its own. Touch and hold for more.")
+            Text("\(Image(systemName: "star.fill")) The preferred save, which Play uses unless a Build picks its own. Touch and hold for more.")
         }
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            if !model.selection.isSelecting {
+                let isFavorite = model.game?.isFavorite ?? false
+                Button {
+                    model.setFavorite(!isFavorite)
+                } label: {
+                    Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "star.fill" : "star")
+                }
+                .accessibilityIdentifier("game.favorite")
+            }
+        }
         ToolbarItem(placement: .topBarTrailing) {
             if !model.selection.isSelecting {
                 Menu {
@@ -239,7 +246,7 @@ struct GameDetailView: View {
                             buildID: nil
                         )
                     } label: {
-                        Label("Game Settings…", systemImage: "gearshape")
+                        Label("Game Settings", systemImage: "gearshape")
                     }
                     Button("Rename Game…", systemImage: "pencil") {
                         gameTitle = model.game?.primaryTitle ?? ""
@@ -256,10 +263,10 @@ struct GameDetailView: View {
                     Button(role: .destructive) {
                         model.requestGameDeletion()
                     } label: {
-                        Label("Delete Game…", systemImage: "trash")
+                        Label("Delete Game", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Label("More", systemImage: "ellipsis")
                 }
                 .accessibilityIdentifier("game.moreMenu")
             }
@@ -320,9 +327,6 @@ struct GameDetailView: View {
             }
             .sheet(item: $buildDetails) { build in
                 BuildDetailView(build: build, container: container)
-            }
-            .sheet(item: $technicalInfo) { build in
-                BuildTechnicalInfoView(build: build, container: container)
             }
             .sheet(item: $statesProfile) { profile in
                 SaveStatesView(profile: profile, container: container)
@@ -495,21 +499,71 @@ struct GameDetailView: View {
 
     @ViewBuilder
     private func buildMenu(_ build: Build) -> some View {
-        Button("Play") { launch(build: build) }
-        Button("Start Over") { launch(build: build, start: .startOver) }
-        Menu("Play with Save") {
-            ForEach(model.saveProfiles) { profile in
-                Button(profile.title) { launch(build: build, profile: profile) }
+        Section {
+            Button("Play", systemImage: "play.fill") { launch(build: build) }
+            Button("Start Over", systemImage: "arrow.counterclockwise") { launch(build: build, start: .startOver) }
+            Menu {
+                ForEach(model.saveProfiles) { profile in
+                    Button(profile.title) { launch(build: build, profile: profile) }
+                }
+            } label: {
+                Label("Play with Save", systemImage: "play.circle")
             }
         }
-        Menu("Default Save") {
+        Section {
+            Button("Set as Preferred Build", systemImage: "star") { model.setPreferredBuild(build) }
+                .disabled(model.preferredBuild?.id == build.id)
+            preferredSaveMenu(build)
+            if build.sourceKind != .patchRecipe {
+                Button(build.isBase ? "Unmark as Base Build" : "Mark as Base Build", systemImage: "square.stack.3d.down.right") {
+                    model.setBase(build, isBase: !build.isBase)
+                }
+            }
+        }
+        Section {
+            Button("Rename Build…", systemImage: "pencil") {
+                buildName = build.displayName
+                renamingBuild = build
+            }
+            Button("Build Info", systemImage: "info.circle") { buildDetails = build }
+            Button("Build Settings", systemImage: "gearshape") {
+                settingsTarget = SettingsTarget(
+                    title: "\(build.displayName) Settings",
+                    scope: .build(build.id),
+                    system: build.system,
+                    buildID: build.id
+                )
+            }
+        }
+        Section {
+            Menu {
+                Button("Apply Patch…", systemImage: "bandage") { request(.patch(build)) }
+                Button("Attach Variable Map…", systemImage: "list.bullet.rectangle") { request(.variableMap(build)) }
+                Button("Export ROM", systemImage: "square.and.arrow.up") { model.exportROM(of: build) }
+                if build.sourceKind == .patchRecipe {
+                    Button("Remove Generated Image", systemImage: "xmark.bin") { model.removeGeneratedImage(of: build) }
+                }
+            } label: {
+                Label("ROM and Patches", systemImage: "doc.badge.gearshape")
+            }
+        }
+        Section {
+            Button("Make Separate Game…", systemImage: "rectangle.portrait.and.arrow.right") { promotion = build }
+            Button(role: .destructive) { model.requestDeletion(of: build) } label: { Label("Delete Build", systemImage: "trash") }
+        }
+    }
+
+    /// Which save this Build plays: the Game's preferred save, or one of its own.
+    private func preferredSaveMenu(_ build: Build) -> some View {
+        Menu {
             Button {
                 model.setDefaultProfile(nil, for: build)
             } label: {
+                let title = "Game's Preferred Save" + (model.defaultSaveProfile.map { " (\($0.title))" } ?? "")
                 if build.preferredSaveProfileID == nil {
-                    Label("Game Default", systemImage: "checkmark")
+                    Label(title, systemImage: "checkmark")
                 } else {
-                    Text("Game Default")
+                    Text(title)
                 }
             }
             ForEach(model.saveProfiles) { profile in
@@ -523,38 +577,9 @@ struct GameDetailView: View {
                     }
                 }
             }
+        } label: {
+            Label("Preferred Save", systemImage: "externaldrive")
         }
-        Button("Set as Preferred") { model.setPreferredBuild(build) }
-        Divider()
-        Button("Rename Build…") {
-            buildName = build.displayName
-            renamingBuild = build
-        }
-        Button("Build Details…") { buildDetails = build }
-        Button("Technical Info…") { technicalInfo = build }
-        Button("Export ROM") { model.exportROM(of: build) }
-        Button("Build Settings…") {
-            settingsTarget = SettingsTarget(
-                title: "\(build.displayName) Settings",
-                scope: .build(build.id),
-                system: build.system,
-                buildID: build.id
-            )
-        }
-        if build.sourceKind != .patchRecipe {
-            Button(build.isBase ? "Unmark as Base Build" : "Mark as Base Build") {
-                model.setBase(build, isBase: !build.isBase)
-            }
-        }
-        Divider()
-        Button("Apply Patch…") { request(.patch(build)) }
-        Button("Attach Variable Map…") { request(.variableMap(build)) }
-        if build.sourceKind == .patchRecipe {
-            Button("Remove Generated Image") { model.removeGeneratedImage(of: build) }
-        }
-        Divider()
-        Button("Make Separate Game…") { promotion = build }
-        Button("Delete Build…", role: .destructive) { model.requestDeletion(of: build) }
     }
 
     private func profileRow(_ profile: SaveProfile) -> some View {
@@ -577,27 +602,32 @@ struct GameDetailView: View {
             if model.defaultSaveProfile?.id == profile.id {
                 Image(systemName: "star.fill")
                     .foregroundStyle(.yellow)
-                    .accessibilityLabel("Default Save")
+                    .accessibilityLabel("Preferred Save")
             }
         }
         .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: profile) } }
         .contextMenu {
             if !model.selection.isSelecting {
-                Button("Play with This Save") { launch(build: model.preferredBuild, profile: profile) }
-                Button("Duplicate") {
-                    model.duplicate(profile, name: profile.displayName + " Copy")
+                Button("Play with This Save", systemImage: "play.fill") { launch(build: model.preferredBuild, profile: profile) }
+                Section {
+                    Button("Save States", systemImage: "square.stack") { statesProfile = profile }
+                    Button("Set as Preferred Save", systemImage: "star") { model.setPreferredSave(profile) }
+                        .disabled(model.defaultSaveProfile?.id == profile.id)
+                    Button("Badge…", systemImage: "face.smiling") {
+                        badgeText = profile.badge ?? ""
+                        badgeTarget = profile
+                    }
+                    Button("Duplicate", systemImage: "plus.square.on.square") {
+                        model.duplicate(profile, name: profile.displayName + " Copy")
+                    }
                 }
-                Button("Replace Save from File…") { request(.replacementSave(profile)) }
-                if profile.persistentSaveAssetID != nil {
-                    Button("Export Save") { model.exportSave(of: profile) }
+                Section {
+                    Button("Replace from File…", systemImage: "square.and.arrow.down") { request(.replacementSave(profile)) }
+                    if profile.persistentSaveAssetID != nil {
+                        Button("Export Save", systemImage: "square.and.arrow.up") { model.exportSave(of: profile) }
+                    }
                 }
-                Button("Badge…") {
-                    badgeText = profile.badge ?? ""
-                    badgeTarget = profile
-                }
-                Button("Save States…") { statesProfile = profile }
-                Divider()
-                Button("Delete…", role: .destructive) { model.requestDeletion(of: profile) }
+                Button(role: .destructive) { model.requestDeletion(of: profile) } label: { Label("Delete Save Profile", systemImage: "trash") }
             }
         }
     }

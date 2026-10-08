@@ -12,7 +12,8 @@ struct AppSettingsView: View {
     private let libraryDeletion: LibraryDeletionOperations?
     private let games: (any GameRepository)?
 
-    @State private var systemSettings: SystemSettingsTarget?
+    @State private var showNameReview = false
+    @State private var showFamilyMergeReview = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.libraryStorageContext) private var libraryStorageContext
 
@@ -31,16 +32,17 @@ struct AppSettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // The same order as a system's, Game's or Build's settings.
                 Section {
-                    NavigationLink {
-                        ControlsSettingsPage(storage: storage)
-                    } label: {
-                        Label("Controls", systemImage: "gamecontroller")
-                    }
                     NavigationLink {
                         DisplaySettingsPage(storage: storage)
                     } label: {
                         Label("Display", systemImage: "display")
+                    }
+                    NavigationLink {
+                        ControlsSettingsPage(storage: storage)
+                    } label: {
+                        Label("Controls", systemImage: "gamecontroller")
                     }
                     NavigationLink {
                         PlayingSettingsPage(storage: storage)
@@ -51,16 +53,17 @@ struct AppSettingsView: View {
 
                 Section {
                     ForEach(GameSystem.allCases, id: \.self) { system in
-                        Button {
-                            systemSettings = SystemSettingsTarget(system: system)
-                        } label: {
-                            LabeledContent(system.displayName) {
-                                Image(systemName: "chevron.right")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
+                        NavigationLink(system.displayName) {
+                            ScopedSettingsView(
+                                title: "\(system.displayName) Settings",
+                                scope: .system(system),
+                                system: system,
+                                gameID: nil,
+                                buildID: nil,
+                                store: store,
+                                inSheet: false
+                            )
                         }
-                        .foregroundStyle(.primary)
                     }
                 } header: {
                     Text("Systems")
@@ -90,6 +93,9 @@ struct AppSettingsView: View {
                                     context.onResumeQuickPlay(session)
                                 }
                             }
+                            // Reviews open as sheets: each is a task with its own Cancel and confirm.
+                            Button("Suggest Names") { showNameReview = true }
+                            Button("Suggest Game Merges") { showFamilyMergeReview = true }
                         }
                     }
                 }
@@ -109,23 +115,14 @@ struct AppSettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .sheet(item: $systemSettings) { target in
-                ScopedSettingsView(
-                    title: "\(target.system.displayName) Settings",
-                    scope: .system(target.system),
-                    system: target.system,
-                    gameID: nil,
-                    buildID: nil,
-                    store: store
-                )
+            .sheet(isPresented: $showNameReview) {
+                if let context = libraryStorageContext { NameReviewView(container: context.container) }
+            }
+            .sheet(isPresented: $showFamilyMergeReview) {
+                if let context = libraryStorageContext { FamilyMergeReviewView(container: context.container) }
             }
         }
     }
 
     private var storage: AppSettingsStorage { AppSettingsStorage(store: store) }
-}
-
-private struct SystemSettingsTarget: Identifiable {
-    let system: GameSystem
-    var id: GameSystem { system }
 }

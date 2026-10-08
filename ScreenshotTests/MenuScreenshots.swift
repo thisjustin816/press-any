@@ -17,7 +17,7 @@ final class MenuScreenshots: XCTestCase {
     func test1AddMenu() throws {
         let app = try launch("library")
         app.buttons["library.addMenu"].tap()
-        try expect(app.buttons["Import File…"], then: "menu-add")
+        try expect(app.buttons["Import Files…"], then: "menu-add")
     }
 
     func test2LibraryViewMenu() throws {
@@ -30,21 +30,21 @@ final class MenuScreenshots: XCTestCase {
         let settings = try settings()
         let app = try launch("game:\(settings.gameROM)")
         app.buttons["game.moreMenu"].tap()
-        try expect(app.buttons["Game Settings…"], then: "menu-game")
+        try expect(app.buttons["Game Settings"], then: "menu-game")
     }
 
     func test4BuildMenu() throws {
         let settings = try settings()
         let app = try launch("game:\(settings.gameROM)")
         app.staticTexts["Original"].firstMatch.press(forDuration: 1)
-        try expect(app.buttons["Technical Info…"], then: "menu-build")
+        try expect(app.buttons["Build Info"], then: "menu-build")
     }
 
     func test5SaveProfileMenu() throws {
         let settings = try settings()
         let app = try launch("game:\(settings.gameROM)")
         // A seeded Game has no profile until one is played or made, so make one.
-        let newSave = app.buttons["New Blank Save"]
+        let newSave = app.buttons["New Blank Save…"]
         scrollTo(newSave, in: app)
         newSave.tap()
         let create = app.alerts.buttons["Create"]
@@ -121,7 +121,7 @@ final class MenuScreenshots: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         waitForOrientation(in: app, landscape: true)
         menu.tap()
-        let settingsButton = app.buttons["Settings…"]
+        let settingsButton = app.buttons["Settings"]
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         settingsButton.tap()
         waitForOrientation(in: app, landscape: false)

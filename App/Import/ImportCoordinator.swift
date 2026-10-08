@@ -40,7 +40,7 @@ extension UTType {
     static let patchFileTypes = withResolvedTypes([.ipsPatch, .bpsPatch], extensions: ["ips", "bps"])
     /// Battery saves: `.sav`, and `.srm` as RetroArch names them.
     static let saveFileTypes = withResolvedTypes([.gameBoySave], extensions: ["sav", "srm"])
-    /// Everything Import File accepts: ROMs, patches, saves, and zips holding them.
+    /// Everything Import Files accepts: ROMs, patches, saves, and zips holding them.
     static let importFileTypes = romFileTypes + patchFileTypes + saveFileTypes
         + withResolvedTypes([.zip], extensions: ["zip"])
 
