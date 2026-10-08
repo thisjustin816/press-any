@@ -8,6 +8,7 @@ public enum FakeEmulatorCoreError: Error {
     case unsupportedSystem(GameSystem)
     case romNotLoaded
     case stateLoadFailedPartway
+    case cheatCodeRefused
 }
 
 public struct FakeCoreFactory: EmulatorCoreFactory {
@@ -27,7 +28,7 @@ public struct FakeCoreFactory: EmulatorCoreFactory {
     }
 }
 
-public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability {
+public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability {
     public let descriptor: CoreDescriptor
     public let supportedSystems: Set<GameSystem>
     public let stateSerializationVersion = "fake-json-v1"
@@ -38,6 +39,10 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability {
     private var pendingAudio = [StereoSample]()
     private var speed: EmulationSpeed = .normal
     public private(set) var bootAnimationSkips = 0
+    public private(set) var cheatCodes: [String] = []
+    public private(set) var cheatsEnabled = true
+    /// The frames run since the image loaded at each change to the codes or their switch.
+    public private(set) var framesRunAtCheatChanges: [UInt64] = []
     /// Makes the next state load write the state's cartridge RAM and then fail, as SameBoy does
     /// with a state that ends early.
     public var failsNextStateLoadPartway = false
@@ -131,6 +136,22 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability {
         battery = state.battery
         loadedSystem = state.system
         pendingAudio.removeAll(keepingCapacity: true)
+    }
+
+    public func setCheatCodes(_ codes: [String]) throws {
+        guard codes.allSatisfy(isValidCheatCode) else { throw FakeEmulatorCoreError.cheatCodeRefused }
+        cheatCodes = codes
+        framesRunAtCheatChanges.append(frameCounter)
+    }
+
+    public func setCheatsEnabled(_ enabled: Bool) {
+        cheatsEnabled = enabled
+        framesRunAtCheatChanges.append(frameCounter)
+    }
+
+    /// Reads any code of hex digits and dashes.
+    public func isValidCheatCode(_ code: String) -> Bool {
+        !code.isEmpty && code.allSatisfy { $0.isHexDigit || $0 == "-" }
     }
 
     @discardableResult

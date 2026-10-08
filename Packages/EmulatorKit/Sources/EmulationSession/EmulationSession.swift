@@ -56,6 +56,7 @@ public final class EmulationSession: @unchecked Sendable {
     private let launchHistory: SessionLaunchHistory?
     private let transactions: any LibraryTransactionRunner
     private let inFlight: InFlightFiles?
+    private let cheats: (any BuildCheatRepository)?
     private var lastCheckpointNanoseconds: UInt64 = 0
 
     private let lock = NSLock()
@@ -90,6 +91,7 @@ public final class EmulationSession: @unchecked Sendable {
         thumbnails: (any FrameImageEncoding)? = nil,
         deletion: LibraryDeletionOperations? = nil,
         inFlight: InFlightFiles? = nil,
+        cheats: (any BuildCheatRepository)? = nil,
         batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -116,6 +118,7 @@ public final class EmulationSession: @unchecked Sendable {
         self.launchHistory = launchHistory
         self.transactions = transactions
         self.inFlight = inFlight
+        self.cheats = cheats
         self.batteryCheckIntervalNanoseconds = UInt64(batteryCheckInterval * 1_000_000_000)
     }
 
@@ -163,6 +166,7 @@ public final class EmulationSession: @unchecked Sendable {
             func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
                 let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
                 try newWorker.perform { try $0.loadImage(rom, system: build.system) }
+                try applyCheats(buildID: build.id, worker: newWorker)
                 try newWorker.perform { try $0.loadPersistentSave(battery) }
                 savedBattery = try newWorker.perform { try $0.persistentSaveData() }
                 if skipBoot {
@@ -311,6 +315,27 @@ public final class EmulationSession: @unchecked Sendable {
             }
         }
         return frame
+    }
+
+    /// Applies the Build's cheats as they are now, after a change to its list or its Cheats On
+    /// switch. The core takes them between frames, so they show from the next frame.
+    public func reloadCheats() throws {
+        let (worker, context, _) = try snapshotActive()
+        try applyCheats(buildID: context.buildID, worker: worker)
+    }
+
+    /// The codes of the Build's cheats that are on, or none while its Cheats On switch is off. A
+    /// cheat with a code the core can't read is left out whole, so it can't stop the others.
+    private func applyCheats(buildID: UUID, worker: SessionWorker) throws {
+        guard let cheats else { return }
+        guard let build = try builds.fetchBuild(id: buildID) else { throw EmulationSessionError.buildNotFound(buildID) }
+        let enabled = build.cheatsEnabled
+        let active = enabled ? try cheats.fetchCheats(buildID: buildID).filter(\.isEnabled).map(\.codes) : []
+        try worker.perform { core in
+            guard let core = core as? any CheatCapability else { return }
+            try core.setCheatCodes(active.filter { $0.allSatisfy(core.isValidCheatCode) }.flatMap { $0 })
+            core.setCheatsEnabled(enabled)
+        }
     }
 
     public func consumeRumbleAmplitude() throws -> Double {

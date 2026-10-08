@@ -328,7 +328,8 @@ final class AppContainer {
             transactions: repositories.transactions,
             thumbnails: PNGFrameEncoder(),
             deletion: libraryDeletion,
-            inFlight: inFlightFiles
+            inFlight: inFlightFiles,
+            cheats: repositories.cheats
         )
     }
 

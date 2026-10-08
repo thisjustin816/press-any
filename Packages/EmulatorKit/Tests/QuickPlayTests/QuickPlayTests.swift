@@ -494,6 +494,20 @@ extension QuickPlayTests {
 }
 
 extension QuickPlayTests {
+    func testQuickPlayNeverAppliesCheats() throws {
+        let harness = try QuickPlayHarness.make()
+        let rom = try harness.writeExternalROM(TestROM.make(title: "NOCHEATS", cgb: false))
+        let session = try harness.workspace.start(romURL: rom)
+        let factory = CapturingQuickPlayFactory()
+        let runtime = harness.makeRuntime(session, factory: factory)
+        try runtime.start(resumeAutoState: false)
+        for _ in 0..<3 { _ = try runtime.stepFrame() }
+        try runtime.restart()
+        let core = try XCTUnwrap(factory.cores.last)
+        XCTAssertEqual(core.framesRunAtCheatChanges, [])
+        XCTAssertEqual(core.cheatCodes, [])
+    }
+
     func testFreshStartSkipsBootAnimationButResumeDoesNot() throws {
         let harness = try QuickPlayHarness.make()
         let rom = try harness.writeExternalROM(TestROM.make(title: "BOOT", cgb: false))
