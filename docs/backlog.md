@@ -496,7 +496,7 @@ title placeholder fallback; Artwork follows Builds when a Game is emptied by pro
 | done | Export one Game as a package in the Library Backup format: its Builds' patches and recipes, Save Profiles, states, artwork, documents and notes, ROMs only when asked; importing it merges like a restore | v1 | Game Details export, patch-base dependencies and reviewed merge; current schema has no documents model |
 | done | Documented versioned archive: manifest, ordinary files, checksums, schema version | v1 | docs/backup-format.md; format v1, migration ID, every payload checksummed; newer versions refused |
 | done | ROMs excluded by default, explicit personal full-backup option | v1 | Include ROMs defaults off; personal-backup footer; missing ROM rows restore and duplicate import repairs files |
-| missing | Optional password encryption | v1 | Follow-up to parts 1-4: AES-GCM, PBKDF2-HMAC-SHA256, readable password manifest, wrong-password and iOS encryption tests; no Password toggle in this build |
+| partial | Optional password encryption | v1 | Readable manifest flag and safe refusal built; AES-GCM, PBKDF2-HMAC-SHA256, password entry, wrong-password and iOS encryption tests deferred after parts 1-4; no Password toggle in this build |
 | done | Merge restore by stable IDs/hashes with conflict review; Replace Entire Library | v1 | Per-item choices and independent save copies; automatic safety backup before destructive confirmation; atomic commit and rollback tests |
 | done | Migration Report before commit + retained summary | v1 | Review before writes, report after commit, Settings > Library > Last Restore retained in the database |
 | missing | Delta/Manic/Afterplay/Playtiles import adapters | future |  |

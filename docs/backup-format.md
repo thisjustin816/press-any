@@ -123,8 +123,9 @@ Replace Entire Library first writes an automatic backup to Exports, including RO
 incoming archive includes them. The confirmation names that file. Replacement verifies the
 safety backup against the reviewed library and replaces metadata in one transaction. Old
 files stay in place; Check Library Files can clean up unreferenced source and cache files.
-The latest report records added
-and skipped items, conflict choices, Builds needing ROMs, exclusions and the safety filename.
+The latest report records added and skipped items, conflict choices, Builds needing ROMs and
+exclusions. The safety filename is shown in the confirmation and immediate result only; it is
+never stored in library metadata or used to identify an archive.
 
 ## Password encryption
 

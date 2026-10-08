@@ -92,7 +92,8 @@ final class LibraryBackupFlowTests: XCTestCase {
         await model.prepareReplacement()
         await model.confirmReplacement()
         XCTAssertNil(model.errorMessage)
-        XCTAssertEqual(model.report?.safetyBackupFilename, model.safetyBackupURL?.lastPathComponent)
+        XCTAssertNotNil(model.report)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: try XCTUnwrap(model.safetyBackupURL).path))
     }
 
     func testRunningGameBlocksRestoreAndBuildCannotBeKeptBoth() async throws {

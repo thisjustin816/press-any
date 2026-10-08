@@ -18,6 +18,9 @@ struct LibraryRestoreView: View {
             Form {
                 if let report = model.report {
                     RestoreReportSections(report: report)
+                    if let url = model.safetyBackupURL {
+                        Section("Automatic Backup") { Text(url.lastPathComponent) }
+                    }
                 } else {
                     reviewSections
                 }
@@ -130,7 +133,6 @@ struct RestoreReportSections: View {
             }
         }
         MissingROMSection(builds: report.missingROMs)
-        if let name = report.safetyBackupFilename { Section("Automatic Backup") { Text(name) } }
         if !report.notCarriedOver.isEmpty {
             Section("Not Carried Over") { ForEach(report.notCarriedOver, id: \.self) { Text($0) } }
         }

@@ -33,17 +33,15 @@ public struct RestoreReport: Codable, Equatable, Sendable {
     public var resolutions: [RestoreResolution]
     public var missingROMs: [RestoreMissingROM]
     public var notCarriedOver: [String]
-    public var safetyBackupFilename: String?
 
     public init(restoredAt: Date, added: Int = 0, skipped: Int = 0,
                 resolutions: [RestoreResolution] = [], missingROMs: [RestoreMissingROM] = [],
-                notCarriedOver: [String] = [], safetyBackupFilename: String? = nil) {
+                notCarriedOver: [String] = []) {
         self.restoredAt = restoredAt
         self.added = added
         self.skipped = skipped
         self.resolutions = resolutions
         self.missingROMs = missingROMs
         self.notCarriedOver = notCarriedOver
-        self.safetyBackupFilename = safetyBackupFilename
     }
 }

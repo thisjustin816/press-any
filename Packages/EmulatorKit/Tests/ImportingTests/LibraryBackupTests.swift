@@ -131,7 +131,8 @@ import Testing
         let fileCount = try allFiles(fixture.store.rootURL).count
         fixture.repository.failCommit = false
         let report = try fixture.service.restore(prepared, review: review, choices: [:], replaceEntireLibrary: true, safetyBackupURL: safety)
-        #expect(report.safetyBackupFilename == safety.lastPathComponent)
+        #expect(fixture.store.fileExists(at: safety))
+        #expect(!String(decoding: try JSONEncoder().encode(report), as: UTF8.self).contains(safety.lastPathComponent))
         #expect(try allFiles(fixture.store.rootURL).count >= fileCount)
     }
 

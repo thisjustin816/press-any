@@ -166,8 +166,7 @@ public struct LibraryBackupService: Sendable {
                 resolutions: merge.conflicts.compactMap { conflict in
                     choices[conflict.id].map { RestoreResolution(record: "\(conflict.kind): \(conflict.name)", choice: $0) }
                 }, missingROMs: missingROMs(in: plan.snapshot, files: plan.files, library: plan.snapshot),
-                notCarriedOver: prepared.manifest.notCarriedOver,
-                safetyBackupFilename: replaceEntireLibrary ? safetyBackupURL?.lastPathComponent : nil)
+                notCarriedOver: prepared.manifest.notCarriedOver)
             let result = try repository.commitSnapshot(replacingLibrary: replaceEntireLibrary) { current in
                 try requireUnchanged(current, review.snapshot)
                 try verifyCurrentUserFiles(current)
