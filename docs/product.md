@@ -980,8 +980,9 @@ exposes them; custom border editing is later.
 - A welcome screen on first launch explains the library, Builds, saves, Quick Play, the game
   menu, exports, and that the app comes with no games. It shows once, again only when its
   content version rises, never in automated runs, and never ahead of a shared file or game.
-  Settings > How Press Any Works reopens it. v1 replaces it with onboarding that covers opt-ins
-  and introduces advanced features in context.
+  Settings > How Press Any Works reopens it, and the first game shows "Tap Press Any for the
+  menu" once. v1 has nothing to opt into; the v1.1 opt-ins (crash reports, usage counts) and
+  Developer Mode bring their own introductions.
 - v1: more sorting by year, developer, publisher, hack author, Build version and date, last
   Build change and manual order; a separate statistics screen (no permanent session log).
 - v1.1: SQLite FTS5 live search across titles, aliases, filenames, hack title, author, version,
