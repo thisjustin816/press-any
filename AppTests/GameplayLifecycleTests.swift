@@ -16,18 +16,20 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(group.children.compactMap { ($0 as? UIAction)?.title }, ["Restart", "Close Game"])
     }
 
-    func testQuickPlayMenuDisablesQuickSaveAndQuickLoad() throws {
+    func testGameMenuOpensWithAnIconRowThenStates() throws {
         let (gameplay, _, _) = makeGameplay()
-        let items = gameplay.prepareGameMenu().compactMap { $0 as? UIAction }
-        let titles = items.map(\.title)
-        let saveIndex = try XCTUnwrap(titles.firstIndex(of: "Save State"))
-        XCTAssertEqual(titles.firstIndex(of: "Quick Save"), saveIndex - 2)
-        XCTAssertEqual(titles.firstIndex(of: "Quick Load"), saveIndex - 1)
-        for title in ["Quick Save", "Quick Load", "Save State"] {
-            let action = try XCTUnwrap(items.first { $0.title == title })
-            XCTAssertTrue(action.attributes.contains(.disabled))
-            XCTAssertEqual(action.subtitle, "Add to Library to save states")
+        let items = gameplay.prepareGameMenu()
+        let row = try XCTUnwrap(items.first as? UIMenu)
+        XCTAssertEqual(row.preferredElementSize, .small)
+        XCTAssertEqual(row.children.compactMap { ($0 as? UIAction)?.title }, ["Resume", "Fast Forward", "Quick Save", "Quick Load"])
+        for title in ["Quick Save", "Quick Load"] {
+            let action = try XCTUnwrap(items.allActions.first { $0.title == title })
+            XCTAssertTrue(action.attributes.contains(.disabled), "\(title) needs a library game")
         }
+        let states = try XCTUnwrap(items.dropFirst().first as? UIAction)
+        XCTAssertEqual(states.title, "States")
+        XCTAssertTrue(states.attributes.contains(.disabled))
+        XCTAssertEqual(states.subtitle, "Add to Library to save states")
     }
 
     private func makeGameplay(
@@ -356,8 +358,8 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertFalse(gameplay.isRunningFrames)
         XCTAssertTrue(gameplay.isShowingPaused)
         XCTAssertEqual(gameplay.heldInput, EmulatorInputState())
-        XCTAssertTrue(items.contains { ($0 as? UIAction)?.title == "Resume" })
-        XCTAssertFalse(items.contains { ($0 as? UIAction)?.title == "Pause" })
+        XCTAssertTrue(items.allActions.contains { $0.title == "Resume" })
+        XCTAssertFalse(items.allActions.contains { $0.title == "Pause" })
         let frozen = runtime.frames
         RunLoop.current.run(until: Date().addingTimeInterval(0.06))
         XCTAssertEqual(runtime.frames, frozen, "the game does not advance behind its menu")
@@ -419,7 +421,7 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertTrue(gameplay.isShowingPaused)
         XCTAssertEqual(runtime.foregrounds, 0)
 
-        let resume = try XCTUnwrap(items.compactMap { $0 as? UIAction }.first { $0.title == "Resume" })
+        let resume = try XCTUnwrap(items.allActions.first { $0.title == "Resume" })
         let button = UIButton(type: .system)
         button.addAction(resume, for: .touchUpInside)
         let frozen = runtime.frames
@@ -515,4 +517,14 @@ private final class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     func stop(createAutoState: Bool, discardUnsaved: Bool) throws {}
     func flushBatteryIfChanged() throws -> Bool { false }
     func restart() throws {}
+}
+
+private extension Array where Element == UIMenuElement {
+    /// Every action in the menu, including those in inline groups and submenus.
+    var allActions: [UIAction] {
+        flatMap { element -> [UIAction] in
+            if let menu = element as? UIMenu { return menu.children.allActions }
+            return (element as? UIAction).map { [$0] } ?? []
+        }
+    }
 }
