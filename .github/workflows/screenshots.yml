@@ -1,25 +1,26 @@
 name: Screenshots
 
 # Manual only: captures the app on an iPhone simulator, seeded from TestROMs/, and uploads
-# the PNGs as an artifact. The 6.5-inch and 6.9-inch presets check dimensions before upload.
+# the PNGs as an artifact. By default it takes the App Store listing set on the 6.9-inch
+# iPhone 17 Pro Max; the 6.5-inch and 6.9-inch presets check dimensions before upload.
 
 on:
   workflow_dispatch:
     inputs:
       device:
-        description: 14 Plus for Apple's 6.5-inch slot; Pro Max for the 6.9-inch slot
+        description: Pro Max for Apple's 6.9-inch slot, which smaller iPhones scale from; 14 Plus for the 6.5-inch slot
         type: choice
-        options: [iPhone 14 Plus, iPhone 17 Pro Max, iPhone 17 Pro]
-        default: iPhone 14 Plus
+        options: [iPhone 17 Pro Max, iPhone 14 Plus, iPhone 17 Pro]
+        default: iPhone 17 Pro Max
       roms:
         description: "hero, all, or comma-separated manifest tags and filenames"
         default: hero
         required: true
       shots:
-        description: One of each screen, or each ROM's game, Technical Info and gameplay too
+        description: listing is the ten App Store screenshots in order; summary is every screen and menu for review; every-rom adds each ROM's screens
         type: choice
-        options: [summary, every-rom]
-        default: summary
+        options: [listing, summary, every-rom]
+        default: listing
       appearance:
         description: Simulator appearance; both runs a light and a dark job side by side
         type: choice
@@ -31,8 +32,8 @@ on:
         options: [default, largest]
         default: default
       import_rom:
-        description: The ROM the import review opens (never seeded)
-        default: gbdk450-badsum.gb
+        description: The ROM the import review opens (never seeded); gbdk450-badsum.gb shows the checksum warning
+        default: zgb-dmg.gb
         required: true
 
 permissions:
@@ -87,6 +88,12 @@ jobs:
           APPEARANCE: ${{ matrix.appearance }}
           TEXT_SIZE: ${{ inputs.text_size == 'largest' && 'accessibility-extra-extra-extra-large' || 'default' }}
           IMPORT_ROM: ${{ inputs.import_rom }}
+          # A real game for the gameplay shots, kept out of the repository: set these repository
+          # variables to a downloadable .gb, .gbc or .zip whose author allows its use, and its
+          # SHA-256. Unset, the test ROMs play.
+          GAME_URL: ${{ vars.SCREENSHOT_GAME_URL }}
+          GAME_SHA256: ${{ vars.SCREENSHOT_GAME_SHA256 }}
+          GAME_NAME: ${{ vars.SCREENSHOT_GAME_NAME }}
         run: |
           set -o pipefail
           ./Scripts/take-screenshots.sh "$ROMS" screenshots 2>&1 | tee screenshots.log
