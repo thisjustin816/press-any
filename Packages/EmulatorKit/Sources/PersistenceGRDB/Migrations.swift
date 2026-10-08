@@ -53,6 +53,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v16-image-fingerprints") { db in
             try db.execute(sql: V1V16ImageFingerprintsSchema.sql)
         }
+        migrator.registerMigration("v1-v17-manual-order") { db in
+            try db.execute(sql: V1V17ManualOrderSchema.sql)
+        }
         return migrator
     }
 }
@@ -445,5 +448,17 @@ enum V1V16ImageFingerprintsSchema {
     BEGIN
         DELETE FROM image_fingerprints WHERE image_sha256 = OLD.content_sha256;
     END;
+    """
+}
+
+/// The library's Manual sort: one row per Game the player has placed, by game ID and a position
+/// counted from 0. A Game never placed has no row. Deleting a Game keeps its row, which goes only
+/// when the Game itself is purged.
+enum V1V17ManualOrderSchema {
+    static let sql = """
+    CREATE TABLE game_manual_positions (
+        game_id TEXT PRIMARY KEY NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL CHECK (position >= 0)
+    );
     """
 }

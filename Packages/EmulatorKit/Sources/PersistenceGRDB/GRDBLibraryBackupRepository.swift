@@ -60,6 +60,9 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
         var value = LibraryBackupSnapshot(migrationID: try String.fetchOne(db,
             sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid DESC LIMIT 1") ?? "")
         value.games = try repositories.games.fetchGames()
+        value.manualPositions = try repositories.games.fetchManualPositions().map {
+            BackupManualPosition(gameID: $0.key, position: $0.value)
+        }.sorted { $0.gameID.uuidString < $1.gameID.uuidString }
         value.builds = try repositories.builds.fetchAllBuilds()
         value.profiles = try repositories.saveProfiles.fetchAllSaveProfiles()
         value.states = try SaveStateRecord.fetchAll(db, sql: """
@@ -172,7 +175,7 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
         for table in [
             "save_states", "patch_recipe_items", "patch_recipes", "build_variable_maps",
             "build_toolchain_reports", "build_save_declarations", "build_metadata_provenance",
-            "game_metadata_provenance", "game_aliases", "save_profiles", "builds", "games",
+            "game_metadata_provenance", "game_aliases", "game_manual_positions", "save_profiles", "builds", "games",
             "managed_assets", "library_deletions", "tombstones", "settings_overrides", "image_fingerprints",
         ] {
             try db.execute(sql: "DELETE FROM \(table)")
@@ -189,6 +192,14 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
                 try db.execute(sql: "INSERT OR IGNORE INTO game_aliases (game_id, title) VALUES (?, ?)",
                     arguments: [PersistenceCodec.uuid(game.id), alias])
             }
+        }
+        try db.execute(sql: """
+            DELETE FROM game_manual_positions
+            WHERE game_id IN (SELECT id FROM games WHERE deletion_id IS NULL)
+            """)
+        for value in value.manualPositions {
+            try db.execute(sql: "INSERT INTO game_manual_positions (game_id, position) VALUES (?, ?)",
+                arguments: [PersistenceCodec.uuid(value.gameID), value.position])
         }
 
         // Unique Base and slot assignments may trade owners within the same restore.
@@ -270,6 +281,7 @@ enum BackupCoverage {
         "grdb_migrations": "Newest applied identifier only; migration history belongs to the destination.",
         "games": "All live Game metadata.",
         "game_aliases": "Canonical aliases of live Games.",
+        "game_manual_positions": "Manual sort positions of live Games; follows the Game conflict choice.",
         "builds": "All live Build metadata, source and generated image references, and playtime.",
         "save_profiles": "All live Save Profiles, battery references, RTC, and session history.",
         "save_states": "Live states and thumbnails except crash recovery checkpoints.",
@@ -288,7 +300,7 @@ enum BackupCoverage {
     ]
 
     static let ports: [String: String] = [
-        "GameRepository": "Live Games and aliases.",
+        "GameRepository": "Live Games, aliases and manual sort positions.",
         "BuildRepository": "Live Builds and save compatibility declarations.",
         "SaveProfileRepository": "Live Save Profiles.",
         "SaveStateRepository": "Live states except crash recovery.",

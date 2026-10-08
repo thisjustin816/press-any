@@ -133,6 +133,51 @@ final class LibraryNotesAndFavoritesTests: XCTestCase {
         XCTAssertEqual(PlayStatisticsDisplay.lastPlayed(nil), "Unknown")
     }
 
+    func testBuildSortsAndManualReorderKeepHiddenGamesInPlaceAndPersist() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let alpha = try importROM(into: container, root: root, title: "Alpha")
+        let beta = try importROM(into: container, root: root, title: "Beta", byte: 1)
+        let gamma = try importROM(into: container, root: root, title: "Gamma", byte: 2)
+        try container.buildOperations.setMetadata(buildID: beta.id, field: .author, value: "Ann")
+        try container.buildOperations.setMetadata(buildID: gamma.id, field: .versionString, value: "1.2")
+        let library = libraryModel(container)
+        library.reload()
+        library.sort = .hackAuthor
+        XCTAssertEqual(library.visibleGames.map(\.id), [beta.gameID, alpha.gameID, gamma.gameID])
+        library.sort = .version
+        XCTAssertEqual(library.visibleGames.map(\.id), [gamma.gameID, alpha.gameID, beta.gameID])
+        library.sort = .recentlyChanged
+        XCTAssertEqual(library.visibleGames.first?.id, gamma.gameID)
+
+        library.sort = .manual
+        XCTAssertEqual(library.visibleGames.map(\.id), [alpha.gameID, beta.gameID, gamma.gameID])
+        library.reorder(visible: [gamma.gameID, alpha.gameID, beta.gameID])
+        XCTAssertEqual(library.visibleGames.map(\.id), [gamma.gameID, alpha.gameID, beta.gameID])
+        library.toggleFavorite(try XCTUnwrap(container.repositories.games.fetchGame(id: alpha.gameID)))
+        library.toggleFavorite(try XCTUnwrap(container.repositories.games.fetchGame(id: beta.gameID)))
+        library.favoritesOnly = true
+        library.reorder(visible: [beta.gameID, alpha.gameID])
+        library.favoritesOnly = false
+        XCTAssertEqual(library.visibleGames.map(\.id), [gamma.gameID, beta.gameID, alpha.gameID])
+
+        let delta = try importROM(into: container, root: root, title: "Delta", byte: 3)
+        let reopened = libraryModel(try AppContainer(rootURL: root))
+        reopened.sort = .manual
+        reopened.reload()
+        XCTAssertEqual(reopened.visibleGames.map(\.id), [gamma.gameID, beta.gameID, alpha.gameID, delta.gameID])
+    }
+
+    private func libraryModel(_ container: AppContainer) -> LibraryViewModel {
+        LibraryViewModel(
+            gameRepository: container.repositories.games, buildRepository: container.repositories.builds,
+            profiles: container.repositories.saveProfiles,
+            launchResolver: container.preferredLaunchResolver, buildOperations: container.buildOperations,
+            deletion: container.libraryDeletion
+        )
+    }
+
     private func importROM(into container: AppContainer, root: URL, title: String, byte: UInt8 = 0) throws -> Build {
         let file = root.appendingPathComponent("\(title).gb")
         var data = Data(repeating: 0, count: 0x8000)

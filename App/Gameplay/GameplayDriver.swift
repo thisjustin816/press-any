@@ -249,7 +249,8 @@ protocol DisplayRefreshSource: AnyObject, Sendable {
 
 /// Reports each display refresh from its own thread, with the time since the previous refresh and
 /// the length of the next one, both from the display's clock. A busy main thread can't delay it.
-/// Allows up to 120 Hz on ProMotion screens, where a repeated frame lasts half as long.
+/// Allows up to 120 Hz on ProMotion screens, where a repeated frame lasts half as long, and drops
+/// to 60 Hz while Low Power Mode is on or the device runs hot.
 final class DisplayRefreshThread: NSObject, DisplayRefreshSource, @unchecked Sendable {
     private let handler: DisplayRefreshHandler
     private let lock = NSLock()
@@ -257,12 +258,27 @@ final class DisplayRefreshThread: NSObject, DisplayRefreshSource, @unchecked Sen
     private var link: CADisplayLink?
     private var runLoop: CFRunLoop?
     private var lastTimestamp: CFTimeInterval?
+    /// What the display should be asked for now, and what the link was last given. Both guarded by
+    /// `lock`; the link is only touched on its own thread, so a change waits for the next refresh.
+    private var frameRate = PresentationFrameRate.current()
+    private var appliedFrameRate: PresentationFrameRate?
+    private var observers: [NSObjectProtocol] = []
 
     init(handler: @escaping DisplayRefreshHandler) {
         self.handler = handler
     }
 
     func start() {
+        let names: [Notification.Name] = [.NSProcessInfoPowerStateDidChange, ProcessInfo.thermalStateDidChangeNotification]
+        lock.withLock {
+            guard !cancelled else { return }
+            frameRate = .current()
+            observers = names.map { name in
+                NotificationCenter.default.addObserver(forName: name, object: nil, queue: nil) { [weak self] _ in
+                    self?.powerStateChanged()
+                }
+            }
+        }
         let thread = Thread { [self] in run() }
         thread.name = "Gameplay.DisplayRefresh"
         thread.qualityOfService = .userInteractive
@@ -270,10 +286,12 @@ final class DisplayRefreshThread: NSObject, DisplayRefreshSource, @unchecked Sen
     }
 
     func cancel() {
-        let (link, runLoop) = lock.withLock { () -> (CADisplayLink?, CFRunLoop?) in
+        let (link, runLoop, tokens) = lock.withLock { () -> (CADisplayLink?, CFRunLoop?, [NSObjectProtocol]) in
             cancelled = true
-            return (self.link, self.runLoop)
+            defer { observers = [] }
+            return (self.link, self.runLoop, observers)
         }
+        for token in tokens { NotificationCenter.default.removeObserver(token) }
         link?.invalidate()
         // Removing the link doesn't wake a run loop waiting on another thread, so stop it too.
         if let runLoop { CFRunLoopStop(runLoop) }
@@ -281,9 +299,10 @@ final class DisplayRefreshThread: NSObject, DisplayRefreshSource, @unchecked Sen
 
     private func run() {
         let link = CADisplayLink(target: self, selector: #selector(refreshed(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
         let started = lock.withLock { () -> Bool in
             guard !cancelled else { return false }
+            link.preferredFrameRateRange = frameRate.range
+            appliedFrameRate = frameRate
             self.link = link
             runLoop = CFRunLoopGetCurrent()
             return true
@@ -295,12 +314,21 @@ final class DisplayRefreshThread: NSObject, DisplayRefreshSource, @unchecked Sen
         }
     }
 
+    private func powerStateChanged() {
+        let rate = PresentationFrameRate.current()
+        lock.withLock { frameRate = rate }
+    }
+
     /// Reports under the lock, so `cancel()` waits out a report in progress. The handler must not
     /// call `cancel()`.
     @objc private func refreshed(_ link: CADisplayLink) {
         lock.lock()
         defer { lock.unlock() }
         guard !cancelled else { return }
+        if appliedFrameRate != frameRate {
+            link.preferredFrameRateRange = frameRate.range
+            appliedFrameRate = frameRate
+        }
         let elapsed = lastTimestamp.map { max(0, link.timestamp - $0) } ?? 0
         lastTimestamp = link.timestamp
         let interval = max(0, link.targetTimestamp - link.timestamp)

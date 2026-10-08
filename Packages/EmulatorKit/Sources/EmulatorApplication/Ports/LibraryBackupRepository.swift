@@ -1,6 +1,16 @@
 import EmulatorDomain
 import Foundation
 
+public struct BackupManualPosition: Codable, Equatable, Sendable {
+    public var gameID: UUID
+    public var position: Int
+
+    public init(gameID: UUID, position: Int) {
+        self.gameID = gameID
+        self.position = position
+    }
+}
+
 public struct BackupSetting: Codable, Equatable, Sendable {
     public static let excludedKeys: Set<String> = [
         "session.launchMarker", "backup.lastRestoreReport", "noIntro.appliedVersion",
@@ -48,6 +58,7 @@ public struct BackupToolchainReport: Codable, Equatable, Sendable {
 public struct LibraryBackupSnapshot: Equatable, Sendable {
     public var migrationID: String
     public var games: [Game] = []
+    public var manualPositions: [BackupManualPosition] = []
     public var builds: [Build] = []
     public var profiles: [SaveProfile] = []
     public var states: [SaveState] = []

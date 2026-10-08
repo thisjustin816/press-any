@@ -13,6 +13,7 @@ enum BackupSnapshotCodec {
         let encoder = encoder()
         return [
             "games.json": try encoder.encode(snapshot.games),
+            "manual-positions.json": try encoder.encode(snapshot.manualPositions),
             "builds.json": try encoder.encode(snapshot.builds),
             "profiles.json": try encoder.encode(snapshot.profiles),
             "states.json": try encoder.encode(snapshot.states),
@@ -28,7 +29,7 @@ enum BackupSnapshotCodec {
     }
 
     static let recordFilenames: Set<String> = [
-        "games.json", "builds.json", "profiles.json", "states.json", "recipes.json",
+        "games.json", "manual-positions.json", "builds.json", "profiles.json", "states.json", "recipes.json",
         "variable-maps.json", "managed-assets.json", "game-provenance.json", "build-provenance.json",
         "toolchain-reports.json", "save-declarations.json", "settings.json",
     ]
@@ -41,6 +42,7 @@ enum BackupSnapshotCodec {
         }
         var snapshot = LibraryBackupSnapshot(migrationID: migrationID)
         snapshot.games = try values([Game].self, "games.json")
+        snapshot.manualPositions = try values([BackupManualPosition].self, "manual-positions.json")
         snapshot.builds = try values([Build].self, "builds.json")
         snapshot.profiles = try values([SaveProfile].self, "profiles.json")
         snapshot.states = try values([SaveState].self, "states.json")
@@ -56,7 +58,7 @@ enum BackupSnapshotCodec {
     }
 
     static func counts(_ snapshot: LibraryBackupSnapshot) -> [String: Int] {
-        ["games": snapshot.games.count, "builds": snapshot.builds.count,
+        ["games": snapshot.games.count, "manualPositions": snapshot.manualPositions.count, "builds": snapshot.builds.count,
          "profiles": snapshot.profiles.count, "states": snapshot.states.count,
          "recipes": snapshot.recipes.count, "variableMaps": snapshot.variableMaps.count,
          "assets": snapshot.assets.count, "gameProvenance": snapshot.gameProvenance.count,
@@ -67,6 +69,7 @@ enum BackupSnapshotCodec {
     static func canonical(_ snapshot: LibraryBackupSnapshot) throws -> [String: Data] {
         var snapshot = snapshot
         snapshot.games.sort { $0.id.uuidString < $1.id.uuidString }
+        snapshot.manualPositions.sort { $0.gameID.uuidString < $1.gameID.uuidString }
         snapshot.builds.sort { $0.id.uuidString < $1.id.uuidString }
         snapshot.profiles.sort { $0.id.uuidString < $1.id.uuidString }
         snapshot.states.sort { $0.id.uuidString < $1.id.uuidString }
@@ -92,6 +95,7 @@ enum BackupSnapshotCodec {
             }
         }
         try unique(snapshot.games) { $0.id.uuidString }
+        try unique(snapshot.manualPositions) { $0.gameID.uuidString }
         try unique(snapshot.builds) { $0.id.uuidString }
         try unique(snapshot.builds) { "\($0.gameID)/\($0.imageSHA256)" }
         try unique(snapshot.profiles) { $0.id.uuidString }
@@ -116,6 +120,9 @@ enum BackupSnapshotCodec {
         func asset(_ id: UUID?, kind: ManagedAssetKind? = nil) throws {
             guard let id else { return }
             try require(assets[id] != nil && (kind == nil || assets[id]?.kind == kind))
+        }
+        for value in snapshot.manualPositions {
+            try require(games.contains(value.gameID) && value.position >= 0)
         }
         for game in snapshot.games {
             try asset(game.artworkAssetID, kind: .artwork)

@@ -9,6 +9,9 @@ final class LibraryViewModel: ObservableObject {
     /// Each Game's system, from the Build it plays.
     @Published private(set) var systems: [UUID: GameSystem] = [:]
     @Published private(set) var statistics: [UUID: GameStatistics] = [:]
+    /// The Build each Game plays, which Hack Author and Version sort by.
+    @Published private(set) var preferredBuilds: [UUID: Build] = [:]
+    @Published private(set) var manualPositions: [UUID: Int] = [:]
     @Published var sort: LibrarySort = .title
     @Published var selection = ItemSelection<UUID>()
     @Published var pendingBatchDeletion: BatchDeletionPlan?
@@ -67,8 +70,7 @@ final class LibraryViewModel: ObservableObject {
     }
 
     var visibleGames: [Game] {
-        let sorted = sort.sorted(games: games, systems: systems, statistics: statistics)
-            .filter { !favoritesOnly || $0.isFavorite }
+        let sorted = ordered(by: sort).filter { !favoritesOnly || $0.isFavorite }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return sorted }
         return sorted.filter { $0.matchesSearch(query) }
@@ -78,21 +80,36 @@ final class LibraryViewModel: ObservableObject {
         do {
             let games = try gameRepository.fetchGames()
             let builds = try buildRepository.fetchAllBuilds()
-            let buildsByGame = Dictionary(grouping: builds, by: \.gameID)
             let statistics = try fetchStatistics.execute(games: games, builds: builds)
-            var systems: [UUID: GameSystem] = [:]
-            for game in games {
-                let builds = buildsByGame[game.id] ?? []
-                systems[game.id] = (builds.first { $0.id == game.preferredBuildID } ?? builds.first)?.system
-            }
+            let preferredBuilds = LibrarySort.preferredBuilds(games: games, builds: builds)
+            let manualPositions = try gameRepository.fetchManualPositions()
             self.games = games
-            self.systems = systems
+            self.systems = preferredBuilds.mapValues(\.system)
             self.statistics = statistics
+            self.preferredBuilds = preferredBuilds
+            self.manualPositions = manualPositions
             selection.reconcile(with: Set(visibleGames.map(\.id)))
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// Saves the order the player dragged the visible Games into. Games that search or Favorites
+    /// Only hide keep their places among them.
+    func reorder(visible: [UUID]) {
+        let current = ordered(by: .manual).map(\.id)
+        do {
+            try gameRepository.setManualOrder(LibrarySort.manualOrder(current: current, rearrangedVisible: visible))
+            reload()
+        } catch {
+            report(error.localizedDescription)
+        }
+    }
+
+    private func ordered(by sort: LibrarySort) -> [Game] {
+        sort.sorted(games: games, systems: systems, statistics: statistics, preferredBuilds: preferredBuilds,
+                    manualPositions: manualPositions)
     }
 
     /// Renames from the library's long-press menu, the same way Rename Game in Game Details does.

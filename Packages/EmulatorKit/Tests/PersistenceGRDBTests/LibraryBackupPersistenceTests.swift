@@ -32,6 +32,7 @@ import Testing
         let game = Game(id: UUID(), primaryTitle: "Example", systemFamily: "gameboy", aliases: ["Alias"], isFavorite: true, createdAt: date, modifiedAt: date)
         var snapshot = LibraryBackupSnapshot()
         snapshot.games = [game]
+        snapshot.manualPositions = [BackupManualPosition(gameID: game.id, position: 3)]
         snapshot.gameProvenance = [BackupProvenance(ownerID: game.id, values: [MetadataProvenance(field: .title, source: .filename, providedValue: "Example", recordedAt: date)])]
         snapshot.settings = [BackupSetting(scopeType: "app", scopeID: "app", key: "releasePreference", valueJSON: "{}")]
         let input = snapshot
@@ -39,10 +40,12 @@ import Testing
         _ = try repos.backup.commitSnapshot(replacingLibrary: false) { _ in (input, report, true) }
         let actual = try repos.backup.readSnapshot { $0 }
         #expect(actual.games == [game])
+        #expect(actual.manualPositions == input.manualPositions)
+        #expect(try repos.games.fetchManualPositions() == [game.id: 3])
         #expect(actual.gameProvenance == input.gameProvenance)
         #expect(actual.settings == input.settings)
         #expect(try repos.backup.lastRestoreReport() == report)
-        #expect(actual.migrationID == "v1-v16-image-fingerprints")
+        #expect(actual.migrationID == "v1-v17-manual-order")
         try db.writer.write { try $0.execute(sql: """
             CREATE TRIGGER fail_restore BEFORE INSERT ON settings_overrides
             WHEN NEW.key = 'backup.lastRestoreReport'

@@ -58,13 +58,13 @@ struct LibraryBackupView: View {
 
 struct BackupCountsSection: View {
     let counts: [String: Int]
-    private let labels = ["games": "Games", "builds": "Builds", "profiles": "Save Profiles",
+    private let labels = ["games": "Games", "manualPositions": "Games in Manual Order", "builds": "Builds", "profiles": "Save Profiles",
                           "states": "Save States", "recipes": "Patch Recipes", "variableMaps": "Variable Maps",
                           "reports": "Toolchain Reports", "declarations": "Save Declarations", "settings": "Settings"]
 
     var body: some View {
         Section("Contents") {
-            ForEach(["games", "builds", "profiles", "states", "recipes", "variableMaps", "reports", "declarations", "settings"], id: \.self) { key in
+            ForEach(["games", "manualPositions", "builds", "profiles", "states", "recipes", "variableMaps", "reports", "declarations", "settings"], id: \.self) { key in
                 LabeledContent(labels[key] ?? key, value: "\(counts[key] ?? 0)")
             }
         }

@@ -206,6 +206,21 @@ import Testing
         #expect(try repository.readSnapshot { $0.builds.first { $0.id == expectedBuildID }?.notes } == (choice == .archive ? "My notes" : "Library note"))
     }
 
+    @Test(arguments: [RestoreChoice.library, .archive])
+    func manualPositionConflictFollowsGameChoice(_ choice: RestoreChoice) throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let prepared = try fixture.service.prepare(from: fixture.export())
+        var current = fixture.snapshot
+        current.manualPositions[0].position = 7
+        let repository = InMemoryLibraryBackupRepository(current)
+        let service = LibraryBackupService(repository: repository, assetStore: fixture.store)
+        let review = try service.review(prepared)
+        let conflict = try #require(review.conflicts.first { $0.kind == "Game" })
+        _ = try service.restore(prepared, review: review, choices: [conflict.id: choice])
+        #expect(try repository.readSnapshot { $0.manualPositions.first?.position } == (choice == .archive ? 2 : 7))
+    }
+
     @Test func gamePackageCarriesCrossGamePatchBaseButExcludesUnrelatedGames() throws {
         let fixture = try BackupFixture()
         defer { fixture.remove() }
@@ -219,6 +234,7 @@ import Testing
         let packageURL = try service.export(to: fixture.root, displayName: "Test", appVersion: "1", appBuild: "1", includeROMs: true, gameID: gameID)
         let package = try service.prepare(from: packageURL)
         #expect(Set(package.snapshot.games.map(\.id)) == Set([gameID, baseGame.id]))
+        #expect(package.snapshot.manualPositions.allSatisfy { Set([gameID, baseGame.id]).contains($0.gameID) })
         #expect(package.snapshot.builds.count == 2)
         let destination = try fixture.destination()
         _ = try destination.service.restore(package, review: destination.service.review(package), choices: [:])
@@ -296,6 +312,7 @@ private struct BackupFixture {
         value.games = [Game(id: gameID, primaryTitle: "Backup Game", systemFamily: "gameboy", aliases: ["Other Title"],
             hasPlayerTitle: true, isFavorite: true, preferredBuildID: patchedID, preferredSaveProfileID: profileID,
             artworkAssetID: art.id, createdAt: date, modifiedAt: date)]
+        value.manualPositions = [BackupManualPosition(gameID: gameID, position: 2)]
         value.builds = [Build(id: baseID, gameID: gameID, system: .gameBoy, displayName: "Base", imageAssetID: source.id,
             imageSHA256: source.contentSHA256, sourceKind: .importedImage, isBase: true, region: "USA", language: "English",
             notes: "My notes", totalPlaytimeSeconds: 30, preferredSaveProfileID: profileID, createdAt: date, modifiedAt: date),
@@ -315,7 +332,7 @@ private struct BackupFixture {
         value.reports = [BackupToolchainReport(buildID: baseID, report: ToolchainDetectionReport(detector: "test", detectorVersion: "1", corpusRevision: "1", components: []), detectedAt: date)]
         value.declarations = [BuildSaveDeclaration(between: baseID, and: patchedID, compatibility: .sharesSaves)]
         value.settings = [BackupSetting(scopeType: "app", scopeID: "app", key: "releasePreference", valueJSON: "{}"),
-            BackupSetting(scopeType: "game", scopeID: gameID.uuidString.lowercased(), key: "manualSort", valueJSON: "2")]
+            BackupSetting(scopeType: "game", scopeID: gameID.uuidString.lowercased(), key: "skipBootAnimation", valueJSON: "true")]
         snapshot = value
         repository = InMemoryLibraryBackupRepository(value)
         service = LibraryBackupService(repository: repository, assetStore: store)

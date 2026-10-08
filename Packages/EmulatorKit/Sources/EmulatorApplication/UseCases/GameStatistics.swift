@@ -5,6 +5,8 @@ public struct GameStatistics: Equatable, Sendable {
     public private(set) var totalPlaytimeSeconds: Double = 0
     public private(set) var sessionCount: Int = 0
     public private(set) var lastPlayedAt: Date?
+    /// When the newest of the Game's live Builds was added or last changed.
+    public private(set) var lastBuildChangeAt: Date?
     public let addedAt: Date
 
     public init(game: Game) {
@@ -18,7 +20,13 @@ public struct GameStatistics: Equatable, Sendable {
     public static func rollup(games: [Game], builds: [Build], profiles: [SaveProfile]) -> [UUID: GameStatistics] {
         var result = Dictionary(uniqueKeysWithValues: games.map { ($0.id, GameStatistics(game: $0)) })
         for build in builds {
-            result[build.gameID]?.totalPlaytimeSeconds += build.totalPlaytimeSeconds
+            guard var statistics = result[build.gameID] else { continue }
+            statistics.totalPlaytimeSeconds += build.totalPlaytimeSeconds
+            let changedAt = max(build.createdAt, build.modifiedAt)
+            if statistics.lastBuildChangeAt.map({ changedAt > $0 }) ?? true {
+                statistics.lastBuildChangeAt = changedAt
+            }
+            result[build.gameID] = statistics
         }
         for profile in profiles {
             guard var statistics = result[profile.gameID] else { continue }

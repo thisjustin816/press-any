@@ -22,12 +22,12 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertEqual(review.language, "En, Fr")
         XCTAssertEqual(review.revision, "A")
         XCTAssertEqual(review.version, "1.10")
-        XCTAssertEqual(review.normalizedFilename, "Example (Europe) (En, Fr) (Rev A) [v1.10].gb")
+        XCTAssertEqual(review.normalizedFilename, "Example (Europe) (En,Fr) (Rev A) (v1.10).gb")
         review.region = " Japan "
         review.language = " "
         review.revision = ""
         review.version = "2.0"
-        XCTAssertEqual(review.normalizedFilename, "Example (Japan) [v2.0].gb")
+        XCTAssertEqual(review.normalizedFilename, "Example (Japan) (v2.0).gb")
         let result = try review.commit()
         let reopened = try AppContainer(rootURL: root)
         let build = try XCTUnwrap(reopened.repositories.builds.fetchBuild(id: result.build.id))

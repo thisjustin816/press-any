@@ -45,6 +45,7 @@ persistent enum values come from the Codable models in `EmulatorDomain`.
 | Filename | Count key | Records |
 |---|---|---|
 | `games.json` | `games` | Games, aliases, title choice, favorite, preferences, artwork reference, lineage and dates |
+| `manual-positions.json` | `manualPositions` | `gameID` and zero-based `position` for Games with a manual sort position |
 | `builds.json` | `builds` | Builds, immutable image identity, metadata, notes, playtime, lineage and core pins |
 | `profiles.json` | `profiles` | Save Profiles, battery reference, recorded writer, copy lineage, RTC and statistics |
 | `states.json` | `states` | Manual, Quick, numbered-slot and Auto States, thumbnail references, labels and pins |
@@ -57,8 +58,9 @@ persistent enum values come from the Codable models in `EmulatorDomain`.
 | `save-declarations.json` | `declarations` | Symmetric Build pairs and their compatibility declarations |
 | `settings.json` | `settings` | `scopeType`, `scopeID`, `key`, and `valueJSON` for stored overrides |
 
-Settings include App, System, Game and Build scopes, region and language ordering, and any
-stored sort positions. Device view preferences in UserDefaults stay on the device. The
+Settings include App, System, Game and Build scopes, plus region and language ordering.
+Manual positions travel separately and follow the Game conflict choice. Device view
+preferences in UserDefaults stay on the device. The
 launch marker, last restore report and No-Intro backfill marker are operational records and
 are excluded. Lineage pointers to excluded records are omitted from the archive; merge keeps
 the destination's pointers when its version is chosen. There are no full Save Profile settings overrides in the current schema.

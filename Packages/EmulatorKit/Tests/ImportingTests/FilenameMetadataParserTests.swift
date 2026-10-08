@@ -16,7 +16,11 @@ final class FilenameMetadataParserTests: XCTestCase {
                 XCTAssertEqual(parsed.suggestedTitle, "Example", spelling)
                 XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(status: status), spelling)
                 XCTAssertEqual(parsed.suggestedBuildName, status, spelling)
-                XCTAssertEqual(parsed.normalizedFilename, "Example [\(status)].gb", spelling)
+                XCTAssertEqual(
+                    parsed.normalizedFilename,
+                    "Example (\(status.replacingOccurrences(of: "Prototype", with: "Proto"))).gb",
+                    spelling
+                )
                 XCTAssertEqual(parsed.releaseKind, .development, spelling)
                 XCTAssertEqual(parsed.unknownGroups, [], spelling)
             }
@@ -30,7 +34,7 @@ final class FilenameMetadataParserTests: XCTestCase {
                 XCTAssertEqual(parsed.suggestedTitle, "Example", spelling)
                 XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(status: status), spelling)
                 XCTAssertEqual(parsed.suggestedBuildName, status, spelling)
-                XCTAssertEqual(parsed.normalizedFilename, "Example [\(status)].gb", spelling)
+                XCTAssertEqual(parsed.normalizedFilename, "Example (\(status)).gb", spelling)
                 XCTAssertEqual(parsed.releaseKind, .development, spelling)
                 XCTAssertEqual(parsed.unknownGroups, [], spelling)
             }
@@ -53,7 +57,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.suggestedTitle, "Moon Garden")
         XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(region: "World", versionString: "1.1"))
         XCTAssertEqual(parsed.suggestedBuildName, "v1.1")
-        XCTAssertEqual(parsed.normalizedFilename, "Moon Garden (World) [v1.1].gb")
+        XCTAssertEqual(parsed.normalizedFilename, "Moon Garden (World) (v1.1).gb")
         XCTAssertEqual(parsed.releaseKind, .development)
         XCTAssertEqual(parsed.confidence, .high)
         XCTAssertEqual(parsed.unknownGroups, [])
@@ -64,7 +68,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.suggestedTitle, "Pocket Critters")
         XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(region: "USA", status: "Beta 2"))
         XCTAssertEqual(parsed.suggestedBuildName, "Beta 2")
-        XCTAssertEqual(parsed.normalizedFilename, "Pocket Critters (USA) [Beta 2].gb")
+        XCTAssertEqual(parsed.normalizedFilename, "Pocket Critters (USA) (Beta 2).gb")
         XCTAssertEqual(parsed.releaseKind, .development)
         XCTAssertEqual(parsed.unknownGroups, [])
     }
@@ -92,7 +96,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.unknownGroups, ["Unknown"])
         XCTAssertEqual(parsed.originalBaseName, "Example (USA, Europe) (En,Fr,De) (Rev A) [v1.10.2] [Unknown]")
         XCTAssertEqual(parsed.suggestedBuildName, "v1.10.2 · Rev A")
-        XCTAssertEqual(parsed.normalizedFilename, "Example (USA, Europe) (En, Fr, De) (Rev A) [v1.10.2] [Unknown].gbc")
+        XCTAssertEqual(parsed.normalizedFilename, "Example (USA, Europe) (En,Fr,De) (Rev A) (v1.10.2) [Unknown].gbc")
         XCTAssertEqual(parsed.releaseKind, .development)
         XCTAssertEqual(parsed.confidence, .high)
     }
@@ -127,7 +131,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.hackTitle, "PureRed")
         XCTAssertEqual(parsed.buildMetadata.author, "Vortyne")
         XCTAssertEqual(parsed.buildMetadata.status, "Beta")
-        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Red - PureRed [v4.7.0] [by Vortyne] [Beta].gb")
+        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Red [PureRed by Vortyne v4.7.0] [Beta].gb")
     }
 
     func testLabeledHackMetadataAndTranslationNormalizeWithoutInventingUnknownFields() {
@@ -140,7 +144,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.hackTitle, "Crystal Clear")
         XCTAssertEqual(parsed.buildMetadata.translation, "Spanish")
         XCTAssertEqual(parsed.buildMetadata.author, "ShockSlayer")
-        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Crystal - Crystal Clear [v2.5.10] [by ShockSlayer] [Spanish Translation].gbc")
+        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Crystal [Crystal Clear by ShockSlayer v2.5.10] [T+Spa].gbc")
         XCTAssertEqual(parsed.unknownGroups, [])
     }
 
@@ -164,7 +168,7 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.hackTitle, "Nueva")
         XCTAssertEqual(parsed.buildMetadata.translation, "Spa")
         XCTAssertEqual(parsed.unknownGroups, [])
-        XCTAssertEqual(parsed.normalizedFilename, "Base Game - Nueva [v1.0] [Spa Translation].gb")
+        XCTAssertEqual(parsed.normalizedFilename, "Base Game [Nueva v1.0] [T+Spa].gb")
     }
 
     func testPercentEncodedDescriptiveHackNameIsDecodedAndSplitIntoFields() {
@@ -181,7 +185,87 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.versionString, "1.1")
         XCTAssertEqual(
             parsed.normalizedFilename,
-            "Bubble Bobble Part 2 - Tearing fix & save patch (USA, Europe) [v1.1] [by thisJUSTin816].gb"
+            "Bubble Bobble Part 2 (USA, Europe) [Tearing fix & save patch by thisJUSTin816 v1.1].gb"
+        )
+    }
+
+    func testAHackReleasedUnderItsOwnNamingKeepsThatNameAndReadsBackTheSame() {
+        let filename = "Moon Garden (USA) [Night patch by Jane v0.3].gbc"
+        let parsed = FilenameMetadataParser.parse(filename: filename)
+
+        XCTAssertEqual(parsed.normalizedFilename, filename)
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: parsed.normalizedFilename).buildMetadata, parsed.buildMetadata)
+    }
+
+    func testTranslationsAsReleasedAreReadAndWrittenTheSameWay() {
+        let released = FilenameMetadataParser.parse(filename: "Moon Garden (Japan) [T-En by Jane v1.0].gb")
+        XCTAssertEqual(released.releaseKind, .romHack)
+        XCTAssertEqual(released.buildMetadata.translation, "En")
+        XCTAssertEqual(released.buildMetadata.author, "Jane")
+        XCTAssertEqual(released.buildMetadata.versionString, "1.0")
+        XCTAssertEqual(released.unknownGroups, [])
+        XCTAssertEqual(released.normalizedFilename, "Moon Garden (Japan) [T+Eng1.0_Jane].gb")
+
+        let goodTools = FilenameMetadataParser.parse(filename: "Moon Garden (Japan) [T+Eng1.03_Jane Doe].gb")
+        XCTAssertEqual(goodTools.buildMetadata.translation, "Eng")
+        XCTAssertEqual(goodTools.buildMetadata.author, "Jane Doe")
+        XCTAssertEqual(goodTools.buildMetadata.versionString, "1.03")
+        XCTAssertEqual(goodTools.unknownGroups, [])
+        XCTAssertEqual(goodTools.normalizedFilename, "Moon Garden (Japan) [T+Eng1.03_Jane Doe].gb")
+    }
+
+    func testGoodToolsRegionsVersionsAndDumpFlagsAreReadAsNoIntroFields() {
+        let parsed = FilenameMetadataParser.parse(filename: "Moon Garden (UE) (V1.1) (M3) [C][!].gbc")
+        XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(region: "USA, Europe", versionString: "1.1"))
+        XCTAssertEqual(parsed.unknownGroups, [])
+        XCTAssertEqual(parsed.suggestedTitle, "Moon Garden")
+        XCTAssertEqual(parsed.normalizedFilename, "Moon Garden (USA, Europe) (v1.1).gbc")
+
+        for (code, region) in [("U", "USA"), ("J", "Japan"), ("E", "Europe"), ("JU", "Japan, USA"), ("JUE", "World"), ("W", "World"), ("G", "Germany")] {
+            XCTAssertEqual(FilenameMetadataParser.parse(filename: "Moon Garden (\(code)).gb").buildMetadata.region, region, code)
+        }
+        for flags in ["[a1]", "[b1]", "[o2]", "[p1]", "[!p]", "[x]", "[S]"] {
+            let copy = FilenameMetadataParser.parse(filename: "Moon Garden (U) \(flags).gb")
+            XCTAssertEqual(copy.unknownGroups, [], flags)
+            XCTAssertEqual(copy.releaseKind, .standard, flags)
+        }
+        for flags in ["[h1]", "[h1C]", "[hI]", "[hM04]", "[t1]", "[f2]"] {
+            let modified = FilenameMetadataParser.parse(filename: "Moon Garden (U) \(flags).gb")
+            XCTAssertEqual(modified.unknownGroups, [], flags)
+            XCTAssertEqual(modified.releaseKind, .romHack, flags)
+        }
+    }
+
+    func testAGoodToolsTranslationWithoutAVersionKeepsItsTranslator() {
+        let parsed = FilenameMetadataParser.parse(filename: "Moon Garden (J) [T+Spa_Jane].gb")
+        XCTAssertEqual(parsed.buildMetadata.translation, "Spa")
+        XCTAssertEqual(parsed.buildMetadata.author, "Jane")
+        XCTAssertEqual(parsed.normalizedFilename, "Moon Garden (Japan) [T+Spa_Jane].gb")
+    }
+
+    func testAHackTitleNeedsNoKeywordWhenItNamesItsAuthor() {
+        let filename = "Moon Garden (USA) [Lunar Remix by Jane v2.1].gb"
+        let parsed = FilenameMetadataParser.parse(filename: filename)
+
+        XCTAssertEqual(parsed.releaseKind, .romHack)
+        XCTAssertEqual(parsed.buildMetadata.hackTitle, "Lunar Remix")
+        XCTAssertEqual(parsed.normalizedFilename, filename)
+    }
+
+    func testTitlesFollowNoIntro() {
+        XCTAssertEqual(FilenameMetadataParser.noIntroTitle("The Moon Garden: Night Tales"), "Moon Garden, The - Night Tales")
+        XCTAssertEqual(FilenameMetadataParser.noIntroTitle("A Moon Garden"), "Moon Garden, A")
+        XCTAssertEqual(FilenameMetadataParser.noIntroTitle("Pokémon Moon"), "Pokemon Moon")
+        XCTAssertEqual(FilenameMetadataParser.noIntroTitle("Moon Garden, The - A Night"), "Moon Garden, The - A Night")
+        XCTAssertEqual(FilenameMetadataParser.noIntroTitle("Theatre"), "Theatre")
+    }
+
+    func testAHackWithoutItsOwnTitleIsNamedForItsAuthor() {
+        let metadata = BuildImportMetadata(versionString: "1.3", baseTitle: "Moon Garden", hackTitle: "Moon Garden", author: "Jane")
+
+        XCTAssertEqual(
+            FilenameMetadataParser.canonicalFilename(fileExtension: "gb", title: "Moon Garden", metadata: metadata, unknownGroups: []),
+            "Moon Garden [Hack by Jane v1.3].gb"
         )
     }
 

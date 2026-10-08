@@ -50,7 +50,14 @@ struct BackupMerge {
             name: { $0.primaryTitle }, date: { $0.modifiedAt }, equivalent: { a, b in
                 a == b && hash(a.artworkAssetID, archive) == hash(b.artworkAssetID, library)
                     && archive.gameProvenance.first { $0.ownerID == a.id } == library.gameProvenance.first { $0.ownerID == b.id }
+                    && archive.manualPositions.first { $0.gameID == a.id } == library.manualPositions.first { $0.gameID == b.id }
             }, choices: choices)
+        result.manualPositions = library.manualPositions
+        let existingGameIDs = Set(library.games.map(\.id))
+        for game in archive.games where !existingGameIDs.contains(game.id) || choices?["Game/\(game.id.uuidString)"] == .archive {
+            result.manualPositions.removeAll { $0.gameID == game.id }
+            result.manualPositions += archive.manualPositions.filter { $0.gameID == game.id }
+        }
         result.builds = try records(archive.builds, library.builds, kind: "Build", key: { $0.id.uuidString },
             name: { $0.displayName }, date: { $0.modifiedAt }, equivalent: { a, b in
                 a == b && archive.buildProvenance.first { $0.ownerID == a.id } == library.buildProvenance.first { $0.ownerID == b.id }

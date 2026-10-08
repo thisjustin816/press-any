@@ -66,6 +66,7 @@ extension LibraryBackupSnapshot {
         result.builds = builds.filter { buildIDs.contains($0.id) }
         let gameIDs = Set(result.builds.map(\.gameID)).union([gameID])
         result.games = games.filter { gameIDs.contains($0.id) }
+        result.manualPositions = manualPositions.filter { gameIDs.contains($0.gameID) }
         let selectedProfiles = Set(result.builds.compactMap(\.preferredSaveProfileID))
         result.profiles = profiles.filter { $0.gameID == gameID || selectedProfiles.contains($0.id) }
         let profileIDs = Set(result.profiles.map(\.id))
