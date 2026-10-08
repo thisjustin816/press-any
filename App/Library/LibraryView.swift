@@ -121,18 +121,19 @@ struct LibraryView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    // Sort lives in the view menu: a fourth toolbar button left the wordmark no
+                    // room at larger text sizes.
                     Menu {
-                        Picker("Sort", selection: $sort) {
+                        Picker(selection: $sort) {
                             ForEach(LibrarySort.allCases, id: \.self) { order in
                                 Text(order.displayName).tag(order)
                             }
+                        } label: {
+                            Label("Sort By", systemImage: "arrow.up.arrow.down")
+                            Text(sort.displayName)
                         }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
-                    }
-                    .accessibilityIdentifier("library.sortMenu")
-
-                    Menu {
+                        .pickerStyle(.menu)
+                        .accessibilityIdentifier("library.sortMenu")
                         Picker("Library View", selection: $displayMode) {
                             Label("Grid", systemImage: "square.grid.2x2").tag(DisplayMode.grid)
                             Label("List", systemImage: "list.bullet").tag(DisplayMode.list)

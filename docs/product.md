@@ -908,8 +908,8 @@ exposes them; custom border editing is later.
   list and checkmark circles on tiles. The bottom bar offers Select All / Deselect All and Delete
   (n) for the visible Games, with one confirmation. Tiles read Selected or Not selected to
   VoiceOver. Tapping while selecting changes the selection without opening or playing a Game.
-- The Sort menu beside the view options remembers Title (the default), Recently Played, Recently
-  Added, Playtime or System. Recent play, added and playtime sort largest first; Games never
+- Sort By, at the top of the view options menu, remembers Title (the default), Recently Played,
+  Recently Added, Playtime or System. Recent play, added and playtime sort largest first; Games never
   played go last under Recently Played and Playtime. System groups Game Boy before Game Boy
   Color. Ties use title order. Search and Favorites Only filter the sorted list. List rows show
   the system under Title and System, relative last played under Recently Played, playtime under
