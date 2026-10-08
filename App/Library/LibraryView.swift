@@ -37,6 +37,8 @@ struct LibraryView: View {
     @State private var screenshotBuildInfo: Build?
     @State private var gameToRename: Game?
     @State private var renameTitle = ""
+    /// Drag handles in the list, for the Manual sort.
+    @State private var isReordering = false
     /// Off hides the titles under grid tiles, for libraries whose box art carries the name.
     @AppStorage("library.showsGridTitles") private var showsGridTitles = true
     @AppStorage("library.sort") private var sort: LibrarySort = .title
@@ -120,13 +122,22 @@ struct LibraryView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    if isReordering {
+                        Button("Done") { isReordering = false }
+                    }
                     // Select and the view options live in this menu, as in Photos and Files: more
                     // toolbar buttons left the wordmark no room at larger text sizes.
                     Menu {
-                        if !model.selection.isSelecting {
+                        if !model.selection.isSelecting && !isReordering {
                             Section {
                                 Button("Select", systemImage: "checkmark.circle") { model.selection.toggleMode() }
                                     .disabled(model.visibleGames.isEmpty)
+                                // Dragging works in the list; the grid shows the same order.
+                                if sort == .manual && displayMode == .list {
+                                    Button("Reorder", systemImage: "line.3.horizontal") { isReordering = true }
+                                        .disabled(model.visibleGames.count < 2)
+                                        .accessibilityIdentifier("library.reorder")
+                                }
                             }
                         }
                         // Grid and List as one row of icons, as Files shows its view styles.
@@ -197,7 +208,13 @@ struct LibraryView: View {
                 model.sort = sort
                 model.reload()
             }
-            .onChange(of: sort) { _, value in model.sort = value }
+            .onChange(of: sort) { _, value in
+                model.sort = value
+                if value != .manual { isReordering = false }
+            }
+            .onChange(of: displayMode) { _, mode in
+                if mode != .list { isReordering = false }
+            }
             .task { openScreenshotScene() }
             .navigationDestination(item: $screenshotGameID) { gameID in
                 GameDetailView(container: container, gameID: gameID, onPlay: onPlay)
@@ -324,7 +341,7 @@ struct LibraryView: View {
         List(selection: model.selection.isSelecting ? $model.selection.ids : nil) {
             ForEach(model.visibleGames) { game in
                 Group {
-                    if model.selection.isSelecting {
+                    if model.selection.isSelecting || isReordering {
                         gameListLabel(game)
                     } else {
                         NavigationLink {
@@ -339,8 +356,17 @@ struct LibraryView: View {
                 }
                 .tag(game.id)
             }
+            .onMove(perform: isReordering ? moveGames : nil)
         }
         .listStyle(.plain)
+        // Drag handles show only in edit mode, which Select also turns on for its checkboxes.
+        .environment(\.editMode, .constant(model.selection.isSelecting || isReordering ? .active : .inactive))
+    }
+
+    private func moveGames(from source: IndexSet, to destination: Int) {
+        var ids = model.visibleGames.map(\.id)
+        ids.move(fromOffsets: source, toOffset: destination)
+        model.reorder(visible: ids)
     }
 
     private func gameListLabel(_ game: Game) -> some View {
@@ -366,7 +392,7 @@ struct LibraryView: View {
 
     private func listSubtitle(for game: Game) -> String {
         switch sort {
-        case .title, .system:
+        case .title, .system, .manual:
             model.system(of: game).displayName
         case .recentlyPlayed:
             PlayStatisticsDisplay.played(
@@ -375,8 +401,14 @@ struct LibraryView: View {
             )
         case .recentlyAdded:
             "Added \(game.createdAt.formatted(date: .abbreviated, time: .omitted))"
+        case .recentlyChanged:
+            model.statistics[game.id]?.lastBuildChangeAt.map { "Changed \(PlayStatisticsDisplay.lastPlayed($0))" } ?? "No Builds"
         case .playtime:
             BuildPlaytime.formatted(model.statistics[game.id]?.totalPlaytimeSeconds ?? 0)
+        case .hackAuthor:
+            LibrarySort.hackAuthor(of: model.preferredBuilds[game.id]) ?? "No Author"
+        case .version:
+            model.preferredBuilds[game.id]?.versionString.map { "Version \($0)" } ?? "No Version"
         }
     }
 
@@ -463,8 +495,12 @@ private extension LibrarySort {
         case .title: "Title"
         case .recentlyPlayed: "Recently Played"
         case .recentlyAdded: "Recently Added"
+        case .recentlyChanged: "Recently Changed"
         case .playtime: "Playtime"
         case .system: "System"
+        case .hackAuthor: "Hack Author"
+        case .version: "Version"
+        case .manual: "Manual"
         }
     }
 }

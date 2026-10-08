@@ -116,10 +116,10 @@ struct MigrationTests {
                 #expect(upgraded == rows, "migration changed existing rows in \(table)")
             }
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(8) == [
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations ORDER BY rowid").suffix(9) == [
                 "v1-v9-game-identity", "v1-v10-library-model", "v1-v11-save-compatibility",
                 "v1-v12-system-screen-colors", "v1-v13-patch-step-inputs", "v1-v14-metadata-provenance",
-                "v1-v15-save-state-slots", "v1-v16-image-fingerprints",
+                "v1-v15-save-state-slots", "v1-v16-image-fingerprints", "v1-v17-manual-order",
             ])
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_save_declarations") == 0)
         }
