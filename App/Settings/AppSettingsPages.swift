@@ -183,10 +183,18 @@ struct PlayingSettingsPage: View {
     @State private var fastForwardAudio: FastForwardAudio
     @State private var autoResumePolicy: AutoResumePolicy
     @State private var skipBootAnimation: Bool
+    @State private var saveStateSlots: SaveStateSlots
+    @State private var nameNewStates: Bool
+    @State private var keepSaveStates: KeepSaveStates
+    @State private var keepAutoStates: KeepAutoStates
     @State private var errorMessage: String?
 
     init(storage: AppSettingsStorage) {
         self.storage = storage
+        _saveStateSlots = State(initialValue: storage.value(SaveStateSlots.self, .saveStateSlots) ?? .off)
+        _nameNewStates = State(initialValue: storage.value(Bool.self, .nameNewStates) ?? false)
+        _keepSaveStates = State(initialValue: storage.value(KeepSaveStates.self, .keepSaveStates) ?? .all)
+        _keepAutoStates = State(initialValue: storage.value(KeepAutoStates.self, .keepAutoStates) ?? .five)
         _soundMode = State(initialValue: storage.value(SoundMode.self, .soundMode) ?? .followSilentSwitch)
         _fastForwardSpeed = State(initialValue: storage.value(FastForwardSpeed.self, .fastForwardSpeed) ?? .x2)
         _fastForwardAudio = State(initialValue: storage.value(FastForwardAudio.self, .fastForwardAudio) ?? .muted)
@@ -234,12 +242,33 @@ struct PlayingSettingsPage: View {
                 Text("Resume Games picks up where you left off when you open a game again or return to the app. Skip Boot Logo opens library games on the game; Quick Play always skips it.")
             }
 
+            Section {
+                Picker("Slots", selection: $saveStateSlots) {
+                    ForEach(SaveStateSlots.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                }
+                Toggle("Name New States", isOn: $nameNewStates)
+                Picker("Keep Save States", selection: $keepSaveStates) {
+                    ForEach(KeepSaveStates.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                }
+                Picker("Keep Auto States", selection: $keepAutoStates) {
+                    ForEach(KeepAutoStates.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                }
+            } header: {
+                Text("Save States")
+            } footer: {
+                Text("Pinned states are never cleaned up. Cleaned-up save states go to Recently Deleted. Auto States are removed permanently. Changes apply after the next save of that kind.")
+            }
+
             if let errorMessage {
                 Section { Text(errorMessage).foregroundStyle(.red) }
             }
         }
         .navigationTitle("Playing")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: saveStateSlots) { _, newValue in save(newValue, .saveStateSlots) }
+        .onChange(of: nameNewStates) { _, newValue in save(newValue, .nameNewStates) }
+        .onChange(of: keepSaveStates) { _, newValue in save(newValue, .keepSaveStates) }
+        .onChange(of: keepAutoStates) { _, newValue in save(newValue, .keepAutoStates) }
         .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
         .onChange(of: fastForwardSpeed) { _, newValue in save(newValue, .fastForwardSpeed) }
         .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }

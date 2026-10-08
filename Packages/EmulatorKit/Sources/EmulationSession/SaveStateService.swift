@@ -26,6 +26,8 @@ public struct SaveStateService: Sendable {
     private let assetStore: any AssetStore
     private let transactions: any LibraryTransactionRunner
     private let retention: AutoStateRetention
+    private let settings: SettingsResolver?
+    private let deletion: LibraryDeletionOperations?
     private let thumbnails: (any FrameImageEncoding)?
     private let now: @Sendable () -> Date
 
@@ -34,6 +36,8 @@ public struct SaveStateService: Sendable {
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
         retention: AutoStateRetention = .init(),
+        settings: SettingsResolver? = nil,
+        deletion: LibraryDeletionOperations? = nil,
         transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
         thumbnails: (any FrameImageEncoding)? = nil,
         now: @escaping @Sendable () -> Date = Date.init
@@ -42,6 +46,8 @@ public struct SaveStateService: Sendable {
         self.assets = assets
         self.assetStore = assetStore
         self.retention = retention
+        self.settings = settings
+        self.deletion = deletion
         self.transactions = transactions
         self.thumbnails = thumbnails
         self.now = now
@@ -53,9 +59,11 @@ public struct SaveStateService: Sendable {
         context: LaunchContext,
         kind: SaveStateKind,
         label: String? = nil,
+        slot: Int? = nil,
         playtimeSeconds: Double,
         frame: EmulatorVideoFrame? = nil
     ) throws -> SaveState {
+        if kind == .slot && (slot ?? 0) <= 0 { throw SaveSlotStateError.invalidSlot }
         let payload = try worker.perform { try $0.serializeState() }
         let core = try worker.perform { $0.descriptor }
         let serializationVersion = try worker.perform { $0.stateSerializationVersion }
@@ -102,6 +110,7 @@ public struct SaveStateService: Sendable {
                     stateAssetID: assetID,
                     screenshotAssetID: thumbnail?.id,
                     kind: kind,
+                    slot: kind == .slot ? slot : nil,
                     autoSequence: autoSequence,
                     label: label,
                     playtimeSeconds: playtimeSeconds,
@@ -109,6 +118,10 @@ public struct SaveStateService: Sendable {
                 )
                 if kind == .quick {
                     let result = try SaveQuickState(states: states, transactions: transactions).execute(candidate)
+                    state = result.saved
+                    if let previous = result.previous { discardAssets(of: previous) }
+                } else if kind == .slot {
+                    let result = try SaveSlotState(states: states, transactions: transactions).execute(candidate)
                     state = result.saved
                     if let previous = result.previous { discardAssets(of: previous) }
                 } else {
@@ -129,6 +142,8 @@ public struct SaveStateService: Sendable {
         // not take the new state with it; the next save prunes again.
         if kind == .auto {
             try? pruneAutoStates(context: context)
+        } else if kind == .manual {
+            try? pruneManualStates(context: context, keeping: state.id)
         }
         return state
     }
@@ -236,9 +251,16 @@ public struct SaveStateService: Sendable {
         try worker.perform { try $0.deserializeState(payload) }
     }
 
+    private func pruneManualStates(context: LaunchContext, keeping stateID: UUID) throws {
+        let keep = try settings?.appValue(KeepSaveStates.self, key: .keepSaveStates) ?? .all
+        if let count = keep.keepCount { try deletion?.cleanManualStates(context: context, keepCount: count, keeping: stateID) }
+    }
+
     private func pruneAutoStates(context: LaunchContext) throws {
         let all = try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
-        for state in retention.expiredStates(from: all) {
+        let configured = try settings?.appValue(KeepAutoStates.self, key: .keepAutoStates)
+        let policy = configured.map { AutoStateRetention(keepCount: $0.rawValue) } ?? retention
+        for state in policy.expiredStates(from: all) {
             let thumbnail = try state.screenshotAssetID.flatMap { try assets.fetchAsset(id: $0) }
             if let asset = try assets.fetchAsset(id: state.stateAssetID) {
                 let url = try assetStore.managedURL(relativePath: asset.relativePath)

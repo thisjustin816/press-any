@@ -429,13 +429,16 @@ struct SaveStateRecord: Codable, FetchableRecord, PersistableRecord {
     var stateAssetID: String
     var screenshotAssetID: String?
     var kind: String
+    var slot: Int?
+    var isPinned: Bool
     var autoSequence: Int?
     var label: String?
     var playtimeSeconds: Double
     var createdAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, label
+        case id, kind, label, slot
+        case isPinned = "is_pinned"
         case buildID = "build_id"
         case saveProfileID = "save_profile_id"
         case coreID = "core_id"
@@ -458,6 +461,8 @@ struct SaveStateRecord: Codable, FetchableRecord, PersistableRecord {
         stateAssetID = PersistenceCodec.uuid(value.stateAssetID)
         screenshotAssetID = value.screenshotAssetID.map(PersistenceCodec.uuid)
         kind = value.kind.rawValue
+        slot = value.slot
+        isPinned = value.isPinned
         autoSequence = value.autoSequence
         label = value.label
         playtimeSeconds = value.playtimeSeconds
@@ -477,6 +482,8 @@ struct SaveStateRecord: Codable, FetchableRecord, PersistableRecord {
             stateAssetID: try PersistenceCodec.uuid(stateAssetID),
             screenshotAssetID: try PersistenceCodec.optionalUUID(screenshotAssetID),
             kind: stateKind,
+            slot: slot,
+            isPinned: isPinned,
             autoSequence: autoSequence,
             label: label,
             playtimeSeconds: playtimeSeconds,

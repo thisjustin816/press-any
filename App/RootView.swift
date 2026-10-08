@@ -140,6 +140,8 @@ struct RootView: View {
             GameplayViewControllerRepresentable(
                 runtime: presentation.runtime,
                 autoResumePolicy: presentation.autoResumePolicy,
+                saveStateSlots: bootstrap.container?.saveStateSlots() ?? .off,
+                nameNewStates: bootstrap.container?.nameNewStates() ?? false,
                 launchMessage: presentation.launchMessage,
                 firstFrameClock: presentation.firstFrameClock,
                 display: presentation.display,

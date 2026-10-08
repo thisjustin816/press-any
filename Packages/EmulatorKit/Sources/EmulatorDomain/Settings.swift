@@ -76,6 +76,21 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case touchHaptics
     /// Which way gameplay faces (GameplayInput's `ScreenOrientation`), unset means `automatic`.
     case orientation
+    /// `SaveStateSlots`, App scope only; unset means `.off`.
+    case saveStateSlots
+    /// Bool, App scope only; unset means false.
+    case nameNewStates
+    /// `KeepSaveStates`, App scope only; unset means `.all`.
+    case keepSaveStates
+    /// `KeepAutoStates`, App scope only; unset means `.five`.
+    case keepAutoStates
+
+    public var isAppOnly: Bool {
+        switch self {
+        case .saveStateSlots, .nameNewStates, .keepSaveStates, .keepAutoStates: true
+        default: false
+        }
+    }
 }
 
 /// How strongly the on-screen controls tap back when pressed. Raw values are stored in settings.
@@ -243,4 +258,32 @@ public enum FrameBlending: String, Codable, Sendable, CaseIterable {
         let total = full.prefix(available).reduce(0, +)
         return full.indices.map { $0 < available ? full[$0] / total : 0 }
     }
+}
+
+
+public enum SaveStateSlots: Int, Codable, Sendable, CaseIterable {
+    case off = 0
+    case three = 3
+    case five = 5
+    case ten = 10
+
+    public var displayName: String { self == .off ? "Off" : String(rawValue) }
+}
+
+public enum KeepSaveStates: Int, Codable, Sendable, CaseIterable {
+    case all = 0
+    case ten = 10
+    case twentyFive = 25
+    case fifty = 50
+
+    public var displayName: String { self == .all ? "All" : String(rawValue) }
+    public var keepCount: Int? { self == .all ? nil : rawValue }
+}
+
+public enum KeepAutoStates: Int, Codable, Sendable, CaseIterable {
+    case three = 3
+    case five = 5
+    case ten = 10
+
+    public var displayName: String { String(rawValue) }
 }

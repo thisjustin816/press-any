@@ -10,6 +10,43 @@ import XCTest
 /// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
+    func testSlotsMenuIsOptInAndEmptyLoadIsDisabled() throws {
+        let runtime = StateMenuRuntime()
+        let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: .always)
+        var items = gameplay.prepareGameMenu()
+        XCTAssertFalse(items.allMenus.contains { $0.title == "Slots" })
+        gameplay.saveStateSlots = .three
+        items = gameplay.prepareGameMenu()
+        let slots = try XCTUnwrap(items.allMenus.first { $0.title == "Slots" })
+        XCTAssertEqual(slots.children.map(\.title), ["Slot 1", "Slot 2", "Slot 3"])
+        let empty = try XCTUnwrap(slots.children.first as? UIMenu)
+        XCTAssertEqual(empty.subtitle, "Empty")
+        XCTAssertFalse(try XCTUnwrap(empty.children.allActions.first { $0.title == "Save to Slot 1" }).attributes.contains(.disabled))
+        XCTAssertTrue(try XCTUnwrap(empty.children.allActions.first { $0.title == "Load Slot 1" }).attributes.contains(.disabled))
+        let occupied = try XCTUnwrap(slots.children[1] as? UIMenu)
+        XCTAssertNotEqual(occupied.subtitle, "Empty")
+        XCTAssertFalse(try XCTUnwrap(occupied.children.allActions.first { $0.title == "Load Slot 2" }).attributes.contains(.disabled))
+        XCTAssertNotNil(occupied.image)
+        XCTAssertFalse(items.allActions.contains { $0.title == "Slot 2" }, "a configured slot does not repeat below the submenu")
+        XCTAssertTrue(items.allActions.contains { $0.title == "Slot 5" }, "slots above the count remain loadable")
+        let states = try XCTUnwrap(items.allMenus.first { $0.title == "States" })
+        let saves = try XCTUnwrap(states.children.first as? UIMenu)
+        XCTAssertEqual(saves.children.map(\.title), ["Save New State", "Slots"])
+        gameplay.saveStateSlots = .five
+        XCTAssertFalse(gameplay.prepareGameMenu().allActions.contains { $0.title == "Slot 5" })
+        gameplay.saveStateSlots = .off
+        XCTAssertTrue(gameplay.prepareGameMenu().allActions.contains { $0.title == "Slot 2" })
+        XCTAssertNotNil(try XCTUnwrap(gameplay.prepareGameMenu().allActions.first { $0.title == "Pinned manual" }).image)
+    }
+
+    func testQuickPlayShowsDisabledSlotsWhenEnabled() throws {
+        let gameplay = GameplayViewController(runtime: LifecycleRuntime(), autoResumePolicy: .always, saveStateSlots: .three)
+        let slots = try XCTUnwrap(gameplay.prepareGameMenu().allMenus.first { $0.title == "Slots" })
+        XCTAssertEqual(slots.children.count, 3)
+        XCTAssertEqual(slots.children.allActions.count, 6)
+        XCTAssertTrue(slots.children.allActions.allSatisfy { $0.attributes.contains(.disabled) })
+    }
+
     func testGameMenuOffersRestartBesideCloseGame() throws {
         let (gameplay, _, _) = makeGameplay()
         let group = try XCTUnwrap(gameplay.prepareGameMenu().last as? UIMenu)
@@ -462,7 +499,7 @@ final class GameplayPauseReasonsTests: XCTestCase {
 }
 
 /// Throws on a frame while paused, as the real sessions do, and counts lifecycle calls.
-private final class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
+private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     private let lock = NSLock()
     private var paused = false
     private var backgroundCount = 0
@@ -519,7 +556,34 @@ private final class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     func restart() throws {}
 }
 
+private final class StateMenuRuntime: LifecycleRuntime, SaveStateRuntime, @unchecked Sendable {
+    private let saved: [SaveState] = [
+        SaveState(id: UUID(), buildID: UUID(), saveProfileID: UUID(), core: .init(identifier: "test", version: "1"),
+            stateSerializationVersion: "1", stateAssetID: UUID(), kind: .slot, slot: 2, isPinned: true, playtimeSeconds: 0, createdAt: Date()),
+        SaveState(id: UUID(), buildID: UUID(), saveProfileID: UUID(), core: .init(identifier: "test", version: "1"),
+            stateSerializationVersion: "1", stateAssetID: UUID(), kind: .slot, slot: 5, playtimeSeconds: 0, createdAt: Date()),
+        SaveState(id: UUID(), buildID: UUID(), saveProfileID: UUID(), core: .init(identifier: "test", version: "1"),
+            stateSerializationVersion: "1", stateAssetID: UUID(), kind: .manual, isPinned: true, label: "Pinned manual", playtimeSeconds: 0, createdAt: Date()),
+    ]
+    func saveCrashRecoveryIfDue() throws -> Bool { false }
+    func saveManualState(label: String?) throws -> SaveState { throw NotRunning() }
+    func saveQuickState() throws -> SaveState { throw NotRunning() }
+    func saveSlotState(slot: Int) throws -> SaveState { throw NotRunning() }
+    func saveStates() throws -> [SaveState] { saved }
+    func loadState(_ saveState: SaveState) throws {}
+    func loadingWouldRollBackSave(_ saveState: SaveState) throws -> Bool { false }
+    func loadStateKeepingCopy(_ saveState: SaveState) throws -> SaveProfile { throw NotRunning() }
+    func thumbnailData(for state: SaveState) -> Data? { nil }
+}
+
 private extension Array where Element == UIMenuElement {
+    var allMenus: [UIMenu] {
+        flatMap { element -> [UIMenu] in
+            guard let menu = element as? UIMenu else { return [] }
+            return [menu] + menu.children.allMenus
+        }
+    }
+
     /// Every action in the menu, including those in inline groups and submenus.
     var allActions: [UIAction] {
         flatMap { element -> [UIAction] in

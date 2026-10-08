@@ -5,6 +5,8 @@ import SwiftUI
 struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let runtime: any GameplayRuntime
     let autoResumePolicy: AutoResumePolicy
+    var saveStateSlots: SaveStateSlots = .off
+    var nameNewStates: Bool = false
     let launchMessage: String?
     let firstFrameClock: UInt64?
     let display: GameplayDisplaySettings
@@ -27,6 +29,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
         let controller = GameplayViewController(
             runtime: runtime,
             autoResumePolicy: autoResumePolicy,
+            saveStateSlots: saveStateSlots,
+            nameNewStates: nameNewStates,
             launchMessage: launchMessage,
             firstFrameClock: firstFrameClock,
             controlStyle: display.controlStyle,
@@ -53,6 +57,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: GameplayViewController, context: Context) {
+        uiViewController.saveStateSlots = saveStateSlots
+        uiViewController.nameNewStates = nameNewStates
         uiViewController.setCoveredBySheet(isCoveredBySheet)
         uiViewController.applyDisplaySettings(
             controlStyle: display.controlStyle,

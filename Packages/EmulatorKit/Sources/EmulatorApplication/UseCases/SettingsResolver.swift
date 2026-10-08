@@ -33,7 +33,9 @@ public struct SettingsResolver: Sendable {
         gameID: UUID? = nil,
         buildID: UUID? = nil
     ) throws -> ResolvedSetting? {
-        for scope in Self.precedence(system: system, gameID: gameID, buildID: buildID) {
+        let scopes: [SettingsScope] = SettingKey(rawValue: key)?.isAppOnly == true
+            ? [.app] : Self.precedence(system: system, gameID: gameID, buildID: buildID)
+        for scope in scopes {
             if let value = try store.valueJSON(key: key, scope: scope) {
                 return ResolvedSetting(key: key, valueJSON: value, source: scope)
             }
@@ -70,7 +72,8 @@ public struct SettingsResolver: Sendable {
         gameID: UUID? = nil,
         buildID: UUID? = nil
     ) throws -> ScopedSetting {
-        let scopes = Self.precedence(system: system, gameID: gameID, buildID: buildID)
+        let scopes: [SettingsScope] = SettingKey(rawValue: key)?.isAppOnly == true
+            ? [.app] : Self.precedence(system: system, gameID: gameID, buildID: buildID)
         guard let index = scopes.firstIndex(of: scope) else {
             throw SettingsResolverError.scopeOutsideContext(scope)
         }
@@ -87,6 +90,11 @@ public struct SettingsResolver: Sendable {
             overrideJSON: try store.valueJSON(key: key, scope: scope),
             inherited: inherited
         )
+    }
+
+    public func appValue<T: Decodable>(_ type: T.Type, key: SettingKey) throws -> T? {
+        guard let json = try store.valueJSON(key: key.rawValue, scope: .app) else { return nil }
+        return try JSONDecoder().decode(type, from: Data(json.utf8))
     }
 
     public static func precedence(

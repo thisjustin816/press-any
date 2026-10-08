@@ -5,6 +5,7 @@ import EmulatorApplication
 import EmulatorDomain
 import Foundation
 import XCTest
+import Testing
 @testable import EmulationSession
 
 final class EmulationSessionTests: XCTestCase {
@@ -31,7 +32,7 @@ final class EmulationSessionTests: XCTestCase {
         XCTAssertEqual(try core.persistentSaveData(), Data([2]))
     }
 
-    func testAutoResumeAndCrashRecoveryIgnoreQuickStates() throws {
+    func testAutoResumeAndCrashRecoveryIgnoreQuickAndSlotStates() throws {
         let harness = try SessionHarness.make()
         let history = SessionLaunchHistory(store: InMemorySettingsStore())
         let session = harness.makeSession(history: history)
@@ -39,6 +40,9 @@ final class EmulationSessionTests: XCTestCase {
         let quick = try session.saveQuickState()
         XCTAssertNil(try session.resumableAutoState(for: harness.contextA))
         XCTAssertEqual(try history.launchAction(checkpoint: quick), .library)
+        let slot = try session.saveSlotState(slot: 2)
+        XCTAssertNil(try session.resumableAutoState(for: harness.contextA))
+        XCTAssertEqual(try history.launchAction(checkpoint: slot), .library)
 
         let auto = try session.saveAutoState()
         for _ in 0..<3584 { _ = try session.stepFrame() }
@@ -46,6 +50,9 @@ final class EmulationSessionTests: XCTestCase {
         let checkpoint = try XCTUnwrap(harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
             .first { $0.kind == .crashRecovery })
         let newerQuick = try session.saveQuickState()
+        XCTAssertEqual(try session.resumableAutoState(for: harness.contextA), auto)
+        let newerSlot = try session.saveSlotState(slot: 2)
+        XCTAssertEqual(try history.launchAction(checkpoint: newerSlot), .library)
         XCTAssertEqual(try session.resumableAutoState(for: harness.contextA), auto)
         XCTAssertEqual(try history.launchAction(checkpoint: newerQuick), .library)
         XCTAssertEqual(try history.launchAction(checkpoint: checkpoint), .recover(harness.contextA, checkpoint))
@@ -1171,4 +1178,28 @@ extension EmulationSessionTests {
                            "No safety profile was created")
         }
     }
+}
+
+
+@Suite("Slot resume exclusion")
+struct SlotResumeTests {
+    @Test("launch, Resume Games and crash recovery ignore slots", arguments: AutoResumePolicy.allCasesForTesting)
+    func ignoreSlots(policy: AutoResumePolicy) throws {
+        let harness = try SessionHarness.make()
+        let store = InMemorySettingsStore()
+        try store.set(policy, key: SettingKey.autoResumePolicy.rawValue, scope: .app)
+        let history = SessionLaunchHistory(store: store)
+        let session = harness.makeSession(settings: SettingsResolver(store: store), history: history)
+        try session.start(context: harness.contextA)
+        let slot = try session.saveSlotState(slot: 2)
+        #expect(try session.resumableAutoState(for: harness.contextA) == nil)
+        #expect(try history.launchAction(checkpoint: slot) == .library)
+        #expect(session.autoResumePolicy(for: harness.contextA) == policy)
+        #expect(try session.foreground(policy: policy) == (policy == .always))
+        #expect(try harness.states.fetchSaveState(id: slot.id) == slot)
+    }
+}
+
+private extension AutoResumePolicy {
+    static let allCasesForTesting: [Self] = [.always, .ask, .never]
 }

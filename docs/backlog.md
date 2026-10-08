@@ -268,9 +268,9 @@ states.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | done | Quick Save (one tap) | v1 | One replaceable Quick State per Build + Save Profile; Quick Load uses the existing load checks; rename, delete and restore in Save States |
-| missing | Configurable fixed slots | v1 |  |
-| partial | Unlimited named states | v1 | a Save Profile's Save States renames and deletes them; Save State doesn't ask for a name |
-| missing | Configurable automatic cleanup; pinned/favorited exempt | v1 |  |
+| done | Configurable fixed slots | v1 | App-only Off/3/5/10; replacement preserves name and pin; restore/reassign collisions become manual |
+| done | Unlimited named states | v1 | Optional Name New States prompt; rename and delete in Save States |
+| done | Configurable automatic cleanup; pinned/favorited exempt | v1 | Manual All/10/25/50 to Recently Deleted; Auto 3/5/10 pruned permanently; pins exempt and restored manual states pinned under a limit |
 | missing | State records cheat config; offer Restore Cheat Configuration | v1.1 |  |
 | missing | Per-Save-Profile autoresume override | v1.1 |  |
 | done | Separate crash-recovery checkpoint + Recover Session / Start Normally | v1 | One hidden state per Build and Save Profile, refreshed each minute of play; clean close or Auto State removes it. An open-session marker offers recovery without automatic launch; Start Normally keeps the checkpoint until that Build launches |
@@ -280,7 +280,7 @@ states.
 
 Done: Basic manual save + load state (menu hides crash checkpoints); States
 never cross Build/Profile/core/serialization context; Auto State on background, close and session
-switch; rolling 5; Resume Games Always/Ask/Never (default Always), inheritable System/Game/Build,
+switch; configurable retention (default 5); Resume Games Always/Ask/Never (default Always), inheritable System/Game/Build,
 Ask prompt, foreground policy; Auto State not restored once the profile's save is newer; Failed
 restore boots normally, keeps state, tells user; Backgrounding pauses emulation/audio; One active
 emulator session; Each state keeps a PNG thumbnail of its frame, shown in Load State; A failed

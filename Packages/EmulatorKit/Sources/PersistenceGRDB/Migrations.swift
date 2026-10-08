@@ -47,6 +47,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v14-metadata-provenance") { db in
             try db.execute(sql: V1V14MetadataProvenanceSchema.sql)
         }
+        migrator.registerMigration("v1-v15-save-state-slots") { db in
+            try db.execute(sql: V1V15SaveStateSlotsSchema.sql)
+        }
         return migrator
     }
 }
@@ -408,5 +411,15 @@ enum V1V14MetadataProvenanceSchema {
         recorded_at TEXT NOT NULL,
         PRIMARY KEY (build_id, field)
     );
+    """
+}
+
+
+enum V1V15SaveStateSlotsSchema {
+    static let sql = """
+    ALTER TABLE save_states ADD COLUMN slot INTEGER;
+    ALTER TABLE save_states ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1));
+    CREATE UNIQUE INDEX save_states_live_slot ON save_states(build_id, save_profile_id, slot)
+    WHERE slot IS NOT NULL AND deletion_id IS NULL;
     """
 }

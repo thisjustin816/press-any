@@ -131,7 +131,8 @@ final class AppContainer {
             recipes: repositories.patchRecipes,
             deletions: repositories.deletions,
             assetStore: fileStore,
-            transactions: repositories.transactions
+            transactions: repositories.transactions,
+            settings: SettingsResolver(store: repositories.settings)
         )
         duplicateSaveProfile = DuplicateSaveProfile(
             profiles: repositories.saveProfiles,
@@ -285,7 +286,8 @@ final class AppContainer {
             settings: settingsResolver,
             launchHistory: launchHistory,
             transactions: repositories.transactions,
-            thumbnails: PNGFrameEncoder()
+            thumbnails: PNGFrameEncoder(),
+            deletion: libraryDeletion
         )
     }
 
@@ -455,6 +457,9 @@ final class AppContainer {
             fastForwardAudio: fastForwardAudio(system: target.system, gameID: target.gameID, buildID: target.buildID)
         )
     }
+
+    func saveStateSlots() -> SaveStateSlots { appSetting(SaveStateSlots.self, .saveStateSlots) ?? .off }
+    func nameNewStates() -> Bool { appSetting(Bool.self, .nameNewStates) ?? false }
 
     /// App-wide. Unset or unreadable means following the silent switch.
     func soundMode() -> SoundMode {
