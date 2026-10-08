@@ -14,9 +14,11 @@ public enum SameBoyAdapterError: Error, Equatable {
     case stateSaveFailed
     case stateLoadFailed
     case frameRefreshFailed
+    case cheatCodeRefused
 }
 
-public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability {
+public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability,
+    CheatCapability {
     public let descriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
     public let supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
     public let stateSerializationVersion = "sameboy-bess-v1"
@@ -26,6 +28,8 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     private var hasFrame = false
     public private(set) var colorCorrection: ColorCorrection = .defaultValue
     public private(set) var dmgPalette: DMGPalette = .defaultValue
+    public private(set) var cheatCodes: [String] = []
+    public private(set) var cheatsEnabled = true
 
     public init() {}
 
@@ -64,6 +68,9 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             }
             guard romLoaded else { throw SameBoyAdapterError.romLoadFailed }
             applyDisplaySettings(to: created)
+            // Every code was read when it was set, so a new instance reads them too.
+            _ = Self.setCheats(cheatCodes, on: created)
+            SBSetCheatsEnabled(created, cheatsEnabled)
             loadedSystem = system
         } catch {
             SBDestroy(created)
@@ -167,6 +174,36 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         }
         SBSetColorCorrection(instance, correction)
         SBSetDMGPalette(instance, palette)
+    }
+
+    public func setCheatCodes(_ codes: [String]) throws {
+        if let instance {
+            guard Self.setCheats(codes, on: instance) else { throw SameBoyAdapterError.cheatCodeRefused }
+        } else {
+            guard codes.allSatisfy(isValidCheatCode) else { throw SameBoyAdapterError.cheatCodeRefused }
+        }
+        cheatCodes = codes
+    }
+
+    public func setCheatsEnabled(_ enabled: Bool) {
+        cheatsEnabled = enabled
+        if let instance { SBSetCheatsEnabled(instance, enabled) }
+    }
+
+    public func isValidCheatCode(_ code: String) -> Bool {
+        code.withCString { SBCheckCheat($0) }
+    }
+
+    private static func setCheats(_ codes: [String], on instance: OpaquePointer) -> Bool {
+        let copies = codes.map { strdup($0) }
+        defer { copies.forEach { free($0) } }
+        let pointers = copies.map { $0.map { UnsafePointer($0) } }
+        return pointers.withUnsafeBufferPointer { SBSetCheats(instance, $0.baseAddress, $0.count) }
+    }
+
+    /// The byte the game would read at `address`, cheats included, for tests.
+    func readMemory(_ address: UInt16) -> UInt8? {
+        instance.map { SBReadMemory($0, address) }
     }
 
     public func serializeState() throws -> Data {

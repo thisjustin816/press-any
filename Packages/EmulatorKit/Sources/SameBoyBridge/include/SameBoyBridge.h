@@ -90,6 +90,15 @@ bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size);
 
 void SBReset(SBInstance *instance);
 
+/// Whether SameBoy reads code as a Game Genie (XXX-XXX or XXX-XXX-XXX) or GameShark (01VVAAAA)
+/// code. Needs no instance and applies nothing.
+bool SBCheckCheat(const char *code);
+/// Replaces every cheat with these codes. If any code doesn't read, nothing changes and this
+/// returns false.
+bool SBSetCheats(SBInstance *instance, const char *const *codes, size_t count);
+/// Turns the cheats on or off as a whole, keeping them.
+void SBSetCheatsEnabled(SBInstance *instance, bool enabled);
+
 /// For the accuracy harness: test ROMs report their results in CPU registers (Mooneye, SameSuite),
 /// as text sent out of the serial port with no link partner, or in cartridge RAM (Blargg).
 SBRegisters SBReadRegisters(SBInstance *instance);

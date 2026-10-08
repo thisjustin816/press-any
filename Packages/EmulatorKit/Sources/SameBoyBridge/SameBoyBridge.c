@@ -6,6 +6,7 @@
 #include "gb.h"
 #endif
 
+#include <ctype.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
@@ -416,4 +417,78 @@ void SBReset(SBInstance *instance)
     if (!instance || !instance->gb) return;
     GB_reset(instance->gb);
     instance->has_run = false;
+}
+
+// GB_import_cheat reads codes with sscanf, which also accepts signs, spaces and "0x", and reads
+// only the first nine digits of a longer Game Genie code. Only hex digits and dashes reach it,
+// starting and ending with a digit: 8 digits and no dashes (GameShark), or 6 or 9 (Game Genie).
+static bool sb_cheat_has_code_shape(const char *code)
+{
+    if (!code) return false;
+    size_t length = strlen(code);
+    if (length == 0 || length > 16) return false;
+    if (!isxdigit((unsigned char)code[0]) || !isxdigit((unsigned char)code[length - 1])) return false;
+    size_t digits = 0;
+    size_t dashes = 0;
+    for (size_t i = 0; i < length; i++) {
+        if (isxdigit((unsigned char)code[i])) digits++;
+        else if (code[i] == '-') dashes++;
+        else return false;
+    }
+    if (digits == 8) return dashes == 0;
+    return digits == 6 || digits == 9;
+}
+
+bool SBCheckCheat(const char *code)
+{
+    if (!sb_cheat_has_code_shape(code)) return false;
+    GB_gameboy_t *allocation = GB_alloc();
+    if (!allocation) return false;
+    GB_gameboy_t *gb = GB_init(allocation, GB_MODEL_DMG_B);
+    if (!gb) {
+        GB_dealloc(allocation);
+        return false;
+    }
+    bool readable = GB_import_cheat(gb, code, "", false) != NULL;
+    GB_dealloc(gb);
+    return readable;
+}
+
+bool SBSetCheats(SBInstance *instance, const char *const *codes, size_t count)
+{
+    if (!instance || !instance->gb || (count > 0 && !codes)) return false;
+    for (size_t i = 0; i < count; i++) {
+        if (!sb_cheat_has_code_shape(codes[i])) return false;
+    }
+    GB_gameboy_t *gb = instance->gb;
+    // Adding a cheat can move SameBoy's list, so keep the old entries' own pointers.
+    size_t previous_count = 0;
+    const GB_cheat_t *const *current = GB_get_cheats(gb, &previous_count);
+    const GB_cheat_t **previous = previous_count ? malloc(previous_count * sizeof(*previous)) : NULL;
+    const GB_cheat_t **added = count ? calloc(count, sizeof(*added)) : NULL;
+    if ((previous_count && !previous) || (count && !added)) {
+        free(previous);
+        free(added);
+        return false;
+    }
+    if (previous_count) memcpy(previous, current, previous_count * sizeof(*previous));
+    bool imported = true;
+    for (size_t i = 0; i < count && imported; i++) {
+        added[i] = GB_import_cheat(gb, codes[i], "", true);
+        imported = added[i] != NULL;
+    }
+    const GB_cheat_t **removed = imported ? previous : added;
+    size_t removed_count = imported ? previous_count : count;
+    for (size_t i = 0; i < removed_count; i++) {
+        if (removed[i]) GB_remove_cheat(gb, removed[i]);
+    }
+    free(previous);
+    free(added);
+    return imported;
+}
+
+void SBSetCheatsEnabled(SBInstance *instance, bool enabled)
+{
+    if (!instance || !instance->gb) return;
+    GB_set_cheats_enabled(instance->gb, enabled);
 }

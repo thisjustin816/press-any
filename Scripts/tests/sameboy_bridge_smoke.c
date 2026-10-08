@@ -149,6 +149,35 @@ static void test_rom_size_limit(void)
     SBDestroy(instance);
 }
 
+// Replacing, refusing and clearing cheats, which builds and frees SameBoy's cheat lists. Built with
+// AddressSanitizer, this also catches a cheat freed twice or left behind.
+static void test_cheats(const uint8_t *rom, size_t rom_size)
+{
+    uint8_t boot[256] = {0};
+    boot[0] = 0xc3; boot[1] = 0x00; boot[2] = 0x01; // jp $0100
+
+    assert(SBCheckCheat("014200C0"));
+    assert(SBCheckCheat("990-00B-EFA"));
+    assert(!SBCheckCheat("123-456"));
+    assert(!SBCheckCheat("+14200C0"));
+    assert(!SBCheckCheat(NULL));
+
+    SBInstance *instance = SBCreate(SB_MODEL_DMG);
+    assert(SBLoadBootROM(instance, boot, sizeof(boot)));
+    assert(SBLoadROM(instance, rom, rom_size));
+    const char *both[] = {"014200C0", "990-00B"};
+    const char *one[] = {"990-00B-EFA"};
+    const char *refused[] = {"014300C0", "123-456"};
+    SBSetCheatsEnabled(instance, true);
+    assert(SBSetCheats(instance, both, 2));
+    assert(SBSetCheats(instance, one, 1));
+    assert(!SBSetCheats(instance, refused, 2));
+    (void)SBRunFrame(instance);
+    assert(SBSetCheats(instance, NULL, 0));
+    assert(SBSetCheats(instance, both, 2));
+    SBDestroy(instance);
+}
+
 int main(void)
 {
     SBInstance *instance = SBCreate(SB_MODEL_DMG);
@@ -186,6 +215,7 @@ int main(void)
     test_cartridge_rumble();
     test_oversized_battery();
     test_rom_size_limit();
+    test_cheats(rom, sizeof(rom));
     puts("sameboy bridge smoke: ok");
     return 0;
 }
