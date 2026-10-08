@@ -54,9 +54,9 @@ Open items in each area are in the table, finished ones on the line under it.
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1.1 | none |
 | done | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; the first game shows "Tap Press Any for the menu" once. v1 has nothing to opt into: crash reports and usage counts (v1.1) bring their own opt-in screens, and Developer Mode its introductions |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |
-| partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
+| done | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Rotation lock, cutout and controller checks passed on device |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1.1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
-| partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow seeds from `TestROMs/` and checks 6.5-inch (iPhone 14 Plus) and 6.9-inch (iPhone 17 Pro Max) dimensions (docs/testflight.md); choosing the set, uploading it and any app preview remain with the App Store listing |
+| partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow seeds from `TestROMs/` and by default takes the ten-image listing set in App Store order on the 6.9-inch iPhone 17 Pro Max, checking its dimensions (6.5-inch on the 14 Plus too; docs/testflight.md); uploading the set and any app preview remain with the App Store listing |
 
 Done: A Press Any folder in Files holding Exports, with the library kept in Application Support and
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
@@ -190,7 +190,7 @@ altering a ROM.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Files default-open handling with another emulator installed | v1 | Owner/Viewer declarations for .gb/.gbc/.ips/.bps; cited Delta, Provenance, SameBoy and RetroArch ROM identifiers accepted (see product.md, Shared files); hosted app test covers rank, role, extensions and identifiers; physical-iPhone tap and Share > Press Any checks pending in mvp-verification.md; iOS chooses the default between claiming apps |
+| done | Files default-open handling with another emulator installed | v1 | Owner/Viewer declarations for .gb/.gbc/.ips/.bps; cited Delta, Provenance, SameBoy and RetroArch ROM identifiers accepted (see product.md, Shared files); hosted app test covers rank, role, extensions and identifiers; the Files tap and Share > Press Any checks passed on device alongside another emulator; iOS chooses the default between claiming apps |
 | partial | ZIP + 7z with archive safety (size limits, traversal, password detect) | v1.1 | shared zips open each ROM, patch and save inside, read in memory with the system zlib (stored and deflate, per-kind size limits, CRC checked, encrypted and Zip64 refused); 7z remains |
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path only repairs the blob |
@@ -368,7 +368,7 @@ update the open picture from Settings, and survive reset and state loads.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Consistent touch D-pad diagonal sectors | v1 | Game Boy portrait and landscape and Playtiles share a 0.67 weaker/stronger axis ratio, about 22.5° per diagonal and 67.5° per cardinal; dead zones and hit areas stay unchanged. Angle regression tests cover both styles and orientations; physical-iPhone thumb-sliding check remains in mvp-verification.md |
+| done | Consistent touch D-pad diagonal sectors | v1 | Game Boy portrait and landscape and Playtiles share a 0.67 weaker/stronger axis ratio, about 22.5° per diagonal and 67.5° per cardinal; dead zones and hit areas stay unchanged. Angle regression tests cover both styles and orientations; the thumb-sliding check passed on device |
 | missing | Minimal / Fullscreen / one-handed presets | v1.1 |  |
 | missing | GameBaby preset; per-accessory/device calibration screen | v1.1 |  |
 | missing | Lightweight editor: screen/control position+size, opacity, hitboxes, portrait/landscape, control styles, save preset | v1.1 |  |
