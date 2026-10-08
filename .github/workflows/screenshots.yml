@@ -44,6 +44,9 @@ on:
       game_name:
         description: "Optional: the game's name in the library; the ROM header's title when empty"
         default: ""
+      game_input:
+        description: "Optional: a button script the game's gameplay shots play first, then | and each shot's wait (docs/testflight.md)"
+        default: ""
 
 permissions:
   contents: read
@@ -99,11 +102,14 @@ jobs:
           IMPORT_ROM: ${{ inputs.import_rom }}
           # A real game for the gameplay shots, kept out of the repository: pass it when running
           # the workflow, or set the SCREENSHOT_GAME_* repository variables, to a downloadable
-          # .gb, .gbc or .zip whose author allows its use, and its SHA-256. With neither, the
-          # test ROMs play.
+          # .gb, .gbc or .zip whose author allows its use, and its SHA-256, with an optional
+          # button script that gets it past its intro. With neither, the test ROMs play.
           GAME_URL: ${{ inputs.game_url || vars.SCREENSHOT_GAME_URL }}
           GAME_SHA256: ${{ inputs.game_url && inputs.game_sha256 || vars.SCREENSHOT_GAME_SHA256 }}
-          GAME_NAME: ${{ inputs.game_url && inputs.game_name || vars.SCREENSHOT_GAME_NAME }}
+          # A game given when running the workflow brings its own name and script, even empty ones,
+          # since the variables' are for their game.
+          GAME_NAME: ${{ inputs.game_url && inputs.game_name || !inputs.game_url && vars.SCREENSHOT_GAME_NAME || '' }}
+          GAME_INPUT: ${{ inputs.game_url && inputs.game_input || !inputs.game_url && vars.SCREENSHOT_GAME_INPUT || '' }}
         run: |
           set -o pipefail
           ./Scripts/take-screenshots.sh "$ROMS" screenshots 2>&1 | tee screenshots.log

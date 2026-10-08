@@ -242,10 +242,36 @@ the workflow wins over the variables.
 | `SCREENSHOT_GAME_URL` | A direct download of the game: a `.gb`, `.gbc`, or a `.zip` holding one |
 | `SCREENSHOT_GAME_SHA256` | The ROM's SHA-256, so a changed download is refused |
 | `SCREENSHOT_GAME_NAME` | The game's title in the library (optional; the ROM header's title otherwise) |
+| `SCREENSHOT_GAME_INPUT` | A button script for the gameplay shots (optional; see below) |
 
 The game is downloaded for each run and never stored in the repository. Use only a game whose
 author allows its use in your listing, and credit them if its license asks for it. The test
-ROMs still fill the library, the Game page and Import Review.
+ROMs still fill the library, the Game page and Import Review. A game given when running the
+workflow takes its name and script from that run too, so an empty `game_name` or `game_input`
+there means none rather than the variable's.
+
+Most games open with logos and an intro, so a shot taken a few seconds in shows those. A button
+script in `game_input` plays the game first. Every gameplay shot of the game plays it from the
+game's first frame, then waits a little and takes the screenshot.
+
+- A number waits that many seconds.
+- `a`, `b`, `start`, `select`, `up`, `down`, `left` or `right` taps that button.
+- `button:seconds` holds it, such as `right:2`.
+- Buttons joined with `+` press together, such as `right+a` or `up+a:0.5`.
+
+Seconds are the game's own, counted in frames, so a slow runner plays the script exactly as a
+fast one does. With a script, the game skips the boot logo and starts with a new save in every
+shot, so each shot sees the same game. After the script, `|` and `<shot>=<seconds>` pairs set
+each shot's wait; a shot not named waits 1 second. The shots are `play`, `play-lcd`,
+`quick-play`, `play-landscape` and `play-landscape-gamepad`, and different waits show different
+moments. For example:
+
+```text
+8 start 1.5 a 2 right:1.5 up+a | play=1 play-lcd=2.5 quick-play=4
+```
+
+To work out a script, play the game in an emulator, note when each press happens, and keep the
+script ending somewhere the game stays playable for the longest wait.
 
 After the run, download `screenshots-light-6.9-inch` and/or `screenshots-dark-6.9-inch` from its
 **Artifacts** section and unzip them. Upload the numbered PNGs, not the included logs.

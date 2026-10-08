@@ -463,7 +463,14 @@ struct RootView: View {
                     errorMessage = "\(file) wasn’t seeded."
                     return
                 }
-                launch(context, container: container)
+                if ScreenshotScene.input != nil {
+                    // A button script is written for the game as a new player finds it, and a save
+                    // an earlier scene wrote can change what the game does.
+                    let fresh = try container.chooseSaveForBuild.playWithNewSave(context)
+                    launch(fresh, container: container, checkSave: false, start: .startOver)
+                } else {
+                    launch(context, container: container)
+                }
             } catch {
                 errorMessage = "Could not start \(file): \(error)"
             }

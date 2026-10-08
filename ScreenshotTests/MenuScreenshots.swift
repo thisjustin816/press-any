@@ -5,6 +5,8 @@ import XCTest
 /// `Scripts/take-screenshots.sh`, which runs these through the PressAnyScreenshots scheme. The
 /// script passes `SCREENSHOT_ROMS` (the fixture folder the app seeds its library from),
 /// `SCREENSHOT_OUTPUT`, `SCREENSHOT_GAME_ROM` and `SCREENSHOT_PLAY_ROM`; without them the tests skip.
+/// It can also pass `SCREENSHOT_INPUT`, a button script the landscape gameplay shots play before
+/// their wait, and `SCREENSHOT_WAITS`, those waits in seconds as `<shot>=<seconds>` pairs.
 /// Each test fails when its menu doesn't open, after saving what the screen showed instead.
 @MainActor
 final class MenuScreenshots: XCTestCase {
@@ -13,6 +15,13 @@ final class MenuScreenshots: XCTestCase {
         let output: URL
         let gameROM: String
         let playROM: String
+        let input: String?
+        let waits: [String: Double]
+
+        /// The launch arguments that play the button script, if there is one.
+        var inputArguments: [String] {
+            input.map { ["-ScreenshotInput", $0] } ?? []
+        }
     }
 
     func test1AddMenu() throws {
@@ -73,12 +82,12 @@ final class MenuScreenshots: XCTestCase {
     func test9LandscapeGameplayAndClosingReturnsToPortrait() throws {
         defer { XCUIDevice.shared.orientation = .portrait }
         let settings = try settings()
-        let app = try launch("play:\(settings.playROM)")
+        let app = try launch("play:\(settings.playROM)", arguments: settings.inputArguments)
         let menu = app.buttons["Game Menu"]
         XCTAssertTrue(menu.waitForExistence(timeout: 10))
-        sleep(4)
         XCUIDevice.shared.orientation = .landscapeLeft
         waitForOrientation(in: app, landscape: true)
+        try waitForPlay(menu, before: "play-landscape")
         try expect(menu, then: "play-landscape")
         menu.tap()
         let resume = app.buttons["Resume"]
@@ -92,12 +101,14 @@ final class MenuScreenshots: XCTestCase {
     func testLandscapeQuickPlayWithController() throws {
         defer { XCUIDevice.shared.orientation = .portrait }
         let settings = try settings()
-        let app = try launch("quick-play:\(settings.playROM)", arguments: ["-ScreenshotGamepad", "YES"])
+        let app = try launch(
+            "quick-play:\(settings.playROM)", arguments: ["-ScreenshotGamepad", "YES"] + settings.inputArguments
+        )
         let menu = app.buttons["Game Menu"]
         XCTAssertTrue(menu.waitForExistence(timeout: 10))
-        sleep(4)
         XCUIDevice.shared.orientation = .landscapeRight
         waitForOrientation(in: app, landscape: true)
+        try waitForPlay(menu, before: "play-landscape-gamepad")
         try expect(menu, then: "play-landscape-gamepad")
         menu.tap()
         try expect(app.buttons["Add to Library…"], then: "menu-quick-play-landscape")
@@ -137,6 +148,22 @@ final class MenuScreenshots: XCTestCase {
         XCTAssertEqual(app.frame.width > app.frame.height, landscape)
     }
 
+    /// Lets gameplay get past the boot logo or, with a button script, waits until the app reports
+    /// the script played (in the menu button's accessibility value, as `ScreenshotScene.readyMessage`
+    /// spells it) and then for the shot's wait, so the shot shows the game being played.
+    private func waitForPlay(_ menu: XCUIElement, before shot: String) throws {
+        let settings = try settings()
+        guard settings.input != nil else {
+            sleep(4)
+            return
+        }
+        let played = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "Screenshot scene ready"), object: menu
+        )
+        XCTAssertEqual(XCTWaiter().wait(for: [played], timeout: 180), .completed, "the button script plays")
+        Thread.sleep(forTimeInterval: settings.waits[shot] ?? 1)
+    }
+
     /// Taps the logo, which opens the same menu with or without a controller connected.
     private func openGameplayMenu(
         scene: String = "play",
@@ -173,7 +200,16 @@ final class MenuScreenshots: XCTestCase {
               let playROM = environment["SCREENSHOT_PLAY_ROM"] else {
             throw XCTSkip("Run by Scripts/take-screenshots.sh, which sets the SCREENSHOT_ variables.")
         }
-        return Settings(roms: roms, output: URL(fileURLWithPath: output, isDirectory: true), gameROM: gameROM, playROM: playROM)
+        var waits: [String: Double] = [:]
+        for pair in (environment["SCREENSHOT_WAITS"] ?? "").split(separator: " ") {
+            let parts = pair.split(separator: "=", maxSplits: 1)
+            if parts.count == 2, let seconds = Double(parts[1]) { waits[String(parts[0])] = seconds }
+        }
+        let input = environment["SCREENSHOT_INPUT"].flatMap { $0.isEmpty ? nil : $0 }
+        return Settings(
+            roms: roms, output: URL(fileURLWithPath: output, isDirectory: true), gameROM: gameROM, playROM: playROM,
+            input: input, waits: waits
+        )
     }
 
     private func launch(_ scene: String, arguments: [String] = []) throws -> XCUIApplication {

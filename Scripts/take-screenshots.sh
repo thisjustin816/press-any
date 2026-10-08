@@ -15,6 +15,11 @@ set -euo pipefail
 # never seeded), and GAME_URL with GAME_SHA256 (and optionally GAME_NAME): a real game for the
 # listing's gameplay shots, a .gb, .gbc or .zip holding one, downloaded at run time so neither the
 # game nor its name is kept in the repository. Use only a game whose author allows it.
+#
+# GAME_INPUT, with a game, is a button script its gameplay shots play first, so they show the game
+# being played rather than its intro: the grammar App/Screenshots/ScreenshotInput.swift describes,
+# then optionally `|` and each shot's wait after the script as `<shot>=<seconds>`, such as
+# `3 start 1.5 a right:2 | play=1 play-lcd=2.5`. A shot not named waits 1 second.
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
@@ -76,17 +81,35 @@ fi
 
 # The plan, tab-separated: `file <name>` for each ROM or patch to copy (the chosen ROMs, then any
 # patch whose source was chosen), `menus <game ROM> <gameplay ROM>` for the menu UI tests,
-# `only <test>` for each UI test to run (all of them when there is none), `order <names>` for the
-# final numbering, then `shot <scene> <seconds to wait> <name> <ready> <flags>` for each
-# screenshot. The waits let gameplay get past the boot logo with the game's picture moving. Ready
-# is `ready` when the app reports the scene ready, and the wait counts from then, or `-`. Flags
-# are the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
+# `only <test>` for each UI test to run (all of them when there is none), `input <script>` and
+# `waits <shot>=<seconds> ...` for the button script and the UI tests' waits after it,
+# `order <names>` for the final numbering, then `shot <scene> <seconds to wait> <name> <ready>
+# <flags>` for each screenshot. Without a script, the waits let gameplay get past the boot logo
+# with the game's picture moving. Ready is `ready` when the app reports the scene ready, `input`
+# when it plays the button script and reports that, or `-`; the wait counts from then. Flags are
+# the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
 plan_file="build/screenshots/plan.tsv"
 mkdir -p "$(dirname "$plan_file")"
-python3 - "$roms" "$shots" "$import_rom" "$game_entry" >"$plan_file" <<'PY'
+python3 - "$roms" "$shots" "$import_rom" "$game_entry" "${GAME_INPUT:-}" >"$plan_file" <<'PY'
 import json, sys
-wanted_arg, shots, import_rom, game_entry = sys.argv[1:]
+wanted_arg, shots, import_rom, game_entry, game_input = sys.argv[1:]
 game = json.loads(game_entry) if game_entry else None
+script, _, wait_text = game_input.partition("|")
+script = " ".join(script.split())
+scripted = {"play", "play-lcd", "quick-play", "play-landscape", "play-landscape-gamepad"}
+waits = {}
+for pair in wait_text.split():
+    name, _, seconds = pair.partition("=")
+    try:
+        waits[name] = float(seconds)
+    except ValueError:
+        waits[name] = -1
+    if name not in scripted or not 0 <= waits[name] <= 600:
+        sys.exit(f"GAME_INPUT's {pair!r} isn't <shot>=<seconds> for one of {', '.join(sorted(scripted))}.")
+if waits and not script:
+    sys.exit("GAME_INPUT names waits but no button script.")
+if script and not game:
+    sys.exit("GAME_INPUT needs GAME_URL: the script is for that game.")
 manifest = json.load(open("TestROMs/manifest.json"))
 wanted = {w.strip() for w in wanted_arg.split(",") if w.strip()}
 def chosen(entry):
@@ -122,13 +145,19 @@ if shots == "listing":
     shot("library", 8, "library")
     shot(f"game:{game_rom}", 4, "game")
     shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info", ready="ready")
-    shot(f"play:{gbc}", 10, "play")
-    shot(f"play:{gb}", 10, "play-lcd", "-ScreenshotLCDFilter lcd3x")
+    # With a button script, each gameplay shot waits for it to play, then for its own wait.
+    play = lambda scene, name, flags="-": shot(scene, waits.get(name, 1) if script else 10, name, flags,
+                                               "input" if script else "-")
+    play(f"play:{gbc}", "play")
+    play(f"play:{gb}", "play-lcd", "-ScreenshotLCDFilter lcd3x")
     shot(f"import:unimported/{import_rom}", 4, "import-review")
-    shot(f"quick-play:{gb}", 10, "quick-play")
+    play(f"quick-play:{gb}", "quick-play")
     # Landscape gameplay needs the device turned, which only a UI test can do.
     for test in ("test9LandscapeGameplayAndClosingReturnsToPortrait", "testLandscapeQuickPlayWithController"):
         lines.append(f"only\tPressAnyScreenshotTests/MenuScreenshots/{test}")
+    if script:
+        lines.append(f"input\t{script}")
+        lines.append("waits\t" + " ".join(f"{n}={waits.get(n, 1):g}" for n in ("play-landscape", "play-landscape-gamepad")))
     lines.append("order\t" + " ".join(["play", "library", "game", "play-landscape", "import-review",
         "play-lcd", "build-info", "quick-play", "play-landscape-gamepad"]))
     print("\n".join(lines))
@@ -167,12 +196,16 @@ PY
 files=()
 scenes=()
 only=()
+game_input=""
+test_waits=""
 order=""
 while IFS=$'\t' read -r kind rest; do
   case "$kind" in
     file) files+=("$rest") ;;
     menus) IFS=$'\t' read -r game_rom play_rom <<<"$rest" ;;
     only) only+=("-only-testing:$rest") ;;
+    input) game_input="$rest" ;;
+    waits) test_waits="$rest" ;;
     order) order="$rest" ;;
     shot) scenes+=("$rest") ;;
   esac
@@ -257,15 +290,21 @@ collect_diagnostics() {
   echo "Launch failed; see $output/simulator.log." >&2
 }
 
-# The app logs this, as ScreenshotScene spells it, once a scene that takes time to settle is ready.
+# The app logs these, as ScreenshotScene spells them: the first once a scene that takes time to
+# settle is ready, the second when it can't read the button script.
 ready_message="Screenshot scene ready"
+input_error="Couldn't read -ScreenshotInput"
 
-# wait_ready <seconds>: waits for the app to log that the scene is ready. A scene that doesn't
-# report in time is taken anyway, with a warning.
+# wait_ready <seconds>: waits for the app to log that the scene is ready, and fails if it refused
+# the button script. A scene that doesn't report in time is taken anyway, with a warning.
 wait_ready() {
   local deadline=$((SECONDS + $1))
   while ((SECONDS < deadline)); do
     grep -qF "$ready_message" "$log.tmp" 2>/dev/null && return 0
+    if grep -qF "$input_error" "$log.tmp" 2>/dev/null; then
+      grep -F "$input_error" "$log.tmp" >&2
+      return 1
+    fi
     sleep 0.5
   done
   echo "The app didn't report the scene ready within $1 seconds; taking it anyway." >&2
@@ -352,7 +391,11 @@ shoot() {
     fi
     sleep 5
   done
-  [[ $ready == - ]] || wait_ready 30
+  # A button script can run for minutes on a slow simulator; Technical Info shows in seconds.
+  case "$ready" in
+    input) wait_ready 300 || return 1 ;;
+    ready) wait_ready 30 || return 1 ;;
+  esac
   sleep "$wait"
   xcrun simctl io "$udid" screenshot "$file" >/dev/null
   # Before its first frame the app shows the blank launch screen, a PNG under 100 KB where every
@@ -374,6 +417,7 @@ capture() {
   file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$name")"
   check="$output/banner-check.png"
   arguments=("$@")
+  [[ $ready != input ]] || arguments+=(-ScreenshotInput "$game_input")
   echo "== $scene $*" >>"$log"
   for attempt in 1 2 3; do
     shoot "$file" "$scene" "$wait" "$ready" ${arguments[@]+"${arguments[@]}"} || return 1
@@ -408,6 +452,7 @@ menus="$output/menus"
 set +e
 TEST_RUNNER_SCREENSHOT_ROMS="$staging" TEST_RUNNER_SCREENSHOT_OUTPUT="$menus" \
   TEST_RUNNER_SCREENSHOT_GAME_ROM="$game_rom" TEST_RUNNER_SCREENSHOT_PLAY_ROM="$play_rom" \
+  TEST_RUNNER_SCREENSHOT_INPUT="$game_input" TEST_RUNNER_SCREENSHOT_WAITS="$test_waits" \
   xcodebuild test -project PressAny.xcodeproj -scheme PressAnyScreenshots \
   -destination "id=$udid" -derivedDataPath "$derived_data" ${only[@]+"${only[@]}"} 2>&1 |
   grep -E 'error:|Test Case .*(passed|failed)|Failing tests|\*\* TEST'

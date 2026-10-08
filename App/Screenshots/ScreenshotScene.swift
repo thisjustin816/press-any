@@ -51,9 +51,35 @@ enum ScreenshotScene: Equatable {
         #endif
     }()
 
-    /// Logged once a scene that takes time to settle is ready, such as Technical Info once it shows.
-    /// `Scripts/take-screenshots.sh` waits for it before the scene's own wait.
+    /// Set with `-ScreenshotInput "<script>"`: gameplay plays the script from the game's first
+    /// frame, which `ScreenshotInput` describes.
+    static let input: ScreenshotInput? = {
+        #if DEBUG
+        guard current != nil, let script = UserDefaults.standard.string(forKey: "ScreenshotInput") else { return nil }
+        do {
+            return try ScreenshotInput(script)
+        } catch {
+            log("\(inputErrorMessage): \(error)")
+            return nil
+        }
+        #else
+        return nil
+        #endif
+    }()
+
+    /// Logged once a scene that takes time to settle is ready: Technical Info is showing, or
+    /// gameplay's button script has played. `Scripts/take-screenshots.sh` waits for it before the
+    /// scene's own wait. Gameplay also puts it in the game menu button's accessibility value, where
+    /// the screenshot UI tests look for it.
     static let readyMessage = "Screenshot scene ready"
+    /// Logged with the reason when the button script can't be read, which stops the screenshot run.
+    static let inputErrorMessage = "Couldn't read -ScreenshotInput"
+
+    /// With a button script, games skip the boot logo, so the script starts on the game's first
+    /// frame in a library game as it does in Quick Play.
+    static func settingsStore(_ store: any SettingsStore) -> any SettingsStore {
+        input == nil ? store : BootSkippingSettingsStore(base: store)
+    }
 
     private static func flag(_ key: String) -> Bool {
         #if DEBUG
@@ -120,6 +146,22 @@ enum ScreenshotScene: Equatable {
             createBlank: container.createBlankSaveProfile
         ).execute(gameID: build.gameID, buildID: build.id)
         return LaunchContext(gameID: build.gameID, buildID: build.id, saveProfileID: profile.id)
+    }
+}
+
+private struct BootSkippingSettingsStore: SettingsStore {
+    let base: any SettingsStore
+
+    func valueJSON(key: String, scope: SettingsScope) throws -> String? {
+        key == SettingKey.skipBootAnimation.rawValue ? "true" : try base.valueJSON(key: key, scope: scope)
+    }
+
+    func setValueJSON(_ valueJSON: String, key: String, scope: SettingsScope) throws {
+        try base.setValueJSON(valueJSON, key: key, scope: scope)
+    }
+
+    func removeValue(key: String, scope: SettingsScope) throws {
+        try base.removeValue(key: key, scope: scope)
     }
 }
 
