@@ -315,7 +315,7 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
     }
 
     /// Whether any record, live or waiting in Recently Deleted, still uses the asset.
-    private static func isReferenced(_ assetID: String, db: Database) throws -> Bool {
+    static func isReferenced(_ assetID: String, db: Database) throws -> Bool {
         try Int.fetchOne(
             db,
             sql: """
