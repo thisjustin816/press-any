@@ -220,9 +220,9 @@ After the run, download `screenshots-light-6.5-inch` and/or `screenshots-dark-6.
 They show the original test ROMs from `TestROMs/`, with no commercial game images.
 
 The iPhone 14 Plus captures are 1284 × 2778 pixels (or 2778 × 1284 in landscape),
-which fit Apple's 6.5-inch screenshot slot. The workflow checks every PNG's
-dimensions. Choose iPhone 17 Pro Max only for the separate 6.9-inch slot; those
-larger PNGs will be rejected in the 6.5-inch slot. Use portrait captures for
+which fit Apple's 6.5-inch screenshot slot. Choose iPhone 17 Pro Max for the
+separate 6.9-inch slot: 1320 × 2868 pixels, in artifacts ending `-6.9-inch`. The
+workflow checks every PNG's dimensions for both, and each set fits only its own slot. Use portrait captures for
 portrait slots and landscape captures for landscape slots.
 Choose up to ten clear images, for example the library, gameplay, the game page,
 Build info and Settings. Check that each shows a loaded app, readable content and

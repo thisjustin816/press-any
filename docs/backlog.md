@@ -52,11 +52,11 @@ Open items in each area are in the table, finished ones on the line under it.
 |---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | TestFlight upload on every main build; a GitHub pre-release adds its build to the public group and submits it for Beta App Review, with notes since the previous release (docs/testflight.md); App Store submission, listing, review and rights gate not started |
 | missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1.1 | none |
-| partial | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; opt-ins and contextual introductions remain, besides the one-time "Tap Press Any for the menu" hint |
+| done | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; the first game shows "Tap Press Any for the menu" once. v1 has nothing to opt into: crash reports and usage counts (v1.1) bring their own opt-in screens, and Developer Mode its introductions |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |
 | partial | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Physical-device rotation lock, cutout and controller checks remain in mvp-verification.md |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1.1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
-| missing | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow already seeds from `TestROMs/` |
+| partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow seeds from `TestROMs/` and checks 6.5-inch (iPhone 14 Plus) and 6.9-inch (iPhone 17 Pro Max) dimensions (docs/testflight.md); choosing the set, uploading it and any app preview remain with the App Store listing |
 
 Done: A Press Any folder in Files holding Exports, with the library kept in Application Support and
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
@@ -588,7 +588,7 @@ Add to Library, never before the first frame; Feeds the save compatibility check
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | no-intro-update, toolchain-fingerprints-update, shader-catalog-update, included-games-verify, fixtures, license-audit, privacy-audit, openvgdb-update (disabled) | v1 |  |
+| done | Data and audit pipelines: no-intro-update, toolchain-fingerprints-update, fixtures, license-audit, privacy-audit | v1 | No-Intro data stays a human refresh by policy, with a CI reminder at 90 days and generator tests; toolchain detection is checked against gbtoolsid on every push; `verify-repo-hygiene.sh` checks the test-ROM manifest; the iOS build verifies the privacy manifest; `verify-third-party-notices.py` fails when a pinned dependency or submodule commit is missing from THIRD_PARTY_NOTICES.md. shader-catalog-update and included-games-verify arrive with shaders and included games in v1.1; openvgdb-update stays disabled |
 | partial | MVP gate | MVP | package tests cover required tests 1-13 and 15, and an app test covers 14 (controller disconnect); every physical-iPhone (L4c) check is unchecked |
 
 Done: ci.yml (L1/L2/L3, gbtoolsid differential, test-coverage, hygiene) and ios-build.yml (simulator

@@ -1,7 +1,7 @@
 name: Screenshots
 
 # Manual only: captures the app on an iPhone simulator, seeded from TestROMs/, and uploads
-# the PNGs as an artifact. The 6.5-inch preset checks dimensions before upload.
+# the PNGs as an artifact. The 6.5-inch and 6.9-inch presets check dimensions before upload.
 
 on:
   workflow_dispatch:
@@ -90,12 +90,19 @@ jobs:
         run: |
           set -o pipefail
           ./Scripts/take-screenshots.sh "$ROMS" screenshots 2>&1 | tee screenshots.log
-      - name: Verify 6.5-inch screenshot dimensions
-        if: inputs.device == 'iPhone 14 Plus'
+      - name: Verify App Store screenshot dimensions
+        if: inputs.device != 'iPhone 17 Pro'
+        env:
+          DEVICE: ${{ inputs.device }}
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import os
           import struct
+
+          # Apple's 6.5-inch slot takes the 14 Plus's size and the 6.9-inch slot the Pro Max's.
+          expected = (1284, 2778) if os.environ["DEVICE"] == "iPhone 14 Plus" else (1320, 2868)
+          slot = "6.5-inch" if expected == (1284, 2778) else "6.9-inch"
 
           images = sorted(Path("screenshots").rglob("*.png"))
           if not images:
@@ -106,15 +113,15 @@ jobs:
               if header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
                   raise SystemExit(f"Invalid PNG: {image}")
               size = struct.unpack(">II", header[16:24])
-              if size not in ((1284, 2778), (2778, 1284)):
-                  raise SystemExit(f"{image}: {size} does not fit Apple's 6.5-inch slot.")
+              if size not in (expected, expected[::-1]):
+                  raise SystemExit(f"{image}: {size} does not fit Apple's {slot} slot.")
               print(f"Verified {image}: {size[0]} x {size[1]}")
           PY
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: screenshots-${{ matrix.appearance }}${{ inputs.device == 'iPhone 14 Plus' && '-6.5-inch' || '' }}${{ inputs.text_size == 'largest' && '-largest-text' || '' }}
+          name: screenshots-${{ matrix.appearance }}${{ inputs.device == 'iPhone 14 Plus' && '-6.5-inch' || inputs.device == 'iPhone 17 Pro Max' && '-6.9-inch' || '' }}${{ inputs.text_size == 'largest' && '-largest-text' || '' }}
           path: |
             screenshots/
             screenshots.log
