@@ -42,8 +42,18 @@ public final class GRDBGameRepository: GameRepository, GRDBRepositoryBacking, @u
 
     public func fetchGames() throws -> [Game] {
         try read { db in
-            try GameRecord.fetchAll(db, sql: "SELECT * FROM games WHERE deletion_id IS NULL ORDER BY primary_title COLLATE NOCASE, created_at")
-                .map { try $0.domain(aliases: Self.aliases(gameID: $0.id, db: db)) }
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT alias.game_id, alias.title FROM game_aliases alias
+                JOIN games game ON game.id = alias.game_id
+                WHERE game.deletion_id IS NULL ORDER BY alias.title COLLATE NOCASE
+                """)
+            var aliases: [String: [String]] = [:]
+            for row in rows {
+                let id: String = row["game_id"]
+                aliases[id, default: []].append(row["title"])
+            }
+            return try GameRecord.fetchAll(db, sql: "SELECT * FROM games WHERE deletion_id IS NULL ORDER BY primary_title COLLATE NOCASE, created_at")
+                .map { try $0.domain(aliases: aliases[$0.id] ?? []) }
         }
     }
 
@@ -580,6 +590,23 @@ public final class GRDBToolchainReportRepository: ToolchainReportRepository, GRD
         }
         return try rows.map { try JSONDecoder().decode(ToolchainDetectionReport.self, from: Data($0.utf8)) }
     }
+
+    public func fetchAllReports() throws -> [UUID: [ToolchainDetectionReport]] {
+        try read { db in
+            var result: [UUID: [ToolchainDetectionReport]] = [:]
+            for row in try Row.fetchAll(db, sql: """
+                SELECT report.build_id, report.report_json FROM build_toolchain_reports report
+                JOIN builds build ON build.id = report.build_id
+                WHERE build.deletion_id IS NULL ORDER BY report.build_id, report.detector
+                """) {
+                let buildID: String = row["build_id"]
+                let id = try PersistenceCodec.uuid(buildID)
+                let json: String = row["report_json"]
+                result[id, default: []].append(try JSONDecoder().decode(ToolchainDetectionReport.self, from: Data(json.utf8)))
+            }
+            return result
+        }
+    }
 }
 
 public final class GRDBBuildVariableMapRepository: BuildVariableMapRepository, GRDBRepositoryBacking, @unchecked Sendable {
@@ -702,6 +729,7 @@ public struct GRDBRepositorySet: Sendable {
     public let saveStates: GRDBSaveStateRepository
     public let patchRecipes: GRDBPatchRecipeRepository
     public let toolchainReports: GRDBToolchainReportRepository
+    public let fingerprints: GRDBImageFingerprintRepository
     public let variableMaps: GRDBBuildVariableMapRepository
     public let assets: GRDBManagedAssetRepository
     public let settings: GRDBSettingsStore
@@ -715,6 +743,7 @@ public struct GRDBRepositorySet: Sendable {
         saveStates = GRDBSaveStateRepository(writer: writer)
         patchRecipes = GRDBPatchRecipeRepository(writer: writer)
         toolchainReports = GRDBToolchainReportRepository(writer: writer)
+        fingerprints = GRDBImageFingerprintRepository(writer: writer)
         variableMaps = GRDBBuildVariableMapRepository(writer: writer)
         assets = GRDBManagedAssetRepository(writer: writer)
         settings = GRDBSettingsStore(writer: writer)

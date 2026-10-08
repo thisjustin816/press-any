@@ -87,6 +87,8 @@ private final class CountingReports: ToolchainReportRepository, @unchecked Senda
         try inner.saveReport(report, buildID: buildID, detectedAt: detectedAt)
     }
 
+    func fetchAllReports() throws -> [UUID: [ToolchainDetectionReport]] { try inner.fetchAllReports() }
+
     func fetchReports(buildID: UUID) throws -> [ToolchainDetectionReport] {
         try inner.fetchReports(buildID: buildID)
     }

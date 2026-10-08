@@ -99,12 +99,16 @@ final class AppContainer {
 
         integrityChecker = ManagedAssetIntegrityChecker(assets: repositories.assets, assetStore: fileStore)
         knownDumps = try? KnownDumpIndex.bundled()
-        importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, games: repositories.games, assetStore: fileStore, knownDumps: knownDumps)
+        importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, games: repositories.games,
+            fingerprints: repositories.fingerprints,
+            toolchainReports: repositories.toolchainReports,
+            assetStore: fileStore, knownDumps: knownDumps)
         importCommitter = ImportCommitter(
             games: repositories.games,
             builds: repositories.builds,
             assets: repositories.assets,
             toolchainReports: repositories.toolchainReports,
+            fingerprints: repositories.fingerprints,
             assetStore: fileStore,
             transactions: repositories.transactions
         )
@@ -242,15 +246,18 @@ final class AppContainer {
 
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
         _ = try? libraryDeletion.purgeExpired()
-        // Builds imported before SHA-1 was kept get it once, off the main thread, so matching
-        // against No-Intro's data never reads ROMs. A large library takes a few seconds.
+        // Backfill source-image evidence off the main thread. Unreadable files are retried
+        // next launch; import suggestions use only the records already filled.
         let fillSHA1 = FillImageSHA1(builds: repositories.builds, assetStore: fileStore)
+        let fillFingerprints = FillImageFingerprints(assets: repositories.assets,
+            fingerprints: repositories.fingerprints, assetStore: fileStore)
         let metadataRefresh = knownDumps.map {
             RefreshKnownDumpMetadata(builds: repositories.builds, settings: repositories.settings,
                 index: $0, transactions: repositories.transactions)
         }
         Task.detached(priority: .utility) {
-            _ = try fillSHA1.execute()
+            _ = try? fillSHA1.execute()
+            _ = try? fillFingerprints.execute()
             try metadataRefresh?.execute()
         }
         try? fileStore.removeStagedFiles()

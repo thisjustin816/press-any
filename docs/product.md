@@ -141,6 +141,13 @@ Every binary (ROMs, patches, saves, states, thumbnails, artwork, variable maps) 
 with a content hash, kind, size, relative path, original filename, provenance and integrity
 status. Source assets are irreplaceable; generated patched ROMs are rebuildable cache.
 
+The `image_fingerprints` table stores each source image's SHA-256, bank size, 64-bit bank hashes
+in one blob, header title, cartridge type, RAM size code and CGB flag. Import records this evidence;
+launch fills missing rows from existing source files and retries unreadable images next launch.
+Purging a source image removes its fingerprint. Patched Builds use their imported base's evidence;
+generated images receive no fingerprint. These records are metadata, so Check Library Files does
+not treat them as files.
+
 ## Storage and integrity
 
 - Metadata lives in GRDB and SQLite. Binaries live in a managed folder in Application Support,
@@ -224,14 +231,27 @@ changes the library; review shows what will happen; commit is all or nothing.
 ### Import Review
 
 - The destination and Build details come first: a new Game or an existing one.
-- **Matching an existing Game.** A known No-Intro dump joins the one Game that already holds a
-  Build from its family; with several candidates it's a choice, not a default. Otherwise review
-  suggests a Game whose title or alias matches the file's title, header title or a hack's base title,
-  ignoring case, punctuation and spacing. Only whole titles match ("Mega Man 2" never joins
-  "Mega Man"), and two matching Games suggest neither. A ROM whose header title matches a Build
-  already in one Game suggests that Game, since homebrew builds of one project share a header
-  title while their filenames change. When the title and header suggest different Games, neither
-  is suggested. An uncertain ROM is never attached silently.
+- **Matching an existing Game.** Exact duplicates keep their existing Build. A known No-Intro dump
+  joins the one Game holding its family or recorded base lineage; several Games require a choice.
+  Unknown ROMs compare their filename title, header title and hack base title with Game titles and
+  aliases, using whole titles and ignoring case, punctuation and spacing. Development matching
+  treats a header title unique to one Game, a Game title or alias match, and at least half of the
+  smaller image's distinct 16 KB banks shared with one Build as strong signals. Matching cartridge
+  type and RAM size, color support, toolchain with the same detected engine, and at least a quarter
+  of banks shared provide supporting evidence. Banks count even when they move; entirely 0x00 or
+  0xFF banks do not count, and neither do banks already in two Games, which are engine or library
+  code. When both ROMs share a detected engine, such as GB Studio, shared banks only support, since
+  that engine's banks are the same in unrelated games. Short, common placeholder and shared header
+  titles provide no header evidence. Different high-confidence toolchains or exclusively
+  incompatible DMG/CGB support rule out a suggestion. High confidence requires two strong signals,
+  or one strong signal with two supporting signals, and a clear lead. It preselects the Game. Medium
+  confidence keeps New Game selected and lists the candidate first for a one-tap choice. The
+  evidence line below the destination reads "Likely another build of Moon Garden: same header title,
+  87% of ROM banks shared, both GBDK" or "Possibly another build of ..." and explains the signals.
+  Ranked candidates precede other Games in score order, after No-Intro family Games. Shared banks
+  counted as supporting, with two other supporting signals, also qualify as medium. Equal evidence
+  suggests neither Game. Base and Preferred suggestions follow the chosen destination, including in
+  Quick Play promotion. The player confirms Import before a ROM is attached.
 - **Match Game.** A ROM with no No-Intro match can be marked as a hack or another Build of a known
   game. Search the library and bundled No-Intro data, choose the base game, then confirm Import.
   A recorded base keeps its title, system and, when known, No-Intro family and release even if its
@@ -269,7 +289,6 @@ changes the library; review shows what will happen; commit is all or nothing.
 
 ### Planned (v1.1 unless noted)
 
-- v1: development matching from several signals, preselecting a Game only at high confidence.
 - 7z through libarchive, as a temporary container that isn't kept, with the same limits as zip.
   RAR is tentative.
 - Multi-asset review that groups ROMs, patches, saves, artwork, documents, READMEs, changelogs,

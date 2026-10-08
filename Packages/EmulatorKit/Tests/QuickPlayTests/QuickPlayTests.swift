@@ -142,12 +142,16 @@ final class QuickPlayTests: XCTestCase {
         let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
         try harness.workspace.writeTemporaryBattery(Data([4]), sessionID: session.id)
         let refusing = PromoteQuickPlay(
-            analyzer: ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store),
+            analyzer: ROMImportAnalyzer(builds: harness.builds,
+                fingerprints: harness.fingerprints,
+                toolchainReports: harness.toolchainReports,
+                assetStore: harness.store),
             committer: ImportCommitter(
                 games: harness.games,
                 builds: harness.builds,
                 assets: harness.assets,
-                toolchainReports: InMemoryToolchainReportRepository(),
+                toolchainReports: harness.toolchainReports,
+                fingerprints: harness.fingerprints,
                 assetStore: harness.store,
                 transactions: PassthroughTransactionRunner()
             ),
@@ -188,12 +192,16 @@ final class QuickPlayTests: XCTestCase {
         let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
         try harness.workspace.writeTemporaryBattery(Data([5]), sessionID: session.id)
         let refusing = PromoteQuickPlay(
-            analyzer: ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store),
+            analyzer: ROMImportAnalyzer(builds: harness.builds,
+                fingerprints: harness.fingerprints,
+                toolchainReports: harness.toolchainReports,
+                assetStore: harness.store),
             committer: ImportCommitter(
                 games: harness.games,
                 builds: harness.builds,
                 assets: harness.assets,
-                toolchainReports: InMemoryToolchainReportRepository(),
+                toolchainReports: harness.toolchainReports,
+                fingerprints: harness.fingerprints,
                 assetStore: harness.store,
                 transactions: PassthroughTransactionRunner()
             ),
@@ -281,6 +289,8 @@ private struct QuickPlayHarness {
     let profiles: InMemorySaveProfileRepository
     let states: InMemorySaveStateRepository
     let assets: InMemoryAssetRepository
+    let fingerprints: InMemoryImageFingerprintRepository
+    let toolchainReports: InMemoryToolchainReportRepository
     let game: Game
     let profile: SaveProfile
     let workspace: QuickPlayWorkspace
@@ -300,7 +310,9 @@ private struct QuickPlayHarness {
         let builds = InMemoryBuildRepository()
         let profiles = InMemorySaveProfileRepository()
         let states = InMemorySaveStateRepository()
-        let assets = InMemoryAssetRepository()
+        let fingerprints = InMemoryImageFingerprintRepository()
+        let toolchainReports = InMemoryToolchainReportRepository()
+        let assets = InMemoryAssetRepository(fingerprints: fingerprints)
 
         let game = Game(
             id: UUID(),
@@ -344,12 +356,16 @@ private struct QuickPlayHarness {
             retentionSeconds: retentionSeconds,
             now: { now }
         )
-        let analyzer = ROMImportAnalyzer(builds: builds, assetStore: store)
+        let analyzer = ROMImportAnalyzer(builds: builds,
+            fingerprints: fingerprints,
+            toolchainReports: toolchainReports,
+            assetStore: store)
         let committer = ImportCommitter(
             games: games,
             builds: builds,
             assets: assets,
-            toolchainReports: InMemoryToolchainReportRepository(),
+            toolchainReports: toolchainReports,
+            fingerprints: fingerprints,
             assetStore: store,
             transactions: PassthroughTransactionRunner(),
             now: { now }
@@ -374,6 +390,8 @@ private struct QuickPlayHarness {
             profiles: profiles,
             states: states,
             assets: assets,
+            fingerprints: fingerprints,
+            toolchainReports: toolchainReports,
             game: game,
             profile: profile,
             workspace: workspace,
@@ -787,12 +805,16 @@ extension QuickPlayTests {
         let harness = try QuickPlayHarness.make()
         let session = try stateOnlySession(harness, title: "NO BATTERY")
         let refusing = PromoteQuickPlay(
-            analyzer: ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store),
+            analyzer: ROMImportAnalyzer(builds: harness.builds,
+                fingerprints: harness.fingerprints,
+                toolchainReports: harness.toolchainReports,
+                assetStore: harness.store),
             committer: ImportCommitter(
                 games: harness.games,
                 builds: harness.builds,
                 assets: harness.assets,
-                toolchainReports: InMemoryToolchainReportRepository(),
+                toolchainReports: harness.toolchainReports,
+                fingerprints: harness.fingerprints,
                 assetStore: harness.store,
                 transactions: PassthroughTransactionRunner()
             ),

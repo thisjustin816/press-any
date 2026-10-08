@@ -1,4 +1,5 @@
 import EmulatorApplication
+import EmulatorDomain
 import Foundation
 import GameIdentity
 import ToolchainDetection
@@ -6,6 +7,8 @@ import ToolchainDetection
 public struct ROMImportAnalyzer: Sendable {
     private let builds: any BuildRepository
     private let games: (any GameRepository)?
+    private let fingerprints: any ImageFingerprintRepository
+    private let toolchainReports: any ToolchainReportRepository
     private let assetStore: any AssetStore
     private let detectors: ToolchainDetectorRegistry
     private let knownDumps: KnownDumpIndex?
@@ -14,6 +17,8 @@ public struct ROMImportAnalyzer: Sendable {
     public init(
         builds: any BuildRepository,
         games: (any GameRepository)? = nil,
+        fingerprints: any ImageFingerprintRepository,
+        toolchainReports: any ToolchainReportRepository,
         assetStore: any AssetStore,
         detectors: ToolchainDetectorRegistry = .standard,
         knownDumps: KnownDumpIndex? = nil,
@@ -21,6 +26,8 @@ public struct ROMImportAnalyzer: Sendable {
     ) {
         self.builds = builds
         self.games = games
+        self.fingerprints = fingerprints
+        self.toolchainReports = toolchainReports
         self.assetStore = assetStore
         self.detectors = detectors
         self.knownDumps = knownDumps
@@ -48,6 +55,10 @@ public struct ROMImportAnalyzer: Sendable {
             let lineageIDs = try knownDump.map(lineageGameIDs(of:)) ?? []
             var familyGameIDs = try knownDump.map(familyGameIDs(of:)) ?? []
             for id in lineageIDs where !familyGameIDs.contains(id) { familyGameIDs.append(id) }
+            let fingerprint = ROMBankFingerprint.make(image: data, sha256: sha256, header: header)
+            let reports = detectors.detect(image: data, system: header.system)
+            let candidates = existing == nil && knownDump == nil
+                ? try developmentCandidates(fingerprint: fingerprint, naming: naming, reports: reports) : []
             return ROMImportAnalysis(
                 transactionID: transactionID,
                 stagedURL: stagedURL,
@@ -58,14 +69,15 @@ public struct ROMImportAnalyzer: Sendable {
                 filenameMetadata: naming,
                 exactExistingBuildID: existing?.id,
                 suggestedGameID: targetGameID ?? existing?.gameID ?? (familyGameIDs.count == 1 ? familyGameIDs[0] : nil),
-                toolchainReports: detectors.detect(image: data, system: header.system),
+                toolchainReports: reports,
                 imageSHA1: sha1,
                 knownDump: knownDump,
                 knownFile: knownDumps?.file(sha1: sha1),
                 familyGameIDs: familyGameIDs,
                 familyTitles: knownDump.flatMap { knownDumps?.family(of: $0).map(\.title) } ?? [],
                 baseLineageGameIDs: lineageIDs,
-                headerTitleGameIDs: existing == nil ? try headerTitleGameIDs(of: header.title, excluding: sha256) : []
+                fingerprint: fingerprint,
+                developmentCandidates: candidates
             )
         } catch {
             try? assetStore.removeIfExists(stagedURL.deletingLastPathComponent())
@@ -82,28 +94,19 @@ public struct ROMImportAnalyzer: Sendable {
         }.map(\.id)
     }
 
-    /// The Games holding an imported Build whose header title is this one, read from the first
-    /// bytes of each Build's source file. Titles shorter than three letters or digits match nothing.
-    private func headerTitleGameIDs(of title: String, excluding sha256: String) throws -> [UUID] {
-        let key = GameMatcher.normalized(title)
-        guard key.count >= 3 else { return [] }
-        var seen = Set<UUID>()
-        var gameIDs: [UUID] = []
-        for build in try builds.fetchImportedBuilds() where build.imageSHA256 != sha256 {
-            guard let url = try? assetStore.sourceImageURL(sha256: build.imageSHA256),
-                  let otherTitle = Self.headerTitle(at: url),
-                  GameMatcher.normalized(otherTitle) == key,
-                  seen.insert(build.gameID).inserted else { continue }
-            gameIDs.append(build.gameID)
-        }
-        return gameIDs
-    }
-
-    private static func headerTitle(at url: URL) -> String? {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
-        defer { try? handle.close() }
-        guard let prefix = try? handle.read(upToCount: 0x150) else { return nil }
-        return try? GBROMHeaderParser.parse(prefix).title
+    private func developmentCandidates(fingerprint: ImageFingerprint, naming: FilenameMetadata,
+                                       reports: [ToolchainDetectionReport]) throws -> [DevelopmentBuildMatcher.Candidate] {
+        guard let games else { return [] }
+        let imported = try builds.fetchAllBuilds().filter { $0.sourceKind == .importedImage }
+        let stored = try fingerprints.fetchFingerprints(imageSHA256s: imported.map(\.imageSHA256))
+        let storedReports = try toolchainReports.fetchAllReports()
+        let grouped = Dictionary(grouping: imported, by: \.gameID)
+        return DevelopmentBuildMatcher.match(arriving: .init(fingerprint: fingerprint, filenameMetadata: naming, reports: reports),
+            games: try games.fetchGames().map { game in
+                .init(game: game, builds: (grouped[game.id] ?? []).map {
+                    .init(fingerprint: stored[$0.imageSHA256], reports: storedReports[$0.id] ?? [])
+                })
+            })
     }
 
     /// The Games already holding a Build from any file of the dump's No-Intro family, bad copies

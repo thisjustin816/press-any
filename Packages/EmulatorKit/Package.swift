@@ -106,7 +106,7 @@ let package = Package(
         .testTarget(
             name: "PersistenceGRDBTests",
             dependencies: [
-                "PersistenceGRDB", "EmulatorApplication", "EmulatorDomain", "AssetStorage",
+                "PersistenceGRDB", "EmulatorApplication", "EmulatorDomain", "AssetStorage", "Importing", "EmulatorKitTestSupport",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ]
         ),

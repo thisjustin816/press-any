@@ -50,6 +50,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v15-save-state-slots") { db in
             try db.execute(sql: V1V15SaveStateSlotsSchema.sql)
         }
+        migrator.registerMigration("v1-v16-image-fingerprints") { db in
+            try db.execute(sql: V1V16ImageFingerprintsSchema.sql)
+        }
         return migrator
     }
 }
@@ -421,5 +424,26 @@ enum V1V15SaveStateSlotsSchema {
     ALTER TABLE save_states ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1));
     CREATE UNIQUE INDEX save_states_live_slot ON save_states(build_id, save_profile_id, slot)
     WHERE slot IS NOT NULL AND deletion_id IS NULL;
+    """
+}
+
+enum V1V16ImageFingerprintsSchema {
+    static let sql = """
+    CREATE TABLE image_fingerprints (
+        image_sha256 TEXT PRIMARY KEY NOT NULL,
+        bank_size INTEGER NOT NULL CHECK (bank_size > 0),
+        bank_hashes BLOB NOT NULL CHECK (length(bank_hashes) % 8 = 0),
+        header_title TEXT NOT NULL,
+        cartridge_type INTEGER NOT NULL CHECK (cartridge_type BETWEEN 0 AND 255),
+        ram_size_code INTEGER NOT NULL CHECK (ram_size_code BETWEEN 0 AND 255),
+        cgb_flag INTEGER NOT NULL CHECK (cgb_flag BETWEEN 0 AND 255)
+    );
+    CREATE TRIGGER remove_source_image_fingerprint AFTER DELETE ON managed_assets
+    WHEN OLD.kind = 'sourceROM' AND NOT EXISTS (
+        SELECT 1 FROM managed_assets WHERE kind = 'sourceROM' AND content_sha256 = OLD.content_sha256
+    )
+    BEGIN
+        DELETE FROM image_fingerprints WHERE image_sha256 = OLD.content_sha256;
+    END;
     """
 }

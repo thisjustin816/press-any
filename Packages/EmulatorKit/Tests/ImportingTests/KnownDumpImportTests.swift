@@ -12,7 +12,9 @@ final class KnownDumpImportTests: XCTestCase {
     private var store: ManagedFileStore!
     private let games = InMemoryGameRepository()
     private let builds = InMemoryBuildRepository()
-    private let assets = InMemoryAssetRepository()
+    private let fingerprints = InMemoryImageFingerprintRepository()
+    private let reports = InMemoryToolchainReportRepository()
+    private lazy var assets = InMemoryAssetRepository(fingerprints: fingerprints)
 
     // Three releases of one family, and an image No-Intro doesn't know.
     private let usa = TestROM.make(title: "CRITTERS", payloadByte: 1)
@@ -69,7 +71,10 @@ final class KnownDumpImportTests: XCTestCase {
     private func analyze(_ data: Data, named filename: String, target: UUID? = nil) throws -> ROMImportAnalysis {
         let file = root.appendingPathComponent(filename)
         try data.write(to: file)
-        let analyzer = ROMImportAnalyzer(builds: builds, games: games, assetStore: store, knownDumps: try index())
+        let analyzer = ROMImportAnalyzer(builds: builds, games: games,
+            fingerprints: fingerprints,
+            toolchainReports: reports,
+            assetStore: store, knownDumps: try index())
         return try analyzer.analyzeROM(at: file, targetGameID: target)
     }
 
@@ -78,7 +83,8 @@ final class KnownDumpImportTests: XCTestCase {
             games: games,
             builds: builds,
             assets: assets,
-            toolchainReports: InMemoryToolchainReportRepository(),
+            toolchainReports: reports,
+            fingerprints: fingerprints,
             assetStore: store,
             transactions: PassthroughTransactionRunner()
         )
@@ -105,7 +111,9 @@ final class KnownDumpImportTests: XCTestCase {
         let index = try index()
         let reference = index.reference(to: try XCTUnwrap(index.dump(sha1: SHA1Digest.data(usa))))
         let committer = ImportCommitter(games: games, builds: builds, assets: assets,
-            toolchainReports: InMemoryToolchainReportRepository(), assetStore: store, transactions: PassthroughTransactionRunner())
+            toolchainReports: reports,
+            fingerprints: fingerprints,
+            assetStore: store, transactions: PassthroughTransactionRunner())
         let hack = try committer.commit(ROMImportPlan(
             analysis: analyze(homebrew, named: "Critters Plus.gb"), disposition: .createGame(title: "Critters Plus"),
             buildDisplayName: "Hack", markAsBase: false, baseGameReference: reference))
@@ -125,7 +133,9 @@ final class KnownDumpImportTests: XCTestCase {
     func testConfirmedTitleProposalKeepsOldTitleAsAliasAndProtectsPlayerTitle() throws {
         let first = try commit(try analyze(japan, named: "aka.gb"))
         let committer = ImportCommitter(games: games, builds: builds, assets: assets,
-            toolchainReports: InMemoryToolchainReportRepository(), assetStore: store, transactions: PassthroughTransactionRunner())
+            toolchainReports: reports,
+            fingerprints: fingerprints,
+            assetStore: store, transactions: PassthroughTransactionRunner())
         let better = try committer.commit(ROMImportPlan(analysis: analyze(usa, named: "red.gb"), disposition: .addBuild(gameID: first.game.id),
             buildDisplayName: "USA", markAsBase: false, markAsPreferred: true, proposedGameTitle: "Pocket Critters - Red Version"))
         XCTAssertEqual(better.game.primaryTitle, "Pocket Critters - Red Version")

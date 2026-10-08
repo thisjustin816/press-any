@@ -88,6 +88,8 @@ targets:
     platform: iOS
     sources:
       - path: AppTests
+      - path: Packages/EmulatorKit/Sources/EmulatorKitTestSupport
+        includes: [InMemoryRepositories.swift, InMemoryImageFingerprintRepository.swift, TestROM.swift]
     dependencies:
       - target: PressAny
   ShareTestSender:
