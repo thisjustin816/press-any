@@ -278,7 +278,7 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
             }
             let columns = try db.columns(in: BuildRecord.databaseTableName).map(\.name)
                 .filter {
-                    $0 != "total_playtime_seconds" && $0 != "deletion_id"
+                    $0 != "total_playtime_seconds" && $0 != "deletion_id" && $0 != "cheats_enabled"
                         && ($0 != "rom_sha1" || build.imageSHA1 != nil)
                 }
             try BuildRecord(build).update(db, columns: columns)
@@ -290,6 +290,16 @@ public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, 
             try db.execute(
                 sql: "UPDATE builds SET total_playtime_seconds = total_playtime_seconds + ? WHERE id = ? AND deletion_id IS NULL",
                 arguments: [seconds, PersistenceCodec.uuid(buildID)]
+            )
+            guard db.changesCount == 1 else { throw BuildOperationError.buildNotFound(buildID) }
+        }
+    }
+
+    public func setCheatsEnabled(buildID: UUID, enabled: Bool) throws {
+        try write { db in
+            try db.execute(
+                sql: "UPDATE builds SET cheats_enabled = ? WHERE id = ? AND deletion_id IS NULL",
+                arguments: [enabled, PersistenceCodec.uuid(buildID)]
             )
             guard db.changesCount == 1 else { throw BuildOperationError.buildNotFound(buildID) }
         }
@@ -758,6 +768,7 @@ public struct GRDBRepositorySet: Sendable {
     public let toolchainReports: GRDBToolchainReportRepository
     public let fingerprints: GRDBImageFingerprintRepository
     public let variableMaps: GRDBBuildVariableMapRepository
+    public let cheats: GRDBBuildCheatRepository
     public let assets: GRDBManagedAssetRepository
     public let settings: GRDBSettingsStore
     public let transactions: GRDBLibraryTransactionRunner
@@ -773,6 +784,7 @@ public struct GRDBRepositorySet: Sendable {
         toolchainReports = GRDBToolchainReportRepository(writer: writer)
         fingerprints = GRDBImageFingerprintRepository(writer: writer)
         variableMaps = GRDBBuildVariableMapRepository(writer: writer)
+        cheats = GRDBBuildCheatRepository(writer: writer)
         assets = GRDBManagedAssetRepository(writer: writer)
         settings = GRDBSettingsStore(writer: writer)
         transactions = GRDBLibraryTransactionRunner(writer: writer)

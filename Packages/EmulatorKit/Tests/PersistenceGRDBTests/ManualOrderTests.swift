@@ -16,14 +16,20 @@ struct ManualOrderTests {
         let fixture = try legacyFixture(in: database, includingDeletedRecords: deleted)
         let before = try database.writer.read { db in
             let tables = try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'grdb_migrations'")
-            return try tables.map { ($0, try Row.fetchAll(db, sql: "SELECT * FROM \($0) ORDER BY rowid")) }
+            // Later migrations may add columns, so compare the columns the table had.
+            return try tables.map { table in
+                let columns = try db.columns(in: table).map(\.name).joined(separator: ", ")
+                return (table, columns, try Row.fetchAll(db, sql: "SELECT \(columns) FROM \(table) ORDER BY rowid"))
+            }
         }
         try database.migrate()
         try database.writer.read { db throws -> Void in
-            for (table, rows) in before { #expect(try Row.fetchAll(db, sql: "SELECT * FROM \(table) ORDER BY rowid") == rows) }
+            for (table, columns, rows) in before {
+                #expect(try Row.fetchAll(db, sql: "SELECT \(columns) FROM \(table) ORDER BY rowid") == rows)
+            }
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM game_manual_positions") == 0)
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").last == "v1-v17-manual-order")
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").contains("v1-v17-manual-order"))
         }
         let games = database.makeRepositories().games
         #expect(try games.fetchManualPositions().isEmpty)

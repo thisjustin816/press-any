@@ -214,7 +214,7 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
 
     private func clearLibrary(db: Database) throws {
         for table in [
-            "save_states", "patch_recipe_items", "patch_recipes", "build_variable_maps",
+            "save_states", "patch_recipe_items", "patch_recipes", "build_variable_maps", "build_cheats",
             "build_toolchain_reports", "build_save_declarations", "build_metadata_provenance",
             "game_metadata_provenance", "game_aliases", "game_manual_positions", "save_profiles", "builds", "games",
             "managed_assets", "library_deletions", "tombstones", "settings_overrides", "image_fingerprints",
@@ -323,7 +323,7 @@ enum BackupCoverage {
         "games": "All live Game metadata.",
         "game_aliases": "Canonical aliases of live Games.",
         "game_manual_positions": "Manual sort positions of live Games; follows the Game conflict choice.",
-        "builds": "All live Build metadata, source and generated image references, and playtime.",
+        "builds": "All live Build metadata, source and generated image references, playtime and the Cheats On switch.",
         "save_profiles": "All live Save Profiles, battery references, RTC, and session history.",
         "save_states": "Live states and thumbnails except crash recovery checkpoints.",
         "patch_recipes": "Recipes whose result and base Builds are live.",
@@ -338,6 +338,7 @@ enum BackupCoverage {
         "library_deletions": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
         "tombstones": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
         "image_fingerprints": "Excluded derived matching cache; cleared by replacement.",
+        "build_cheats": "Excluded until backups carry cheats; replacement clears it.",
     ]
 
     /// Every column of every table, as the decisions above cover them. Columns that hold
@@ -345,6 +346,7 @@ enum BackupCoverage {
     /// their table's decision. A new column fails the coverage test until it is listed here and
     /// the backup carries it or a decision above says why not.
     static let columns: [String: Set<String>] = [
+        "build_cheats": ["id", "build_id", "name", "codes", "is_enabled", "position", "created_at", "modified_at"],
         "build_metadata_provenance": ["build_id", "field", "source", "confidence", "provided_value", "recorded_at"],
         "build_save_declarations": ["first_build_id", "second_build_id", "compatibility"],
         "build_toolchain_reports": [
@@ -356,7 +358,7 @@ enum BackupCoverage {
             "parent_build_id", "is_base", "region", "language", "revision", "version_string", "version_sort_key",
             "preferred_save_profile_id", "pinned_core_id", "pinned_core_version", "core_pinned_at", "created_at",
             "modified_at", "base_title", "hack_title", "author", "translation", "status", "deletion_id", "rom_sha1",
-            "base_game_reference_json", "notes", "total_playtime_seconds"
+            "base_game_reference_json", "notes", "total_playtime_seconds", "cheats_enabled"
         ],
         "game_aliases": ["game_id", "title"],
         "game_manual_positions": ["game_id", "position"],
@@ -401,6 +403,7 @@ enum BackupCoverage {
         "SaveStateRepository": "Live states except crash recovery.",
         "PatchRecipeRepository": "Live recipes and their steps.",
         "BuildVariableMapRepository": "Maps of live Builds.",
+        "BuildCheatRepository": "Excluded until backups carry cheats.",
         "ManagedAssetRepository": "Referenced assets.",
         "ManagedAssetInventoryRepository": "Inventory filtered to referenced assets.",
         "MetadataProvenanceRepository": "Live Game and Build provenance.",

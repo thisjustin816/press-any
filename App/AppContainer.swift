@@ -127,6 +127,7 @@ final class AppContainer {
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
             recipes: repositories.patchRecipes,
+            cheats: repositories.cheats,
             assets: repositories.assets,
             assetStore: fileStore,
             transactions: repositories.transactions

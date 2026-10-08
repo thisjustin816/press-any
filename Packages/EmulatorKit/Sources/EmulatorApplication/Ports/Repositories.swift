@@ -37,7 +37,21 @@ public protocol BuildRepository: MetadataProvenanceRepository {
     /// Changes to tracked presentation fields record player overrides.
     func updateBuildMetadata(_ build: Build) throws
     func addPlaytime(buildID: UUID, seconds: Double) throws
+    /// Sets the Build's Cheats On switch alone. Metadata updates leave it as it is.
+    func setCheatsEnabled(buildID: UUID, enabled: Bool) throws
     func moveBuild(id: UUID, toGameID: UUID) throws
+}
+
+/// Each Build's cheats. A Build in Recently Deleted keeps its cheats hidden until it is restored,
+/// and purging the Build removes them.
+public protocol BuildCheatRepository: Sendable {
+    /// In list order.
+    func fetchCheats(buildID: UUID) throws -> [BuildCheat]
+    func fetchCheat(id: UUID) throws -> BuildCheat?
+    /// The cheat's Build must be live.
+    func insertCheat(_ cheat: BuildCheat) throws
+    func updateCheat(_ cheat: BuildCheat) throws
+    func deleteCheat(id: UUID) throws
 }
 
 public protocol SaveProfileRepository: Sendable {

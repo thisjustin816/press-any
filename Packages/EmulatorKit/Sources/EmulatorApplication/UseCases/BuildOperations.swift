@@ -7,8 +7,8 @@ public enum ReorganizationMode: Equatable, Sendable {
 }
 
 /// The Game-level things a promote or merge brings along, chosen in its review step. Build-scoped
-/// data (save states, recipes, toolchain reports, variable maps, settings) always follows its
-/// Build.
+/// data (save states, recipes, cheats, toolchain reports, variable maps, settings) always follows
+/// its Build.
 public struct GameCarryOver: Equatable, Sendable {
     /// Bring the source Game's artwork. A merge that moves everything brings it anyway when the
     /// target has none.
@@ -47,6 +47,7 @@ public struct BuildOperations: Sendable {
     private let profiles: any SaveProfileRepository
     private let states: any SaveStateRepository
     private let recipes: any PatchRecipeRepository
+    private let cheats: any BuildCheatRepository
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
     private let transactions: any LibraryTransactionRunner
@@ -59,6 +60,7 @@ public struct BuildOperations: Sendable {
         profiles: any SaveProfileRepository,
         states: any SaveStateRepository,
         recipes: any PatchRecipeRepository,
+        cheats: any BuildCheatRepository,
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
         transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
@@ -70,6 +72,7 @@ public struct BuildOperations: Sendable {
         self.profiles = profiles
         self.states = states
         self.recipes = recipes
+        self.cheats = cheats
         self.assets = assets
         self.assetStore = assetStore
         self.transactions = transactions
@@ -526,8 +529,8 @@ public struct BuildOperations: Sendable {
         )
     }
 
-    /// Inserts a copy of `source` in `gameID`. A patch-derived copy gets its own recipe, so
-    /// evicting the shared cached image can't strand it. `replacing` maps Build IDs to the Builds
+    /// Inserts a copy of `source` in `gameID`, with its own copy of each cheat. A patch-derived
+    /// copy gets its own recipe, so evicting the shared cached image can't strand it. `replacing` maps Build IDs to the Builds
     /// that stand in for them in the target, including `source`'s own copy ID; a base that isn't
     /// mapped stays in its original Game, which then can't be deleted while the copy needs it.
     private func copy(
@@ -547,6 +550,7 @@ public struct BuildOperations: Sendable {
         for row in try builds.fetchMetadataProvenance(ownerID: source.id) {
             try builds.saveMetadataProvenance(row, ownerID: copied.id)
         }
+        try cheats.copyCheats(from: source.id, to: copied.id, at: timestamp, makeID: makeID)
         if source.sourceKind == .patchRecipe, let recipe = try recipes.fetchPatchRecipe(resultBuildID: source.id) {
             try recipes.insertPatchRecipe(PatchRecipe(
                 id: makeID(),
@@ -593,6 +597,7 @@ public struct BuildOperations: Sendable {
             totalPlaytimeSeconds: source.totalPlaytimeSeconds,
             preferredSaveProfileID: nil,
             corePin: source.corePin,
+            cheatsEnabled: source.cheatsEnabled,
             createdAt: timestamp,
             modifiedAt: timestamp
         )

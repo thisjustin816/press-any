@@ -224,6 +224,7 @@ private struct ArchitectureHarness {
             profiles: profiles,
             states: states,
             recipes: recipes,
+            cheats: InMemoryBuildCheatRepository(builds: builds),
             assets: assets,
             assetStore: store,
             transactions: PassthroughTransactionRunner(),
