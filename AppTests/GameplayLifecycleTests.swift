@@ -409,12 +409,12 @@ final class GameplayLifecycleTests: XCTestCase {
     func testMenuSettingsOpenOverThePausedGameAndApplyLive() throws {
         let (gameplay, runtime, _) = makeGameplay()
         XCTAssertFalse(
-            gameplay.prepareGameMenu().contains { ($0 as? UIAction)?.title == "Settings…" },
+            gameplay.prepareGameMenu().contains { ($0 as? UIAction)?.title == "Settings" },
             "without a place to save settings the menu leaves them out"
         )
         var opened = 0
         gameplay.onOpenSettings = { opened += 1 }
-        let settings = try XCTUnwrap(gameplay.prepareGameMenu().compactMap { $0 as? UIAction }.first { $0.title == "Settings…" })
+        let settings = try XCTUnwrap(gameplay.prepareGameMenu().compactMap { $0 as? UIAction }.first { $0.title == "Settings" })
         let button = UIButton(type: .system)
         button.addAction(settings, for: .touchUpInside)
         button.sendActions(for: .touchUpInside)

@@ -284,7 +284,7 @@ final class GameplayViewController: UIViewController {
             }
         ))
         if onOpenSettings != nil {
-            elements.append(UIAction(title: "Settings…", image: UIImage(systemName: "gearshape")) { [weak self] _ in
+            elements.append(UIAction(title: "Settings", image: UIImage(systemName: "gearshape")) { [weak self] _ in
                 self?.onOpenSettings?()
             })
         }
@@ -327,14 +327,14 @@ final class GameplayViewController: UIViewController {
         }
         let quickSave = UIAction(
             title: "Quick Save",
-            image: UIImage(systemName: "square.and.arrow.down"),
+            image: UIImage(systemName: "tray.and.arrow.down"),
             attributes: canSave ? [] : .disabled
         ) { [weak self] _ in
             self?.saveState(quick: true)
         }
         let quickLoad = UIAction(
             title: "Quick Load",
-            image: UIImage(systemName: "square.and.arrow.up"),
+            image: UIImage(systemName: "tray.and.arrow.up"),
             attributes: quick == nil ? .disabled : []
         ) { [weak self] _ in
             if let quick { self?.loadState(quick) }
@@ -846,7 +846,7 @@ final class GameplayViewController: UIViewController {
     private func restartTapped() {
         holdFrames()
         let message = runtime is any SaveStateRuntime
-            ? "The game starts again from the beginning, and its save is kept. Where you are now is kept as an Auto State, so Load State can bring you back."
+            ? "The game starts again from the beginning, and its save is kept. Where you are now is kept as an Auto State, so States can bring you back."
             : "The game starts again from the beginning, and its save is kept. Progress since the game last saved is lost."
         let alert = UIAlertController(title: "Restart the Game?", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in

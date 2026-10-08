@@ -75,7 +75,7 @@ struct WelcomeView: View {
         Topic(
             symbol: "square.grid.2x2",
             title: "Your Library",
-            text: "Tap + and Import File, or share a ROM, patch, save or zip to \(AppBrand.displayName) from Files or another app. The library keeps its own copy, so the original can be moved or deleted."
+            text: "Tap + and Import Files, or share a ROM, patch, save or zip to \(AppBrand.displayName) from Files or another app. The library keeps its own copy, so the original can be moved or deleted."
         ),
         Topic(
             symbol: "square.stack.3d.up",
@@ -95,7 +95,7 @@ struct WelcomeView: View {
         Topic(
             symbol: "gamecontroller",
             title: "In a Game",
-            text: "Tap \(AppBrand.displayName) on the controller to pause and open the menu: Fast Forward, Save State and Load State, Settings, and Close Game. A Bluetooth controller's Menu button opens the same menu; press it again to close and resume. The touch controls hide while one is in use."
+            text: "Tap \(AppBrand.displayName) on the controller to pause and open the menu: Fast Forward, Quick Save and Quick Load, States, Settings, and Close Game. A Bluetooth controller's Menu button opens the same menu; press it again to close and resume. The touch controls hide while one is in use."
         ),
         Topic(
             symbol: "folder",

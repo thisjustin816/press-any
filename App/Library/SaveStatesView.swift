@@ -33,7 +33,7 @@ struct SaveStatesView: View {
                     ContentUnavailableView(
                         "No Save States",
                         systemImage: "square.stack",
-                        description: Text("Save State in the game menu adds one.")
+                        description: Text("Save New State or Quick Save in the game menu adds one.")
                     )
                 }
             }
@@ -53,7 +53,7 @@ struct SaveStatesView: View {
                 set: { if !$0 { renaming = nil } }
             ), presenting: renaming) { state in
                 TextField("Name", text: $name)
-                Button("Save") { model.rename(state, to: name) }
+                Button("Rename") { model.rename(state, to: name) }
                 Button("Cancel", role: .cancel) {}
             } message: { state in
                 Text("Leave the name empty to call it \(state.kindName) again.")
@@ -107,8 +107,8 @@ struct SaveStatesView: View {
                 Button(state.isPinned ? "Unpin" : "Pin", systemImage: state.isPinned ? "pin.slash" : "pin") {
                     model.togglePin(state)
                 }
-                Button("Rename…") { startRenaming(state) }
-                Button("Delete…", role: .destructive) { model.requestDeletion(of: state) }
+                Button("Rename…", systemImage: "pencil") { startRenaming(state) }
+                Button(role: .destructive) { model.requestDeletion(of: state) } label: { Label("Delete", systemImage: "trash") }
             }
         }
     }

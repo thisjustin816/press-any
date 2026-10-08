@@ -16,24 +16,34 @@ struct ScopedSettingsView: View {
     let store: any SettingsStore
     /// Called after each saved change, so an open game can apply it.
     var onChange: (() -> Void)?
+    /// False when App Settings pushes it as a page, which has its own navigation and Done.
+    var inSheet = true
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            Form {
-                displaySection
-                controlsSection
-                playingSection
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+        if inSheet {
+            NavigationStack {
+                form.toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
                 }
             }
+        } else {
+            form
         }
+    }
+
+    private var form: some View {
+        Form {
+            displaySection
+            controlsSection
+            fastForwardSection
+            playingSection
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     // Separate properties keep each section small enough for the compiler to type-check quickly.
@@ -87,22 +97,28 @@ struct ScopedSettingsView: View {
         }
     }
 
-    private var playingSection: some View {
-        Section("Playing") {
+    /// Named as on App Settings' Playing page: Speed and Audio under Fast Forward.
+    private var fastForwardSection: some View {
+        Section("Fast Forward") {
             InheritableSettingRow(
-                title: "Fast Forward Speed",
+                title: "Speed",
                 key: .fastForwardSpeed,
                 defaultValue: FastForwardSpeed.x2,
                 options: FastForwardSpeed.allCases.map { ($0, $0.displayName) },
                 context: context
             )
             InheritableSettingRow(
-                title: "Fast Forward Audio",
+                title: "Audio",
                 key: .fastForwardAudio,
                 defaultValue: FastForwardAudio.muted,
                 options: FastForwardAudio.allCases.map { ($0, $0.displayName) },
                 context: context
             )
+        }
+    }
+
+    private var playingSection: some View {
+        Section("Playing") {
             InheritableSettingRow(
                 title: "Resume Games",
                 key: .autoResumePolicy,

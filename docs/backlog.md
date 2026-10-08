@@ -145,7 +145,7 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 | missing | Tags on Games/Builds via long-press/overflow | v1.1 |  |
 | partial | Sorting | v1 | remembered Sort By in the More menu: title, recent play, added, playtime and system; list second lines follow the sort; release year/developer/publisher/hack author/Build version and date/last Build change/manual order remain |
 | done | Multi-select deletion | v1 | Select in library grid/list, Game Builds and Save Profiles, Save States, Quick Play Sessions and Recently Deleted; one confirmation with skipped counts and reasons, separate restorable entries, and dependency-ordered Restore |
-| done | Favorites | v1 | Game Details toggle and library long-press menu beside Play and Rename; small star on tiles/list rows; Favorites Only works with search; merge keeps either favorite and promotion carries it |
+| done | Favorites | v1 | Game Details toolbar star and library long-press menu beside Rename; small star on tiles/list rows; Favorites Only works with search; merge keeps either favorite and promotion carries it |
 | done | Play statistics | v1 | Game rollups of Build playtime and profile session counts/latest last played in Game Details; played profiles show playtime and last played; Recently Deleted rows excluded; refresh on library changes and game close; a separate statistics screen remains later work |
 
 Done: Box-art grid and compact list; Game detail with Builds and Save Profiles; Preferred Build
@@ -171,7 +171,7 @@ Done: Search by primary title and Game aliases.
 | missing | Signed/validated downloadable database updates | v1.1 | needs a host and a signing key; the bundled file already carries its date |
 | partial | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | matched by SHA-1; a known dump takes its canonical name, region, language and revision through the filename parser; status flags such as Aftermarket and Unl are not parsed yet |
 | done | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | one family Game is suggested; several require a choice; regional title and Preferred proposals are confirmed in Import Review |
-| done | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Names | v1 | library More-menu review selects Games, survivor and title; confirmation uses the existing merge path, preserving lineage, profiles, states and artwork; overlapping images refused before moving a group |
+| done | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Names | v1 | Settings > Library review selects Games, survivor and title; confirmation uses the existing merge path, preserving lineage, profiles, states and artwork; overlapping images refused before moving a group |
 | done | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 | Settings > Library > Regions and Languages supports reordering both lists; better regional title and Preferred mark are separate import proposals; ties stay put; player titles and preexisting titles without provenance are protected during import; Suggest Names opts into the regional title order on acceptance, protects edits, leaves skips and Preferred Builds unchanged |
 | done | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | explicit library and bundled No-Intro search in Import Review; records the base title, system and known family/release without a ROM; a later base import offers the destination and Base mark; manual matching leaves verification Unknown |
 | partial | Multi-signal development-build matching, never silently attach | v1 | exact hash/family and whole-title, alias, header or hack-base suggestions exist; broader development signals and confidence ranking remain |
@@ -543,7 +543,7 @@ Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filename
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | VoiceOver labels for management UI and emulator controls | v1.1 | the logo is the "Game Menu" button, with Close Game inside the menu; the default save's star reads "Default Save"; controls not playable by VoiceOver (accepted) |
+| partial | VoiceOver labels for management UI and emulator controls | v1.1 | the logo is the "Game Menu" button, with Close Game inside the menu; the preferred save's star reads "Preferred Save"; controls not playable by VoiceOver (accepted) |
 | partial | Dynamic Type in normal UI | v1.1 | SwiftUI defaults; controller drawing fixed size |
 | missing | Reduce Motion support | v1.1 | none |
 | partial | Large/configurable touch targets | v1.1 | hit areas extend 10-12 pt beyond drawn controls; not configurable |
@@ -559,8 +559,8 @@ Nothing open.
 
 Done: Resolver App -> System -> Game -> Build, only explicit overrides stored, inherited source
 shown, Reset to Inherited; Implemented keys; Settings screens for App, System (Game Boy, Game Boy
-Color), Game and Build; App Settings as Controls, Display and Playing pages with Systems, Library
-and About lists, and the scoped sheet grouped the same way with each setting's source under its
+Color), Game and Build; App Settings as Display, Controls and Playing pages with Systems pages, Library
+and About lists, and the scoped form grouped the same way with each setting's source under its
 name.
 
 ### SDK / toolchain detection

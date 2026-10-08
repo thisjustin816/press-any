@@ -16,6 +16,21 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertEqual(try harness.builds.fetchBuild(id: harness.baseBuild.id)?.notes, "")
     }
 
+    func testPreferredSaveIsSetPerGameAndRefusesAnotherGamesProfile() throws {
+        let harness = try Harness.make()
+        let first = try harness.createProfile(name: "First", battery: Data([1]))
+        let second = try harness.createProfile(name: "Second", battery: Data([2]))
+        let operations = harness.buildOperations()
+        try operations.setPreferredSaveProfile(gameID: harness.game.id, profileID: second.id)
+        XCTAssertEqual(try harness.games.fetchGame(id: harness.game.id)?.preferredSaveProfileID, second.id)
+        try operations.setPreferredSaveProfile(gameID: harness.game.id, profileID: first.id)
+        XCTAssertEqual(try harness.games.fetchGame(id: harness.game.id)?.preferredSaveProfileID, first.id)
+
+        let other = try harness.createStandaloneGame(title: "Other")
+        XCTAssertThrowsError(try operations.setPreferredSaveProfile(gameID: other.id, profileID: first.id))
+        XCTAssertNil(try harness.games.fetchGame(id: other.id)?.preferredSaveProfileID)
+    }
+
     func testFavoritesSurviveMoveAndCopyPromotionAndMerge() throws {
         for mode in [ReorganizationMode.move, .copy] {
             for sourceFavorite in [false, true] {

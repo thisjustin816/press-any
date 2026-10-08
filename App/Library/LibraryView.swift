@@ -28,8 +28,7 @@ struct LibraryView: View {
     @State private var pendingFileAction: FileAction = .importFiles
     @State private var importReview: ImportReviewPresentation?
     @State private var showSettings = false
-    @State private var showNameReview = false
-    @State private var showFamilyMergeReview = false
+    @State private var settingsGame: Game?
     @State private var showSaveChooser = false
     @State private var chosenQuickPlaySave: UUID?
     @State private var showQuickPlaySessions = false
@@ -46,7 +45,7 @@ struct LibraryView: View {
     let onPlay: (LaunchContext, LaunchStart) -> Void
     let onQuickPlay: (QuickPlayRequest) -> Void
     let onResumeQuickPlay: (QuickPlaySession) -> Void
-    /// Files chosen with Import File, handled as if shared to the app.
+    /// Files chosen with Import Files, handled as if shared to the app.
     let onImportFiles: ([URL]) -> Void
 
     private let importCoordinator: ImportCoordinator
@@ -93,7 +92,7 @@ struct LibraryView: View {
                              : "No games match your search.")
                     } actions: {
                         if model.searchText.isEmpty && !model.favoritesOnly {
-                            Button("Import File") {
+                            Button("Import Files…") {
                                 pendingFileAction = .importFiles
                                 showROMImporter = true
                             }
@@ -121,8 +120,8 @@ struct LibraryView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    // Select and Sort live in this menu, as in Photos and Files: more toolbar
-                    // buttons left the wordmark no room at larger text sizes.
+                    // Select and the view options live in this menu, as in Photos and Files: more
+                    // toolbar buttons left the wordmark no room at larger text sizes.
                     Menu {
                         if !model.selection.isSelecting {
                             Section {
@@ -130,6 +129,12 @@ struct LibraryView: View {
                                     .disabled(model.visibleGames.isEmpty)
                             }
                         }
+                        // Grid and List as one row of icons, as Files shows its view styles.
+                        Picker("Library View", selection: $displayMode) {
+                            Label("Grid", systemImage: "square.grid.2x2").tag(DisplayMode.grid)
+                            Label("List", systemImage: "list.bullet").tag(DisplayMode.list)
+                        }
+                        .pickerStyle(.palette)
                         Picker(selection: $sort) {
                             ForEach(LibrarySort.allCases, id: \.self) { order in
                                 Text(order.displayName).tag(order)
@@ -140,25 +145,11 @@ struct LibraryView: View {
                         }
                         .pickerStyle(.menu)
                         .accessibilityIdentifier("library.sortMenu")
-                        Picker("Library View", selection: $displayMode) {
-                            Label("Grid", systemImage: "square.grid.2x2").tag(DisplayMode.grid)
-                            Label("List", systemImage: "list.bullet").tag(DisplayMode.list)
-                        }
-                        Toggle("Favorites Only", isOn: $model.favoritesOnly)
-                            .accessibilityIdentifier("library.favoritesOnly")
                         if displayMode == .grid {
                             Toggle("Show Titles", isOn: $showsGridTitles)
                         }
-                        Section {
-                            Button {
-                                showNameReview = true
-                            } label: {
-                                Label("Suggest Names…", systemImage: "character.cursor.ibeam")
-                            }
-                            Button("Suggest Game Merges…", systemImage: "arrow.triangle.merge") {
-                                showFamilyMergeReview = true
-                            }
-                        }
+                        Toggle("Favorites Only", isOn: $model.favoritesOnly)
+                            .accessibilityIdentifier("library.favoritesOnly")
                     } label: {
                         Label("More", systemImage: "ellipsis")
                     }
@@ -169,14 +160,14 @@ struct LibraryView: View {
                             pendingFileAction = .importFiles
                             showROMImporter = true
                         } label: {
-                            Label("Import File…", systemImage: "square.and.arrow.down")
+                            Label("Import Files…", systemImage: "square.and.arrow.down")
                         }
                         Section("Quick Play") {
                             Button {
                                 pendingFileAction = .quickPlay(copiedSaveProfileID: nil)
                                 showROMImporter = true
                             } label: {
-                                Label("Quick Play ROM", systemImage: "play.circle")
+                                Label("Quick Play ROM…", systemImage: "play.circle")
                             }
                             Button {
                                 showSaveChooser = true
@@ -186,11 +177,11 @@ struct LibraryView: View {
                             Button {
                                 showQuickPlaySessions = true
                             } label: {
-                                Label("Quick Play Sessions…", systemImage: "clock.arrow.circlepath")
+                                Label("Quick Play Sessions", systemImage: "clock.arrow.circlepath")
                             }
                         }
                     } label: {
-                        Image(systemName: "plus")
+                        Label("Add", systemImage: "plus")
                     }
                     .accessibilityIdentifier("library.addMenu")
                 }
@@ -252,11 +243,15 @@ struct LibraryView: View {
                     onCancel: {}
                 )
             }
-            .sheet(isPresented: $showFamilyMergeReview) {
-                FamilyMergeReviewView(container: container)
-            }
-            .sheet(isPresented: $showNameReview) {
-                NameReviewView(container: container)
+            .sheet(item: $settingsGame) { game in
+                ScopedSettingsView(
+                    title: "Game Settings",
+                    scope: .game(game.id),
+                    system: model.system(of: game),
+                    gameID: game.id,
+                    buildID: nil,
+                    store: container.repositories.settings
+                )
             }
             .sheet(isPresented: $showSettings) {
                 AppSettingsView(
@@ -338,6 +333,7 @@ struct LibraryView: View {
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button("Play") { launch(game) }.tint(.accentColor)
                         }
+                        .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: game) } }
                         .contextMenu { gameActions(game) }
                     }
                 }
@@ -386,17 +382,23 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func gameActions(_ game: Game) -> some View {
-        Button("Play", systemImage: "play.fill") { launch(game) }
-        Button("Start Over", systemImage: "arrow.counterclockwise") { launch(game, start: .startOver) }
-        Button(game.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-               systemImage: game.isFavorite ? "star.slash" : "star") {
-            model.toggleFavorite(game)
+        Section {
+            Button("Play", systemImage: "play.fill") { launch(game) }
+            Button("Start Over", systemImage: "arrow.counterclockwise") { launch(game, start: .startOver) }
         }
-        .accessibilityIdentifier("library.toggleFavorite")
-        Button("Rename…", systemImage: "pencil") {
-            renameTitle = game.primaryTitle
-            gameToRename = game
+        Section {
+            Button(game.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                   systemImage: game.isFavorite ? "star.slash" : "star") {
+                model.toggleFavorite(game)
+            }
+            .accessibilityIdentifier("library.toggleFavorite")
+            Button("Rename…", systemImage: "pencil") {
+                renameTitle = game.primaryTitle
+                gameToRename = game
+            }
+            Button("Game Settings", systemImage: "gearshape") { settingsGame = game }
         }
+        Button(role: .destructive) { model.requestDeletion(of: game) } label: { Label("Delete Game", systemImage: "trash") }
     }
 
     private func launch(_ game: Game, start: LaunchStart = .resumeGames) {

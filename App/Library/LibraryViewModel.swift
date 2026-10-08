@@ -43,6 +43,11 @@ final class LibraryViewModel: ObservableObject {
         self.deletion = deletion
     }
 
+    /// One Game from its long-press menu or swipe, confirmed the way a selection is.
+    func requestDeletion(of game: Game) {
+        pendingBatchDeletion = deletion.planDeletion(of: [LibraryDeletionTarget(kind: .game, id: game.id)])
+    }
+
     func requestSelectedDeletion() {
         pendingBatchDeletion = deletion.planDeletion(of: visibleGames.filter { selection.ids.contains($0.id) }.map {
             LibraryDeletionTarget(kind: .game, id: $0.id)

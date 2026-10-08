@@ -87,7 +87,7 @@ Profile, its pinned core, settings overrides, and when it was added.
   Recipes keep their exact source Build and hash whatever happens to the Base mark.
 - A Game holds one Build per image.
 
-Each Build has one plain-text note, shown and edited in Build Details from its menu. Saving
+Each Build has one plain-text note, shown and edited in Build Details (Build Info in its menu). Saving
 preserves whitespace; Cancel leaves the stored note alone, and saving an empty note clears it.
 FTS5 search over notes comes later. Build Details also shows its accumulated playtime. A session
 adds the same played time to its Build and Save Profile on background and close, counting only
@@ -197,8 +197,8 @@ changes the library; review shows what will happen; commit is all or nothing.
 
 ### Sources and safety
 
-- Import File in the library's + menu, and Share Sheet / Open In, for `.gb`, `.gbc`, `.ips`,
-  `.bps`, `.sav`, `.srm` and `.zip`. Import File picks one or more files and handles each as if
+- Import Files in the library's + menu, and Share Sheet / Open In, for `.gb`, `.gbc`, `.ips`,
+  `.bps`, `.sav`, `.srm` and `.zip`. Import Files picks one or more files and handles each as if
   it had been shared, except that a ROM goes straight to Import Review instead of offering Quick
   Play first. The ROM, patch and save document types are registered in Info.plist with
   `LSHandlerRank = Owner`, and zip at Alternate. Each keeps
@@ -364,7 +364,7 @@ isn't stored.
 - A suggested name that repeats one already in the Game gains the day ("v1.0 · Oct 6"), then the
   time, then a number. A name the player typed is left alone. A Build sharing its name with
   another shows its date and time in the list.
-- Suggest Names, in the library's More menu, shows Game title suggestions above Build names.
+- Suggest Names, in Settings > Library, shows Game title suggestions above Build names.
   A Game with No-Intro releases gets a title suggestion when its best-ranked release under the
   app's region and language order has a different title. This uses the same selection as Import
   Review, including stable ties; missing Build region or language fields use the matched release's
@@ -406,14 +406,14 @@ isn't stored.
   target keeps its artwork unless Use <source>'s Artwork is on. Copy offers the source's artwork
   and profiles. When the target already holds the same image, Copy skips that Build and Move is
   refused, since moving would drop the Build's states or let them cross Builds.
-- **Suggest Game Merges**, in the library's More menu, lists Games whose Builds are images from
+- **Suggest Game Merges**, in Settings > Library, lists Games whose Builds are images from
   the same No-Intro family. A hack patched from a release stays out, since it's its own Game. Review chooses the subset, the Game to keep
   and its surviving title. Merge confirms moves through Merge into Another Game; lineage,
   profiles, states and artwork follow that path. The survivor keeps its artwork, or the first
   available source artwork fills it. Duplicate images are refused before moving a family group.
   Merely opening the review changes nothing. A failed operation refreshes the remaining list;
   completed groups stay merged and can be reviewed in the library.
-- A Build's menu has Mark as Base Build and Unmark as Base Build.
+- A Build's menu has Mark as Base Build and Unmark as Base Build, beside Set as Preferred Build.
 - Save compatibility declarations follow the original Build IDs through Move in Make Separate
   Game and Merge into Another Game, including when the pair ends up in separate Games. A Copy
   gets no declarations. Deleting either Build hides its declarations; restoring it from Recently
@@ -451,7 +451,7 @@ isn't stored.
   the profile's modified time alone, since that time decides whether an Auto State can restore.
 - Deleting a profile asks first, naming it, and sends it to Recently Deleted with its save and
   states. A Game or Build that played it plays the Game's default instead.
-- **Replace Save from File** asks first when the profile has a save, copies it to "<profile>
+- **Replace from File** asks first when the profile has a save, copies it to "<profile>
   before import", then writes the file. A blank profile fills without asking. An imported save
   records no writing Build, so it never raises the compatibility warning, and since it's newer
   than any Auto State, the next launch boots from it.
@@ -819,21 +819,24 @@ down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games an
 App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics, Hide Touch Controls with a
 Controller, and the region and language order.
 
-App Settings is a short list of pages, like the iPhone's own Settings:
+App Settings is a short list of pages, like the iPhone's own Settings, in the order a system's,
+Game's or Build's settings use:
 
+- **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
 - **Controls**: Controller Layout and Controller Theme; Touch Haptics and Tap Game for Menu under
   Touch; Hide Touch Controls under With a Controller.
-- **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
 - **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo; Save States
   (Slots, Name New States, Keep Save States and Keep Auto States, all App-only).
-- **Systems**: Game Boy and Game Boy Color, each opening that system's settings.
-- **Library**: Regions and Languages, Recently Deleted, Check Library Files and Storage.
+- **Systems**: Game Boy and Game Boy Color, each a page with that system's settings.
+- **Library**: Regions and Languages, Recently Deleted, Check Library Files, Storage, and the
+  Suggest Names and Suggest Game Merges reviews.
 - **About**: How Press Any Works, the Privacy Policy and Acknowledgements.
 
-The settings for a system, a Game, a Build or the open game are one sheet, short enough to sit at
-half height over a paused game. They're grouped under Display (Orientation, Screen Scaling, Screen
-Colors, LCD Filter, Frame Blending), Controls (Controller Layout) and Playing (Fast Forward Speed
-and Audio, Resume Games, Skip Boot Logo). Under each setting's name a note says where its value
+The settings for a system, a Game, a Build or the open game are one form: a page in App Settings
+for a system, and otherwise a sheet short enough to sit at half height over a paused game. They're
+grouped under Display (Orientation, Screen Scaling, Screen Colors, LCD Filter, Frame Blending),
+Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Skip Boot
+Logo). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
 v1.1 adds automatic DMG, GBC or SGB model selection with overrides at every level (no promise that
@@ -904,33 +907,51 @@ exposes them; custom border editing is later.
 
 - A square box-art grid (Show Titles on by default, and one column at accessibility text sizes) and
   a compact list, with search by primary title and aliases. Cartridges without artwork take a color
-  per system and print the title on the label. Select, first in the toolbar's More menu as in
-  Photos, adds checkboxes in the list and checkmark circles on tiles, and Done in the toolbar ends
+  per system and print the title on the label.
+- The toolbar holds Settings, the wordmark, More and Add, as Photos and Files arrange theirs. More
+  opens Select; Grid and List as a row of icons; Sort By; Show Titles in the grid; and Favorites
+  Only. Add opens Import Files, then Quick Play ROM, Quick Play with a Save and Quick Play
+  Sessions. The wordmark shrinks to fit rather than losing letters at large text sizes.
+- Select adds checkboxes in the list and checkmark circles on tiles, and Done in the toolbar ends
   it. The bottom bar offers Select All / Deselect All and Delete (n) for the visible Games, with one
   confirmation. Tiles read Selected or Not selected to VoiceOver. Tapping while selecting changes
   the selection without opening or playing a Game.
-- Sort By, in the More menu, remembers Title (the default), Recently Played, Recently Added,
-  Playtime or System. Recent play, added and playtime sort largest first; Games never played go last
-  under Recently Played and Playtime. System groups Game Boy before Game Boy Color. Ties use title
-  order. Search and Favorites Only filter the sorted list. List rows show the system under Title and
-  System, relative last played under Recently Played, playtime under Playtime, and the date added
-  under Recently Added. Grid tiles keep their usual appearance.
+- Touching and holding a Game offers Play and Start Over; Add to Favorites or Remove from
+  Favorites, Rename and Game Settings; then Delete Game. A list row swipes right to Play and left
+  to Delete.
+- Sort By remembers Title (the default), Recently Played, Recently Added, Playtime or System.
+  Recent play, added and playtime sort largest first; Games never played go last under Recently
+  Played and Playtime. System groups Game Boy before Game Boy Color. Ties use title order. Search
+  and Favorites Only filter the sorted list. List rows show the system under Title and System,
+  relative last played under Recently Played, playtime under Playtime, and the date added under
+  Recently Added. Grid tiles keep their usual appearance.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
-  profile. Select edits the Builds and Save Profiles sections with one selection across both and
-  Delete (n) in the bottom bar. Build taps select instead of playing. The Build menu groups playing
-  and saves, details, editing, then Make Separate Game.
-  Technical Info shows hashes (four groups of 16 on two lines, copied by touch and hold), the
-  stored metadata, verification, when the Build was added, and Made With: an engine such as GB
-  Studio above the toolchain it runs on, names as their projects spell them, version ranges as
-  "x to y" or "x or later".
-  Once a Game has been played, its Statistics section shows Playtime, Sessions and Last Played.
-  Playtime uses the same abbreviated hours, minutes and seconds as Build Details. Played Save
-  Profiles show their playtime and relative last played under their names. These statistics
-  refresh when the library changes and when a game closes.
+  preferred save. The toolbar has a Favorite star, Select and More (Game Settings, Rename Game,
+  Artwork, Merge Into Another Game, Delete Game). Select edits the Builds and Save Profiles
+  sections with one selection across both and Delete (n) in the bottom bar. Build taps select
+  instead of playing.
+- A Build's menu, with an icon on each item, groups Play, Start Over and Play with Save; Set as
+  Preferred Build, Preferred Save and Mark as Base Build; Rename Build, Build Info and Build
+  Settings; ROM and Patches (Apply Patch, Attach Variable Map, Export ROM, Remove Generated Image);
+  then Make Separate Game and Delete Build. Preferred Save picks which save this Build plays: the
+  Game's preferred save, named, or one of its own.
+- A Save Profile's menu has Play with This Save; Save States, Set as Preferred Save, Badge and
+  Duplicate; Replace from File and Export Save; then Delete Save Profile. A star marks the Game's
+  preferred save, which Play uses unless a Build picks its own.
+- Build Info opens Build Details, which links to Technical Info. Technical Info shows hashes (four
+  groups of 16 on two lines, copied by touch and hold), the stored metadata, verification, when
+  the Build was added, and Made With: an engine such as GB Studio above the toolchain it runs on,
+  names as their projects spell them, version ranges as "x to y" or "x or later".
+- Once a Game has been played, a Statistics section after Save Profiles shows Playtime, Sessions
+  and Last Played. Playtime uses the same abbreviated hours, minutes and seconds as Build Details.
+  Played Save Profiles show their playtime and relative last played under their names. These
+  statistics refresh when the library changes and when a game closes.
 - Favorites appear as a small star on grid tiles and list rows, including tiles with titles hidden.
-  Favorite in Game Details and Add to Favorites or Remove from Favorites beside Play and Rename
-  in the library's long-press menu change the same Game flag. Favorites Only in the More menu
-  works with title and alias search.
+  The star in Game Details' toolbar and Add to Favorites or Remove from Favorites in the library's
+  long-press menu change the same Game flag. Favorites Only in the More menu works with title and
+  alias search.
+- Menu items end in an ellipsis only when they ask for something more before acting: a file, a
+  name, a choice in a form. Items that open a screen, and deletions that only confirm, have none.
 - A welcome screen on first launch explains the library, Builds, saves, Quick Play, the game
   menu, exports, and that the app comes with no games. It shows once, again only when its
   content version rises, never in automated runs, and never ahead of a shared file or game.

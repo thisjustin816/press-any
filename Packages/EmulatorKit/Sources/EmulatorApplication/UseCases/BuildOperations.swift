@@ -103,6 +103,20 @@ public struct BuildOperations: Sendable {
         try builds.updateBuildMetadata(build)
     }
 
+    /// The save Play uses for the Game's Builds that don't pick their own.
+    public func setPreferredSaveProfile(gameID: UUID, profileID: UUID) throws {
+        guard var game = try games.fetchGame(id: gameID) else { throw BuildOperationError.gameNotFound(gameID) }
+        guard let profile = try profiles.fetchSaveProfile(id: profileID) else {
+            throw BuildOperationError.profileNotFound(profileID)
+        }
+        guard profile.gameID == gameID else {
+            throw BuildOperationError.profileBelongsToDifferentGame(profileID: profileID, gameID: gameID)
+        }
+        game.preferredSaveProfileID = profileID
+        game.modifiedAt = now()
+        try games.updateGame(game)
+    }
+
     public func setFavorite(gameID: UUID, isFavorite: Bool) throws {
         guard var game = try games.fetchGame(id: gameID) else { throw BuildOperationError.gameNotFound(gameID) }
         game.isFavorite = isFavorite

@@ -23,7 +23,7 @@ struct BuildDetailView: View {
                     Section {
                         LabeledContent("Playtime", value: BuildPlaytime.formatted(build.totalPlaytimeSeconds))
                             .accessibilityIdentifier("build.playtime")
-                        Button("Technical Info…") { showsTechnicalInfo = true }
+                        Button("Technical Info") { showsTechnicalInfo = true }
                     }
                     Section("Notes") {
                         Text(verbatim: build.notes.isEmpty ? "No notes" : build.notes)
@@ -42,7 +42,7 @@ struct BuildDetailView: View {
                                     }
                                 }
                         }
-                        Button("Add Declaration", systemImage: "plus") { model.addCompatibility() }
+                        Button("Add Declaration…", systemImage: "plus") { model.addCompatibility() }
                             .disabled(model.compatibilityCandidates.isEmpty)
                             .accessibilityIdentifier("build.addSaveCompatibility")
                     }
