@@ -22,7 +22,9 @@ public final class InFlightFiles: @unchecked Sendable {
 
         deinit { files.release(paths) }
 
-        /// Call before the file is placed, so cleanup can't take it in between.
+        /// Call before the file is placed, so cleanup can't take it in between. Never call it
+        /// inside a database transaction: Check Library Files reads the database while it holds
+        /// the registry's lock, so a hold taken there could deadlock with it.
         public func hold(_ relativePath: String) {
             files.hold(relativePath)
             paths.append(relativePath)
