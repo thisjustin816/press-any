@@ -227,7 +227,14 @@ final class AppContainer {
         // Builds imported before SHA-1 was kept get it once, off the main thread, so matching
         // against No-Intro's data never reads ROMs. A large library takes a few seconds.
         let fillSHA1 = FillImageSHA1(builds: repositories.builds, assetStore: fileStore)
-        Task.detached(priority: .utility) { _ = try? fillSHA1.execute() }
+        let metadataRefresh = knownDumps.map {
+            RefreshKnownDumpMetadata(builds: repositories.builds, settings: repositories.settings,
+                index: $0, transactions: repositories.transactions)
+        }
+        Task.detached(priority: .utility) {
+            _ = try fillSHA1.execute()
+            try metadataRefresh?.execute()
+        }
         try? fileStore.removeStagedFiles()
     }
 

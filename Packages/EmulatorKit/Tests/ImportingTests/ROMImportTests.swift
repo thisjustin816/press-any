@@ -479,8 +479,8 @@ struct ROMMetadataProvenanceTests {
         #expect(rows.allSatisfy { $0.source == .filename && $0.confidence == MetadataConfidence(analysis.filenameMetadata.confidence) })
     }
 
-    @Test("No-Intro fields have high confidence and header revision remains header evidence")
-    func noIntroAndHeader() throws {
+    @Test("No-Intro fields have high confidence; unmatched header revision keeps its source", arguments: [false, true])
+    func noIntroAndHeader(matched: Bool) throws {
         let harness = try ImportHarness.make()
         defer { try? FileManager.default.removeItem(at: harness.root) }
         var rom = TestROM.make(title: "HEADER")
@@ -491,17 +491,23 @@ struct ROMMetadataProvenanceTests {
             title: "Catalog", region: "USA", languages: "En", status: "Beta", version: "v1.2",
             files: [KnownDumpFile(sha1: SHA1Digest.data(rom), size: Int64(rom.count))])
         let index = try KnownDumpIndex(catalog: KnownDumpCatalog(source: "test", generated: "2026-10-07", systems: [], games: [dump]))
-        let analyzer = ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store, knownDumps: index)
+        let analyzer = ROMImportAnalyzer(builds: harness.builds, assetStore: harness.store, knownDumps: matched ? index : nil)
         let analysis = try analyzer.analyzeROM(at: url, targetGameID: nil)
         let result = try harness.committer.commit(ROMImportPlan(analysis: analysis,
-            disposition: .createGame(title: "Catalog"), buildDisplayName: analysis.filenameMetadata.suggestedBuildName, markAsBase: true))
+            disposition: .createGame(title: analysis.filenameMetadata.suggestedTitle),
+            buildDisplayName: analysis.filenameMetadata.suggestedBuildName, markAsBase: true))
         let rows = try harness.builds.fetchMetadataProvenance(ownerID: result.build.id)
-        #expect(Set(rows.map(\.field)) == [.displayName, .region, .language, .revision, .versionString, .status])
+        let expected: Set<MetadataField> = matched
+            ? [.displayName, .region, .language, .versionString, .status]
+            : [.displayName, .region, .revision]
+        #expect(Set(rows.map(\.field)) == expected)
+        #expect(result.build.revision == (matched ? nil : "2"))
         for row in rows {
-            #expect(row.source == (row.field == .revision ? .romHeader : .noIntro))
-            #expect(row.confidence == (row.field == .revision ? nil : .high))
+            #expect(row.source == (matched ? .noIntro : row.field == .revision ? .romHeader : .filename))
+            let confidence = matched ? MetadataConfidence.high : MetadataConfidence(analysis.filenameMetadata.confidence)
+            #expect(row.confidence == (row.field == .revision ? nil : confidence))
         }
-        #expect(try harness.games.fetchMetadataProvenance(ownerID: result.game.id).first?.source == .noIntro)
+        #expect(try harness.games.fetchMetadataProvenance(ownerID: result.game.id).first?.source == (matched ? .noIntro : .filename))
         #expect(!result.game.hasPlayerTitle)
     }
 

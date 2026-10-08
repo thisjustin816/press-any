@@ -29,6 +29,7 @@ public enum BuildOperationError: Error, Equatable {
     case buildNotFound(UUID)
     case invalidBuildName
     case invalidGameTitle
+    case invalidMetadataField(MetadataField)
     case gameNotFound(UUID)
     case buildBelongsToDifferentGame(buildID: UUID, gameID: UUID)
     case profileNotFound(UUID)
@@ -116,6 +117,24 @@ public struct BuildOperations: Sendable {
         try builds.updateBuildMetadata(build)
     }
 
+    public func setMetadata(buildID: UUID, field: MetadataField, value: String?) throws {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleaned = trimmed?.isEmpty == true ? nil : trimmed
+        try transactions.run { [builds, now] in
+            guard let keyPath = field.buildMetadataKeyPath else {
+                throw BuildOperationError.invalidMetadataField(field)
+            }
+            guard var build = try builds.fetchBuild(id: buildID) else {
+                throw BuildOperationError.buildNotFound(buildID)
+            }
+            build[keyPath: keyPath] = cleaned
+            if field == .versionString { build.versionSortKey = Build.versionSortKey(for: cleaned) }
+            build.modifiedAt = now()
+            try builds.updateBuildMetadata(build)
+            try builds.recordPlayerOverride(field: field, value: cleaned, ownerID: buildID, at: build.modifiedAt)
+        }
+    }
+
     public func renameGame(gameID: UUID, title: String, hasPlayerTitle: Bool = true) throws {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { throw BuildOperationError.invalidGameTitle }
@@ -143,18 +162,18 @@ public struct BuildOperations: Sendable {
     public func renameBuild(buildID: UUID, displayName: String, source: MetadataSource = .player) throws {
         let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { throw BuildOperationError.invalidBuildName }
-        guard var build = try builds.fetchBuild(id: buildID) else {
-            throw BuildOperationError.buildNotFound(buildID)
-        }
-        guard build.displayName != name else { return }
-        build.displayName = name
-        build.modifiedAt = now()
-        let updated = build
-        try transactions.run { [builds] in
-            try builds.updateBuildMetadata(updated)
-            if source != .player {
+        try transactions.run { [builds, now] in
+            guard var build = try builds.fetchBuild(id: buildID) else {
+                throw BuildOperationError.buildNotFound(buildID)
+            }
+            build.displayName = name
+            build.modifiedAt = now()
+            try builds.updateBuildMetadata(build)
+            if source == .player {
+                try builds.recordPlayerOverride(field: .displayName, value: name, ownerID: buildID, at: build.modifiedAt)
+            } else {
                 try builds.saveMetadataProvenance(MetadataProvenance(field: .displayName, source: source,
-                    providedValue: name, recordedAt: updated.modifiedAt), ownerID: buildID)
+                    providedValue: name, recordedAt: build.modifiedAt), ownerID: buildID)
             }
         }
     }

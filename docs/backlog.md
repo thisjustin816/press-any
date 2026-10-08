@@ -14,20 +14,19 @@ Library backend first: everything that decides how the library is stored, identi
 safe lands before more play features, so a library built while testing never needs regrouping or
 migrating later.
 
-1. Identity: the ROM-hack naming and metadata-source work that remains. Bundled No-Intro data,
+1. Identity: the ROM-hack naming work that remains. Bundled No-Intro data,
    hash matching, family grouping, regional proposals, reviewed family merges and Match Game
    with absent-base lineage are built. "No-Intro data" in `docs/product.md` describes the behavior.
-2. The rest of the data model, in as few schema migrations as possible: metadata provenance with
-   Metadata Details and per-step patch input hashes. Game aliases, rename, Build notes, per-Build
-   playtime, favorites, declared save compatibility and the cross-region save check are built.
-3. Multi-signal development-build matching, the one import item left in v1.
-4. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
+2. Multi-signal development-build matching, the one import item left in v1. Metadata provenance,
+   Metadata Details and per-step patch input hashes are built, along with Game aliases, rename,
+   Build notes, per-Build playtime, favorites, declared save compatibility and the cross-region save check.
+3. Library features on that data: FTS5 search, sorting, play statistics, and the storage screen
    with cleanup, in-flight protection and verification on read.
-5. Exports, last of the library work because their format follows the settled schema: Library
+4. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
    Files folder they land in come first, as they don't depend on the schema.
-6. The rest of the v1 core: save state slots, crash recovery, reopening the last
+5. The rest of the v1 core: save state slots, crash recovery, reopening the last
    game, and a fixed controller combo for the game menu.
 
 v1 is a good core experience; everything else waits for v1.1: 7z and multi-asset import,
@@ -118,7 +117,7 @@ ROMs and patches on demand.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | done | Game aliases/alternate titles (indexed) | v1 | normalized indexed alias table in one identity migration; family titles added at import; library search matches aliases, including "Pocket Monsters Crystal" for Pokémon Crystal; FTS5 remains separate |
-| partial | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Game title and Build field provenance, confidence and player overrides are recorded; offered values survive corrections and rows follow restructuring and deletion; Metadata Details UI and provider refreshes remain |
+| done | Metadata source/confidence/provenance + user overrides, Metadata Details UI | v1 | Technical Info opens each field's value, source, confidence, date and offered value; edits and Use Offered Value keep the player source and the earlier offer; provenance follows restructuring and deletion |
 | done | Presentation-metadata editing (rename Game/Build after creation) | v1 | Rename Game in Game Details preserves the former title as an alias and protects the player title; Rename Build; Suggest Names reviews Game titles and Build names, retaining old Game titles as aliases |
 | partial | Build toolchain record, variable-map sidecars, artwork/doc overrides, activation history | v1 (toolchain and sidecars were MVP) | toolchain reports and variable maps done; artwork/doc overrides and activation history missing |
 | done | Build notes | v1 | one plain-text note, shown and edited in Build Details; whitespace preserved; clear or cancel edits; notes follow moved and copied Builds; FTS5 note search comes later |
@@ -132,7 +131,7 @@ gameID, system, concise name, immutable hash, sourceKind, parent lineage, Base m
 profile, core pin; SaveProfile: name, current save, ancestry, playtime/session count/last
 played/created; SaveState exact context (Build + Profile + core + serialization version), playtime,
 label, kind; Build region/language/revision/version suggested from recognized filename tags,
-nonzero header revision fallback, editable or clearable at import (including Quick Play promotion),
+nonzero header revision fallback without a No-Intro match, editable or clearable at import (including Quick Play promotion),
 numeric version sort key and Technical Info display; PatchRecipe: exact base, ordered items, enabled flag, expected hash, Apply-Anyway flag;
 ManagedAsset: hash, kind, length, relative path, original filename, provenance, integrity.
 
@@ -176,7 +175,7 @@ Done: Search by primary title and Game aliases.
 | done | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 | Settings > Library > Regions and Languages supports reordering both lists; better regional title and Preferred mark are separate import proposals; ties stay put; player titles and preexisting titles without provenance are protected during import; Suggest Names opts into the regional title order on acceptance, protects edits, leaves skips and Preferred Builds unchanged |
 | done | Match Game... for unknown ROMs, lineage without owning the base, link base later | v1 | explicit library and bundled No-Intro search in Import Review; records the base title, system and known family/release without a ROM; a later base import offers the destination and Base mark; manual matching leaves verification Unknown |
 | partial | Multi-signal development-build matching, never silently attach | v1 | exact hash/family and whole-title, alias, header or hack-base suggestions exist; broader development signals and confidence ranking remain |
-| missing | Quiet provider metadata refresh never overwriting user overrides | v1.1 |  |
+| partial | Quiet provider metadata refresh never overwriting user overrides | v1.1 | No-Intro refreshes matched Builds at launch when each system's bundled version changes; player fields, missing provenance and names stay protected; other providers remain |
 
 Done: SHA-256 identity for every ROM; Original imported filename preserved permanently; the bundled
 No-Intro data (both systems' DB exports, aftermarket releases included) with its generator, manual

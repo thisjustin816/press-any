@@ -14,18 +14,22 @@ public enum MetadataField: String, Codable, CaseIterable, Sendable {
     case status
 
     public func value(in build: Build) -> String? {
+        if self == .displayName { return build.displayName }
+        return buildMetadataKeyPath.flatMap { build[keyPath: $0] }
+    }
+
+    public var buildMetadataKeyPath: WritableKeyPath<Build, String?>? {
         switch self {
-        case .title: nil
-        case .displayName: build.displayName
-        case .region: build.region
-        case .language: build.language
-        case .revision: build.revision
-        case .versionString: build.versionString
-        case .baseTitle: build.baseTitle
-        case .hackTitle: build.hackTitle
-        case .author: build.author
-        case .translation: build.translation
-        case .status: build.status
+        case .title, .displayName: nil
+        case .region: \Build.region
+        case .language: \Build.language
+        case .revision: \Build.revision
+        case .versionString: \Build.versionString
+        case .baseTitle: \Build.baseTitle
+        case .hackTitle: \Build.hackTitle
+        case .author: \Build.author
+        case .translation: \Build.translation
+        case .status: \Build.status
         }
     }
 }
