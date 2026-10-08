@@ -7,7 +7,7 @@ set -euo pipefail
 #   Scripts/take-screenshots.sh [ROMS] [OUTPUT_DIR]
 #
 # ROMS is `hero` (the default), `all`, or a comma-separated list of manifest tags and filenames.
-# Optional environment: SHOTS (`listing`, the default: the ten App Store screenshots, numbered in
+# Optional environment: SHOTS (`listing`, the default: the nine App Store screenshots, numbered in
 # listing order; `summary`: one of each screen and every menu, for review; `every-rom`: summary
 # plus each ROM's game, Technical Info and gameplay), DEVICE (simulator name), APPEARANCE (light or dark),
 # TEXT_SIZE (`default`, or a `simctl ui content_size` value such as
@@ -15,6 +15,11 @@ set -euo pipefail
 # never seeded), and GAME_URL with GAME_SHA256 (and optionally GAME_NAME): a real game for the
 # listing's gameplay shots, a .gb, .gbc or .zip holding one, downloaded at run time so neither the
 # game nor its name is kept in the repository. Use only a game whose author allows it.
+#
+# GAME_INPUT, with a game, is a button script its gameplay shots play first, so they show the game
+# being played rather than its intro: the grammar App/Screenshots/ScreenshotInput.swift describes,
+# then optionally `|` and each shot's wait after the script as `<shot>=<seconds>`, such as
+# `3 start 1.5 a right:2 | play=1 play-lcd=2.5`. A shot not named waits 1 second.
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
@@ -40,7 +45,8 @@ if [[ -n ${GAME_URL:-} ]]; then
   rm -rf "$game_dir"
   mkdir -p "$game_dir"
   curl -fsSL --retry 3 "$GAME_URL" -o "$game_dir/download"
-  game_entry="$(python3 - "$game_dir" "$GAME_URL" "$GAME_SHA256" "${GAME_NAME:-}" <<'PY'
+  # Heredocs stay out of $(...): macOS's bash 3.2 misreads one holding an odd number of quotes.
+  python3 - "$game_dir" "$GAME_URL" "$GAME_SHA256" "${GAME_NAME:-}" >"$game_dir/entry.json" <<'PY'
 import hashlib, json, sys, zipfile
 from pathlib import Path
 folder, url, expected, name = Path(sys.argv[1]), *sys.argv[2:]
@@ -69,20 +75,41 @@ if not name:
 print(json.dumps({"filename": filename, "name": name or "Game", "system": "GBC" if color else "GB",
                   "sha256": hashlib.sha256(data).hexdigest(), "hero": True, "tags": ["listing-game"]}))
 PY
-)"
+  game_entry="$(cat "$game_dir/entry.json")"
   echo "Gameplay shots use $(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["filename"])' "$game_entry")."
 fi
 
 # The plan, tab-separated: `file <name>` for each ROM or patch to copy (the chosen ROMs, then any
 # patch whose source was chosen), `menus <game ROM> <gameplay ROM>` for the menu UI tests,
-# `only <test>` to run just that UI test, `order <names>` for the final numbering, then
-# `shot <scene> <seconds to wait> <name> <flags>` for each
-# screenshot. The waits let gameplay get past the boot logo with the game's picture moving. Flags
-# are the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
-plan="$(python3 - "$roms" "$shots" "$import_rom" "$game_entry" <<'PY'
+# `only <test>` for each UI test to run (all of them when there is none), `input <script>` and
+# `waits <shot>=<seconds> ...` for the button script and the UI tests' waits after it,
+# `order <names>` for the final numbering, then `shot <scene> <seconds to wait> <name> <ready>
+# <flags>` for each screenshot. Without a script, the waits let gameplay get past the boot logo
+# with the game's picture moving. Ready is `ready` when the app reports the scene ready, `input`
+# when it plays the button script and reports that, or `-`; the wait counts from then. Flags are
+# the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
+plan_file="build/screenshots/plan.tsv"
+mkdir -p "$(dirname "$plan_file")"
+python3 - "$roms" "$shots" "$import_rom" "$game_entry" "${GAME_INPUT:-}" >"$plan_file" <<'PY'
 import json, sys
-wanted_arg, shots, import_rom, game_entry = sys.argv[1:]
+wanted_arg, shots, import_rom, game_entry, game_input = sys.argv[1:]
 game = json.loads(game_entry) if game_entry else None
+script, _, wait_text = game_input.partition("|")
+script = " ".join(script.split())
+scripted = {"play", "play-lcd", "quick-play", "play-landscape", "play-landscape-gamepad"}
+waits = {}
+for pair in wait_text.split():
+    name, _, seconds = pair.partition("=")
+    try:
+        waits[name] = float(seconds)
+    except ValueError:
+        waits[name] = -1
+    if name not in scripted or not 0 <= waits[name] <= 600:
+        sys.exit(f"GAME_INPUT's {pair!r} isn't <shot>=<seconds> for one of {', '.join(sorted(scripted))}.")
+if waits and not script:
+    sys.exit("GAME_INPUT names waits but no button script.")
+if script and not game:
+    sys.exit("GAME_INPUT needs GAME_URL: the script is for that game.")
 manifest = json.load(open("TestROMs/manifest.json"))
 wanted = {w.strip() for w in wanted_arg.split(",") if w.strip()}
 def chosen(entry):
@@ -105,7 +132,7 @@ lines = [f"file\t{f}" for f in names + [p["filename"] for p in patches] + ([game
 # A Game with a patched Build shows Builds best.
 game_rom = patches[0]["source"] if patches else names[0]
 lines.append(f"menus\t{game_rom}\t{game['filename'] if game and shots == 'listing' else names[0]}")
-shot = lambda scene, wait, name, flags="-": lines.append(f"shot\t{scene}\t{wait}\t{name}\t{flags}")
+shot = lambda scene, wait, name, flags="-", ready="-": lines.append(f"shot\t{scene}\t{wait:g}\t{name}\t{ready}\t{flags}")
 gb = first(lambda r: r["system"] == "GB") or names[0]
 gbc = first(lambda r: r["system"] == "GBC") or names[0]
 if shots == "listing" and game:
@@ -117,17 +144,22 @@ if shots == "listing":
     # results, so they carry gameplay, the library and a Game's Builds and saves.
     shot("library", 8, "library")
     shot(f"game:{game_rom}", 4, "game")
-    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info")
-    shot(f"play:{gbc}", 10, "play")
-    shot(f"play:{gb}", 10, "play-lcd", "-ScreenshotLCDFilter lcd3x")
-    shot(f"play:{gbc}", 10, "playtiles", "-ScreenshotLayout playtiles")
-    shot(f"play:{gb}", 10, "play-gamepad", "-ScreenshotGamepad YES")
+    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info", ready="ready")
+    # With a button script, each gameplay shot waits for it to play, then for its own wait.
+    play = lambda scene, name, flags="-": shot(scene, waits.get(name, 1) if script else 10, name, flags,
+                                               "input" if script else "-")
+    play(f"play:{gbc}", "play")
+    play(f"play:{gb}", "play-lcd", "-ScreenshotLCDFilter lcd3x")
     shot(f"import:unimported/{import_rom}", 4, "import-review")
-    shot(f"quick-play:{gb}", 10, "quick-play")
+    play(f"quick-play:{gb}", "quick-play")
     # Landscape gameplay needs the device turned, which only a UI test can do.
-    lines.append("only\tPressAnyScreenshotTests/MenuScreenshots/test9LandscapeGameplayAndClosingReturnsToPortrait")
+    for test in ("test9LandscapeGameplayAndClosingReturnsToPortrait", "testLandscapeQuickPlayWithController"):
+        lines.append(f"only\tPressAnyScreenshotTests/MenuScreenshots/{test}")
+    if script:
+        lines.append(f"input\t{script}")
+        lines.append("waits\t" + " ".join(f"{n}={waits.get(n, 1):g}" for n in ("play-landscape", "play-landscape-gamepad")))
     lines.append("order\t" + " ".join(["play", "library", "game", "play-landscape", "import-review",
-        "playtiles", "play-lcd", "build-info", "quick-play", "play-gamepad"]))
+        "play-lcd", "build-info", "quick-play", "play-landscape-gamepad"]))
     print("\n".join(lines))
     sys.exit()
 # The first launch seeds the library, so it waits longest.
@@ -136,12 +168,12 @@ shot("settings", 4, "settings")
 if shots == "every-rom":
     for f in names:
         shot(f"game:{f}", 4, f"game-{stem(f)}")
-        shot(f"build-info:{f}", 4, f"build-info-{stem(f)}")
+        shot(f"build-info:{f}", 4, f"build-info-{stem(f)}", ready="ready")
         shot(f"play:{f}", 10, f"play-{stem(f)}")
 elif shots == "summary":
     shot(f"game:{game_rom}", 4, "game")
     # GB Studio shows the most in Made With.
-    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info")
+    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info", ready="ready")
     for system in ("GB", "GBC"):
         if f := first(lambda r: r["system"] == system):
             shot(f"play:{f}", 10, f"play-{system.lower()}")
@@ -161,20 +193,23 @@ shot(f"quick-play:{names[0]}", 10, "quick-play")
 shot(f"quick-play-info:{names[0]}", 4, "quick-play-info")
 print("\n".join(lines))
 PY
-)"
 files=()
 scenes=()
-only_test=""
+only=()
+game_input=""
+test_waits=""
 order=""
 while IFS=$'\t' read -r kind rest; do
   case "$kind" in
     file) files+=("$rest") ;;
     menus) IFS=$'\t' read -r game_rom play_rom <<<"$rest" ;;
-    only) only_test="$rest" ;;
+    only) only+=("-only-testing:$rest") ;;
+    input) game_input="$rest" ;;
+    waits) test_waits="$rest" ;;
     order) order="$rest" ;;
     shot) scenes+=("$rest") ;;
   esac
-done <<<"$plan"
+done <"$plan_file"
 echo "Seeding: ${files[*]}"
 
 mkdir -p "$output"
@@ -255,15 +290,95 @@ collect_diagnostics() {
   echo "Launch failed; see $output/simulator.log." >&2
 }
 
+# The app logs these, as ScreenshotScene spells them: the first once a scene that takes time to
+# settle is ready, the second when it can't read the button script.
+ready_message="Screenshot scene ready"
+input_error="Couldn't read -ScreenshotInput"
+
+# wait_ready <seconds>: waits for the app to log that the scene is ready, and fails if it refused
+# the button script. A scene that doesn't report in time is taken anyway, with a warning.
+wait_ready() {
+  local deadline=$((SECONDS + $1))
+  while ((SECONDS < deadline)); do
+    grep -qF "$ready_message" "$log.tmp" 2>/dev/null && return 0
+    if grep -qF "$input_error" "$log.tmp" 2>/dev/null; then
+      grep -F "$input_error" "$log.tmp" >&2
+      return 1
+    fi
+    sleep 0.5
+  done
+  echo "The app didn't report the scene ready within $1 seconds; taking it anyway." >&2
+}
+
+# A fresh simulator can show a system notification banner, such as one about Apple Intelligence,
+# at any time, and nothing simctl offers turns those off. A banner stays about five seconds, so
+# each shot is compared with a second one taken after that: a difference along the screen's left
+# edge, below the status bar, where the banner's end sits and every scene holds still, means one
+# of them was covered, and the scene is taken again. This exits 1 for a difference.
+banner_check="build/screenshots/banner-check.py"
+cat >"$banner_check" <<'PY'
+import struct, sys, zlib
+
+# Pixels near the screen's left edge, below the status bar: where a notification banner's left end
+# sits, and where every scene shows something that holds still.
+LEFT, WIDTH, TOP, BOTTOM = 8, 48, 120, 440
+
+def strip(path):
+    data = open(path, "rb").read()
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    pos, idat, header = 8, [], None
+    while pos < len(data):
+        length, kind = struct.unpack(">I4s", data[pos:pos + 8])
+        if kind == b"IHDR":
+            header = struct.unpack(">IIBBBBB", data[pos + 8:pos + 8 + length])
+        elif kind == b"IDAT":
+            idat.append(data[pos + 8:pos + 8 + length])
+        pos += 12 + length
+    width, height, depth, color, _, _, interlace = header
+    if depth != 8 or interlace or color not in (2, 6) or height < BOTTOM:
+        return None
+    bpp = 4 if color == 6 else 3
+    stride = width * bpp + 1
+    raw = zlib.decompressobj().decompress(b"".join(idat), stride * BOTTOM)
+    count = (LEFT + WIDTH) * bpp
+    previous, rows = bytearray(count), []
+    for y in range(BOTTOM):
+        kind, line = raw[y * stride], bytearray(raw[y * stride + 1:y * stride + 1 + count])
+        for i in range(count):
+            a = line[i - bpp] if i >= bpp else 0
+            b = previous[i]
+            c = previous[i - bpp] if i >= bpp else 0
+            if kind == 1:
+                line[i] = (line[i] + a) & 255
+            elif kind == 2:
+                line[i] = (line[i] + b) & 255
+            elif kind == 3:
+                line[i] = (line[i] + (a + b) // 2) & 255
+            elif kind == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        previous = line
+        if y >= TOP:
+            rows.append(line[LEFT * bpp:])
+    return bpp, rows
+
+shot, later = strip(sys.argv[1]), strip(sys.argv[2])
+if not shot or not later or shot[0] != later[0]:
+    sys.exit(0)
+bpp = shot[0]
+changed = sum(1 for one, two in zip(shot[1], later[1]) for x in range(0, len(one), bpp)
+              if max(abs(one[x + i] - two[x + i]) for i in range(3)) > 8)
+sys.exit(1 if changed > WIDTH * (BOTTOM - TOP) // 50 else 0)
+PY
+
 shot=0
-# capture <scene> <seconds to wait> <name> [launch arguments...]
-capture() {
-  local scene="$1" wait="$2" name="$3"
-  shift 3
-  shot=$((shot + 1))
-  local file
-  file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$name")"
-  echo "== $scene $*" >>"$log"
+# shoot <file> <scene> <seconds to wait> <ready> [launch arguments...]: launches the scene and
+# saves the screen to <file> once it's ready and has waited, leaving the app running.
+shoot() {
+  local file="$1" scene="$2" wait="$3" ready="$4"
+  shift 4
   # simctl doesn't truncate the output file, so a launch that prints nothing would repeat the last.
   rm -f "$log.tmp"
   local attempt
@@ -276,6 +391,11 @@ capture() {
     fi
     sleep 5
   done
+  # A button script can run for minutes on a slow simulator; Technical Info shows in seconds.
+  case "$ready" in
+    input) wait_ready 300 || return 1 ;;
+    ready) wait_ready 30 || return 1 ;;
+  esac
   sleep "$wait"
   xcrun simctl io "$udid" screenshot "$file" >/dev/null
   # Before its first frame the app shows the blank launch screen, a PNG under 100 KB where every
@@ -286,17 +406,42 @@ capture() {
     sleep 6
     xcrun simctl io "$udid" screenshot "$file" >/dev/null
   done
-  xcrun simctl terminate "$udid" "$bundle_id" || true
-  cat "$log.tmp" >>"$log" 2>/dev/null || true
+}
+
+# capture <scene> <seconds to wait> <name> <ready> [launch arguments...]
+capture() {
+  local scene="$1" wait="$2" name="$3" ready="$4"
+  shift 4
+  shot=$((shot + 1))
+  local file check arguments attempt
+  file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$name")"
+  check="$output/banner-check.png"
+  arguments=("$@")
+  [[ $ready != input ]] || arguments+=(-ScreenshotInput "$game_input")
+  echo "== $scene $*" >>"$log"
+  for attempt in 1 2 3; do
+    shoot "$file" "$scene" "$wait" "$ready" ${arguments[@]+"${arguments[@]}"} || return 1
+    sleep 7
+    xcrun simctl io "$udid" screenshot "$check" >/dev/null
+    xcrun simctl terminate "$udid" "$bundle_id" || true
+    cat "$log.tmp" >>"$log" 2>/dev/null || true
+    python3 "$banner_check" "$file" "$check" && break
+    if ((attempt == 3)); then
+      echo "$file may still show a notification banner." >&2
+    else
+      echo "$file may show a notification banner; taking it again ($attempt)." >&2
+    fi
+  done
+  rm -f "$check"
   echo "$file"
 }
 
 for scene in "${scenes[@]}"; do
-  IFS=$'\t' read -r name_scene wait name flags <<<"$scene"
+  IFS=$'\t' read -r name_scene wait name ready flags <<<"$scene"
   arguments=()
   [[ $flags == - ]] || read -r -a arguments <<<"$flags"
   # Written so bash 3.2, macOS's, accepts an empty array under `set -u`.
-  capture "$name_scene" "$wait" "$name" ${arguments[@]+"${arguments[@]}"}
+  capture "$name_scene" "$wait" "$name" "$ready" ${arguments[@]+"${arguments[@]}"}
 done
 rm -f "$log.tmp"
 
@@ -304,11 +449,10 @@ rm -f "$log.tmp"
 # screenshot of each. A menu that doesn't open fails the run once everything else is saved.
 menus="$output/menus"
 # Without -quiet, which hides why a test failed; the filter keeps the results and failures.
-only=()
-[[ -z $only_test ]] || only=("-only-testing:$only_test")
 set +e
 TEST_RUNNER_SCREENSHOT_ROMS="$staging" TEST_RUNNER_SCREENSHOT_OUTPUT="$menus" \
   TEST_RUNNER_SCREENSHOT_GAME_ROM="$game_rom" TEST_RUNNER_SCREENSHOT_PLAY_ROM="$play_rom" \
+  TEST_RUNNER_SCREENSHOT_INPUT="$game_input" TEST_RUNNER_SCREENSHOT_WAITS="$test_waits" \
   xcodebuild test -project PressAny.xcodeproj -scheme PressAnyScreenshots \
   -destination "id=$udid" -derivedDataPath "$derived_data" ${only[@]+"${only[@]}"} 2>&1 |
   grep -E 'error:|Test Case .*(passed|failed)|Failing tests|\*\* TEST'

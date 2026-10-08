@@ -33,6 +33,9 @@ final class GameplayDriver: @unchecked Sendable {
     private var lastSaveFailed = false
     private var saveCheckInFlight = false
 
+    /// Called on the driver's queue just before each emulated frame. A screenshot scene's button
+    /// script sets that frame's buttons here.
+    var willRunFrame: (@Sendable () -> Void)?
     var onFrame: FrameHandler?
     var onAudio: AudioHandler?
     var onRumble: RumbleHandler?
@@ -155,6 +158,7 @@ final class GameplayDriver: @unchecked Sendable {
     }
 
     private func runFrame() throws -> EmulatorVideoFrame {
+        willRunFrame?()
         let frame = try runtime.stepFrame(input: input.current())
         emulatedNanosecondsSinceSavePoll &+= frame.emulatedNanoseconds
         if emulatedNanosecondsSinceSavePoll >= savePollNanoseconds {

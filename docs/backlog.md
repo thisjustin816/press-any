@@ -58,7 +58,7 @@ Open items in each area are in the table, finished ones on the line under it.
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |
 | done | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Rotation lock, cutout and controller checks passed on device |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1.1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
-| partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow seeds from `TestROMs/` and by default takes the ten-image listing set in App Store order on the 6.9-inch iPhone 17 Pro Max, checking its dimensions (6.5-inch on the 14 Plus too; docs/testflight.md); uploading the set and any app preview remain with the App Store listing |
+| partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow seeds from `TestROMs/` and by default takes the nine-image listing set in App Store order on the 6.9-inch iPhone 17 Pro Max, checking its dimensions (6.5-inch on the 14 Plus too; docs/testflight.md); uploading the set and any app preview remain with the App Store listing |
 
 Done: A Press Any folder in Files holding Exports, with the library kept in Application Support and
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;

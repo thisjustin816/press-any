@@ -35,6 +35,7 @@ struct LibraryView: View {
     @State private var quickPlayToResume: QuickPlaySession?
     @State private var screenshotGameID: UUID?
     @State private var screenshotBuildInfo: Build?
+    @State private var screenshotBuildInfoShown = false
     @State private var gameToRename: Game?
     @State private var renameTitle = ""
     /// Drag handles in the list, for the Manual sort.
@@ -215,12 +216,17 @@ struct LibraryView: View {
             .onChange(of: displayMode) { _, mode in
                 if mode != .list { isReordering = false }
             }
-            .task { openScreenshotScene() }
+            .task { await openScreenshotScene() }
             .navigationDestination(item: $screenshotGameID) { gameID in
                 GameDetailView(container: container, gameID: gameID, onPlay: onPlay)
             }
             .sheet(item: $screenshotBuildInfo) { build in
                 BuildTechnicalInfoView(build: build, container: container)
+                    .onAppear {
+                        guard !screenshotBuildInfoShown else { return }
+                        screenshotBuildInfoShown = true
+                        ScreenshotScene.log(ScreenshotScene.readyMessage)
+                    }
             }
             // Quick Play promotion adds Games from sheets this screen doesn't own.
             .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in model.reload() }
@@ -447,18 +453,32 @@ struct LibraryView: View {
     }
 
     /// The library scenes; `RootView` opens the gameplay ones.
-    private func openScreenshotScene() {
+    private func openScreenshotScene() async {
         switch ScreenshotScene.current {
         case .settings:
             showSettings = true
         case .game(let file):
             screenshotGameID = ScreenshotScene.build(romFile: file, in: container)?.gameID
         case .buildInfo(let file):
-            screenshotBuildInfo = ScreenshotScene.build(romFile: file, in: container)
+            guard let build = ScreenshotScene.build(romFile: file, in: container) else { return }
+            await showScreenshotBuildInfo(build)
         case .importReview(let file):
             openImportReview(at: ScreenshotScene.romURL(file))
         default:
             break
+        }
+    }
+
+    /// A sheet asked for while the library is still appearing can be dropped, leaving the library
+    /// on screen, so Technical Info is asked for again until it shows.
+    private func showScreenshotBuildInfo(_ build: Build) async {
+        for _ in 0..<5 {
+            screenshotBuildInfo = build
+            try? await Task.sleep(for: .seconds(2))
+            guard !screenshotBuildInfoShown, !Task.isCancelled else { return }
+            ScreenshotScene.log("Technical Info didn't show; asking again.")
+            screenshotBuildInfo = nil
+            try? await Task.sleep(for: .milliseconds(500))
         }
     }
 

@@ -276,7 +276,7 @@ final class AppContainer {
             assetStore: fileStore
         )
         coreRegistry = CoreRegistry(factories: [SameBoyCoreFactory()])
-        settingsResolver = SettingsResolver(store: repositories.settings)
+        settingsResolver = SettingsResolver(store: ScreenshotScene.settingsStore(repositories.settings))
         launchHistory = SessionLaunchHistory(store: repositories.settings)
 
         // Nothing has started yet, so this cleanup can't reach a Quick Play session, import or
