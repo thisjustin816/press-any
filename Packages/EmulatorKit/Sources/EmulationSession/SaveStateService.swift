@@ -29,6 +29,9 @@ public struct SaveStateService: Sendable {
     private let settings: SettingsResolver?
     private let deletion: LibraryDeletionOperations?
     private let thumbnails: (any FrameImageEncoding)?
+    /// False keeps only the newest unpinned Auto State, whatever Keep Auto States says. It's read
+    /// at each Auto State write, so turning it off deletes nothing until the next one.
+    private let keepsAutoStateHistory: @Sendable () -> Bool
     private let now: @Sendable () -> Date
 
     public init(
@@ -40,6 +43,7 @@ public struct SaveStateService: Sendable {
         deletion: LibraryDeletionOperations? = nil,
         transactions: any LibraryTransactionRunner = PassthroughTransactionRunner(),
         thumbnails: (any FrameImageEncoding)? = nil,
+        keepsAutoStateHistory: @escaping @Sendable () -> Bool = { true },
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.states = states
@@ -50,6 +54,7 @@ public struct SaveStateService: Sendable {
         self.deletion = deletion
         self.transactions = transactions
         self.thumbnails = thumbnails
+        self.keepsAutoStateHistory = keepsAutoStateHistory
         self.now = now
     }
 
@@ -258,8 +263,13 @@ public struct SaveStateService: Sendable {
 
     private func pruneAutoStates(context: LaunchContext) throws {
         let all = try states.fetchSaveStates(buildID: context.buildID, saveProfileID: context.saveProfileID)
-        let configured = try settings?.appValue(KeepAutoStates.self, key: .keepAutoStates)
-        let policy = configured.map { AutoStateRetention(keepCount: $0.rawValue) } ?? retention
+        let policy: AutoStateRetention
+        if keepsAutoStateHistory() {
+            let configured = try settings?.appValue(KeepAutoStates.self, key: .keepAutoStates)
+            policy = configured.map { AutoStateRetention(keepCount: $0.rawValue) } ?? retention
+        } else {
+            policy = AutoStateRetention(keepCount: 1)
+        }
         for state in policy.expiredStates(from: all) {
             let thumbnail = try state.screenshotAssetID.flatMap { try assets.fetchAsset(id: $0) }
             if let asset = try assets.fetchAsset(id: state.stateAssetID) {
