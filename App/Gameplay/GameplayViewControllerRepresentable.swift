@@ -23,6 +23,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     let onClose: () -> Void
     var onAddToLibrary: (() -> Void)?
     var onOpenSettings: (() -> Void)?
+    var onOpenCheats: (() -> Void)?
     var onSoundModeChange: ((SoundMode) throws -> Void)?
 
     func makeUIViewController(context: Context) -> GameplayViewController {
@@ -52,6 +53,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
         controller.onClose = onClose
         controller.onAddToLibrary = onAddToLibrary
         controller.onOpenSettings = onOpenSettings
+        controller.onOpenCheats = onOpenCheats
         controller.onSoundModeChange = onSoundModeChange
         return controller
     }

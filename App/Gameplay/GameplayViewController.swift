@@ -66,6 +66,8 @@ final class GameplayViewController: UIViewController {
     /// When set, the menu offers Settings, which calls this. The game stays paused under the
     /// settings, which arrive through `applyDisplaySettings` as they change.
     var onOpenSettings: (() -> Void)?
+    /// When set, the menu offers Cheats, which calls this. The game stays paused under the list.
+    var onOpenCheats: (() -> Void)?
     /// Saves a Sound choice made from the game menu, which applies it to the game at once.
     var onSoundModeChange: ((SoundMode) throws -> Void)?
 
@@ -270,6 +272,18 @@ final class GameplayViewController: UIViewController {
                 title: "States",
                 subtitle: "Add to Library to save states",
                 image: UIImage(systemName: "square.stack"),
+                attributes: .disabled
+            ) { _ in })
+        }
+        if onOpenCheats != nil {
+            elements.append(UIAction(title: "Cheats", image: UIImage(systemName: "wand.and.stars")) { [weak self] _ in
+                self?.onOpenCheats?()
+            })
+        } else if onAddToLibrary != nil {
+            elements.append(UIAction(
+                title: "Cheats",
+                subtitle: "Add to Library to use cheats",
+                image: UIImage(systemName: "wand.and.stars"),
                 attributes: .disabled
             ) { _ in })
         }

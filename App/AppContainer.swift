@@ -27,6 +27,7 @@ final class AppContainer {
     let importAnalyzer: ROMImportAnalyzer
     let importCommitter: ImportCommitter
     let buildOperations: BuildOperations
+    let buildCheats: BuildCheatOperations
     let createBlankSaveProfile: CreateBlankSaveProfile
     let duplicateSaveProfile: DuplicateSaveProfile
     let setSaveProfileBadge: SetSaveProfileBadge
@@ -130,6 +131,11 @@ final class AppContainer {
             cheats: repositories.cheats,
             assets: repositories.assets,
             assetStore: fileStore,
+            transactions: repositories.transactions
+        )
+        buildCheats = BuildCheatOperations(
+            builds: repositories.builds,
+            cheats: repositories.cheats,
             transactions: repositories.transactions
         )
         createBlankSaveProfile = CreateBlankSaveProfile(
@@ -312,6 +318,16 @@ final class AppContainer {
               let url = try? fileStore.managedURL(relativePath: asset.relativePath),
               fileStore.fileExists(at: url) else { return nil }
         return url
+    }
+
+    /// Checks a typed cheat code with the core that plays the Build, without applying it. With no
+    /// core that takes cheats, no code reads.
+    func cheatCodeChecker(buildID: UUID) -> (String) -> Bool {
+        guard let build = try? repositories.builds.fetchBuild(id: buildID) else { return { _ in false } }
+        let factory = build.corePin.flatMap { try? coreRegistry.factory(for: $0.descriptor) }
+            ?? (try? coreRegistry.latestFactory(system: build.system))
+        guard let core = try? factory?.makeCore(), let cheats = core as? any CheatCapability else { return { _ in false } }
+        return { cheats.isValidCheatCode($0) }
     }
 
     func makeEmulationSession() -> EmulationSession {
