@@ -284,7 +284,8 @@ No-Intro in Acknowledgements anyway, with the data's date.
 - At launch, a changed bundled version quietly refreshes that system's matched Builds. Region,
   language, revision, version and status follow No-Intro when their recorded source is No-Intro,
   Filename or ROM Header. An omitted value clears the field. Player values and fields without
-  provenance stay protected, and names and base titles stay unchanged. Each system's applied
+  provenance stay protected, and names and base titles stay unchanged. A field already holding
+  No-Intro's value keeps its recorded date. Each system's applied
   version is stored only when its refresh succeeds; a failure is retried on the next launch.
 - A known dump takes its canonical name ahead of the filename, and a Game created from one is
   titled by its regional title. The original filename is always kept.
@@ -314,8 +315,9 @@ A Build's Technical Info opens Metadata Details: the Game title followed by each
 with its current value, source, recorded confidence and date. A field without provenance reads
 "Not recorded". An offered value that differs appears below the current value. Tapping a field
 edits it; saving a correction records the source as You and keeps the earlier offered value.
-Empty text clears optional fields. Use Offered Value is available for player fields with an
-offered value and keeps the source as You, because the original source isn't stored.
+Empty text clears optional fields. Use Offered Value appears on a player field whose offered
+value differs from its current one, and keeps the source as You, because the original source
+isn't stored.
 
 - Region and language groups, "Rev 1" or "Rev A" (a retail revision), "v1.2" and "Version 1.2"
   are recognized. A dotted "Rev 0.2.0" is a homebrew version. Versions keep a semver suffix such

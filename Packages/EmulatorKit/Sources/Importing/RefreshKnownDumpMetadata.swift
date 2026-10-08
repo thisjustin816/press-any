@@ -57,16 +57,23 @@ public struct RefreshKnownDumpMetadata: Sendable {
             case .player, .patch: return false
             }
         }
-        guard !eligible.isEmpty else { return }
         let metadata = BuildImportMetadata(knownDump: dump)
+        // A field already holding No-Intro's value keeps its row, so its recorded date stays the
+        // one it was first recorded with.
+        let changed = eligible.filter { field in
+            let value = metadata.value(for: field)
+            let row = rows.first { $0.field == field }
+            return field.value(in: build) != value || row?.source != .noIntro || row?.providedValue != value
+        }
+        guard !changed.isEmpty else { return }
         var updated = build
-        for field in eligible {
+        for field in changed {
             if let keyPath = field.buildMetadataKeyPath { updated[keyPath: keyPath] = metadata.value(for: field) }
         }
-        if eligible.contains(.versionString) { updated.versionSortKey = metadata.versionSortKey }
+        if changed.contains(.versionString) { updated.versionSortKey = metadata.versionSortKey }
         updated.modifiedAt = timestamp
         try builds.updateBuildMetadata(updated)
-        for field in eligible {
+        for field in changed {
             try builds.saveMetadataProvenance(MetadataProvenance(field: field, source: .noIntro, confidence: .high,
                 providedValue: metadata.value(for: field), recordedAt: timestamp), ownerID: build.id)
         }

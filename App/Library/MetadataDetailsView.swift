@@ -46,7 +46,8 @@ struct MetadataDetailsView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("metadata.\(field.rawValue)")
-                        if let row = provenance(for: field), row.source == .player, let offered = row.providedValue {
+                        if let row = provenance(for: field), row.source == .player, let offered = row.providedValue,
+                           offered != value(for: field) {
                             Button("Use Offered Value") { save(field: field, value: offered) }
                                 .accessibilityIdentifier("metadata.useOffered.\(field.rawValue)")
                         }

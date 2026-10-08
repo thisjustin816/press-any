@@ -77,6 +77,33 @@ struct RefreshKnownDumpMetadataTests {
         }
     }
 
+    @Test("fields already holding No-Intro's values keep their rows and dates")
+    func unchangedFields() throws {
+        let fixture = RefreshMetadataFixture()
+        var build = fixture.build()
+        build.region = "Europe"
+        build.language = "En, Fr"
+        try fixture.builds.insertBuild(build)
+        for (field, value) in [(MetadataField.region, "Europe"), (.language, "En, Fr")] {
+            try fixture.builds.saveMetadataProvenance(MetadataProvenance(field: field, source: .noIntro,
+                confidence: .high, providedValue: value, recordedAt: fixture.before), ownerID: build.id)
+        }
+        let rows = try fixture.builds.fetchMetadataProvenance(ownerID: build.id)
+        try fixture.refresh().execute()
+        #expect(try fixture.builds.fetchBuild(id: build.id) == build)
+        #expect(try fixture.builds.fetchMetadataProvenance(ownerID: build.id) == rows)
+
+        try fixture.builds.saveMetadataProvenance(MetadataProvenance(field: .status, source: .filename,
+            providedValue: "Beta", recordedAt: fixture.before), ownerID: build.id)
+        try fixture.refresh(version: "2").execute()
+        let updated = try #require(try fixture.builds.fetchBuild(id: build.id))
+        #expect(updated.status == nil)
+        #expect(updated.modifiedAt == fixture.now)
+        let refreshed = try fixture.builds.fetchMetadataProvenance(ownerID: build.id)
+        #expect(refreshed.first { $0.field == .region }?.recordedAt == fixture.before)
+        #expect(refreshed.first { $0.field == .status }?.recordedAt == fixture.now)
+    }
+
     @Test("unrecorded fields, unmatched images and other systems stay unchanged")
     func excludedBuilds() throws {
         let fixture = RefreshMetadataFixture()
