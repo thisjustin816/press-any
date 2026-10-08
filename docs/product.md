@@ -464,11 +464,11 @@ claims reliability from just an old ROM, old save and new ROM.
   has saved since the battery save was last written, or when the state is older than the profile's
   save. Continuing keeps the current save as "<profile> before loading state". A state that fails
   partway puts the latest save back in the game.
-- **Quick Save and Quick Load.** Above Save State and Load State in the game menu, Quick Save
-  replaces the exact Build + Save Profile's Quick State in place, with no naming prompt, and
-  confirms "State saved." Quick Load uses the same load checks and backup prompt as Load State.
-  It shows the Quick State's date, or is disabled with "No Quick Save yet" when there is none.
-  Quick States appear as "Quick Save" with their date in Load State and Save States. Renaming
+- **Quick Save and Quick Load.** In the game menu's icon row, Quick Save replaces the exact
+  Build + Save Profile's Quick State in place, with no naming prompt, and confirms "State saved."
+  Quick Load uses the same load checks and backup prompt as loading any state, and is disabled
+  when there is no Quick State. Quick States appear as "Quick Save" with their date in the game
+  menu's States and in Save States. Renaming
   keeps that name on later Quick Saves. Deleting sends the state to Recently Deleted; restoring
   it when another Quick State exists makes the restored state ordinary and keeps both.
   Quick States are never chosen automatically at launch, by Resume Games, or for crash recovery.
@@ -493,7 +493,7 @@ claims reliability from just an old ROM, old save and new ROM.
   and when returning to the app. Crash recovery is a separate, explicit choice.
 - **Restart and Start Over.** Restart, beside Close Game in the game menu, asks first, then starts
   the game again from its boot and plays. The cartridge keeps its save through a reset. A library
-  game first keeps where the player was as an Auto State, so Load State can go back to it; Quick
+  game first keeps where the player was as an Auto State, so States can go back to it; Quick
   Play keeps only what the game itself saved. Start Over, beside Play in a Game's and a Build's
   menus and on a long press of a Game's Play button, boots from the save whatever Resume Games
   says and keeps the resume point, as the Ask prompt's Start Over does.
@@ -529,7 +529,7 @@ fresh build.
   logo unless Settings > Skip Boot Logo is on.
 - A Quick Play session lives in a temporary workspace and never writes a library save. Using an
   existing save copies it in.
-- The game menu shows Quick Save, Quick Load and Save State grayed out with
+- The game menu shows Quick Save and Quick Load grayed out, and States grayed out with
   "Add to Library to save states". Add to Library closes the game and opens promotion. The session
   screen opens the ROM's Technical Info.
 - Closing offers Keep for Later. Sessions expire after 24 hours; v1.1 makes that Immediately,
@@ -641,9 +641,10 @@ picture. A connected controller still hides the touch controls.
   > Tap Game for Menu (off by default) lets a tap on the picture open it too, but only for a touch
   that lands there, so a sliding thumb doesn't. VoiceOver finds it as the Game Menu button. The
   first game played says "Tap Press Any for the menu" once.
-- Opening the menu stops frames and audio and releases held input. The menu holds Resume, Fast
-  Forward (checked while on), Save State, Load State with each state, Settings, and Close Game in
-  red in its own section. The game stays paused after the menu closes, after changing Fast Forward
+- Opening the menu stops frames and audio and releases held input. A row of icons at the top
+  holds Resume, Fast Forward (highlighted while on), Quick Save and Quick Load. Below it, States
+  opens Save New State and each state, newest first, with its picture and date; then Sound,
+  Settings, and Restart beside Close Game, in red, in their own section. The game stays paused after the menu closes, after changing Fast Forward
   and after returning from another app, until the player chooses Resume. A paused game's Resume
   button sits centered on the game picture.
 - **Settings** opens over the paused game at half height. A library game edits its Game's

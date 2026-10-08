@@ -253,73 +253,16 @@ final class GameplayViewController: UIViewController {
 
     func prepareGameMenu() -> [UIMenuElement] {
         pauseGameplay()
-        var elements: [UIMenuElement] = []
-        if pausedOverlay.isHidden {
-            elements.append(UIAction(title: "Pause", image: UIImage(systemName: "pause.fill")) { [weak self] _ in
-                self?.pauseGameplay()
-            })
+        let states = runtime as? any SaveStateRuntime
+        let saved = (try? states?.saveStates()) ?? []
+        var elements: [UIMenuElement] = [makeQuickControls(canSave: states != nil, quick: saved.first { $0.kind == .quick })]
+        if let states {
+            elements.append(makeStatesMenu(states, saved: saved))
         } else {
-            elements.append(UIAction(title: "Resume", image: UIImage(systemName: "play.fill")) { [weak self] _ in
-                self?.resumeTapped()
-            })
-        }
-        elements.append(UIAction(
-            title: "Fast Forward",
-            image: UIImage(systemName: "forward.fill"),
-            state: fastForward ? .on : .off
-        ) { [weak self] _ in
-            guard let self else { return }
-            self.toggleFastForward()
-        })
-
-        if let states = runtime as? any SaveStateRuntime {
-            let saved = (try? states.saveStates()) ?? []
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            formatter.timeStyle = .medium
-            let quick = saved.first { $0.kind == .quick }
-            elements.append(UIAction(title: "Quick Save", image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
-                self?.saveState(quick: true)
-            })
             elements.append(UIAction(
-                title: "Quick Load",
-                subtitle: quick.map { formatter.string(from: $0.createdAt) } ?? "No Quick Save yet",
-                image: UIImage(systemName: "square.and.arrow.up"),
-                attributes: quick == nil ? .disabled : []
-            ) { [weak self] _ in
-                if let quick { self?.loadState(quick) }
-            })
-            elements.append(UIAction(title: "Save State", image: UIImage(systemName: "square.and.arrow.down")) { [weak self] _ in
-                self?.saveState()
-            })
-            let loadActions = saved.map { state in
-                UIAction(
-                    title: state.displayName,
-                    subtitle: formatter.string(from: state.createdAt),
-                    image: states.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
-                ) { [weak self] _ in
-                    self?.loadState(state)
-                }
-            }
-            let loadImage = UIImage(systemName: "square.and.arrow.up")
-            if loadActions.isEmpty {
-                elements.append(UIAction(title: "Load State", image: loadImage, attributes: .disabled) { _ in })
-            } else {
-                elements.append(UIMenu(title: "Load State", image: loadImage, children: loadActions))
-            }
-        } else {
-            for (title, image) in [("Quick Save", "square.and.arrow.down"), ("Quick Load", "square.and.arrow.up")] {
-                elements.append(UIAction(
-                    title: title,
-                    subtitle: "Add to Library to save states",
-                    image: UIImage(systemName: image),
-                    attributes: .disabled
-                ) { _ in })
-            }
-            elements.append(UIAction(
-                title: "Save State",
+                title: "States",
                 subtitle: "Add to Library to save states",
-                image: UIImage(systemName: "square.and.arrow.down"),
+                image: UIImage(systemName: "square.stack"),
                 attributes: .disabled
             ) { _ in })
         }
@@ -357,6 +300,67 @@ final class GameplayViewController: UIViewController {
         #endif
         elements.append(UIMenu(options: .displayInline, children: [restart, close]))
         return elements
+    }
+
+    /// The row of icons at the top of the game menu: pause or resume, fast forward, Quick Save and
+    /// Quick Load. Quick Play has no states, so its Quick Save and Quick Load are disabled.
+    private func makeQuickControls(canSave: Bool, quick: SaveState?) -> UIMenu {
+        let pauseOrResume = pausedOverlay.isHidden
+            ? UIAction(title: "Pause", image: UIImage(systemName: "pause.fill")) { [weak self] _ in
+                self?.pauseGameplay()
+            }
+            : UIAction(title: "Resume", image: UIImage(systemName: "play.fill")) { [weak self] _ in
+                self?.resumeTapped()
+            }
+        let fastForwardToggle = UIAction(
+            title: "Fast Forward",
+            image: UIImage(systemName: "forward.fill"),
+            state: fastForward ? .on : .off
+        ) { [weak self] _ in
+            self?.toggleFastForward()
+        }
+        let quickSave = UIAction(
+            title: "Quick Save",
+            image: UIImage(systemName: "square.and.arrow.down"),
+            attributes: canSave ? [] : .disabled
+        ) { [weak self] _ in
+            self?.saveState(quick: true)
+        }
+        let quickLoad = UIAction(
+            title: "Quick Load",
+            image: UIImage(systemName: "square.and.arrow.up"),
+            attributes: quick == nil ? .disabled : []
+        ) { [weak self] _ in
+            if let quick { self?.loadState(quick) }
+        }
+        let row = UIMenu(options: .displayInline, children: [pauseOrResume, fastForwardToggle, quickSave, quickLoad])
+        row.preferredElementSize = .small
+        return row
+    }
+
+    /// Save New State first, then every state for this Build and Save Profile, newest first. The
+    /// Quick State is among them, named and dated like the rest.
+    private func makeStatesMenu(_ states: any SaveStateRuntime, saved: [SaveState]) -> UIMenu {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .medium
+        let saveNew = UIAction(title: "Save New State", image: UIImage(systemName: "plus")) { [weak self] _ in
+            self?.saveState()
+        }
+        let loads = saved.map { state in
+            UIAction(
+                title: state.displayName,
+                subtitle: formatter.string(from: state.createdAt),
+                image: states.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
+            ) { [weak self] _ in
+                self?.loadState(state)
+            }
+        }
+        return UIMenu(
+            title: "States",
+            image: UIImage(systemName: "square.stack"),
+            children: [UIMenu(options: .displayInline, children: [saveNew])] + loads
+        )
     }
 
     /// A state's thumbnail at menu-icon size, with the pixels kept sharp.
