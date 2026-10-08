@@ -8,25 +8,48 @@ final class LibraryViewModel: ObservableObject {
     @Published private(set) var games: [Game] = []
     /// Each Game's system, from the Build it plays.
     @Published private(set) var systems: [UUID: GameSystem] = [:]
-    @Published var searchText = ""
-    @Published var favoritesOnly = false
+    @Published var selection = ItemSelection<UUID>()
+    @Published var pendingBatchDeletion: BatchDeletionPlan?
+    @Published var searchText = "" {
+        didSet { selection.reconcile(with: Set(visibleGames.map(\.id))) }
+    }
+    @Published var favoritesOnly = false {
+        didSet { selection.reconcile(with: Set(visibleGames.map(\.id))) }
+    }
     @Published private(set) var errorMessage: String?
 
     private let gameRepository: any GameRepository
     private let buildRepository: any BuildRepository
     private let launchResolver: ResolvePreferredLaunchContext
     private let buildOperations: BuildOperations
+    private let deletion: LibraryDeletionOperations
 
     init(
         gameRepository: any GameRepository,
         buildRepository: any BuildRepository,
         launchResolver: ResolvePreferredLaunchContext,
-        buildOperations: BuildOperations
+        buildOperations: BuildOperations,
+        deletion: LibraryDeletionOperations
     ) {
         self.gameRepository = gameRepository
         self.buildRepository = buildRepository
         self.launchResolver = launchResolver
         self.buildOperations = buildOperations
+        self.deletion = deletion
+    }
+
+    func requestSelectedDeletion() {
+        pendingBatchDeletion = deletion.planDeletion(of: visibleGames.filter { selection.ids.contains($0.id) }.map {
+            LibraryDeletionTarget(kind: .game, id: $0.id)
+        })
+    }
+
+    func confirm(_ batch: BatchDeletionPlan) {
+        let result = deletion.delete(batch)
+        reload()
+        selection.ids = Set(result.skipped.map { $0.target.id }).intersection(Set(visibleGames.map(\.id)))
+        NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+        if let message = result.failureMessage(after: batch) { report(message) }
     }
 
     func system(of game: Game) -> GameSystem {
@@ -51,6 +74,7 @@ final class LibraryViewModel: ObservableObject {
                 systems[game.id] = (builds.first { $0.id == game.preferredBuildID } ?? builds.first)?.system
             }
             self.systems = systems
+            selection.reconcile(with: Set(visibleGames.map(\.id)))
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription

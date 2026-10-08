@@ -6,6 +6,152 @@ import Foundation
 import XCTest
 
 final class LibraryDeletionOperationsTests: XCTestCase {
+    func testBatchDeletesAllWithSeparateRestorableEntries() throws {
+        let library = try Library()
+        let batch = library.operations.planDeletion(of: [
+            .init(kind: .build, id: library.base.id),
+            .init(kind: .build, id: library.patched.id),
+            .init(kind: .saveProfile, id: library.profile.id)
+        ])
+        XCTAssertEqual(batch.items.count, 3)
+        XCTAssertTrue(batch.skipped.isEmpty)
+        XCTAssertNotNil(try library.games.fetchGame(id: library.game.id), "planning does not delete")
+        let result = library.operations.delete(batch)
+        XCTAssertEqual(result.deleted.count, 3)
+        XCTAssertTrue(result.skipped.isEmpty)
+        XCTAssertNil(try library.games.fetchGame(id: library.game.id), "the last Build takes the Game")
+        XCTAssertEqual(result.deleted.map(\.kind), [.saveProfile, .build, .build])
+        XCTAssertEqual(result.deleted.last?.records.gameIDs, [library.game.id])
+        XCTAssertEqual(result.deleted[1].records.buildIDs, [library.patched.id])
+        let restored = library.operations.restore(deletionIDs: result.deleted.map(\.id))
+        XCTAssertEqual(restored.completed.count, 3)
+        XCTAssertTrue(restored.skipped.isEmpty)
+        XCTAssertNotNil(try library.saveProfiles.fetchSaveProfile(id: library.profile.id))
+        XCTAssertNotNil(try library.builds.fetchBuild(id: library.patched.id))
+    }
+
+    func testBatchReplansIndependentBuildsSoTheLastTakesItsGame() throws {
+        let library = try Library()
+        let independent = Build(
+            id: UUID(), gameID: library.game.id, system: .gameBoy, displayName: "Independent",
+            imageAssetID: library.base.imageAssetID, imageSHA256: String(repeating: "c", count: 64),
+            sourceKind: .importedImage, createdAt: library.base.createdAt, modifiedAt: library.base.createdAt
+        )
+        try library.builds.insertBuild(independent)
+        let result = library.operations.delete(library.operations.planDeletion(of: [
+            .init(kind: .build, id: library.base.id),
+            .init(kind: .build, id: library.patched.id),
+            .init(kind: .build, id: independent.id)
+        ]))
+        XCTAssertEqual(result.deleted.count, 3)
+        XCTAssertTrue(result.skipped.isEmpty)
+        XCTAssertNil(try library.games.fetchGame(id: library.game.id))
+        XCTAssertEqual(result.deleted.last?.records.gameIDs, [library.game.id])
+    }
+
+    func testBatchPlanNamesAGameOnlyWhenTheSelectionTakesEveryBuild() throws {
+        let library = try Library()
+        let independent = Build(
+            id: UUID(), gameID: library.game.id, system: .gameBoy, displayName: "Independent",
+            imageAssetID: library.base.imageAssetID, imageSHA256: String(repeating: "c", count: 64),
+            sourceKind: .importedImage, createdAt: library.base.createdAt, modifiedAt: library.base.createdAt
+        )
+        try library.builds.insertBuild(independent)
+        let some = library.operations.planDeletion(of: [.init(kind: .build, id: library.base.id)])
+        XCTAssertTrue(some.emptiedGames.isEmpty, "Independent stays, so the Game does")
+        let every = library.operations.planDeletion(of: [
+            .init(kind: .build, id: library.base.id),
+            .init(kind: .build, id: independent.id)
+        ])
+        XCTAssertTrue(every.items.allSatisfy { $0.plan.emptiedGames.isEmpty }, "neither Build is the last alone")
+        XCTAssertEqual(every.emptiedGames.map(\.id), [library.game.id])
+    }
+
+    func testBatchDeleteRechecksAnItemDeletedAfterConfirmationWasPlanned() throws {
+        let library = try Library()
+        let batch = library.operations.planDeletion(of: [.init(kind: .saveProfile, id: library.profile.id)])
+        _ = try library.operations.delete(library.operations.planProfileDeletion(profileID: library.profile.id))
+        let result = library.operations.delete(batch)
+        XCTAssertTrue(result.deleted.isEmpty)
+        XCTAssertEqual(result.skipped.first?.error as? LibraryDeletionError, .saveProfileNotFound(library.profile.id))
+        XCTAssertEqual(try library.operations.recentlyDeleted().count, 1)
+    }
+
+    func testBatchPurgeDeletesEachSelectedEntryBeforeItsParent() throws {
+        let library = try Library()
+        let state = try library.operations.delete(library.operations.planStateDeletion(stateID: library.state.id))
+        let profile = try library.operations.delete(library.operations.planProfileDeletion(profileID: library.profile.id))
+        let game = try library.operations.delete(library.operations.planGameDeletion(gameID: library.game.id))
+        let result = library.operations.purge(deletionIDs: [game.id, profile.id, state.id])
+        XCTAssertEqual(result.completed, [state.id, profile.id, game.id])
+        XCTAssertTrue(result.skipped.isEmpty)
+        XCTAssertTrue(try library.operations.recentlyDeleted().isEmpty)
+    }
+
+    func testBatchSkipsRefusedGameAndKeepsItsReason() throws {
+        let library = try Library()
+        try library.builds.moveBuild(id: library.patched.id, toGameID: library.otherGame.id)
+        let batch = library.operations.planDeletion(of: [
+            .init(kind: .game, id: library.game.id),
+            .init(kind: .saveState, id: library.state.id)
+        ])
+        XCTAssertEqual(batch.items.count, 1)
+        XCTAssertEqual(batch.skipped.count, 1)
+        XCTAssertEqual(batch.skipped.first?.error as? LibraryDeletionError, .dependentBuildsInOtherGames([library.patched.id]))
+        XCTAssertTrue(try XCTUnwrap(batch.skipped.first).reason.contains("Hack in Other"))
+        let result = library.operations.delete(batch)
+        XCTAssertEqual(result.deleted.count, 1)
+        XCTAssertEqual(result.skipped.count, 1)
+        XCTAssertNotNil(try library.games.fetchGame(id: library.game.id))
+    }
+
+    func testBatchWithNothingPossibleDoesNotDelete() throws {
+        let library = try Library()
+        try library.builds.moveBuild(id: library.patched.id, toGameID: library.otherGame.id)
+        let batch = library.operations.planDeletion(of: [.init(kind: .game, id: library.game.id)])
+        XCTAssertTrue(batch.items.isEmpty)
+        let result = library.operations.delete(batch)
+        XCTAssertTrue(result.deleted.isEmpty)
+        XCTAssertEqual(result.skipped.count, 1)
+        XCTAssertTrue(try library.operations.recentlyDeleted().isEmpty)
+    }
+
+    func testBatchRestoreOrdersGameBeforeBuildProfileAndState() throws {
+        let library = try Library()
+        let state = try library.operations.delete(library.operations.planStateDeletion(stateID: library.state.id))
+        let profile = try library.operations.delete(library.operations.planProfileDeletion(profileID: library.profile.id))
+        let build = try library.operations.delete(library.operations.planBuildDeletion(buildID: library.patched.id))
+        let game = try library.operations.delete(library.operations.planGameDeletion(gameID: library.game.id))
+        let result = library.operations.restore(deletionIDs: [state.id, profile.id, build.id, game.id])
+        XCTAssertEqual(result.completed, [game.id, build.id, profile.id, state.id])
+        XCTAssertTrue(result.skipped.isEmpty)
+        XCTAssertEqual(try library.states.fetchSaveState(id: library.state.id), library.state)
+    }
+
+    func testBatchRestoreRetriesPatchedBuildAfterItsSelectedBase() throws {
+        let library = try Library()
+        try library.builds.insertBuild(Build(
+            id: UUID(), gameID: library.game.id, system: .gameBoy, displayName: "Keeper",
+            imageAssetID: library.base.imageAssetID, imageSHA256: String(repeating: "c", count: 64),
+            sourceKind: .importedImage, createdAt: library.base.createdAt, modifiedAt: library.base.createdAt
+        ))
+        let patched = try library.operations.delete(library.operations.planBuildDeletion(buildID: library.patched.id))
+        let base = try library.operations.delete(library.operations.planBuildDeletion(buildID: library.base.id))
+        let result = library.operations.restore(deletionIDs: [patched.id, base.id])
+        XCTAssertEqual(result.completed, [base.id, patched.id])
+        XCTAssertTrue(result.skipped.isEmpty)
+    }
+
+    func testBatchRestoreReportsMissingParent() throws {
+        let library = try Library()
+        let build = try library.operations.delete(library.operations.planBuildDeletion(buildID: library.patched.id))
+        _ = try library.operations.delete(library.operations.planGameDeletion(gameID: library.game.id))
+        let result = library.operations.restore(deletionIDs: [build.id])
+        XCTAssertTrue(result.completed.isEmpty)
+        XCTAssertEqual(result.skipped.first?.error as? LibraryDeletionError, .gameIsDeleted(library.game.id))
+        XCTAssertTrue(try XCTUnwrap(result.skipped.first).reason.contains("Restore that first."))
+    }
+
     func testDeletingRestoringAndPurgingKeepsInMemoryDeclarationsWithTheirBuilds() throws {
         let library = try Library()
         let a = library.base.id, b = library.patched.id

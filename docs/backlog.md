@@ -145,6 +145,7 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 | missing | Smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates) | v1.1 |  |
 | missing | Tags on Games/Builds via long-press/overflow | v1.1 |  |
 | partial | Sorting | v1 | title only; recent/added/playtime/release year/system/developer/publisher/hack author/Build version/last Build change/manual order missing |
+| done | Multi-select deletion | v1 | Select in library grid/list, Game Builds and Save Profiles, Save States, Quick Play Sessions and Recently Deleted; one confirmation with skipped counts and reasons, separate restorable entries, and dependency-ordered Restore |
 | done | Favorites | v1 | Game Details toggle and library long-press menu beside Play and Rename; small star on tiles/list rows; Favorites Only works with search; merge keeps either favorite and promotion carries it |
 | partial | Play statistics | v1 | Build playtime recorded and shown in Build Details; profile playtime, session count and last played recorded; profile display, Game rollups, play count, last played on Game and the statistics screen remain |
 

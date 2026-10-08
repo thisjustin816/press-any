@@ -455,7 +455,8 @@ claims reliability from just an old ROM, old save and new ROM.
 - **Save States screen.** A profile's menu opens its states on every Build, newest first, with
   picture, Build and date. A state can be renamed (an empty name gives back "Save State" or "Auto
   State") or deleted to Recently Deleted. Loading stays in the game menu, where the Build and
-  profile are already chosen. Crash-recovery checkpoints are hidden from both state lists.
+  profile are already chosen. Select shows checkboxes and a Delete (n) bottom button for one
+  confirmation across the selection. Crash-recovery checkpoints are hidden from both state lists.
 - **Auto State.** Backgrounding, closing and switching sessions write the battery save and an
   Auto State, keeping the last five. Each step is attempted even if an earlier one fails, so the
   Auto State can recover progress a failed battery write lost. A close that fails keeps the game
@@ -505,6 +506,9 @@ fresh build.
   Library closes the game and opens promotion. The session screen opens the ROM's Technical Info.
 - Closing offers Keep for Later. Sessions expire after 24 hours; v1.1 makes that Immediately,
   24 hours or 7 days.
+- Quick Play Sessions has Select, checkboxes and Discard (n) in the bottom bar. One confirmation
+  discards the selected sessions and warns that it can't be undone. Tapping a row while selecting
+  changes its selection; Done returns to opening sessions.
 - An autosave records the battery file it was taken with and is skipped once that file is newer.
 - **Add to Library** runs Import Review and can keep the library's existing save, replace it after
   a "<profile> before Quick Play" copy, or create a new profile. Kept progress becomes what the
@@ -754,6 +758,13 @@ exposes them; custom border editing is later.
 - Builds, Save Profiles and save states can also be deleted with a swipe to the left on their
   rows, and a Quick Play session discarded the same way. The swipe asks first, as the row's
   menu does. In Recently Deleted, swiping left is Delete Now and swiping right is Restore.
+- Select in Recently Deleted adds checkboxes, Restore (n) and Delete Now (n). Restore brings back
+  Games before Builds, then Save Profiles and states, and reports anything it still can't restore.
+  Delete Now asks once for the selection and warns that it can't be undone.
+- Batch deletion plans every selected item before asking. The confirmation gives the count and
+  reasons for skipped items; if nothing can go, it offers only Cancel. Each deleted item keeps its
+  own Recently Deleted entry. Selecting every Build uses the last Build's deletion behavior,
+  including its Game and remaining Save Profiles. Done or an empty list leaves selection mode.
 - A state deleted on its own comes back only once its profile and Build are back. Purging a
   profile or Build for good takes all its states, including ones waiting in another deletion.
 - Purging writes a permanent tombstone so a deleted record can't come back from another device;
@@ -802,9 +813,14 @@ exposes them; custom border editing is later.
 
 - A square box-art grid (Show Titles on by default, and one column at accessibility text sizes)
   and a compact list, with search by primary title and aliases. Cartridges without artwork take a
-  color per system and print the title on the label.
+  color per system and print the title on the label. Select in the toolbar adds checkboxes in the
+  list and checkmark circles on tiles. The bottom bar offers Select All / Deselect All and Delete
+  (n) for the visible Games, with one confirmation. Tiles read Selected or Not selected to
+  VoiceOver. Tapping while selecting changes the selection without opening or playing a Game.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
-  profile. The Build menu groups playing and saves, details, editing, then Make Separate Game.
+  profile. Select edits the Builds and Save Profiles sections with one selection across both and
+  Delete (n) in the bottom bar. Build taps select instead of playing. The Build menu groups playing
+  and saves, details, editing, then Make Separate Game.
   Technical Info shows hashes (four groups of 16 on two lines, copied by touch and hold), the
   stored metadata, verification, when the Build was added, and Made With: an engine such as GB
   Studio above the toolchain it runs on, names as their projects spell them, version ranges as

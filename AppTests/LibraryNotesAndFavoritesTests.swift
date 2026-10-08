@@ -50,7 +50,8 @@ final class LibraryNotesAndFavoritesTests: XCTestCase {
 
         let library = LibraryViewModel(
             gameRepository: container.repositories.games, buildRepository: container.repositories.builds,
-            launchResolver: container.preferredLaunchResolver, buildOperations: container.buildOperations
+            launchResolver: container.preferredLaunchResolver, buildOperations: container.buildOperations,
+            deletion: container.libraryDeletion
         )
         library.reload()
         library.favoritesOnly = true

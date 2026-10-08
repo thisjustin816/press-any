@@ -86,6 +86,10 @@ struct GameDetailView: View {
             .navigationTitle(model.game?.primaryTitle ?? "Game")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
+            .selectionControls(selection: $model.selection, available: model.selectableItems) {
+                model.requestSelectedDeletion()
+            }
+            .batchDeletionAlert(plan: $model.pendingBatchDeletion, noun: "Items", confirm: model.confirm)
             .task { model.reload() }
             .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in model.reload() }
     }
@@ -93,11 +97,13 @@ struct GameDetailView: View {
     // The screen is split into pieces the compiler type-checks one at a time; as one expression
     // it does not type-check in reasonable time.
     private var list: some View {
-        List {
-            artworkSection
-            lineageSection
-            baseGameSection
-            playSection
+        List(selection: model.selection.isSelecting ? $model.selection.ids : nil) {
+            if !model.selection.isSelecting {
+                artworkSection
+                lineageSection
+                baseGameSection
+                playSection
+            }
             buildsSection
             profilesSection
         }
@@ -167,7 +173,7 @@ struct GameDetailView: View {
     private var buildsSection: some View {
         Section {
             ForEach(model.builds) { build in
-                buildRow(build)
+                buildRow(build).tag(LibraryDeletionTarget(kind: .build, id: build.id))
             }
         } header: {
             Text("Builds")
@@ -179,19 +185,21 @@ struct GameDetailView: View {
     private var profilesSection: some View {
         Section {
             ForEach(model.saveProfiles) { profile in
-                profileRow(profile)
+                profileRow(profile).tag(LibraryDeletionTarget(kind: .saveProfile, id: profile.id))
             }
 
-            Button {
-                newProfileName = "New Save"
-                showNewProfile = true
-            } label: {
-                Label("New Blank Save", systemImage: "plus.circle")
-            }
-            Button {
-                request(.batterySave)
-            } label: {
-                Label("Import Save File", systemImage: "square.and.arrow.down")
+            if !model.selection.isSelecting {
+                Button {
+                    newProfileName = "New Save"
+                    showNewProfile = true
+                } label: {
+                    Label("New Blank Save", systemImage: "plus.circle")
+                }
+                Button {
+                    request(.batterySave)
+                } label: {
+                    Label("Import Save File", systemImage: "square.and.arrow.down")
+                }
             }
         } header: {
             Text("Save Profiles")
@@ -203,38 +211,40 @@ struct GameDetailView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    settingsTarget = SettingsTarget(
-                        title: "Game Settings",
-                        scope: .game(model.gameID),
-                        system: model.preferredBuild?.system ?? .gameBoy,
-                        buildID: nil
-                    )
+            if !model.selection.isSelecting {
+                Menu {
+                    Button {
+                        settingsTarget = SettingsTarget(
+                            title: "Game Settings",
+                            scope: .game(model.gameID),
+                            system: model.preferredBuild?.system ?? .gameBoy,
+                            buildID: nil
+                        )
+                    } label: {
+                        Label("Game Settings…", systemImage: "gearshape")
+                    }
+                    Button("Rename Game…", systemImage: "pencil") {
+                        gameTitle = model.game?.primaryTitle ?? ""
+                        showRenameGame = true
+                    }
+                    artworkMenu
+                    Button {
+                        showMerge = true
+                    } label: {
+                        Label("Merge Into Another Game…", systemImage: "arrow.triangle.merge")
+                    }
+                    .disabled(model.otherGames.isEmpty)
+                    Divider()
+                    Button(role: .destructive) {
+                        model.requestGameDeletion()
+                    } label: {
+                        Label("Delete Game…", systemImage: "trash")
+                    }
                 } label: {
-                    Label("Game Settings…", systemImage: "gearshape")
+                    Image(systemName: "ellipsis.circle")
                 }
-                Button("Rename Game…", systemImage: "pencil") {
-                    gameTitle = model.game?.primaryTitle ?? ""
-                    showRenameGame = true
-                }
-                artworkMenu
-                Button {
-                    showMerge = true
-                } label: {
-                    Label("Merge Into Another Game…", systemImage: "arrow.triangle.merge")
-                }
-                .disabled(model.otherGames.isEmpty)
-                Divider()
-                Button(role: .destructive) {
-                    model.requestGameDeletion()
-                } label: {
-                    Label("Delete Game…", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
+                .accessibilityIdentifier("game.moreMenu")
             }
-            .accessibilityIdentifier("game.moreMenu")
         }
     }
 
@@ -409,7 +419,20 @@ struct GameDetailView: View {
         }
     }
 
+    @ViewBuilder
     private func buildRow(_ build: Build) -> some View {
+        if model.selection.isSelecting {
+            buildLabel(build)
+        } else {
+            buildLabel(build)
+                .contentShape(Rectangle())
+                .onTapGesture { launch(build: build) }
+                .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: build) } }
+                .contextMenu { buildMenu(build) }
+        }
+    }
+
+    private func buildLabel(_ build: Build) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
                 // At accessibility sizes BASE gets its own line, so the name isn't squeezed.
@@ -450,10 +473,6 @@ struct GameDetailView: View {
                     .accessibilityLabel("Preferred Build")
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { launch(build: build) }
-        .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: build) } }
-        .contextMenu { buildMenu(build) }
     }
 
     @ViewBuilder
@@ -539,21 +558,23 @@ struct GameDetailView: View {
         }
         .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: profile) } }
         .contextMenu {
-            Button("Play with This Save") { launch(build: model.preferredBuild, profile: profile) }
-            Button("Duplicate") {
-                model.duplicate(profile, name: profile.displayName + " Copy")
+            if !model.selection.isSelecting {
+                Button("Play with This Save") { launch(build: model.preferredBuild, profile: profile) }
+                Button("Duplicate") {
+                    model.duplicate(profile, name: profile.displayName + " Copy")
+                }
+                Button("Replace Save from File…") { request(.replacementSave(profile)) }
+                if profile.persistentSaveAssetID != nil {
+                    Button("Export Save") { model.exportSave(of: profile) }
+                }
+                Button("Badge…") {
+                    badgeText = profile.badge ?? ""
+                    badgeTarget = profile
+                }
+                Button("Save States…") { statesProfile = profile }
+                Divider()
+                Button("Delete…", role: .destructive) { model.requestDeletion(of: profile) }
             }
-            Button("Replace Save from File…") { request(.replacementSave(profile)) }
-            if profile.persistentSaveAssetID != nil {
-                Button("Export Save") { model.exportSave(of: profile) }
-            }
-            Button("Badge…") {
-                badgeText = profile.badge ?? ""
-                badgeTarget = profile
-            }
-            Button("Save States…") { statesProfile = profile }
-            Divider()
-            Button("Delete…", role: .destructive) { model.requestDeletion(of: profile) }
         }
     }
 
@@ -594,6 +615,7 @@ struct GameDetailView: View {
     }
 
     private func launch(build: Build?, profile: SaveProfile? = nil) {
+        guard !model.selection.isSelecting else { return }
         do {
             onPlay(try model.launchContext(build: build, saveProfile: profile))
         } catch {

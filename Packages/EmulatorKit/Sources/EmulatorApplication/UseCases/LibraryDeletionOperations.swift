@@ -37,8 +37,8 @@ public struct DeletionPlan: Equatable, Sendable {
 /// Deletes Games, Builds, Save Profiles and save states into Recently Deleted, restores them, and
 /// purges them after `LibraryDeletion.retention`.
 public struct LibraryDeletionOperations: Sendable {
-    private let games: any GameRepository
-    private let builds: any BuildRepository
+    let games: any GameRepository
+    let builds: any BuildRepository
     private let profiles: any SaveProfileRepository
     private let states: any SaveStateRepository
     private let recipes: any PatchRecipeRepository
@@ -246,6 +246,43 @@ public struct LibraryDeletionOperations: Sendable {
             purged += 1
         }
         return purged
+    }
+
+    func deletionTitle(for target: LibraryDeletionTarget) -> String {
+        switch target.kind {
+        case .game: (try? games.fetchGame(id: target.id))?.primaryTitle ?? "Game"
+        case .build: (try? builds.fetchBuild(id: target.id))?.displayName ?? "Build"
+        case .saveProfile: (try? profiles.fetchSaveProfile(id: target.id))?.displayName ?? "Save Profile"
+        case .saveState: (try? states.fetchSaveState(id: target.id))?.displayName ?? "Save State"
+        }
+    }
+
+    public func failureMessage(for error: any Error, title: String = "Item") -> String {
+        func holder(_ id: UUID, _ key: KeyPath<LibraryRecordSet, [UUID]>) -> String {
+            (try? recentlyDeleted())?.first { $0.records[keyPath: key].contains(id) }?.title ?? "another item"
+        }
+        switch error {
+        case LibraryDeletionError.dependentBuildsInOtherGames(let ids):
+            let names = ids.compactMap { id -> String? in
+                guard let build = try? builds.fetchBuild(id: id) else { return nil }
+                guard let game = try? games.fetchGame(id: build.gameID) else { return build.displayName }
+                return "\(build.displayName) in \(game.primaryTitle)"
+            }
+            let one = names.count == 1
+            return "\(names.formatted(.list(type: .and))) \(one ? "is" : "are") patched from this Game’s Builds and can’t be rebuilt without them. Delete \(one ? "it" : "them") first, or merge the Games."
+        case LibraryDeletionError.gameIsDeleted(let id):
+            return "Its Game, \(holder(id, \.gameIDs)), is in Recently Deleted too. Restore that first."
+        case LibraryDeletionError.baseBuildIsDeleted(let id):
+            return "It’s patched from \(holder(id, \.buildIDs)), which is in Recently Deleted too. Restore that first."
+        case LibraryDeletionError.saveProfileIsDeleted(let id):
+            return "Its Save Profile, \(holder(id, \.saveProfileIDs)), is in Recently Deleted too. Restore that first."
+        case LibraryDeletionError.buildIsDeleted(let id):
+            return "Its Build, \(holder(id, \.buildIDs)), is in Recently Deleted too. Restore that first."
+        case LibraryDeletionError.romAlreadyInGame:
+            return "Its Game has the same ROM again, imported after \(title) was deleted."
+        default:
+            return error.localizedDescription
+        }
     }
 
     private func addProfilesAndStates(ofGame gameID: UUID, to records: inout LibraryRecordSet) throws {
