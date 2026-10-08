@@ -133,9 +133,7 @@ public struct AssessSaveCompatibility: Sendable {
 
     /// The header's cartridge type and RAM size bytes, at 0x147 and 0x149.
     private func saveHardware(of build: Build) -> [UInt8]? {
-        guard let url = try? images.resolveImageURL(buildID: build.id),
-              let image = try? assetStore.readData(at: url), image.count > 0x149
-        else { return nil }
+        guard let image = try? images.readImage(buildID: build.id), image.count > 0x149 else { return nil }
         return [image[image.startIndex + 0x147], image[image.startIndex + 0x149]]
     }
 }

@@ -142,12 +142,12 @@ struct BuildTechnicalInfoView: View {
     }
 
     /// Reads the resolved image, so a patched Build shows its own header. The global checksum
-    /// needs the whole image, which the parser maps instead of copying.
+    /// needs the whole image.
     private func loadHeader() async {
         let resolver = container.launchImageResolver
         let buildID = build.id
         header = await Task.detached {
-            try? GBROMHeaderParser.parse(contentsOf: resolver.resolve(buildID: buildID))
+            try? GBROMHeaderParser.parse(resolver.readImage(buildID: buildID))
         }.value
         headerUnavailable = header == nil
     }

@@ -189,7 +189,9 @@ not treat them as files.
   patched Builds and variable maps hold the files they place until the library records them, and a
   running game holds its ROM, so cache trimming, Clear Patched ROM Cache and Check Library Files
   skip them. Check Library Files also looks a file up again before removing it, since an import
-  may have recorded it during the check.
+  may have recorded it during the check. Anything that reads a patched ROM (export, the save
+  check, toolchain refresh, patch matching, Technical Info's header) holds it until it's read,
+  along with any patched ROM it's rebuilt from.
 - Settings > Library > Storage shows the library's total and the device's available space.
   Your Data lists Game ROMs, Patches, Saves, Save States (including thumbnails), Artwork and
   Other (including variable maps). Rebuildable and Temporary lists Patched ROM Cache and the
@@ -200,8 +202,6 @@ not treat them as files.
   stays, since it's then the only copy. It protects the running session's ROM, including copies
   of a Build that share the file, and refreshes the sizes. Launch and ROM export rebuild a missing
   patched ROM and check its recorded hash. Recently Deleted files count in their asset categories.
-- v1: holding a patched ROM while an export, the save check, toolchain refresh or patch matching
-  reads it, so trimming at that moment can't fail the action.
 
 ### Exports and the Files folder
 

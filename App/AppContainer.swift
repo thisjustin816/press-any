@@ -203,7 +203,8 @@ final class AppContainer {
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
             assetStore: fileStore,
-            trimCache: trimCache
+            trimCache: trimCache,
+            inFlight: inFlightFiles
         )
         exportFiles = ExportLibraryFiles(
             games: repositories.games,
@@ -218,7 +219,6 @@ final class AppContainer {
         toolchainRefresh = RefreshToolchainReports(
             reports: repositories.toolchainReports,
             images: launchImageResolver,
-            assetStore: fileStore,
             detect: { ToolchainDetectorRegistry.standard.detect(image: $0, system: $1) }
         )
         attachVariableMap = AttachVariableMap(

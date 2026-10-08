@@ -7,4 +7,13 @@ import Foundation
 /// port so it never assumes that `Build.imageAssetID` must exist on disk permanently.
 public protocol BuildImageResolving: Sendable {
     func resolveImageURL(buildID: UUID) throws -> URL
+    /// The image's bytes. A resolver that shares the cache with trimming holds the image until
+    /// it's read, so a rebuilt image can't be removed in between.
+    func readImage(buildID: UUID) throws -> Data
+}
+
+extension BuildImageResolving {
+    public func readImage(buildID: UUID) throws -> Data {
+        try Data(contentsOf: resolveImageURL(buildID: buildID))
+    }
 }

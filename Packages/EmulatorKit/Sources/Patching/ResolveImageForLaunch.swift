@@ -19,14 +19,18 @@ public struct ResolveImageForLaunch: Sendable {
     private let assetStore: any AssetStore
     private let patcher: any PatchApplying
     private let trimCache: TrimPatchedROMCache?
+    private let inFlight: InFlightFiles?
 
+    /// `inFlight` holds each image while it's resolved, a patched Build's bases included, so
+    /// cache trimming can't remove one between finding it and reading it.
     public init(
         builds: any BuildRepository,
         recipes: any PatchRecipeRepository,
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
         patcher: any PatchApplying = PatchStackApplier(),
-        trimCache: TrimPatchedROMCache? = nil
+        trimCache: TrimPatchedROMCache? = nil,
+        inFlight: InFlightFiles? = nil
     ) {
         self.builds = builds
         self.recipes = recipes
@@ -34,17 +38,28 @@ public struct ResolveImageForLaunch: Sendable {
         self.assetStore = assetStore
         self.patcher = patcher
         self.trimCache = trimCache
+        self.inFlight = inFlight
     }
 
+    /// The image's location, which nothing holds once this returns. A caller that reads it later
+    /// holds it first, as a running game does, or uses `readImage`.
     public func resolve(buildID: UUID) throws -> URL {
-        try resolve(buildID: buildID, visited: [])
+        let lease = inFlight?.lease()
+        defer { lease?.end() }
+        return try resolve(buildID: buildID, visited: [], lease: lease)
+    }
+
+    public func readImage(buildID: UUID) throws -> Data {
+        let lease = inFlight?.lease()
+        defer { lease?.end() }
+        return try assetStore.readData(at: resolve(buildID: buildID, visited: [], lease: lease))
     }
 
     public func resolveImageForLaunch(buildID: UUID) throws -> URL {
         try resolve(buildID: buildID)
     }
 
-    private func resolve(buildID: UUID, visited: Set<UUID>) throws -> URL {
+    private func resolve(buildID: UUID, visited: Set<UUID>, lease: InFlightFiles.Lease?) throws -> URL {
         guard !visited.contains(buildID) else {
             throw ResolveImageForLaunchError.cyclicBuildLineage(buildID)
         }
@@ -55,6 +70,7 @@ public struct ResolveImageForLaunch: Sendable {
             throw ResolveImageForLaunchError.assetNotFound(build.imageAssetID)
         }
 
+        lease?.hold(asset.relativePath)
         let assetURL = try assetStore.managedURL(relativePath: asset.relativePath)
         if assetStore.fileExists(at: assetURL) {
             let actual = try assetStore.hashFile(at: assetURL)
@@ -72,7 +88,7 @@ public struct ResolveImageForLaunch: Sendable {
 
         var nextVisited = visited
         nextVisited.insert(buildID)
-        let baseURL = try resolve(buildID: recipe.baseBuildID, visited: nextVisited)
+        let baseURL = try resolve(buildID: recipe.baseBuildID, visited: nextVisited, lease: lease)
         var output = try assetStore.readData(at: baseURL)
 
         for item in recipe.items.filter(\.enabled).sorted(by: { $0.position < $1.position }) {
