@@ -340,6 +340,60 @@ enum BackupCoverage {
         "image_fingerprints": "Excluded derived matching cache; cleared by replacement.",
     ]
 
+    /// Every column of every table, as the decisions above cover them. Columns that hold
+    /// Recently Deleted state (`deletion_id`) or derived matching data stay out of backups with
+    /// their table's decision. A new column fails the coverage test until it is listed here and
+    /// the backup carries it or a decision above says why not.
+    static let columns: [String: Set<String>] = [
+        "build_metadata_provenance": ["build_id", "field", "source", "confidence", "provided_value", "recorded_at"],
+        "build_save_declarations": ["first_build_id", "second_build_id", "compatibility"],
+        "build_toolchain_reports": [
+            "build_id", "detector", "detector_version", "corpus_revision", "report_json", "detected_at"
+        ],
+        "build_variable_maps": ["id", "build_id", "asset_id", "format", "source", "original_filename", "attached_at"],
+        "builds": [
+            "id", "game_id", "system", "display_name", "rom_asset_id", "rom_sha256", "source_kind",
+            "parent_build_id", "is_base", "region", "language", "revision", "version_string", "version_sort_key",
+            "preferred_save_profile_id", "pinned_core_id", "pinned_core_version", "core_pinned_at", "created_at",
+            "modified_at", "base_title", "hack_title", "author", "translation", "status", "deletion_id", "rom_sha1",
+            "base_game_reference_json", "notes", "total_playtime_seconds"
+        ],
+        "game_aliases": ["game_id", "title"],
+        "game_manual_positions": ["game_id", "position"],
+        "game_metadata_provenance": ["game_id", "field", "source", "confidence", "provided_value", "recorded_at"],
+        "games": [
+            "id", "primary_title", "system_family", "preferred_build_id", "preferred_save_profile_id", "created_at",
+            "modified_at", "artwork_asset_id", "lineage_source_game_id", "lineage_source_title", "deletion_id",
+            "has_player_title", "is_favorite"
+        ],
+        "grdb_migrations": ["identifier"],
+        "image_fingerprints": [
+            "image_sha256", "bank_size", "bank_hashes", "header_title", "cartridge_type", "ram_size_code",
+            "cgb_flag"
+        ],
+        "library_deletions": ["id", "kind", "title", "game_id", "deleted_at"],
+        "managed_assets": [
+            "id", "kind", "storage_class", "content_sha256", "byte_length", "relative_path", "original_filename",
+            "provenance_json", "integrity_status", "created_at"
+        ],
+        "patch_recipe_items": [
+            "recipe_id", "position", "patch_asset_id", "enabled", "ignores_base_mismatch", "expected_input_sha256"
+        ],
+        "patch_recipes": ["id", "result_build_id", "base_build_id", "expected_result_sha256", "created_at"],
+        "save_profiles": [
+            "id", "game_id", "display_name", "badge", "battery_asset_id", "copied_from_profile_id",
+            "rtc_context_json", "total_playtime_seconds", "session_count", "last_played_at", "created_at",
+            "modified_at", "save_written_by_build_id", "deletion_id"
+        ],
+        "save_states": [
+            "id", "build_id", "save_profile_id", "core_id", "core_version", "state_serialization_version",
+            "state_asset_id", "screenshot_asset_id", "kind", "auto_sequence", "label", "playtime_seconds",
+            "created_at", "deletion_id", "slot", "is_pinned"
+        ],
+        "settings_overrides": ["scope_type", "scope_id", "key", "value_json"],
+        "tombstones": ["record_id", "record_kind", "deleted_at", "purged_at"],
+    ]
+
     static let ports: [String: String] = [
         "GameRepository": "Live Games, aliases and manual sort positions.",
         "BuildRepository": "Live Builds and save compatibility declarations.",

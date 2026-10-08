@@ -21,9 +21,13 @@ import Testing
         #expect(protocols.count >= 18)
         try requireDecisions(protocols, decisions: Set(BackupCoverage.ports.keys))
         #expect(throws: CoverageError.self) { try requireDecisions(protocolNames(in: text + "\npublic protocol NewDataRepository: Sendable {}"), decisions: Set(BackupCoverage.ports.keys)) }
+        try requireColumnDecisions(db)
         try db.writer.write { try $0.execute(sql: "CREATE TABLE new_library_data (id INTEGER PRIMARY KEY)") }
         let withNewTable = try db.writer.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'") }
         #expect(throws: CoverageError.self) { try requireDecisions(Set(withNewTable), decisions: Set(BackupCoverage.tables.keys)) }
+        try db.writer.write { try $0.execute(sql: "DROP TABLE new_library_data") }
+        try db.writer.write { try $0.execute(sql: "ALTER TABLE save_profiles ADD COLUMN favorite_color TEXT") }
+        #expect(throws: CoverageError.self) { try requireColumnDecisions(db) }
     }
 
     @Test func exactSnapshotPersistsWithoutPlayerOverridesAndRollsBackFinalFailure() throws {
@@ -180,6 +184,18 @@ import Testing
         Set(text.split(separator: "\n").filter { $0.hasPrefix("public protocol ") }.compactMap { line in
             line.split(separator: " ").dropFirst(2).first.map { String($0).split(separator: ":").first.map(String.init) ?? "" }
         })
+    }
+
+    private func requireColumnDecisions(_ db: AppDatabase) throws {
+        let tables = try db.writer.read { try String.fetchAll($0, sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'") }
+        try requireDecisions(Set(tables), decisions: Set(BackupCoverage.columns.keys))
+        for table in tables {
+            let columns = try db.writer.read { db in
+                try Row.fetchAll(db, sql: "PRAGMA table_info(\(table))").map { $0["name"] as String }
+            }
+            try requireDecisions(Set(columns.map { "\(table).\($0)" }),
+                decisions: Set((BackupCoverage.columns[table] ?? []).map { "\(table).\($0)" }))
+        }
     }
 
     private func requireDecisions(_ names: Set<String>, decisions: Set<String>) throws {
