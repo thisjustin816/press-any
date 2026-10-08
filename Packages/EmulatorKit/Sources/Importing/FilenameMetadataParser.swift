@@ -395,7 +395,7 @@ public enum FilenameMetadataParser {
         return nil
     }
 
-    private static func canonicalStatus(_ value: String) -> String? {
+    static func canonicalStatus(_ value: String) -> String? {
         if let parts = firstMatchGroups(
             in: value,
             pattern: #"(?i)^\s*(alpha|beta|demo|prototype|proto|preview|release candidate|rc|final)\s+([0-9]+)\s*$"#

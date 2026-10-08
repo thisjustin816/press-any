@@ -7,6 +7,11 @@ public protocol GameRepository: MetadataProvenanceRepository {
     func insertGame(_ game: Game) throws
     func updateGame(_ game: Game) throws
     func deleteGame(id: UUID) throws
+    /// Each live Game's place in the player's manual order. A Game never placed has none.
+    func fetchManualPositions() throws -> [UUID: Int]
+    /// Places these Games in this order, all or none. Every other Game keeps its position,
+    /// including one waiting in Recently Deleted, so a restore gives it back its old position.
+    func setManualOrder(_ gameIDs: [UUID]) throws
 }
 
 public protocol BuildRepository: MetadataProvenanceRepository {

@@ -81,12 +81,14 @@ extension BuildImportMetadata {
         let language = dump.languages.map {
             $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: ", ")
         }
+        // No-Intro writes "Proto"; the filename parser spells it "Prototype". One spelling keeps
+        // a dump match and a filename from naming the same release differently.
         self.init(
             region: dump.region,
             language: language,
             revision: revision,
             versionString: versionString,
-            status: dump.status
+            status: dump.status.map { FilenameMetadataParser.canonicalStatus($0) ?? $0 }
         )
     }
 }

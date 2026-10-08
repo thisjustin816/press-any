@@ -357,6 +357,9 @@ No-Intro in Acknowledgements anyway, with the data's date.
   version is stored only when its refresh succeeds; a failure is retried on the next launch.
 - A known dump takes its canonical name ahead of the filename, and a Game created from one is
   titled by its regional title. The original filename is always kept.
+- A dump's status is No-Intro's development status (Beta, Proto, Demo, Sample, Debug), spelled as
+  the filename parser spells it, so "Proto" reads "Prototype". Aftermarket and Unl describe the
+  release, not its development, so they never become a status, and neither does Pirate.
 - A Build's Technical Info shows Verified (with the dump's name), Bad Dump, Modified (patched from
   a verified dump) or Unknown. The app never alters a ROM to make it match.
 
@@ -623,7 +626,10 @@ claims reliability from just an old ROM, old save and new ROM.
   After only an overlay (Control Center, Notification Center, a call banner) it resumes on its own
   unless the player had paused it; after the background, Resume Games decides. Backgrounding
   clears the open-session marker only after the Auto State is written; returning to play marks
-  it open again.
+  it open again. An audio interruption from another app, or the output device going away
+  (headphones unplugged, a Bluetooth speaker lost), pauses the game as the game menu does, even
+  while the scene stays active. It stays paused until the player chooses Resume, so sound never
+  restarts on its own when the interruption ends. In the background, Resume Games decides.
 - **Crash recovery.** During library play, one hidden `SaveStateKind.crashRecovery` checkpoint
   for the exact Build and Save Profile refreshes about once a minute of play, replacing the
   previous one in the existing state storage. A successful Auto State or clean close removes it.
@@ -803,7 +809,10 @@ picture. A connected controller still hides the touch controls.
   refresh: each refresh adds the time since the last one, measured on the display's clock, and the
   game runs whole frames while it's owed one, then shows the newest. The game keeps its native
   59.73 Hz; on a 60 Hz screen one frame repeats about every four seconds. After a stall, a refresh
-  longer than four frames counts as one frame, so the game doesn't race to catch up.
+  longer than four frames counts as one frame, so the game doesn't race to catch up. A ProMotion
+  screen refreshes at up to 120 Hz, but while Low Power Mode is on or the device's thermal state
+  is serious or critical it's held to 60 Hz, and returns to 120 Hz when that ends, with no restart.
+  The game's speed is the same either way.
 - v1.1: a curated, RetroArch-compatible shader library chosen after a community survey and device
   comparison (LCD1x, LCD3x and pixel-transparency variants are candidates; PT-SkyWalker541 is a
   candidate to audit), downloaded from pinned, license-checked sources with hashes and preserved
@@ -821,7 +830,9 @@ picture. A connected controller still hides the touch controls.
 - **Sound** (app-wide): Follow Silent Switch by default, Always On, or Always Off, which mutes the
   game but leaves other apps' audio alone. It's in App Settings and in the game menu, where a
   change applies to the open game at once and becomes the app-wide setting.
-- Genuine audio interruptions pause; route changes are handled without restarting.
+- Genuine audio interruptions pause; route changes are handled without restarting. A started
+  interruption, or an output device that goes away, pauses the game and leaves it paused for
+  Resume. Other route changes, such as a device arriving, don't interrupt play.
 
 ### Speed
 
@@ -969,9 +980,10 @@ exposes them; custom border editing is later.
   a compact list, with search by primary title and aliases. Cartridges without artwork take a color
   per system and print the title on the label.
 - The toolbar holds Settings, the wordmark, More and Add, as Photos and Files arrange theirs. More
-  opens Select; Grid and List as a row of icons; Sort By; Show Titles in the grid; and Favorites
-  Only. Add opens Import Files, then Quick Play ROM, Quick Play with a Save and Quick Play
-  Sessions. The wordmark shrinks to fit rather than losing letters at large text sizes.
+  opens Select, with Reorder in the list under Manual; Grid and List as a row of icons; Sort By;
+  Show Titles in the grid; and Favorites Only. Add opens Import Files, then Quick Play ROM, Quick
+  Play with a Save and Quick Play Sessions. The wordmark shrinks to fit rather than losing letters
+  at large text sizes.
 - Select adds checkboxes in the list and checkmark circles on tiles, and Done in the toolbar ends
   it. The bottom bar offers Select All / Deselect All and Delete (n) for the visible Games, with one
   confirmation. Tiles read Selected or Not selected to VoiceOver. Tapping while selecting changes
@@ -979,12 +991,19 @@ exposes them; custom border editing is later.
 - Touching and holding a Game offers Play and Start Over; Add to Favorites or Remove from
   Favorites, Rename and Game Settings; then Delete Game. A list row swipes right to Play and left
   to Delete.
-- Sort By remembers Title (the default), Recently Played, Recently Added, Playtime or System.
-  Recent play, added and playtime sort largest first; Games never played go last under Recently
-  Played and Playtime. System groups Game Boy before Game Boy Color. Ties use title order. Search
-  and Favorites Only filter the sorted list. List rows show the system under Title and System,
-  relative last played under Recently Played, playtime under Playtime, and the date added under
-  Recently Added. Grid tiles keep their usual appearance.
+- Sort By remembers Title (the default), Recently Played, Recently Added, Recently Changed,
+  Playtime, System, Hack Author, Version or Manual. Recent play, added, changed and playtime sort
+  largest first; Games never played go last under Recently Played and Playtime. Recently Changed
+  uses the newest Build added or edited in the Game. Hack Author sorts by the Preferred Build's
+  author, A to Z, and Version by its version, newest first; Games without one go last. System groups Game Boy before Game Boy Color. Ties use title
+  order. Search and Favorites Only filter the sorted list. List rows show the system under Title,
+  System and Manual, relative last played under Recently Played, the relative last change under
+  Recently Changed, playtime under Playtime, the date added under Recently Added, the author under
+  Hack Author and the version under Version. Grid tiles keep their usual appearance.
+- Manual is the player's own order. In the list, Reorder shows drag handles and Done ends it; the
+  grid shows the same order. Games hidden by search or Favorites Only keep their places while the
+  visible ones move. Games never placed, new ones included, follow the placed Games in title order.
+  A deleted Game keeps its position in Recently Deleted and takes it back when restored.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
   preferred save. The toolbar has a Favorite star, Select and More (Game Settings, Rename Game,
   Artwork, Merge Into Another Game, Delete Game). Select edits the Builds and Save Profiles
@@ -1000,8 +1019,14 @@ exposes them; custom border editing is later.
   preferred save, which Play uses unless a Build picks its own.
 - Build Info opens Build Details, which links to Technical Info. Technical Info shows hashes (four
   groups of 16 on two lines, copied by touch and hold), the stored metadata, verification, when
-  the Build was added, and Made With: an engine such as GB Studio above the toolchain it runs on,
-  names as their projects spell them, version ranges as "x to y" or "x or later".
+  the Build was added, the cartridge header, read-only, and Made With: an engine such as GB
+  Studio above the toolchain it runs on, names as their projects spell them, version ranges as
+  "x to y" or "x or later".
+  The Header section reads the Build's resolved image, so a patched Build shows its own header:
+  title, Game Boy, Game Boy Color compatible or Game Boy Color only, the cartridge type by name
+  such as "MBC5 + RAM + Battery", ROM and RAM size, revision number, and the header and global
+  checksums with their stored value and Valid or Invalid. An unreadable header shows one row,
+  "Header unavailable".
 - Once a Game has been played, a Statistics section after Save Profiles shows Playtime, Sessions
   and Last Played. Playtime uses the same abbreviated hours, minutes and seconds as Build Details.
   Played Save Profiles show their playtime and relative last played under their names. These
@@ -1018,9 +1043,9 @@ exposes them; custom border editing is later.
   Settings > How Press Any Works reopens it, and the first game shows "Tap Press Any for the
   menu" once. v1 has nothing to opt into; the v1.1 opt-ins (crash reports, usage counts) and
   Developer Mode bring their own introductions.
-- v1: more sorting by year, developer, publisher, hack author, Build version and date, last
-  Build change and manual order; a separate statistics screen (no permanent session log).
-- v1.1: SQLite FTS5 live search across titles, aliases, filenames, hack title, author, version,
+- v1: a separate statistics screen (no permanent session log).
+- v1.1: sorting by release year, developer and publisher, which metadata providers supply; SQLite
+  FTS5 live search across titles, aliases, filenames, hack title, author, version,
   system, region, Build names, tags and document titles, title matches ranked first; manual and
   smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with
   updates); tags on Games and Builds behind long-press and overflow; an optional Developer view.

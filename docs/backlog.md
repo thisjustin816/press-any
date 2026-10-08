@@ -146,7 +146,8 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 | missing | Manual collections/folders | v1.1 |  |
 | missing | Smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates) | v1.1 |  |
 | missing | Tags on Games/Builds via long-press/overflow | v1.1 |  |
-| partial | Sorting | v1 | remembered Sort By in the More menu: title, recent play, added, playtime and system; list second lines follow the sort; release year/developer/publisher/hack author/Build version and date/last Build change/manual order remain |
+| done | Sorting | v1 | remembered Sort By in the More menu: title, recent play, added, last Build change, playtime, system, hack author, Build version and date, and manual order; list second lines follow the sort; Reorder drags Games in the list under Manual, positions survive Recently Deleted; release year/developer/publisher move to v1.1 with metadata providers |
+| missing | Sorting by release year, developer and publisher | v1.1 | needs the metadata provider chain for its data |
 | done | Multi-select deletion | v1 | Select in library grid/list, Game Builds and Save Profiles, Save States, Quick Play Sessions and Recently Deleted; one confirmation with skipped counts and reasons, separate restorable entries, and dependency-ordered Restore |
 | done | Favorites | v1 | Game Details toolbar star and library long-press menu beside Rename; small star on tiles/list rows; Favorites Only works with search; merge keeps either favorite and promotion carries it |
 | done | Play statistics | v1 | Game rollups of Build playtime and profile session counts/latest last played in Game Details; played profiles show playtime and last played; Recently Deleted rows excluded; refresh on library changes and game close; a separate statistics screen remains later work |
@@ -168,11 +169,11 @@ Done: Search by primary title and Game aliases.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | Automatic No-Intro / ROM-hack naming and structured fields | v1 | conservative filename suggestions, hack/base titles, authors, translation/status, confidence and concise Build names are implemented across ROM import, Quick Play promotion and patch-created Builds; the parser recognizes numbered development flags and Sample, Kiosk and Debug, and drops Aftermarket and Unl; a repeated name gains the date the Build was added; Suggest Names reviews existing Build names and regional Game titles; broader real-world corpus tuning remains |
-| partial | Header read/validate/display, no editing | v1 | GBROMHeaderParser validates header + global checksum; shown only in Import Review, not in Build details |
+| done | Header read/validate/display, no editing | v1 | GBROMHeaderParser validates header + global checksum; Import Review shows the checksum warning and a Build's Technical Info shows a read-only Header section: title, color support, named cartridge type, ROM and RAM size, revision number, and both checksums as Valid or Invalid |
 | partial | Normalized No-Intro / ROM-hack filename suggestion | v1 | generated and shown during import while original filenames remain preserved; explicit physical rename remains separate |
 | missing | Explicit "Rename File to Canonical Name" (bulk later) | v1.1 | physical renaming is an explicit action |
 | missing | Signed/validated downloadable database updates | v1.1 | needs a host and a signing key; the bundled file already carries its date |
-| partial | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | matched by SHA-1; a known dump takes its canonical name, region, language and revision through the filename parser; status flags such as Aftermarket and Unl are not parsed yet |
+| done | Hash match on import: canonical name, region, language, revision and status come from the matched dump, ahead of the filename, with the source shown | v1 | matched by SHA-1; a known dump takes its canonical name, region, language, revision and status from the matched data; development statuses (Beta, Proto, Demo, Sample, Debug) are spelled as the filename parser spells them, and Aftermarket, Unl and Pirate describe the release, so they are never a status |
 | done | Parent/clone grouping: a release joins its family's Game automatically when unambiguous, even with a different regional title, shown in Import Review before commit; weaker matches are suggestions; regrouping stays possible | v1 | one family Game is suggested; several require a choice; regional title and Preferred proposals are confirmed in Import Review |
 | done | Suggest merging Games already in the library that are one No-Intro family, reviewed like Suggest Names | v1 | Settings > Library review selects Games, survivor and title; confirmation uses the existing merge path, preserving lineage, profiles, states and artwork; overlapping images refused before moving a group |
 | done | Preferred region and language order (App setting, USA, Europe, Japan by default) choosing a Game's display title among its releases and which regional Build defaults to Preferred | v1 | Settings > Library > Regions and Languages supports reordering both lists; better regional title and Preferred mark are separate import proposals; ties stay put; player titles and preexisting titles without provenance are protected during import; Suggest Names opts into the regional title order on acceptance, protects edits, leaves skips and Preferred Builds unchanged |
@@ -349,7 +350,7 @@ Done: Pause / Resume from menu with paused overlay.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; thermal or Low Power Mode rate changes not handled |
+| done | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check is still to run |
 | partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1.1 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
 | partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1.1 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v1.1 |  |
@@ -522,13 +523,14 @@ Save Profile and save state rows and to discard a Quick Play session, asking fir
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Audio interruptions pause safely; route changes don't restart the game | v1 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio-only interruption that leaves the scene active still runs silently |
+| done | Audio interruptions pause safely; route changes don't restart the game | v1 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio interruption that leaves the scene active, and an output device going away, pause it too and leave it paused until Resume; the device check is still to run |
 | missing | Thermal-aware degradation | v1.1 |  |
 | missing | Default shader sustains full speed on minimum QA device | v1.1 | no shader yet; device gate not recorded |
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
-after shortfalls); frames run on the display refresh at native speed, up to 120 Hz.
+after shortfalls); frames run on the display refresh at native speed, up to 120 Hz, or 60 Hz in
+Low Power Mode or under heat.
 
 ### Privacy and telemetry
 
