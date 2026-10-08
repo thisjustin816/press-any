@@ -887,13 +887,13 @@ exposes them; custom border editing is later.
   content version rises, never in automated runs, and never ahead of a shared file or game.
   Settings > How Press Any Works reopens it. v1 replaces it with onboarding that covers opt-ins
   and introduces advanced features in context.
-- v1: SQLite FTS5 live search across titles, aliases, filenames, hack title, author, version,
+- v1: sorting by title, recent play, added, playtime, year, system, developer, publisher, hack
+  author, Build version and date, last Build change and manual order; play statistics (no
+  permanent session log).
+- v1.1: SQLite FTS5 live search across titles, aliases, filenames, hack title, author, version,
   system, region, Build names, tags and document titles, title matches ranked first; manual and
   smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with
-  updates); tags on Games and Builds behind long-press and overflow; sorting by title, recent
-  play, added, playtime, year, system, developer, publisher, hack author, Build version and date,
-  last Build change and manual order; play statistics (no permanent session log); an
-  optional Developer view.
+  updates); tags on Games and Builds behind long-press and overflow; an optional Developer view.
 
 ## Toolchain detection
 
@@ -1001,11 +1001,12 @@ access (C617.1) for cleaning stale temporary files.
 
 ### Accessibility
 
-Dynamic Type in the normal interface, good contrast and status that doesn't rely on color, Reduce
-Motion, large and configurable touch targets, one-handed layouts (v1.1, with the layout editor),
-controller remapping through iOS's Game Controller settings, controller navigation where
-practical, sensible VoiceOver labels, and haptics never as the only feedback.
-Narrated gameplay isn't a v1 requirement.
+v1 has Dynamic Type in the normal interface, good contrast and status that doesn't rely on color,
+controller remapping through iOS's Game Controller settings, VoiceOver labels for the library and
+the game menu, and haptics never as the only feedback. v1.1 adds Reduce Motion, large and
+configurable touch targets, Dynamic Type for the on-screen controls, controller navigation of
+the app's screens, one-handed layouts with the layout editor, and a fuller VoiceOver pass.
+Narrated gameplay isn't planned.
 
 ### Performance
 
@@ -1031,8 +1032,8 @@ silently. The default shader must hold full speed on the slowest supported devic
 
 ## v1.1 and later
 
-- **v1.1:** cheats and memory tools (above), with states recording their cheat configuration and
-  offering to restore it; the app's screens fitting above a controller that covers the bottom of the screen, as
+- **v1.1:** full-text search and the accessibility work above; cheats and memory tools (above),
+  with states recording their cheat configuration and offering to restore it; the app's screens fitting above a controller that covers the bottom of the screen, as
   with Playtiles, and navigable with its buttons; link cable (local first, then nearby; not built on Multipeer Connectivity), GB Studio
   save migration, Game Boy Camera and Printer, RAR, skin authoring beyond the editor, video and GIF
   capture framed like a Game Boy, `.gbproject` import and export, better ROM comparison and BPS
