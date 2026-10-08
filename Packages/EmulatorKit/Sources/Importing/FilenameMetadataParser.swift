@@ -188,6 +188,9 @@ public enum FilenameMetadataParser {
             status = status ?? stamp.variant
             cleanTitle = stamp.title
         }
+        if !cleanTitle.contains(" ") {
+            cleanTitle = spacedTitle(cleanTitle)
+        }
 
         if isHack, baseTitle == nil, hackTitle == nil,
            let separator = cleanTitle.range(of: " - ") {
@@ -266,6 +269,40 @@ public enum FilenameMetadataParser {
     /// Words an all-lowercase name keeps in capitals: "mole_mania_dx" is "Mole Mania DX".
     private static let uppercaseWords: Set<String> = ["dx", "gb", "gbc", "sgb", "rpg", "ii", "iii", "iv"]
 
+    private static func capitalized(_ word: String) -> String {
+        uppercaseWords.contains(word) ? word.uppercased() : word.prefix(1).uppercased() + word.dropFirst()
+    }
+
+    /// Spaces out a name with no spaces, as homebrew downloads are often named: underscores become
+    /// spaces, camel case splits ("MoonGarden", "GBStudioDemo"), and an all-lowercase name is
+    /// capitalized. Hyphens stay, so "Pac-Man" keeps its title, and a lone lowercase letter stays
+    /// joined, so "iPhone" isn't split.
+    private static func spacedTitle(_ title: String) -> String {
+        var words: [String] = []
+        for part in title.split(separator: "_") {
+            let characters = Array(part)
+            var word = ""
+            for (index, character) in characters.enumerated() {
+                let previous = index > 0 ? characters[index - 1] : nil
+                let next = index + 1 < characters.count ? characters[index + 1] : nil
+                let startsWord = character.isUppercase && word.count > 1 && (
+                    previous?.isLowercase == true
+                        || (previous?.isUppercase == true && next?.isLowercase == true)
+                )
+                if startsWord {
+                    words.append(word)
+                    word = ""
+                }
+                word.append(character)
+            }
+            if !word.isEmpty { words.append(word) }
+        }
+        if title.allSatisfy({ !$0.isUppercase }) {
+            words = words.map(capitalized)
+        }
+        return words.joined(separator: " ")
+    }
+
     /// A "v" version word after at least one title word, separated by spaces or underscores, or by
     /// hyphens in a name that has no spaces, so "R-Type v2" keeps its title. The title words are
     /// joined with spaces, and the words after the version are the variant.
@@ -283,9 +320,7 @@ public enum FilenameMetadataParser {
             var titleWords = Array(words[..<index])
             // An all-lowercase joined name, as in "match-land-live-0.3.0", reads better capitalized.
             if title.allSatisfy({ !$0.isUppercase }) {
-                titleWords = titleWords.map {
-                    uppercaseWords.contains($0) ? $0.uppercased() : $0.prefix(1).uppercased() + $0.dropFirst()
-                }
+                titleWords = titleWords.map(capitalized)
             }
             // In a joined name the separators stand in for the version's dots: "mole_mania_dx_v1_3" is 1.3.
             var version = value

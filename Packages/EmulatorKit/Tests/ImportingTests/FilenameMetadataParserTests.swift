@@ -245,7 +245,7 @@ final class FilenameMetadataParserTests: XCTestCase {
 
     func testADateStampBecomesTheVersionAndTheWordsAfterItTheVariant() {
         let classic = FilenameMetadataParser.parse(filename: "AeonMetalFighters_20261006_classic.gbc")
-        XCTAssertEqual(classic.suggestedTitle, "AeonMetalFighters")
+        XCTAssertEqual(classic.suggestedTitle, "Aeon Metal Fighters")
         XCTAssertEqual(classic.buildMetadata.versionString, "2026.10.06")
         XCTAssertEqual(classic.buildMetadata.status, "classic")
         XCTAssertEqual(classic.suggestedBuildName, "2026-10-06 · classic")
@@ -290,6 +290,26 @@ final class FilenameMetadataParserTests: XCTestCase {
             XCTAssertNil(FilenameMetadataParser.parse(filename: filename).buildMetadata.versionString, filename)
         }
         XCTAssertEqual(FilenameMetadataParser.parse(filename: "Pac-Man.gb").suggestedTitle, "Pac-Man")
+    }
+
+    func testANameWithoutSpacesIsSpacedOut() {
+        let expected = [
+            "MoonGarden.gb": "Moon Garden",
+            "GBStudioDemo.gbc": "GB Studio Demo",
+            "moon_garden_dx.gb": "Moon Garden DX",
+            "Moon_Garden.gb": "Moon Garden",
+            "garden.gb": "Garden",
+            "MoonGarden_v2.gb": "Moon Garden",
+            "iPocket.gb": "iPocket",
+            "Pac-Man.gb": "Pac-Man",
+            "TETRIS.gb": "TETRIS",
+            "Moon Garden.gb": "Moon Garden",
+            "Kid Icarus.gb": "Kid Icarus",
+        ]
+        for (filename, title) in expected {
+            XCTAssertEqual(FilenameMetadataParser.parse(filename: filename).suggestedTitle, title, filename)
+        }
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "MoonGarden.gb").normalizedFilename, "Moon Garden.gb")
     }
 
     func testNumbersThatAreNotDatesStayInTheTitle() {

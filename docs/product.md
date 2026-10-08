@@ -308,6 +308,9 @@ never change.
   are recognized. A dotted "Rev 0.2.0" is a homebrew version. Versions keep a semver suffix such
   as "-beta.3" and sort by their numeric part. Loose forms such as "r2" or a bare trailing number
   stay in the title, since "R-Type" and "Mega Man 2" look the same.
+- A name with no spaces, as homebrew downloads often have, is spaced out: underscores become
+  spaces, camel case splits into words and an all-lowercase name is capitalized. Hyphens stay, so
+  "Pac-Man" keeps its title.
 - In a name joined by hyphens or underscores, a "v5" or "v1.2" word mid-name becomes the version
   and the words after it the status: "Serve-Sisters-Coop-v5-Stability" is "Serve Sisters Coop",
   version 5, status Stability. A dotted number needs no "v": "match-land-live-0.3.0+live1" is
