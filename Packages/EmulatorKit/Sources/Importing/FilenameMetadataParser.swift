@@ -212,7 +212,7 @@ public enum FilenameMetadataParser {
         } else {
             cleanTitle = title
         }
-        // A version word mid-name, as in "Serve-Sisters-Coop-v5-Stability" or
+        // A version word mid-name, as in "Moon-Garden-Coop-v5-Stability" or
         // "match-land-live-0.3.0+live1": the words after it describe the variant.
         if version == nil, let stamp = versionStamp(in: cleanTitle) {
             version = stamp.version
