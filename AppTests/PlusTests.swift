@@ -1,6 +1,7 @@
 import EmulatorApplication
 import EmulatorDomain
 import Importing
+import UIKit
 import XCTest
 @testable import PressAny
 
@@ -9,7 +10,7 @@ import XCTest
 final class PlusTests: XCTestCase {
     func testRoadmapListsWhatPlusHoldsAndWhatsComing() {
         XCTAssertFalse(PlusRoadmap.upcoming.isEmpty)
-        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "Auto State History"])
+        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History"])
         let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming
         XCTAssertEqual(Set(items.map(\.id)).count, items.count, "titles are unique")
         for item in items {
@@ -64,6 +65,25 @@ final class PlusTests: XCTestCase {
         let answers = await Task.detached { (owned.isOwned, notOwned.isOwned) }.value
         XCTAssertTrue(answers.0)
         XCTAssertFalse(answers.1)
+    }
+
+    func testAppIconsNeedPlusExceptTheDefaultAndAreBundled() throws {
+        XCTAssertFalse(AppIconChoice.standard.needsPlus)
+        XCTAssertNil(AppIconChoice.standard.iconName)
+        XCTAssertEqual(AppIconChoice(iconName: nil), .standard)
+        XCTAssertEqual(AppIconChoice(iconName: "AppIcon-Unknown"), .standard)
+
+        let infoIcons = (Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons")
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons~iphone")) as? [String: Any]
+        let alternates = try XCTUnwrap(infoIcons?["CFBundleAlternateIcons"] as? [String: Any],
+            "project.yml includes every app icon set")
+        for choice in AppIconChoice.allCases {
+            XCTAssertNotNil(UIImage(named: choice.previewName), "\(choice.title) has a preview")
+            guard let name = choice.iconName else { continue }
+            XCTAssertTrue(choice.needsPlus)
+            XCTAssertEqual(AppIconChoice(iconName: name), choice)
+            XCTAssertNotNil(alternates[name], "\(name) is an alternate icon")
+        }
     }
 }
 

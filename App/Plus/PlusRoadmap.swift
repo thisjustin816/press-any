@@ -12,6 +12,7 @@ enum PlusRoadmap {
 
     static let includedToday = [
         Item(title: "LCD Filters", detail: "LCD 1× adds a subtle pixel grid, and LCD 3× red, green and blue subpixels."),
+        Item(title: "App Icons", detail: "The home-screen icon in Berry, Grape, Teal, Kiwi or Dandelion."),
         Item(title: "Auto State History", detail: "Keep 3, 5 or 10 Auto States for each save. Without Plus, the latest is kept."),
     ]
 

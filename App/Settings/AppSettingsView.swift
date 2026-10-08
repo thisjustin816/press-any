@@ -58,6 +58,14 @@ struct AppSettingsView: View {
                     } label: {
                         Label("Playing", systemImage: "play.circle")
                     }
+                    NavigationLink {
+                        AppIconSettingsPage(plus: plus)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Label("App Icon", systemImage: "paintpalette")
+                            if !plus.isUnlocked { PlusBadge() }
+                        }
+                    }
                 }
 
                 Section {
