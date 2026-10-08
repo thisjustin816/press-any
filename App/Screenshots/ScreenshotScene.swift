@@ -51,6 +51,17 @@ enum ScreenshotScene: Equatable {
         #endif
     }()
 
+    /// `-GrantPlus YES` acts as if Plus were owned, without StoreKit, for screenshots and UI tests.
+    /// Unlike the other arguments it needs no screenshot scene. `-ScreenshotLCDFilter` implies it,
+    /// so a capture's settings agree with the filter it shows.
+    static let grantsPlus: Bool = {
+        #if DEBUG
+        return UserDefaults.standard.bool(forKey: "GrantPlus") || lcdFilterOverride != nil
+        #else
+        return false
+        #endif
+    }()
+
     private static func flag(_ key: String) -> Bool {
         #if DEBUG
         return current != nil && UserDefaults.standard.bool(forKey: key)

@@ -10,7 +10,7 @@ final class LCDFilterTests: XCTestCase {
     func testLibraryAndQuickPlayResolveSavedFiltersWithOffAsTheDefault() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
-        let container = try AppContainer(rootURL: root)
+        let container = try AppContainer(rootURL: root, plus: .fixed(ownsPlus: true))
         let file = root.appendingPathComponent("LCD Fixture.gb")
         try Data(repeating: 0, count: 0x8000).write(to: file)
         let analysis = try container.importAnalyzer.analyzeROM(at: file, targetGameID: nil)
@@ -29,7 +29,7 @@ final class LCDFilterTests: XCTestCase {
         XCTAssertEqual(container.lcdFilter(system: .gameBoy), .lcd1x)
         XCTAssertEqual(container.lcdFilter(system: .gameBoyColor), .lcd3x)
         try settings.set(LCDFilter.off, key: key, scope: .build(result.build.id))
-        let reopened = try AppContainer(rootURL: root)
+        let reopened = try AppContainer(rootURL: root, plus: .fixed(ownsPlus: true))
         XCTAssertEqual(reopened.lcdFilter(for: context), .off)
         XCTAssertEqual(reopened.lcdFilter(system: .gameBoy), .lcd1x)
         try settings.setValueJSON("\"unknown-filter\"", key: key, scope: .build(result.build.id))

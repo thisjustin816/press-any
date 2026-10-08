@@ -330,7 +330,8 @@ struct GameDetailView: View {
                     system: target.system,
                     gameID: model.gameID,
                     buildID: target.buildID,
-                    store: container.repositories.settings
+                    store: container.repositories.settings,
+                    plus: container.plus
                 )
             }
             .sheet(item: $buildDetails) { build in

@@ -104,15 +104,18 @@ struct ControlsSettingsPage: View {
 /// How the game picture looks. Screen Colors depends on the system, so it lives under Systems.
 struct DisplaySettingsPage: View {
     private let storage: AppSettingsStorage
+    @ObservedObject private var plus: PlusStore
 
+    @State private var showsPlus = false
     @State private var orientation: ScreenOrientation
     @State private var screenScaling: ScreenScaling
     @State private var lcdFilter: LCDFilter
     @State private var frameBlending: FrameBlending
     @State private var errorMessage: String?
 
-    init(storage: AppSettingsStorage) {
+    init(storage: AppSettingsStorage, plus: PlusStore) {
         self.storage = storage
+        _plus = ObservedObject(wrappedValue: plus)
         _orientation = State(initialValue: storage.value(ScreenOrientation.self, .orientation) ?? .automatic)
         _screenScaling = State(initialValue: storage.value(ScreenScaling.self, .screenScaling) ?? .integer)
         _lcdFilter = State(initialValue: storage.value(LCDFilter.self, .lcdFilter) ?? .off)
@@ -141,9 +144,14 @@ struct DisplaySettingsPage: View {
             }
 
             Section {
-                Picker("LCD Filter", selection: $lcdFilter) {
+                Picker(selection: Binding(get: { lcdFilter }, set: { chooseLCDFilter($0) })) {
                     ForEach(LCDFilter.allCases, id: \.self) { filter in
-                        Text(filter.displayName).tag(filter)
+                        Text(plus.gate.label(filter.displayName, needsPlus: filter.needsPlus)).tag(filter)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("LCD Filter")
+                        if !plus.isUnlocked { PlusBadge() }
                     }
                 }
                 Picker("Frame Blending", selection: $frameBlending) {
@@ -154,7 +162,7 @@ struct DisplaySettingsPage: View {
             } header: {
                 Text("Effects")
             } footer: {
-                Text("LCD 1× adds a subtle pixel grid and LCD 3× red, green and blue subpixels, at the same screen size. Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things.")
+                Text(Self.effectsFooter(plus.gate))
             }
 
             if let errorMessage {
@@ -163,10 +171,26 @@ struct DisplaySettingsPage: View {
         }
         .navigationTitle("Display")
         .navigationBarTitleDisplayMode(.inline)
+        .plusSheet(isPresented: $showsPlus, store: plus)
         .onChange(of: orientation) { _, newValue in save(newValue, .orientation) }
         .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
         .onChange(of: lcdFilter) { _, newValue in save(newValue, .lcdFilter) }
         .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
+    }
+
+    static func effectsFooter(_ gate: PlusGate) -> String {
+        let effects = "LCD 1× adds a subtle pixel grid and LCD 3× red, green and blue subpixels, at the same screen size. Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things."
+        guard gate.isLocked(true) else { return effects }
+        return effects + " LCD filters come with \(PlusProduct.name). Without it a game shows Off, and a filter you already chose is kept."
+    }
+
+    /// A Plus filter without Plus opens the Plus screen and leaves the choice as it was.
+    private func chooseLCDFilter(_ filter: LCDFilter) {
+        if plus.gate.isLocked(filter.needsPlus) {
+            showsPlus = true
+        } else {
+            lcdFilter = filter
+        }
     }
 
     private func save(_ value: some Encodable, _ key: SettingKey) {

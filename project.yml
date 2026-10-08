@@ -151,6 +151,9 @@ schemes:
       targets:
         PressAny: all
         PressAnyTests: [test]
+    # Runs from Xcode buy Plus from this file instead of the App Store.
+    run:
+      storeKitConfiguration: Config/PressAnyPlus.storekit
     test:
       targets:
         - PressAnyTests

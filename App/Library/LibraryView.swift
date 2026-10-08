@@ -267,12 +267,14 @@ struct LibraryView: View {
                     system: model.system(of: game),
                     gameID: game.id,
                     buildID: nil,
-                    store: container.repositories.settings
+                    store: container.repositories.settings,
+                    plus: container.plus
                 )
             }
             .sheet(isPresented: $showSettings) {
                 AppSettingsView(
                     store: container.repositories.settings,
+                    plus: container.plus,
                     integrityChecker: container.integrityChecker,
                     libraryDeletion: container.libraryDeletion,
                     games: container.repositories.games
