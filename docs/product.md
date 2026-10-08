@@ -230,8 +230,9 @@ changes the library; review shows what will happen; commit is all or nothing.
   sorts before the Base's. ROM hacks and
   patch-created Builds are Preferred but not Base. A ROM explicitly matched as a hack or another
   Build starts without a Base mark. A role the player sets stays when the destination changes.
-- **Metadata.** Region, language, revision and version fill from the filename (see Naming) and a
-  nonzero header revision, and the player can correct or clear them. Unknown tags stay as written.
+- **Metadata.** Region, language, revision, version and status fill from a matched No-Intro dump
+  or the filename (see Naming). Without a match, a missing filename revision falls back to a
+  nonzero header revision. The player can correct or clear the fields. Unknown tags stay as written.
   Review labels its fields and explains Base Build and a wrong header checksum.
 - **Toolchain detection** runs when an image becomes a Build, and review shows what it found.
 - **Artwork.** Review can add the Game's artwork from Photos or Files. The image is checked and
@@ -280,6 +281,12 @@ No-Intro in Acknowledgements anyway, with the data's date.
   Game aliases when a release joins, and explicit Match Game choices keep base-game lineage even
   without the ROM. Refreshing the data never renames a Game or replaces a player's title.
   Suggest Names can offer the best regional title among releases already held by the Game.
+- At launch, a changed bundled version quietly refreshes that system's matched Builds. Region,
+  language, revision, version and status follow No-Intro when their recorded source is No-Intro,
+  Filename or ROM Header. An omitted value clears the field. Player values and fields without
+  provenance stay protected, and names and base titles stay unchanged. A field already holding
+  No-Intro's value keeps its recorded date. Each system's applied
+  version is stored only when its refresh succeeds; a failure is retried on the next launch.
 - A known dump takes its canonical name ahead of the filename, and a Game created from one is
   titled by its regional title. The original filename is always kept.
 - A Build's Technical Info shows Verified (with the dump's name), Bad Dump, Modified (patched from
@@ -303,6 +310,14 @@ have their own sources. Review edits and later player corrections use the player
 the earlier offered value. A Game's title is protected as the player's exactly when its recorded
 source is player. Existing fields without a row have no recorded provenance. Identity and bytes
 never change.
+
+A Build's Technical Info opens Metadata Details: the Game title followed by each Build field,
+with its current value, source, recorded confidence and date. A field without provenance reads
+"Not recorded". An offered value that differs appears below the current value. Tapping a field
+edits it; saving a correction records the source as You and keeps the earlier offered value.
+Empty text clears optional fields. Use Offered Value appears on a player field whose offered
+value differs from its current one, and keeps the source as You, because the original source
+isn't stored.
 
 - Region and language groups, "Rev 1" or "Rev A" (a retail revision), "v1.2" and "Version 1.2"
   are recognized. A dotted "Rev 0.2.0" is a homebrew version. Versions keep a semver suffix such
@@ -351,9 +366,9 @@ never change.
 - v1.1: Rename File to Canonical Name as an explicit action; bulk rename later.
 - v1.1: artwork by region and patch review offering the Game's other regional Build when a patch
   expects it.
-- A Metadata Details view and quiet provider refreshes that preserve the player's values. Metadata
-  provenance is stored; the view and refreshes remain planned. Build version ordering from semantic
-  versions, build numbers and dates is also planned.
+- v1.1: quiet metadata refreshes from providers beyond the bundled No-Intro data, preserving the
+  player's values. Build version ordering from semantic versions, build numbers and dates is also
+  planned.
 
 ## Restructuring Games
 

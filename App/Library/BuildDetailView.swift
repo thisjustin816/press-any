@@ -56,7 +56,7 @@ struct BuildDetailView: View {
                 }
             }
             .task { model.reload() }
-            .sheet(isPresented: $showsTechnicalInfo) {
+            .sheet(isPresented: $showsTechnicalInfo, onDismiss: { model.reload() }) {
                 if let build = model.build { BuildTechnicalInfoView(build: build, container: container) }
             }
             .sheet(isPresented: $model.isEditingNotes) { notesEditor }

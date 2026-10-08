@@ -1,4 +1,6 @@
+import EmulatorDomain
 import Foundation
+import GameIdentity
 
 /// Reviewable presentation metadata, independent of the image's immutable identity.
 public struct BuildImportMetadata: Equatable, Sendable {
@@ -39,6 +41,10 @@ public struct BuildImportMetadata: Equatable, Sendable {
     }
 
     public init(analysis: ROMImportAnalysis) {
+        if let dump = analysis.knownDump {
+            self.init(knownDump: dump)
+            return
+        }
         let filename = analysis.filenameMetadata.buildMetadata
         self.init(
             region: filename.region,
@@ -53,30 +59,34 @@ public struct BuildImportMetadata: Equatable, Sendable {
         )
     }
 
-    /// Fixed-width components let SQLite sort numeric releases as text. Prereleases sort before
-    /// their release, as in semver: "~" marks a release and follows every identifier character, and
-    /// numeric prerelease parts are padded so "beta.9" comes before "beta.10". Build metadata such
-    /// as "+deferred6" follows, so builds of one version sort together.
     public var versionSortKey: String? {
-        guard let versionString else { return nil }
-        let buildStart = versionString.firstIndex(of: "+") ?? versionString.endIndex
-        let build = versionString[buildStart...]
-        let main = versionString[..<buildStart]
-        let prereleaseStart = main.firstIndex(of: "-") ?? main.endIndex
-        let prerelease = main[prereleaseStart...].dropFirst()
-        let parts = main[..<prereleaseStart].split(separator: ".", omittingEmptySubsequences: false)
-        func isNumber(_ part: Substring) -> Bool {
-            !part.isEmpty && part.count <= 10 && part.utf8.allSatisfy { (48...57).contains($0) }
+        Build.versionSortKey(for: versionString)
+    }
+}
+
+extension BuildImportMetadata {
+    public init(knownDump dump: KnownDump) {
+        var revision: String?
+        var versionString: String?
+        if let version = dump.version {
+            if version.lowercased().hasPrefix("rev ") {
+                revision = String(version.dropFirst(4))
+            } else if version.lowercased().hasPrefix("v") {
+                versionString = String(version.dropFirst())
+            } else {
+                versionString = version
+            }
         }
-        func padded(_ part: Substring) -> String { String(repeating: "0", count: 10 - part.count) + part }
-        guard (1...4).contains(parts.count), parts.allSatisfy(isNumber) else { return nil }
-        let core = (parts.map(padded) + Array(repeating: String(repeating: "0", count: 10), count: 4 - parts.count))
-            .joined(separator: ".")
-        let precedence = prerelease.isEmpty
-            ? "~"
-            : "-" + prerelease.split(separator: ".", omittingEmptySubsequences: false)
-                .map { isNumber($0) ? padded($0) : String($0) }
-                .joined(separator: ".")
-        return core + precedence + build
+        // No-Intro writes "En,Fr"; Build Details spell it as the filename parser does, "En, Fr".
+        let language = dump.languages.map {
+            $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: ", ")
+        }
+        self.init(
+            region: dump.region,
+            language: language,
+            revision: revision,
+            versionString: versionString,
+            status: dump.status
+        )
     }
 }

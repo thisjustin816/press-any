@@ -84,7 +84,7 @@ let package = Package(
             ]
         ),
         .testTarget(name: "EmulatorDomainTests", dependencies: ["EmulatorDomain"]),
-        .testTarget(name: "EmulatorApplicationTests", dependencies: ["EmulatorKitTestSupport", "EmulatorApplication", "EmulatorDomain", "AssetStorage"]),
+        .testTarget(name: "EmulatorApplicationTests", dependencies: ["EmulatorKitTestSupport", "EmulatorApplication", "EmulatorDomain", "AssetStorage", "Importing", "GameIdentity"]),
         .testTarget(name: "AssetStorageTests", dependencies: ["EmulatorKitTestSupport", "AssetStorage"]),
         .testTarget(name: "ImportingTests", dependencies: ["EmulatorKitTestSupport", "Importing", "AssetStorage", "GameIdentity"]),
         .testTarget(name: "PatchingTests", dependencies: ["EmulatorKitTestSupport", "Patching", "AssetStorage", "EmulatorApplication"]),

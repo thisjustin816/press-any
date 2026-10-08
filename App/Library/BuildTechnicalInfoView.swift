@@ -5,8 +5,13 @@ import SwiftUI
 /// A Build's exact identity and what it was made with. Opening it detects the image again, so a
 /// Build imported before detection, or under older signatures, shows current findings.
 struct BuildTechnicalInfoView: View {
-    let build: Build
+    @State private var build: Build
     let container: AppContainer
+
+    init(build: Build, container: AppContainer) {
+        _build = State(initialValue: build)
+        self.container = container
+    }
 
     @State private var reports: [ToolchainDetectionReport]?
     @State private var errorMessage: String?
@@ -54,6 +59,9 @@ struct BuildTechnicalInfoView: View {
                     }
                     LabeledContent("No-Intro", value: verification)
                     SHA256Row(hash: build.imageSHA256)
+                    NavigationLink("Metadata Details") {
+                        MetadataDetailsView(buildID: build.id, container: container)
+                    }
                 }
 
                 if build.sourceKind == .patchRecipe {
@@ -105,6 +113,9 @@ struct BuildTechnicalInfoView: View {
                 }
             }
             .task { await refresh() }
+            .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in
+                if let updated = try? container.repositories.builds.fetchBuild(id: build.id) { build = updated }
+            }
         }
     }
 
