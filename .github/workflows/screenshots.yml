@@ -35,6 +35,15 @@ on:
         description: The ROM the import review opens (never seeded); gbdk450-badsum.gb shows the checksum warning
         default: zgb-dmg.gb
         required: true
+      game_url:
+        description: "Optional: a downloadable .gb, .gbc or .zip for the gameplay shots, used instead of SCREENSHOT_GAME_URL"
+        default: ""
+      game_sha256:
+        description: The game's SHA-256, needed with game_url
+        default: ""
+      game_name:
+        description: "Optional: the game's name in the library; the ROM header's title when empty"
+        default: ""
 
 permissions:
   contents: read
@@ -88,12 +97,13 @@ jobs:
           APPEARANCE: ${{ matrix.appearance }}
           TEXT_SIZE: ${{ inputs.text_size == 'largest' && 'accessibility-extra-extra-extra-large' || 'default' }}
           IMPORT_ROM: ${{ inputs.import_rom }}
-          # A real game for the gameplay shots, kept out of the repository: set these repository
-          # variables to a downloadable .gb, .gbc or .zip whose author allows its use, and its
-          # SHA-256. Unset, the test ROMs play.
-          GAME_URL: ${{ vars.SCREENSHOT_GAME_URL }}
-          GAME_SHA256: ${{ vars.SCREENSHOT_GAME_SHA256 }}
-          GAME_NAME: ${{ vars.SCREENSHOT_GAME_NAME }}
+          # A real game for the gameplay shots, kept out of the repository: pass it when running
+          # the workflow, or set the SCREENSHOT_GAME_* repository variables, to a downloadable
+          # .gb, .gbc or .zip whose author allows its use, and its SHA-256. With neither, the
+          # test ROMs play.
+          GAME_URL: ${{ inputs.game_url || vars.SCREENSHOT_GAME_URL }}
+          GAME_SHA256: ${{ inputs.game_url && inputs.game_sha256 || vars.SCREENSHOT_GAME_SHA256 }}
+          GAME_NAME: ${{ inputs.game_url && inputs.game_name || vars.SCREENSHOT_GAME_NAME }}
         run: |
           set -o pipefail
           ./Scripts/take-screenshots.sh "$ROMS" screenshots 2>&1 | tee screenshots.log

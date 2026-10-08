@@ -233,8 +233,10 @@ appear in search results.
 own screens. `gbdk450-badsum.gb` as the import ROM shows Import Review's checksum warning.
 
 By default the test ROMs from `TestROMs/` play, so no commercial game appears. To show a real
-game in the gameplay shots, set three repository variables under **Settings → Secrets and
-variables → Actions → Variables**:
+game in the gameplay shots, fill in `game_url`, `game_sha256` and, if you like, `game_name` when
+you run the workflow. To use the same game every time, set three repository variables under
+**Settings → Secrets and variables → Actions → Variables** instead. A game given when running
+the workflow wins over the variables.
 
 | Variable | Value |
 |---|---|
