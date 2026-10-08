@@ -77,8 +77,9 @@ fi
 # The plan, tab-separated: `file <name>` for each ROM or patch to copy (the chosen ROMs, then any
 # patch whose source was chosen), `menus <game ROM> <gameplay ROM>` for the menu UI tests,
 # `only <test>` for each UI test to run (all of them when there is none), `order <names>` for the
-# final numbering, then `shot <scene> <seconds to wait> <name> <flags>` for each
-# screenshot. The waits let gameplay get past the boot logo with the game's picture moving. Flags
+# final numbering, then `shot <scene> <seconds to wait> <name> <ready> <flags>` for each
+# screenshot. The waits let gameplay get past the boot logo with the game's picture moving. Ready
+# is `ready` when the app reports the scene ready, and the wait counts from then, or `-`. Flags
 # are the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
 plan_file="build/screenshots/plan.tsv"
 mkdir -p "$(dirname "$plan_file")"
@@ -108,7 +109,7 @@ lines = [f"file\t{f}" for f in names + [p["filename"] for p in patches] + ([game
 # A Game with a patched Build shows Builds best.
 game_rom = patches[0]["source"] if patches else names[0]
 lines.append(f"menus\t{game_rom}\t{game['filename'] if game and shots == 'listing' else names[0]}")
-shot = lambda scene, wait, name, flags="-": lines.append(f"shot\t{scene}\t{wait}\t{name}\t{flags}")
+shot = lambda scene, wait, name, flags="-", ready="-": lines.append(f"shot\t{scene}\t{wait:g}\t{name}\t{ready}\t{flags}")
 gb = first(lambda r: r["system"] == "GB") or names[0]
 gbc = first(lambda r: r["system"] == "GBC") or names[0]
 if shots == "listing" and game:
@@ -120,7 +121,7 @@ if shots == "listing":
     # results, so they carry gameplay, the library and a Game's Builds and saves.
     shot("library", 8, "library")
     shot(f"game:{game_rom}", 4, "game")
-    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info")
+    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info", ready="ready")
     shot(f"play:{gbc}", 10, "play")
     shot(f"play:{gb}", 10, "play-lcd", "-ScreenshotLCDFilter lcd3x")
     shot(f"import:unimported/{import_rom}", 4, "import-review")
@@ -138,12 +139,12 @@ shot("settings", 4, "settings")
 if shots == "every-rom":
     for f in names:
         shot(f"game:{f}", 4, f"game-{stem(f)}")
-        shot(f"build-info:{f}", 4, f"build-info-{stem(f)}")
+        shot(f"build-info:{f}", 4, f"build-info-{stem(f)}", ready="ready")
         shot(f"play:{f}", 10, f"play-{stem(f)}")
 elif shots == "summary":
     shot(f"game:{game_rom}", 4, "game")
     # GB Studio shows the most in Made With.
-    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info")
+    shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info", ready="ready")
     for system in ("GB", "GBC"):
         if f := first(lambda r: r["system"] == system):
             shot(f"play:{f}", 10, f"play-{system.lower()}")
@@ -256,6 +257,20 @@ collect_diagnostics() {
   echo "Launch failed; see $output/simulator.log." >&2
 }
 
+# The app logs this, as ScreenshotScene spells it, once a scene that takes time to settle is ready.
+ready_message="Screenshot scene ready"
+
+# wait_ready <seconds>: waits for the app to log that the scene is ready. A scene that doesn't
+# report in time is taken anyway, with a warning.
+wait_ready() {
+  local deadline=$((SECONDS + $1))
+  while ((SECONDS < deadline)); do
+    grep -qF "$ready_message" "$log.tmp" 2>/dev/null && return 0
+    sleep 0.5
+  done
+  echo "The app didn't report the scene ready within $1 seconds; taking it anyway." >&2
+}
+
 # A fresh simulator can show a system notification banner, such as one about Apple Intelligence,
 # at any time, and nothing simctl offers turns those off. A banner stays about five seconds, so
 # each shot is compared with a second one taken after that: a difference along the screen's left
@@ -320,11 +335,11 @@ sys.exit(1 if changed > WIDTH * (BOTTOM - TOP) // 50 else 0)
 PY
 
 shot=0
-# shoot <file> <scene> <seconds to wait> [launch arguments...]: launches the scene and saves the
-# screen to <file> once it has waited, leaving the app running.
+# shoot <file> <scene> <seconds to wait> <ready> [launch arguments...]: launches the scene and
+# saves the screen to <file> once it's ready and has waited, leaving the app running.
 shoot() {
-  local file="$1" scene="$2" wait="$3"
-  shift 3
+  local file="$1" scene="$2" wait="$3" ready="$4"
+  shift 4
   # simctl doesn't truncate the output file, so a launch that prints nothing would repeat the last.
   rm -f "$log.tmp"
   local attempt
@@ -337,6 +352,7 @@ shoot() {
     fi
     sleep 5
   done
+  [[ $ready == - ]] || wait_ready 30
   sleep "$wait"
   xcrun simctl io "$udid" screenshot "$file" >/dev/null
   # Before its first frame the app shows the blank launch screen, a PNG under 100 KB where every
@@ -349,10 +365,10 @@ shoot() {
   done
 }
 
-# capture <scene> <seconds to wait> <name> [launch arguments...]
+# capture <scene> <seconds to wait> <name> <ready> [launch arguments...]
 capture() {
-  local scene="$1" wait="$2" name="$3"
-  shift 3
+  local scene="$1" wait="$2" name="$3" ready="$4"
+  shift 4
   shot=$((shot + 1))
   local file check arguments attempt
   file="$(printf '%s/%02d-%s.png' "$output" "$shot" "$name")"
@@ -360,7 +376,7 @@ capture() {
   arguments=("$@")
   echo "== $scene $*" >>"$log"
   for attempt in 1 2 3; do
-    shoot "$file" "$scene" "$wait" ${arguments[@]+"${arguments[@]}"} || return 1
+    shoot "$file" "$scene" "$wait" "$ready" ${arguments[@]+"${arguments[@]}"} || return 1
     sleep 7
     xcrun simctl io "$udid" screenshot "$check" >/dev/null
     xcrun simctl terminate "$udid" "$bundle_id" || true
@@ -377,11 +393,11 @@ capture() {
 }
 
 for scene in "${scenes[@]}"; do
-  IFS=$'\t' read -r name_scene wait name flags <<<"$scene"
+  IFS=$'\t' read -r name_scene wait name ready flags <<<"$scene"
   arguments=()
   [[ $flags == - ]] || read -r -a arguments <<<"$flags"
   # Written so bash 3.2, macOS's, accepts an empty array under `set -u`.
-  capture "$name_scene" "$wait" "$name" ${arguments[@]+"${arguments[@]}"}
+  capture "$name_scene" "$wait" "$name" "$ready" ${arguments[@]+"${arguments[@]}"}
 done
 rm -f "$log.tmp"
 

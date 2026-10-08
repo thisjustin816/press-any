@@ -51,6 +51,10 @@ enum ScreenshotScene: Equatable {
         #endif
     }()
 
+    /// Logged once a scene that takes time to settle is ready, such as Technical Info once it shows.
+    /// `Scripts/take-screenshots.sh` waits for it before the scene's own wait.
+    static let readyMessage = "Screenshot scene ready"
+
     private static func flag(_ key: String) -> Bool {
         #if DEBUG
         return current != nil && UserDefaults.standard.bool(forKey: key)
