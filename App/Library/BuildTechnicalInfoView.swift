@@ -1,5 +1,6 @@
 import EmulatorDomain
 import GameIdentity
+import Importing
 import SwiftUI
 
 /// A Build's exact identity and what it was made with. Opening it detects the image again, so a
@@ -15,6 +16,8 @@ struct BuildTechnicalInfoView: View {
 
     @State private var reports: [ToolchainDetectionReport]?
     @State private var errorMessage: String?
+    @State private var header: GBROMHeader?
+    @State private var headerUnavailable = false
     @State private var patchItems: [PatchRecipeItem] = []
     @State private var patchStepsError: String?
     @State private var patchFilenames: [UUID: String] = [:]
@@ -61,6 +64,17 @@ struct BuildTechnicalInfoView: View {
                     SHA256Row(hash: build.imageSHA256)
                     NavigationLink("Metadata Details") {
                         MetadataDetailsView(buildID: build.id, container: container)
+                    }
+                }
+
+                Section("Header") {
+                    if let header {
+                        HeaderRows(header: header)
+                    } else if headerUnavailable {
+                        Text("Header unavailable")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ProgressView()
                     }
                 }
 
@@ -113,6 +127,7 @@ struct BuildTechnicalInfoView: View {
                 }
             }
             .task { await refresh() }
+            .task { await loadHeader() }
             .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in
                 if let updated = try? container.repositories.builds.fetchBuild(id: build.id) { build = updated }
             }
@@ -124,6 +139,17 @@ struct BuildTechnicalInfoView: View {
         case .gbStudioGlobals: "GB Studio globals"
         case .symbolFile: "Symbol file"
         }
+    }
+
+    /// Reads the resolved image, so a patched Build shows its own header. The global checksum
+    /// needs the whole image, which the parser maps instead of copying.
+    private func loadHeader() async {
+        let resolver = container.launchImageResolver
+        let buildID = build.id
+        header = await Task.detached {
+            try? GBROMHeaderParser.parse(contentsOf: resolver.resolve(buildID: buildID))
+        }.value
+        headerUnavailable = header == nil
     }
 
     private func refresh() async {
@@ -149,5 +175,32 @@ struct BuildTechnicalInfoView: View {
         } catch {
             errorMessage = "Could not read the Build’s image: \(error.localizedDescription)"
         }
+    }
+}
+
+/// The cartridge header as stored, read-only. A checksum reads Valid or Invalid in words, so it
+/// doesn't rely on color.
+private struct HeaderRows: View {
+    let header: GBROMHeader
+
+    var body: some View {
+        LabeledContent("Title", value: header.title.isEmpty ? "None" : header.title)
+        LabeledContent("Color Support", value: header.colorSupport.displayName)
+        LabeledContent("Cartridge Type", value: header.cartridgeTypeName)
+        LabeledContent("ROM Size", value: header.romSizeDescription)
+        LabeledContent("RAM Size", value: header.ramSizeDescription)
+        LabeledContent("Revision Number", value: String(header.revisionNumber))
+        LabeledContent(
+            "Header Checksum",
+            value: Self.checksum(String(format: "0x%02X", header.headerChecksum), valid: header.headerChecksumValid)
+        )
+        LabeledContent(
+            "Global Checksum",
+            value: Self.checksum(String(format: "0x%04X", header.globalChecksum), valid: header.globalChecksumValid)
+        )
+    }
+
+    private static func checksum(_ stored: String, valid: Bool) -> String {
+        "\(stored) · \(valid ? "Valid" : "Invalid")"
     }
 }

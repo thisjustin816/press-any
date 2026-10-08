@@ -330,6 +330,9 @@ No-Intro in Acknowledgements anyway, with the data's date.
   version is stored only when its refresh succeeds; a failure is retried on the next launch.
 - A known dump takes its canonical name ahead of the filename, and a Game created from one is
   titled by its regional title. The original filename is always kept.
+- A dump's status is No-Intro's development status (Beta, Proto, Demo, Sample, Debug), spelled as
+  the filename parser spells it, so "Proto" reads "Prototype". Aftermarket and Unl describe the
+  release, not its development, so they never become a status, and neither does Pirate.
 - A Build's Technical Info shows Verified (with the dump's name), Bad Dump, Modified (patched from
   a verified dump) or Unknown. The app never alters a ROM to make it match.
 
@@ -965,8 +968,13 @@ exposes them; custom border editing is later.
   preferred save, which Play uses unless a Build picks its own.
 - Build Info opens Build Details, which links to Technical Info. Technical Info shows hashes (four
   groups of 16 on two lines, copied by touch and hold), the stored metadata, verification, when
-  the Build was added, and Made With: an engine such as GB Studio above the toolchain it runs on,
+  the Build was added, the cartridge header, read-only, and Made With: an engine such as GB Studio above the toolchain it runs on,
   names as their projects spell them, version ranges as "x to y" or "x or later".
+  The Header section reads the Build's resolved image, so a patched Build shows its own header:
+  title, Game Boy, Game Boy Color compatible or Game Boy Color only, the cartridge type by name
+  such as "MBC5 + RAM + Battery", ROM and RAM size, revision number, and the header and global
+  checksums with their stored value and Valid or Invalid. An unreadable header shows one row,
+  "Header unavailable".
 - Once a Game has been played, a Statistics section after Save Profiles shows Playtime, Sessions
   and Last Played. Playtime uses the same abbreviated hours, minutes and seconds as Build Details.
   Played Save Profiles show their playtime and relative last played under their names. These
