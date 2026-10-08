@@ -20,8 +20,9 @@ migrating later.
 2. Multi-signal development-build matching is built. Metadata provenance,
    Metadata Details and per-step patch input hashes are built, along with Game aliases, rename,
    Build notes, per-Build playtime, favorites, declared save compatibility and the cross-region save check.
-3. Library features on that data: broader cleanup and in-flight protection. Sorting, play
-   statistics, the storage screen and verification on read are built.
+3. Library features on that data: the in-flight protection that remains under Persistence /
+   storage. Sorting, play statistics, the storage screen, verification on read and cache trimming
+   under storage pressure are built.
 4. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
@@ -103,15 +104,16 @@ halt_bug, interrupt_time and sound tests) and SameSuite remain.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | done | Storage screen by category, source vs disposable, safe cleanup | v1 | Settings > Library > Storage shows asset categories, Quick Play disk usage and device free space; confirmed cache clearing preserves the running Build's ROM; Recently Deleted has no separate total because purgeable assets cannot be listed without purging |
-| partial | Automatic cleanup of disposable data only | v1 | expired Quick Play sessions and staged copies left by interrupted imports removed at launch (AppContainer init); no generated-cache eviction under pressure |
-| partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | Check Library Files runs the orphan sweep on demand and accepts absent generated ROMs; Storage cache clearing protects the active session's Build image, including shared copies; broader in-flight protection and GC coordination remain |
+| partial | GC coordination / in-flight protection / orphan sweep in the running app | v1 | `InFlightFiles` holds files an import, patched Build or variable map places until they're recorded, and a running game's ROM; cache trimming, cache clearing and Check Library Files skip held files, and the sweep looks each orphan up again before removing it. Launch cleanup runs before anything can start. Remaining: other reads of a patched ROM (export, the save check, toolchain refresh, matching a shared patch to its base) aren't held, so trimming at the same moment fails that one action, and a retry rebuilds the ROM, and a patched-on-patched rebuild doesn't hold its intermediate ROM between writing and reading it |
 
 Done: GRDB/SQLite metadata, binaries on managed FS; SHA-256 identity, content-addressed collision-
 safe relative paths; Source-asset dedup; Source vs userData vs cache vs temporary classes; Atomic
 save/state writes; Transactional commit, no orphaned permanent asset on failure; Verify important
 assets when read or used: launch rehashes the ROM and patches, battery saves and save states are
 checked against their recorded SHA-256 before they reach the core, and Check Library Files rehashes
-ROMs and patches on demand.
+ROMs and patches on demand; Automatic cleanup of disposable data only: expired Quick Play sessions
+and staged copies left by interrupted imports go at launch, and patched ROMs are trimmed, least
+recently played first, when less than 500 MB is free, at launch and before a patched ROM is written.
 
 ### Domain model
 

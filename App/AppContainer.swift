@@ -51,6 +51,9 @@ final class AppContainer {
     let coreRegistry: CoreRegistry
     let settingsResolver: SettingsResolver
     let launchHistory: SessionLaunchHistory
+    /// Files an import or the running game is using, which cache trimming and Check Library Files
+    /// leave alone.
+    let inFlightFiles = InFlightFiles()
 
     private(set) var activeSession: EmulationSession?
 
@@ -67,7 +70,7 @@ final class AppContainer {
             activeBuildID = nil
         }
         try ClearPatchedROMCache(assets: repositories.assets, builds: repositories.builds,
-            recipes: repositories.patchRecipes, assetStore: fileStore)
+            recipes: repositories.patchRecipes, assetStore: fileStore, inFlight: inFlightFiles)
             .execute(activeBuildID: activeBuildID)
     }
 
@@ -97,7 +100,8 @@ final class AppContainer {
         try database.migrate()
         repositories = database.makeRepositories()
 
-        integrityChecker = ManagedAssetIntegrityChecker(assets: repositories.assets, assetStore: fileStore)
+        integrityChecker = ManagedAssetIntegrityChecker(assets: repositories.assets, assetStore: fileStore,
+            inFlight: inFlightFiles)
         knownDumps = try? KnownDumpIndex.bundled()
         importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, games: repositories.games,
             fingerprints: repositories.fingerprints,
@@ -110,7 +114,8 @@ final class AppContainer {
             toolchainReports: repositories.toolchainReports,
             fingerprints: repositories.fingerprints,
             assetStore: fileStore,
-            transactions: repositories.transactions
+            transactions: repositories.transactions,
+            inFlight: inFlightFiles
         )
         buildOperations = BuildOperations(
             games: repositories.games,
@@ -164,6 +169,20 @@ final class AppContainer {
             builds: repositories.builds,
             profiles: repositories.saveProfiles
         )
+        let volume = rootURL
+        let trimCache = TrimPatchedROMCache(
+            assets: repositories.assets,
+            builds: repositories.builds,
+            recipes: repositories.patchRecipes,
+            profiles: repositories.saveProfiles,
+            states: repositories.saveStates,
+            assetStore: fileStore,
+            inFlight: inFlightFiles,
+            freeBytes: {
+                try volume.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+                    .volumeAvailableCapacityForImportantUsage
+            }
+        )
         patchCreator = CreatePatchedBuild(
             games: repositories.games,
             builds: repositories.builds,
@@ -171,13 +190,16 @@ final class AppContainer {
             assets: repositories.assets,
             toolchainReports: repositories.toolchainReports,
             assetStore: fileStore,
-            transactions: repositories.transactions
+            transactions: repositories.transactions,
+            trimCache: trimCache,
+            inFlight: inFlightFiles
         )
         launchImageResolver = ResolveImageForLaunch(
             builds: repositories.builds,
             recipes: repositories.patchRecipes,
             assets: repositories.assets,
-            assetStore: fileStore
+            assetStore: fileStore,
+            trimCache: trimCache
         )
         exportFiles = ExportLibraryFiles(
             games: repositories.games,
@@ -199,7 +221,8 @@ final class AppContainer {
             maps: repositories.variableMaps,
             assets: repositories.assets,
             assetStore: fileStore,
-            transactions: repositories.transactions
+            transactions: repositories.transactions,
+            inFlight: inFlightFiles
         )
         saveCompatibility = AssessSaveCompatibility(
             builds: repositories.builds,
@@ -244,10 +267,13 @@ final class AppContainer {
         settingsResolver = SettingsResolver(store: repositories.settings)
         launchHistory = SessionLaunchHistory(store: repositories.settings)
 
+        // Nothing has started yet, so this cleanup can't reach a Quick Play session, import or
+        // game in progress. Cleanup that runs alongside them goes through inFlightFiles.
         _ = try? QuickPlayRetention(assetStore: fileStore).removeExpiredSessions()
         _ = try? libraryDeletion.purgeExpired()
-        // Backfill source-image evidence off the main thread. Unreadable files are retried
-        // next launch; import suggestions use only the records already filled.
+        // Trim the patched ROM cache if space is short, and backfill source-image evidence, off
+        // the main thread. Unreadable files are retried next launch; import suggestions use only
+        // the records already filled.
         let fillSHA1 = FillImageSHA1(builds: repositories.builds, assetStore: fileStore)
         let fillFingerprints = FillImageFingerprints(assets: repositories.assets,
             fingerprints: repositories.fingerprints, assetStore: fileStore)
@@ -256,6 +282,7 @@ final class AppContainer {
                 index: $0, transactions: repositories.transactions)
         }
         Task.detached(priority: .utility) {
+            _ = try? trimCache.execute()
             _ = try? fillSHA1.execute()
             _ = try? fillFingerprints.execute()
             try metadataRefresh?.execute()
@@ -294,7 +321,8 @@ final class AppContainer {
             launchHistory: launchHistory,
             transactions: repositories.transactions,
             thumbnails: PNGFrameEncoder(),
-            deletion: libraryDeletion
+            deletion: libraryDeletion,
+            inFlight: inFlightFiles
         )
     }
 

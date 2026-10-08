@@ -34,13 +34,16 @@ public enum ManagedAssetIntegrityCleanupPolicy: Sendable {
 public struct ManagedAssetIntegrityChecker: Sendable {
     private let assets: any ManagedAssetInventoryRepository
     private let assetStore: any AssetStore
+    private let inFlight: InFlightFiles?
 
     public init(
         assets: any ManagedAssetInventoryRepository,
-        assetStore: any AssetStore
+        assetStore: any AssetStore,
+        inFlight: InFlightFiles? = nil
     ) {
         self.assets = assets
         self.assetStore = assetStore
+        self.inFlight = inFlight
     }
 
     public func inspect(
@@ -91,12 +94,11 @@ public struct ManagedAssetIntegrityChecker: Sendable {
             knownPaths: knownPaths
         )
         for relativePath in sourceOrphans {
-            issues.append(.orphanSource(relativePath: relativePath))
             if cleanup == .removeProvableOrphans {
-                let url = try assetStore.managedURL(relativePath: relativePath)
-                try assetStore.removeIfExists(url)
+                guard try removeOrphan(relativePath) else { continue }
                 removed.append(relativePath)
             }
+            issues.append(.orphanSource(relativePath: relativePath))
         }
 
         let cacheOrphans = try orphanedFiles(
@@ -104,12 +106,11 @@ public struct ManagedAssetIntegrityChecker: Sendable {
             knownPaths: knownPaths
         )
         for relativePath in cacheOrphans {
-            issues.append(.orphanCache(relativePath: relativePath))
             if cleanup == .removeProvableOrphans {
-                let url = try assetStore.managedURL(relativePath: relativePath)
-                try assetStore.removeIfExists(url)
+                guard try removeOrphan(relativePath) else { continue }
                 removed.append(relativePath)
             }
+            issues.append(.orphanCache(relativePath: relativePath))
         }
 
         for relativePath in try staleWriterTemporaryFiles() {
@@ -124,6 +125,20 @@ public struct ManagedAssetIntegrityChecker: Sendable {
             issues: issues.sorted(by: issueSort),
             removedRelativePaths: removed.sorted()
         )
+    }
+
+    /// Removes a file the inventory didn't list, unless it's in use after all. Returns false when
+    /// it's kept.
+    private func removeOrphan(_ relativePath: String) throws -> Bool {
+        // The inventory was read before the walk, and a commit places its files before recording
+        // them, so the file may be recorded by now or about to be.
+        let remove = { [assets, assetStore] () throws -> Bool in
+            guard try assets.fetchAsset(relativePath: relativePath) == nil else { return false }
+            try assetStore.removeIfExists(try assetStore.managedURL(relativePath: relativePath))
+            return true
+        }
+        guard let inFlight else { return try remove() }
+        return try inFlight.removeUnlessHeld(relativePath, remove)
     }
 
     private func orphanedFiles(under root: URL, knownPaths: Set<String>) throws -> [String] {
