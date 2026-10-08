@@ -26,7 +26,7 @@ struct ImageFingerprintTests {
             for (table, rows) in before { #expect(try Row.fetchAll(db, sql: "SELECT * FROM \(table) ORDER BY rowid") == rows) }
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM image_fingerprints") == 0)
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").last == "v1-v16-image-fingerprints")
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").contains("v1-v16-image-fingerprints"))
         }
     }
 

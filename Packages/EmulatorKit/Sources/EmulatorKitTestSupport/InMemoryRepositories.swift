@@ -9,6 +9,9 @@ public final class InMemoryGameRepository: GameRepository, @unchecked Sendable {
     private let lock = NSLock()
     private var provenance: [UUID: [MetadataField: MetadataProvenance]] = [:]
     private var values: [UUID: Game]
+    /// Kept apart from `values`, as the database keeps it apart from `games`, so hiding a Game
+    /// leaves its position for a restore.
+    private var manualPositions: [UUID: Int] = [:]
 
     public init(_ games: [Game] = []) {
         values = Dictionary(uniqueKeysWithValues: games.map { ($0.id, $0) })
@@ -57,12 +60,29 @@ public final class InMemoryGameRepository: GameRepository, @unchecked Sendable {
         }
     }
 
+    public func fetchManualPositions() throws -> [UUID: Int] {
+        lock.withLock { manualPositions.filter { values[$0.key] != nil } }
+    }
+
+    public func setManualOrder(_ gameIDs: [UUID]) throws {
+        try lock.withLock {
+            if let missing = gameIDs.first(where: { values[$0] == nil }) { throw BuildOperationError.gameNotFound(missing) }
+            for (position, id) in gameIDs.enumerated() { manualPositions[id] = position }
+        }
+    }
+
     func hideGame(id: UUID) { _ = lock.withLock { values.removeValue(forKey: id) } }
-    func purgeMetadata(gameID: UUID) { _ = lock.withLock { provenance.removeValue(forKey: gameID) } }
+    func purgeMetadata(gameID: UUID) {
+        lock.withLock {
+            provenance.removeValue(forKey: gameID)
+            manualPositions.removeValue(forKey: gameID)
+        }
+    }
     public func deleteGame(id: UUID) throws {
         lock.withLock {
             values.removeValue(forKey: id)
             provenance.removeValue(forKey: id)
+            manualPositions.removeValue(forKey: id)
         }
     }
 

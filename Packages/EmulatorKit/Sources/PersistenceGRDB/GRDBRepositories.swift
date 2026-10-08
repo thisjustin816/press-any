@@ -138,6 +138,33 @@ public final class GRDBGameRepository: GameRepository, GRDBRepositoryBacking, @u
             try db.execute(sql: "DELETE FROM games WHERE id = ?", arguments: [gameID])
         }
     }
+
+    public func fetchManualPositions() throws -> [UUID: Int] {
+        try read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT manual.game_id, manual.position FROM game_manual_positions manual
+                JOIN games game ON game.id = manual.game_id
+                WHERE game.deletion_id IS NULL
+                """)
+            var positions: [UUID: Int] = [:]
+            for row in rows {
+                positions[try PersistenceCodec.uuid(row["game_id"] as String)] = row["position"]
+            }
+            return positions
+        }
+    }
+
+    public func setManualOrder(_ gameIDs: [UUID]) throws {
+        try write { db in
+            for (position, id) in gameIDs.enumerated() {
+                try db.execute(sql: """
+                    INSERT OR REPLACE INTO game_manual_positions (game_id, position)
+                    SELECT id, ? FROM games WHERE id = ? AND deletion_id IS NULL
+                    """, arguments: [position, PersistenceCodec.uuid(id)])
+                guard db.changesCount == 1 else { throw BuildOperationError.gameNotFound(id) }
+            }
+        }
+    }
 }
 
 public final class GRDBBuildRepository: BuildRepository, GRDBRepositoryBacking, @unchecked Sendable {

@@ -954,9 +954,10 @@ exposes them; custom border editing is later.
   a compact list, with search by primary title and aliases. Cartridges without artwork take a color
   per system and print the title on the label.
 - The toolbar holds Settings, the wordmark, More and Add, as Photos and Files arrange theirs. More
-  opens Select; Grid and List as a row of icons; Sort By; Show Titles in the grid; and Favorites
-  Only. Add opens Import Files, then Quick Play ROM, Quick Play with a Save and Quick Play
-  Sessions. The wordmark shrinks to fit rather than losing letters at large text sizes.
+  opens Select, with Reorder in the list under Manual; Grid and List as a row of icons; Sort By;
+  Show Titles in the grid; and Favorites Only. Add opens Import Files, then Quick Play ROM, Quick
+  Play with a Save and Quick Play Sessions. The wordmark shrinks to fit rather than losing letters
+  at large text sizes.
 - Select adds checkboxes in the list and checkmark circles on tiles, and Done in the toolbar ends
   it. The bottom bar offers Select All / Deselect All and Delete (n) for the visible Games, with one
   confirmation. Tiles read Selected or Not selected to VoiceOver. Tapping while selecting changes
@@ -964,12 +965,19 @@ exposes them; custom border editing is later.
 - Touching and holding a Game offers Play and Start Over; Add to Favorites or Remove from
   Favorites, Rename and Game Settings; then Delete Game. A list row swipes right to Play and left
   to Delete.
-- Sort By remembers Title (the default), Recently Played, Recently Added, Playtime or System.
-  Recent play, added and playtime sort largest first; Games never played go last under Recently
-  Played and Playtime. System groups Game Boy before Game Boy Color. Ties use title order. Search
-  and Favorites Only filter the sorted list. List rows show the system under Title and System,
-  relative last played under Recently Played, playtime under Playtime, and the date added under
-  Recently Added. Grid tiles keep their usual appearance.
+- Sort By remembers Title (the default), Recently Played, Recently Added, Recently Changed,
+  Playtime, System, Hack Author, Version or Manual. Recent play, added, changed and playtime sort
+  largest first; Games never played go last under Recently Played and Playtime. Recently Changed
+  uses the newest Build added or edited in the Game. Hack Author sorts by the Preferred Build's
+  author, A to Z, and Version by its version, newest first; Games without one go last. System groups Game Boy before Game Boy Color. Ties use title
+  order. Search and Favorites Only filter the sorted list. List rows show the system under Title,
+  System and Manual, relative last played under Recently Played, the relative last change under
+  Recently Changed, playtime under Playtime, the date added under Recently Added, the author under
+  Hack Author and the version under Version. Grid tiles keep their usual appearance.
+- Manual is the player's own order. In the list, Reorder shows drag handles and Done ends it; the
+  grid shows the same order. Games hidden by search or Favorites Only keep their places while the
+  visible ones move. Games never placed, new ones included, follow the placed Games in title order.
+  A deleted Game keeps its position in Recently Deleted and takes it back when restored.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
   preferred save. The toolbar has a Favorite star, Select and More (Game Settings, Rename Game,
   Artwork, Merge Into Another Game, Delete Game). Select edits the Builds and Save Profiles
@@ -1003,9 +1011,9 @@ exposes them; custom border editing is later.
   Settings > How Press Any Works reopens it, and the first game shows "Tap Press Any for the
   menu" once. v1 has nothing to opt into; the v1.1 opt-ins (crash reports, usage counts) and
   Developer Mode bring their own introductions.
-- v1: more sorting by year, developer, publisher, hack author, Build version and date, last
-  Build change and manual order; a separate statistics screen (no permanent session log).
-- v1.1: SQLite FTS5 live search across titles, aliases, filenames, hack title, author, version,
+- v1: a separate statistics screen (no permanent session log).
+- v1.1: sorting by release year, developer and publisher, which metadata providers supply; SQLite
+  FTS5 live search across titles, aliases, filenames, hack title, author, version,
   system, region, Build names, tags and document titles, title matches ranked first; manual and
   smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with
   updates); tags on Games and Builds behind long-press and overflow; an optional Developer view.
