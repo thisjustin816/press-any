@@ -169,10 +169,10 @@ public struct CreatePatchedBuild: Sendable {
             recipes: recipes,
             assets: assets,
             assetStore: assetStore,
-            patcher: patcher
+            patcher: patcher,
+            inFlight: inFlight
         )
-        let baseURL = try resolver.resolve(buildID: baseBuild.id)
-        var output = try assetStore.readData(at: baseURL)
+        var output = try resolver.readImage(buildID: baseBuild.id)
         // Held until the records are in, so Check Library Files doesn't take the placed files
         // for orphans.
         let lease = inFlight?.lease()

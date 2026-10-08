@@ -66,7 +66,6 @@ private final class Fixture: @unchecked Sendable {
         RefreshToolchainReports(
             reports: reports,
             images: FixedImage(url: imageURL),
-            assetStore: store,
             detect: { _, _ in detect() }
         )
     }

@@ -62,7 +62,6 @@ public struct ExportLibraryFiles: Sendable {
         guard let game = try games.fetchGame(id: build.gameID) else {
             throw ExportLibraryFilesError.gameNotFound(build.gameID)
         }
-        let source = try images.resolveImageURL(buildID: buildID)
         let metadata = BuildImportMetadata(
             region: build.region,
             language: build.language,
@@ -92,7 +91,12 @@ public struct ExportLibraryFiles: Sendable {
                 unknownGroups: []
             )
         }
-        return try copy(source, named: name, into: directory)
+        // Read through the resolver, which holds a patched ROM until it's read, so cache trimming
+        // can't remove it first.
+        let image = try images.readImage(buildID: buildID)
+        let destination = try availableDestination(named: name, in: directory)
+        try image.write(to: destination, options: .withoutOverwriting)
+        return destination
     }
 
     /// The profile's battery save, named for the Game and the profile.
@@ -112,10 +116,14 @@ public struct ExportLibraryFiles: Sendable {
     }
 
     private func copy(_ source: URL, named name: String, into directory: URL) throws -> URL {
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let destination = Self.availableURL(for: Self.safeFilename(name), in: directory)
+        let destination = try availableDestination(named: name, in: directory)
         try FileManager.default.copyItem(at: source, to: destination)
         return destination
+    }
+
+    private func availableDestination(named name: String, in directory: URL) throws -> URL {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return Self.availableURL(for: Self.safeFilename(name), in: directory)
     }
 
     /// A title can hold a slash or colon, which would name another folder or fail, and a leading

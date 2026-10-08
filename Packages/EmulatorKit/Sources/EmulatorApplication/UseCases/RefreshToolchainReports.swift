@@ -9,26 +9,23 @@ public struct RefreshToolchainReports: Sendable {
 
     private let reports: any ToolchainReportRepository
     private let images: any BuildImageResolving
-    private let assetStore: any AssetStore
     private let detect: Detect
     private let now: @Sendable () -> Date
 
     public init(
         reports: any ToolchainReportRepository,
         images: any BuildImageResolving,
-        assetStore: any AssetStore,
         detect: @escaping Detect,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.reports = reports
         self.images = images
-        self.assetStore = assetStore
         self.detect = detect
         self.now = now
     }
 
     public func execute(build: Build) throws -> [ToolchainDetectionReport] {
-        let image = try assetStore.readData(at: images.resolveImageURL(buildID: build.id))
+        let image = try images.readImage(buildID: build.id)
         let fresh = detect(image, build.system)
         let kept = Dictionary(uniqueKeysWithValues: try reports.fetchReports(buildID: build.id).map { ($0.detector, $0) })
         let timestamp = now()
