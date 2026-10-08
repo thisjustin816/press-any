@@ -90,6 +90,9 @@ struct WordmarkView: View {
             .font(Font(AppBrand.Wordmark.font(size: size)))
             .kerning(size * AppBrand.Wordmark.tracking)
             .lineLimit(1)
+            // Larger text sizes widen the toolbar buttons beside the library's title, so the name
+            // shrinks to fit the space left rather than losing its last letters.
+            .minimumScaleFactor(0.5)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(AppBrand.displayName)
             .accessibilityAddTraits(.isHeader)

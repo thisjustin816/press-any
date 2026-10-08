@@ -7,9 +7,13 @@ extension View {
         available: Set<ID>,
         action: String = "Delete",
         selectAll: Bool = false,
+        selectInToolbar: Bool = true,
         perform: @escaping () -> Void
     ) -> some View {
-        modifier(SelectionControls(selection: selection, available: available, action: action, selectAll: selectAll, perform: perform))
+        modifier(SelectionControls(
+            selection: selection, available: available, action: action, selectAll: selectAll,
+            selectInToolbar: selectInToolbar, perform: perform
+        ))
     }
 
     func batchDeletionAlert(
@@ -37,15 +41,19 @@ private struct SelectionControls<ID: Hashable>: ViewModifier {
     let available: Set<ID>
     let action: String
     let selectAll: Bool
+    /// False when a menu offers Select, as the library's does; Done still ends selecting here.
+    let selectInToolbar: Bool
     let perform: () -> Void
 
     func body(content: Content) -> some View {
         content
             .environment(\.editMode, .constant(selection.isSelecting ? .active : .inactive))
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(selection.isSelecting ? "Done" : "Select") { selection.toggleMode() }
-                        .disabled(available.isEmpty)
+                if selection.isSelecting || selectInToolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(selection.isSelecting ? "Done" : "Select") { selection.toggleMode() }
+                            .disabled(available.isEmpty)
+                    }
                 }
                 if selection.isSelecting {
                     ToolbarItemGroup(placement: .bottomBar) {

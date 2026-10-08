@@ -36,7 +36,8 @@ darker at the bottom, like the face of the controller's menu button, around thos
 | Accent letter | `#B34680` to `#7C1E50` | `#BC568C` to `#8C2E60` |
 
 `AppBrand.Wordmark` in `App/AppBrand.swift` is its one definition, built from the display name:
-`WordmarkView` shows it in SwiftUI (the library's title), and the on-screen controller presses it
+`WordmarkView` shows it in SwiftUI (the library's title, shrinking to fit beside toolbar buttons
+that grow with larger text rather than cutting off letters), and the on-screen controller presses it
 into the menu button at the bottom, in the controller theme's colors with a darker shade under
 each letter's top edge and a light line along its bottom edge. Placeholder cartridges in the
 library press the name, in capitals, into their plaque the same way.

@@ -121,18 +121,25 @@ struct LibraryView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    // Select and Sort live in this menu, as in Photos and Files: more toolbar
+                    // buttons left the wordmark no room at larger text sizes.
                     Menu {
-                        Picker("Sort", selection: $sort) {
+                        if !model.selection.isSelecting {
+                            Section {
+                                Button("Select", systemImage: "checkmark.circle") { model.selection.toggleMode() }
+                                    .disabled(model.visibleGames.isEmpty)
+                            }
+                        }
+                        Picker(selection: $sort) {
                             ForEach(LibrarySort.allCases, id: \.self) { order in
                                 Text(order.displayName).tag(order)
                             }
+                        } label: {
+                            Label("Sort By", systemImage: "arrow.up.arrow.down")
+                            Text(sort.displayName)
                         }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
-                    }
-                    .accessibilityIdentifier("library.sortMenu")
-
-                    Menu {
+                        .pickerStyle(.menu)
+                        .accessibilityIdentifier("library.sortMenu")
                         Picker("Library View", selection: $displayMode) {
                             Label("Grid", systemImage: "square.grid.2x2").tag(DisplayMode.grid)
                             Label("List", systemImage: "list.bullet").tag(DisplayMode.list)
@@ -153,7 +160,7 @@ struct LibraryView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: displayMode == .grid ? "square.grid.2x2" : "list.bullet")
+                        Label("More", systemImage: "ellipsis")
                     }
                     .accessibilityIdentifier("library.viewMenu")
 
@@ -188,7 +195,10 @@ struct LibraryView: View {
                     .accessibilityIdentifier("library.addMenu")
                 }
             }
-            .selectionControls(selection: $model.selection, available: Set(model.visibleGames.map(\.id)), selectAll: true) {
+            .selectionControls(
+                selection: $model.selection, available: Set(model.visibleGames.map(\.id)),
+                selectAll: true, selectInToolbar: false
+            ) {
                 model.requestSelectedDeletion()
             }
             .batchDeletionAlert(plan: $model.pendingBatchDeletion, noun: "Games", confirm: model.confirm)

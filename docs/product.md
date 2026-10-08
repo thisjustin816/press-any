@@ -364,7 +364,7 @@ isn't stored.
 - A suggested name that repeats one already in the Game gains the day ("v1.0 · Oct 6"), then the
   time, then a number. A name the player typed is left alone. A Build sharing its name with
   another shows its date and time in the list.
-- Suggest Names, in the library's view menu, shows Game title suggestions above Build names.
+- Suggest Names, in the library's More menu, shows Game title suggestions above Build names.
   A Game with No-Intro releases gets a title suggestion when its best-ranked release under the
   app's region and language order has a different title. This uses the same selection as Import
   Review, including stable ties; missing Build region or language fields use the matched release's
@@ -406,7 +406,7 @@ isn't stored.
   target keeps its artwork unless Use <source>'s Artwork is on. Copy offers the source's artwork
   and profiles. When the target already holds the same image, Copy skips that Build and Move is
   refused, since moving would drop the Build's states or let them cross Builds.
-- **Suggest Game Merges**, in the library's view menu, lists Games whose Builds are images from
+- **Suggest Game Merges**, in the library's More menu, lists Games whose Builds are images from
   the same No-Intro family. A hack patched from a release stays out, since it's its own Game. Review chooses the subset, the Game to keep
   and its surviving title. Merge confirms moves through Merge into Another Game; lineage,
   profiles, states and artwork follow that path. The survivor keeps its artwork, or the first
@@ -902,18 +902,19 @@ exposes them; custom border editing is later.
 
 ## Library
 
-- A square box-art grid (Show Titles on by default, and one column at accessibility text sizes)
-  and a compact list, with search by primary title and aliases. Cartridges without artwork take a
-  color per system and print the title on the label. Select in the toolbar adds checkboxes in the
-  list and checkmark circles on tiles. The bottom bar offers Select All / Deselect All and Delete
-  (n) for the visible Games, with one confirmation. Tiles read Selected or Not selected to
-  VoiceOver. Tapping while selecting changes the selection without opening or playing a Game.
-- The Sort menu beside the view options remembers Title (the default), Recently Played, Recently
-  Added, Playtime or System. Recent play, added and playtime sort largest first; Games never
-  played go last under Recently Played and Playtime. System groups Game Boy before Game Boy
-  Color. Ties use title order. Search and Favorites Only filter the sorted list. List rows show
-  the system under Title and System, relative last played under Recently Played, playtime under
-  Playtime, and the date added under Recently Added. Grid tiles keep their usual appearance.
+- A square box-art grid (Show Titles on by default, and one column at accessibility text sizes) and
+  a compact list, with search by primary title and aliases. Cartridges without artwork take a color
+  per system and print the title on the label. Select, first in the toolbar's More menu as in
+  Photos, adds checkboxes in the list and checkmark circles on tiles, and Done in the toolbar ends
+  it. The bottom bar offers Select All / Deselect All and Delete (n) for the visible Games, with one
+  confirmation. Tiles read Selected or Not selected to VoiceOver. Tapping while selecting changes
+  the selection without opening or playing a Game.
+- Sort By, in the More menu, remembers Title (the default), Recently Played, Recently Added,
+  Playtime or System. Recent play, added and playtime sort largest first; Games never played go last
+  under Recently Played and Playtime. System groups Game Boy before Game Boy Color. Ties use title
+  order. Search and Favorites Only filter the sorted list. List rows show the system under Title and
+  System, relative last played under Recently Played, playtime under Playtime, and the date added
+  under Recently Added. Grid tiles keep their usual appearance.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
   profile. Select edits the Builds and Save Profiles sections with one selection across both and
   Delete (n) in the bottom bar. Build taps select instead of playing. The Build menu groups playing
@@ -928,7 +929,7 @@ exposes them; custom border editing is later.
   refresh when the library changes and when a game closes.
 - Favorites appear as a small star on grid tiles and list rows, including tiles with titles hidden.
   Favorite in Game Details and Add to Favorites or Remove from Favorites beside Play and Rename
-  in the library's long-press menu change the same Game flag. Favorites Only in the view menu
+  in the library's long-press menu change the same Game flag. Favorites Only in the More menu
   works with title and alias search.
 - A welcome screen on first launch explains the library, Builds, saves, Quick Play, the game
   menu, exports, and that the app comes with no games. It shows once, again only when its
