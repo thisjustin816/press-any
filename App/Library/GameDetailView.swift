@@ -388,7 +388,7 @@ struct GameDetailView: View {
                 }
                 Button("Cancel", role: .cancel) { model.baseMismatch = nil }
             } message: { pending in
-                Text("This patch was made for a different ROM than \(pending.build.displayName). Applying it anyway may produce a Build that doesn’t work. The original ROM and patch are kept either way.")
+                Text("This patch was made for a different ROM than \(pending.build.displayName).\n\n\(pending.details)\n\nApplying it anyway may produce a Build that doesn’t work. The original ROM and patch are kept either way.")
             }
             .alert(model.errorMessage == nil ? "Done" : "Game Error", isPresented: Binding(
                 get: { model.errorMessage != nil || model.infoMessage != nil },

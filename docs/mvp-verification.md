@@ -52,6 +52,12 @@ Verify with a user-supplied legal ROM:
 - [ ] Upgrade a disposable populated library from the build that has notes, playtime and favorites. Games, Builds, profiles, states, recipes, assets, settings, toolchain reports, variable maps, aliases and Recently Deleted entries retain their rows and values; there are no declarations until one is added.
 - [ ] State created on Build A is never loadable on Build B.
 - [ ] Create an IPS/BPS-derived Build and launch it.
+- [ ] Apply two IPS patches as one stack. In Build Technical Info, confirm the filenames appear
+  in order, both steps say Enabled, and each expected input SHA-256 copies by touch and hold.
+  The second hash must describe the first step's result. Evict the generated ROM and launch again.
+- [ ] Open a BPS patch against the wrong Build from both a Game and a shared file. Confirm the
+  Apply Anyway warning shows the patch's expected size and CRC32 beside the selected input's
+  size and CRC32.
 - [ ] Keep Game Details open, share a patch to the app, apply it to that Game and return to details. The new Build appears without backing out and reopening the Game.
 
 - [ ] Remove its generated-ROM cache, relaunch, and confirm deterministic rebuild.
