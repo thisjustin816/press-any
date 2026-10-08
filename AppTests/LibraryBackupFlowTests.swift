@@ -90,6 +90,9 @@ final class LibraryBackupFlowTests: XCTestCase {
         await model.confirmReplacement()
         XCTAssertNil(model.report)
         await model.prepareReplacement()
+        XCTAssertTrue(try container.libraryBackup.prepare(from: XCTUnwrap(model.safetyBackupURL)).manifest.includesROMs)
+        // SwiftUI clears the dialog binding before the confirm button's task runs.
+        model.isReplacementConfirmationPresented = false
         await model.confirmReplacement()
         XCTAssertNil(model.errorMessage)
         XCTAssertNotNil(model.report)

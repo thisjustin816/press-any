@@ -46,7 +46,7 @@ struct LibraryRestoreView: View {
                 Button("Replace Entire Library", role: .destructive) { Task { await model.confirmReplacement() } }
                 Button("Cancel", role: .cancel) { model.cancelReplacement() }
             } message: {
-                Text("The current library will be replaced. Its automatic backup is in Exports: \(model.safetyBackupURL?.lastPathComponent ?? "").")
+                Text("Replace removes every Game, Build, Save Profile and state in this library and empties Recently Deleted for good. An automatic backup of the current library, with its ROMs, is in Exports: \(model.safetyBackupURL?.lastPathComponent ?? "").")
             }
             .interactiveDismissDisabled(model.isBusy)
         }
@@ -95,7 +95,7 @@ struct LibraryRestoreView: View {
                     Button("Replace Entire Library...", role: .destructive) { Task { await model.prepareReplacement() } }
                         .disabled(!model.canReplaceLibrary)
                 } footer: {
-                    Text("Writes an automatic backup first, then asks to replace every Game, Build, and save in this library.")
+                    Text("Writes an automatic backup of this library with its ROMs to Exports, then asks to replace every Game, Build, and save. Recently Deleted is emptied for good.")
                 }
             }
             if model.sessionIsActive { Section { Text("Close the current game before restoring.") } }

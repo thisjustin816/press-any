@@ -23,6 +23,9 @@ final class LibraryRestoreViewModel: ObservableObject {
     private let appInfo: LibraryBackupAppInfo
     private let isSessionActive: @MainActor () -> Bool
     private var restoreID = UUID()
+    /// Set once the safety backup exists and the player is asked to confirm. SwiftUI resets the
+    /// dialog's presentation flag before the confirm button's task runs, so the flag can't gate it.
+    private var replacementIsPending = false
 
     init(service: LibraryBackupService, url: URL, directory: URL,
          appInfo: LibraryBackupAppInfo = .current,
@@ -53,6 +56,7 @@ final class LibraryRestoreViewModel: ObservableObject {
         choices = [:]
         safetyBackupURL = nil
         isReplacementConfirmationPresented = false
+        replacementIsPending = false
         defer { isLoading = false }
         let service = service, url = url
         do {
@@ -87,6 +91,7 @@ final class LibraryRestoreViewModel: ObservableObject {
         errorMessage = nil
         safetyBackupURL = nil
         isReplacementConfirmationPresented = false
+        replacementIsPending = false
         defer { isMakingSafetyBackup = false }
         let service = service, directory = directory, info = appInfo
         do {
@@ -94,17 +99,22 @@ final class LibraryRestoreViewModel: ObservableObject {
                 try service.makeSafetyBackup(for: prepared, review: review, to: directory,
                     displayName: info.displayName, appVersion: info.version, appBuild: info.build)
             }.value
-            if allowRestore() { isReplacementConfirmationPresented = true }
+            if allowRestore() {
+                replacementIsPending = true
+                isReplacementConfirmationPresented = true
+            }
         } catch { errorMessage = error.localizedDescription }
     }
 
     func cancelReplacement() {
         isReplacementConfirmationPresented = false
+        replacementIsPending = false
     }
 
     func confirmReplacement() async {
-        guard isReplacementConfirmationPresented, safetyBackupURL != nil,
+        guard replacementIsPending, safetyBackupURL != nil,
               canReplaceLibrary, allowRestore() else { return }
+        replacementIsPending = false
         isReplacementConfirmationPresented = false
         await restore(replacingLibrary: true)
     }

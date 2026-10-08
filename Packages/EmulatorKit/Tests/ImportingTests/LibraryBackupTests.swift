@@ -136,6 +136,21 @@ import Testing
         #expect(try allFiles(fixture.store.rootURL).count >= fileCount)
     }
 
+    @Test func safetyBackupAlwaysCarriesROMsEvenWhenTheIncomingBackupDoesNot() throws {
+        let fixture = try BackupFixture()
+        defer { fixture.remove() }
+        let withoutROMs = try fixture.export()
+        let prepared = try fixture.service.prepare(from: withoutROMs)
+        let review = try fixture.service.review(prepared)
+        let safety = try fixture.service.makeSafetyBackup(for: prepared, review: review, to: fixture.root,
+            displayName: "Test", appVersion: "1", appBuild: "1")
+        #expect(try fixture.service.prepare(from: safety).manifest.includesROMs)
+        #expect(throws: LibraryBackupError.safetyBackupRequired) {
+            try fixture.service.restore(prepared, review: review, choices: [:], replaceEntireLibrary: true, safetyBackupURL: withoutROMs)
+        }
+        _ = try fixture.service.restore(prepared, review: review, choices: [:], replaceEntireLibrary: true, safetyBackupURL: safety)
+    }
+
     @Test func damagedNewerAndMissingArchivesFailBeforeChanges() throws {
         let fixture = try BackupFixture()
         defer { fixture.remove() }

@@ -102,13 +102,15 @@ public struct LibraryBackupService: Sendable {
         }
     }
 
+    /// Writes the backup Replace Entire Library requires. It always includes ROMs: the incoming
+    /// backup may not carry a Build the current library has, and Replace leaves no other copy.
     public func makeSafetyBackup(for prepared: PreparedLibraryRestore, review: LibraryRestoreReview,
                                  to directory: URL, displayName: String, appVersion: String, appBuild: String) throws -> URL {
         guard !prepared.manifest.isGamePackage else { throw LibraryBackupError.unsafeChoice("Game package replacement") }
         return try repository.readSnapshot { snapshot in
             try requireUnchanged(snapshot, review.snapshot)
             return try writeBackup(snapshot, to: directory, displayName: displayName,
-                appVersion: appVersion, appBuild: appBuild, includeROMs: prepared.manifest.includesROMs,
+                appVersion: appVersion, appBuild: appBuild, includeROMs: true,
                 gameID: nil, progress: { _ in })
         }
     }
@@ -121,7 +123,7 @@ public struct LibraryBackupService: Sendable {
             guard !prepared.manifest.isGamePackage, let safetyBackupURL else { throw LibraryBackupError.safetyBackupRequired }
             let safety = try prepare(from: safetyBackupURL)
             try requireUnchanged(safety.snapshot, review.snapshot.backupOmittingExternalLineage(), includingRetained: false)
-            guard safety.manifest.includesROMs == prepared.manifest.includesROMs else { throw LibraryBackupError.safetyBackupRequired }
+            guard safety.manifest.includesROMs, !safety.manifest.isGamePackage else { throw LibraryBackupError.safetyBackupRequired }
         }
         let library = try repository.readSnapshot { $0 }
         try requireUnchanged(library, review.snapshot)
