@@ -32,6 +32,9 @@ public struct ImportSizeLimit: Equatable, Sendable {
     public static let variableMap = ImportSizeLimit(bytes: 4 * 1_048_576)
     /// A zip holding a ROM, patches or saves. Each file inside is held to its own kind's limit.
     public static let archive = ImportSizeLimit(bytes: 32 * 1_048_576)
+    /// A Library Backup or Game package, read from a mapped file one entry at a time. 2 GiB keeps
+    /// every zip offset and size in 32 bits, so the format never needs Zip64.
+    public static let backupArchive = ImportSizeLimit(bytes: 2 * 1_073_741_824)
 
     /// Throws when the file, after following symbolic links, is larger than the limit.
     public func check(fileAt url: URL) throws {

@@ -61,6 +61,10 @@ final class AppContainer {
         MeasureLibraryStorage(assets: repositories.assets, assetStore: fileStore)
     }
 
+    var libraryBackup: LibraryBackupService {
+        LibraryBackupService(repository: repositories.backup, assetStore: fileStore, inFlight: inFlightFiles)
+    }
+
     func clearPatchedROMCache() throws {
         let activeBuildID: UUID?
         switch activeSession?.state {
