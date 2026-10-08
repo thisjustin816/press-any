@@ -23,10 +23,10 @@ migrating later.
 3. Library features on that data: the in-flight protection that remains under Persistence /
    storage. Sorting, play statistics, the storage screen, verification on read and cache trimming
    under storage pressure are built.
-4. Exports, last of the library work because their format follows the settled schema: Library
-   Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
-   stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
-   Files folder they land in are built.
+4. Library Backup export, reviewed merge restore, automatic safety backup before whole-library
+   replacement, retained reports and Game packages are built on the settled schema. ROMs are
+   optional and archives use documented domain JSON with checksums. Password encryption is the
+   remaining backup follow-up. Save and ROM exports and the Files folder are built.
 
 The rest of the v1 core is built: save state slots, naming and cleanup, crash recovery, reopening
 the last game, Restart and Start Over, and the controller's Menu button.
@@ -491,13 +491,13 @@ title placeholder fallback; Artwork follows Builds when a Game is emptied by pro
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Export/import Library Backup | v1 |  |
-| missing | Export one Game as a package in the Library Backup format: its Builds' patches and recipes, Save Profiles, states, artwork, documents and notes, ROMs only when asked; importing it merges like a restore | v1 |  |
-| missing | Documented versioned archive: manifest, ordinary files, checksums, schema version | v1 |  |
-| missing | ROMs excluded by default, explicit personal full-backup option | v1 |  |
-| missing | Optional password encryption | v1 |  |
-| missing | Merge restore by stable IDs/hashes with conflict review; Replace Entire Library | v1 |  |
-| missing | Migration Report before commit + retained summary | v1 |  |
+| done | Export/import Library Backup | v1 | Settings export sheet, progress, zip restore picker and shared-file routing; package and GRDB tests |
+| done | Export one Game as a package in the Library Backup format: its Builds' patches and recipes, Save Profiles, states, artwork, documents and notes, ROMs only when asked; importing it merges like a restore | v1 | Game Details export, patch-base dependencies and reviewed merge; current schema has no documents model |
+| done | Documented versioned archive: manifest, ordinary files, checksums, schema version | v1 | docs/backup-format.md; format v1, migration ID, every payload checksummed; newer versions refused |
+| done | ROMs excluded by default, explicit personal full-backup option | v1 | Include ROMs defaults off; personal-backup footer; missing ROM rows restore and duplicate import repairs files |
+| missing | Optional password encryption | v1 | Follow-up to parts 1-4: AES-GCM, PBKDF2-HMAC-SHA256, readable password manifest, wrong-password and iOS encryption tests; no Password toggle in this build |
+| done | Merge restore by stable IDs/hashes with conflict review; Replace Entire Library | v1 | Per-item choices and independent save copies; automatic safety backup before destructive confirmation; atomic commit and rollback tests |
+| done | Migration Report before commit + retained summary | v1 | Review before writes, report after commit, Settings > Library > Last Restore retained in the database |
 | missing | Delta/Manic/Afterplay/Playtiles import adapters | future |  |
 
 Done: Export Save writes a Save Profile's battery save as a .sav named for the Game and profile;

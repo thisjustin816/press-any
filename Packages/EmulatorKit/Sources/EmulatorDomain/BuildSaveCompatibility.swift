@@ -6,7 +6,7 @@ public enum BuildSaveCompatibility: String, Codable, CaseIterable, Sendable {
 }
 
 /// One symmetric declaration, kept by Build identity even when either Build moves Games.
-public struct BuildSaveDeclaration: Equatable, Hashable, Sendable {
+public struct BuildSaveDeclaration: Codable, Equatable, Hashable, Sendable {
     public let firstBuildID: UUID
     public let secondBuildID: UUID
     public let compatibility: BuildSaveCompatibility

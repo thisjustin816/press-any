@@ -15,7 +15,10 @@ struct SharedFileView: View {
 
     var body: some View {
         Group {
-            if file.kind == .patch {
+            if file.kind == .backup {
+                LibraryRestoreView(container: container, url: file.url,
+                    gameIsRunning: quickPlayClosesGame, onFinished: onFinished)
+            } else if file.kind == .patch {
                 SharedPatchView(file: file, container: container, onFinished: onFinished)
             } else if file.kind == .save {
                 SharedSaveView(file: file, container: container, onFinished: onFinished)

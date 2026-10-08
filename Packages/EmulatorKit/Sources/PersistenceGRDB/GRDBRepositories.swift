@@ -735,6 +735,7 @@ public struct GRDBRepositorySet: Sendable {
     public let settings: GRDBSettingsStore
     public let transactions: GRDBLibraryTransactionRunner
     public let deletions: GRDBLibraryDeletionRepository
+    public let backup: GRDBLibraryBackupRepository
 
     init(writer: any DatabaseWriter) {
         games = GRDBGameRepository(writer: writer)
@@ -749,5 +750,6 @@ public struct GRDBRepositorySet: Sendable {
         settings = GRDBSettingsStore(writer: writer)
         transactions = GRDBLibraryTransactionRunner(writer: writer)
         deletions = GRDBLibraryDeletionRepository(writer: writer)
+        backup = GRDBLibraryBackupRepository(writer: writer)
     }
 }

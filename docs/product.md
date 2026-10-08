@@ -207,9 +207,12 @@ not treat them as files.
 
 Press Any has a folder in the Files app for what it writes out. Exports go to its Exports folder:
 a Save Profile's battery save as a `.sav`, and a Build's ROM (the original, or the rebuilt patched
-ROM) under its canonical name. Exporting a whole Game as a package, in the Library Backup format
-with ROMs only when asked, comes with the backup work. Later captures (recordings, bug reports)
-land in the same folder.
+ROM) under its canonical name. Settings > Library > Back Up Library writes an ordinary `.zip`
+backup there and offers sharing. Game Details > More > Export Game writes a Game package in the
+same format. ROMs are off by default; including them makes the backup personal and unsuitable
+for sharing. A summary shows counts and approximate size before export, and progress appears
+while the archive is written. Exports add a numbered copy when a filename already exists.
+Later captures (recordings, bug reports) land in the same folder.
 
 ## Importing
 
@@ -1084,11 +1087,41 @@ community metadata aims for CC0, and imported data and media keep their own righ
 
 ### Backups
 
-Library Backup export and import: a documented, versioned archive with a manifest, ordinary files,
-checksums and a schema version. User data is included and ROMs only when asked. Optional password
-encryption, with no recovery promise. Restore merges by stable IDs and hashes with conflict review,
-or replaces the whole library on request, and shows a report before and after. Adapters for Delta,
-Manic, Afterplay and Playtiles exports come later and report what they can't carry over.
+Library Backup uses an ordinary zip with a root manifest, domain-model JSON and managed asset
+files. [The backup format](backup-format.md) documents its versions, inventory and checksums.
+It carries all live library records, provenance, notes, playtime, profiles, saves, states,
+thumbnails, recipes, patches, maps, artwork, reports, declarations, settings and region/language
+ordering. ROM files are optional. Generated patched ROMs, fingerprints, crash checkpoints,
+Quick Play, staging, Recently Deleted and device view preferences stay out.
+
+Settings > Library > Restore from Backup opens a file picker. Opening a backup zip from Files
+or a share sheet opens the same Restore Review. Its contents, additions, identical records,
+conflicts and Builds needing ROMs are shown before any changes. Close the running game first.
+Each file's length and SHA-256 must match the manifest, and a newer format asks for an app update.
+
+Merge is the default: records match by stable ID and source files by hash. Identical records
+are skipped. Different versions are conflicts, with the newer timestamp suggested; the player
+can keep the library or backup version per item. Saves and states require an explicit choice.
+A Save Profile can be kept as a copy named `<name> from backup`; a Build cannot. Replacing a
+battery save keeps `<profile> before restore`, and replacing a state keeps a named manual copy.
+A new state for an occupied slot is kept as a manual state. A Build without its ROM is restored
+with its asset row: the report and Check Library Files list it, and importing that exact ROM
+later repairs its file through duplicate import.
+
+Replace Entire Library is a separate destructive choice. It writes an automatic backup of the
+current library to Exports first, including ROMs when the incoming backup includes them, then
+names it in the confirmation. Restore rechecks the reviewed library and commits records and
+its report in one transaction, with files staged at unused paths. A failure leaves the library
+unchanged. The Migration Report shows additions, skips, conflict resolutions, Builds needing
+ROMs and exclusions; Settings > Library > Last Restore retains it until the next restore.
+
+Game packages merge through the same review. They carry one Game and its data, plus any base
+Builds needed to rebuild its recipes, and offer ROMs only when asked. They do not replace the
+whole library or change App/System settings. Password encryption is a follow-up: archives are
+currently unencrypted, and an encrypted archive is refused before changes. Password support
+will use AES-GCM with PBKDF2-HMAC-SHA256 and warn that a forgotten password cannot be recovered.
+Adapters for Delta, Manic, Afterplay and Playtiles exports come later and report what they
+cannot carry over.
 
 ### Developer Mode (v1.1)
 

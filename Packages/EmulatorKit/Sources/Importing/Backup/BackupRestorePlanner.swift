@@ -1,0 +1,196 @@
+import EmulatorApplication
+import EmulatorDomain
+import Foundation
+
+struct BackupRestorePlan {
+    var snapshot: LibraryBackupSnapshot
+    var files: [String: Data]
+}
+
+struct BackupRestorePlanner {
+    let store: any AssetStore
+
+    func plan(prepared: PreparedLibraryRestore, library: LibraryBackupSnapshot,
+              merged: LibraryBackupSnapshot, choices: [String: RestoreChoice], replacing: Bool) throws -> BackupRestorePlan {
+        let archive = prepared.snapshot
+        var result = merged
+        var files: [String: Data] = [:]
+        var assets = library.assets
+        var mapping: [UUID: UUID] = [:]
+        func selected(_ kind: String, _ id: UUID, _ existingIDs: Set<UUID>) -> Bool {
+            replacing || !existingIDs.contains(id) || choices["\(kind)/\(id.uuidString)"] == .archive
+        }
+        for incoming in archive.assets {
+            let existing = assets.first { $0.id == incoming.id }
+            if let same = assets.first(where: {
+                ($0.kind == .sourceImage || $0.kind == .sourcePatch || $0.kind == .variableMap || $0.kind == .generatedImage)
+                    && $0.kind == incoming.kind && $0.contentSHA256 == incoming.contentSHA256
+            }) {
+                mapping[incoming.id] = same.id
+                if let bytes = prepared.files[incoming.relativePath], !validFile(same) {
+                    let url = try store.managedURL(relativePath: same.relativePath)
+                    guard !store.fileExists(at: url) else { throw LibraryBackupError.missingLibraryFile(same.relativePath) }
+                    files[same.relativePath] = bytes
+                }
+                continue
+            }
+            if let existing, existing.contentSHA256 == incoming.contentSHA256 && existing.kind == incoming.kind {
+                mapping[incoming.id] = existing.id
+                if let bytes = prepared.files[incoming.relativePath], !validFile(existing) {
+                    // Repair to a new path so a failed database write leaves the old file alone.
+                    let path = restoredPath(incoming)
+                    let replacement = existing.backupCopy(path: path)
+                    assets.removeAll { $0.id == replacement.id }
+                    assets.append(replacement)
+                    files[path] = bytes
+                }
+                continue
+            }
+            let id = existing == nil ? incoming.id : UUID()
+            var path = incoming.relativePath
+            let url = try store.managedURL(relativePath: path)
+            if store.fileExists(at: url) || assets.contains(where: { $0.relativePath.lowercased() == path.lowercased() }) {
+                path = restoredPath(incoming)
+            }
+            let imported = incoming.backupCopy(id: id, path: path)
+            mapping[incoming.id] = imported.id
+            assets.append(imported)
+            if let bytes = prepared.files[incoming.relativePath] { files[path] = bytes }
+        }
+        func mapped(_ id: UUID) -> UUID { mapping[id] ?? id }
+        let gameIDs = Set(library.games.map(\.id)), buildIDs = Set(library.builds.map(\.id))
+        let profileIDs = Set(library.profiles.map(\.id)), stateIDs = Set(library.states.map(\.id))
+        let recipeIDs = Set(library.recipes.map(\.id)), mapIDs = Set(library.variableMaps.map(\.id))
+        result.games = result.games.map { value in
+            var value = value
+            if selected("Game", value.id, gameIDs), let id = value.artworkAssetID { value.artworkAssetID = mapped(id) }
+            return value
+        }
+        result.builds = result.builds.map { value in
+            selected("Build", value.id, buildIDs) ? value.backupCopy(imageAssetID: mapped(value.imageAssetID)) : value
+        }
+        result.profiles = result.profiles.map { value in
+            var value = value
+            if selected("Save Profile", value.id, profileIDs), let id = value.persistentSaveAssetID { value.persistentSaveAssetID = mapped(id) }
+            return value
+        }
+        result.states = result.states.map { value in
+            selected("Save State", value.id, stateIDs)
+                ? value.backupCopy(assetID: mapped(value.stateAssetID), thumbnailID: value.screenshotAssetID.map(mapped)) : value
+        }
+        result.recipes = result.recipes.map { value in
+            guard selected("Patch Recipe", value.id, recipeIDs) else { return value }
+            return PatchRecipe(id: value.id, resultBuildID: value.resultBuildID, baseBuildID: value.baseBuildID,
+                expectedResultSHA256: value.expectedResultSHA256, items: value.items.map {
+                    PatchRecipeItem(position: $0.position, patchAssetID: mapped($0.patchAssetID), enabled: $0.enabled,
+                        ignoresBaseMismatch: $0.ignoresBaseMismatch, expectedInputSHA256: $0.expectedInputSHA256)
+                }, createdAt: value.createdAt)
+        }
+        result.variableMaps = result.variableMaps.map { value in
+            guard selected("Variable Map", value.id, mapIDs) else { return value }
+            return BuildVariableMap(id: value.id, buildID: value.buildID, assetID: mapped(value.assetID),
+                format: value.format, source: value.source, originalFilename: value.originalFilename, attachedAt: value.attachedAt)
+        }
+        func copyAsset(_ original: ManagedAsset, path: String, bytes: Data) -> UUID {
+            let copy = original.backupCopy(id: UUID(), path: path)
+            assets.append(copy)
+            files[path] = bytes
+            return copy.id
+        }
+        func savedBytes(_ asset: ManagedAsset) throws -> Data {
+            let bytes = try store.readData(at: store.managedURL(relativePath: asset.relativePath))
+            guard store.hashData(bytes) == asset.contentSHA256 else { throw LibraryBackupError.missingLibraryFile(asset.relativePath) }
+            return bytes
+        }
+        if !replacing {
+            for incoming in archive.profiles {
+                let choice = choices["Save Profile/\(incoming.id.uuidString)"]
+                guard choice == .archive || choice == .keepBoth,
+                      let current = library.profiles.first(where: { $0.id == incoming.id }) else { continue }
+                let source = choice == .keepBoth ? incoming : current
+                let sourceAssets = choice == .keepBoth ? archive.assets : library.assets
+                let id = UUID()
+                var assetID: UUID?
+                if let sourceID = source.persistentSaveAssetID,
+                   let sourceAsset = sourceAssets.first(where: { $0.id == sourceID }) {
+                    let bytes: Data
+                    if choice == .keepBoth {
+                        guard let file = prepared.files[sourceAsset.relativePath] else { throw LibraryBackupError.missingFile(sourceAsset.relativePath) }
+                        bytes = file
+                    } else { bytes = try savedBytes(sourceAsset) }
+                    assetID = copyAsset(sourceAsset, path: try store.managedRelativePath(for: store.persistentSaveURL(profileID: id)), bytes: bytes)
+                }
+                let suffix = choice == .keepBoth ? " from backup" : " before restore"
+                let name = availableProfileName(source.displayName + suffix, gameID: source.gameID, in: result)
+                result.profiles.append(source.backupCopy(id: id, name: name, assetID: assetID))
+                if choice == .keepBoth {
+                    result.states.removeAll { $0.saveProfileID == incoming.id && !stateIDs.contains($0.id) }
+                    for state in archive.states where state.saveProfileID == incoming.id {
+                        let newStateID = UUID()
+                        guard let original = archive.assets.first(where: { $0.id == state.stateAssetID }),
+                              let bytes = prepared.files[original.relativePath] else { throw LibraryBackupError.missingFile(state.stateAssetID.uuidString) }
+                        let stateAssetID = copyAsset(original, path: try store.managedRelativePath(for: store.stateURL(stateID: newStateID)), bytes: bytes)
+                        var thumbnailID: UUID?
+                        if let oldID = state.screenshotAssetID, let thumbnail = archive.assets.first(where: { $0.id == oldID }),
+                           let bytes = prepared.files[thumbnail.relativePath] {
+                            thumbnailID = copyAsset(thumbnail, path: restoredPath(thumbnail), bytes: bytes)
+                        }
+                        result.states.append(state.backupCopy(id: newStateID, profileID: id, assetID: stateAssetID, thumbnailID: thumbnailID))
+                    }
+                }
+            }
+            for incoming in archive.states {
+                let choice = choices["Save State/\(incoming.id.uuidString)"]
+                guard choice == .archive || choice == .keepBoth,
+                      let current = library.states.first(where: { $0.id == incoming.id }) else { continue }
+                let state = choice == .keepBoth ? incoming : current
+                let sourceAssets = choice == .keepBoth ? archive.assets : library.assets
+                guard let original = sourceAssets.first(where: { $0.id == state.stateAssetID }) else { continue }
+                let bytes: Data
+                if choice == .keepBoth {
+                    guard let file = prepared.files[original.relativePath] else { throw LibraryBackupError.missingFile(original.relativePath) }
+                    bytes = file
+                } else { bytes = try savedBytes(original) }
+                let id = UUID()
+                let assetID = copyAsset(original, path: try store.managedRelativePath(for: store.stateURL(stateID: id)), bytes: bytes)
+                var thumbnailID: UUID?
+                if let oldID = state.screenshotAssetID, let thumbnail = sourceAssets.first(where: { $0.id == oldID }) {
+                    let bytes = try choice == .keepBoth ? prepared.files[thumbnail.relativePath] : savedBytes(thumbnail)
+                    if let bytes { thumbnailID = copyAsset(thumbnail, path: restoredPath(thumbnail), bytes: bytes) }
+                }
+                result.states.append(state.backupCopy(id: id, assetID: assetID, thumbnailID: thumbnailID,
+                    asManual: true, label: "\(state.displayName)\(choice == .keepBoth ? " from backup" : " before restore")"))
+            }
+        }
+        for index in result.states.indices {
+            let state = result.states[index]
+            guard let slot = state.slot,
+                  result.states[..<index].contains(where: { $0.buildID == state.buildID && $0.saveProfileID == state.saveProfileID && $0.slot == slot }) else { continue }
+            result.states[index] = state.backupCopy(asManual: true, label: state.displayName + " from backup")
+        }
+        result.assets = assets.filter { result.referencedAssetIDs.contains($0.id) }
+        let paths = Set(result.assets.map(\.relativePath))
+        files = files.filter { paths.contains($0.key) }
+        try BackupSnapshotCodec.validate(result, allowExternalLineage: !replacing)
+        return BackupRestorePlan(snapshot: result, files: files)
+    }
+
+    private func validFile(_ asset: ManagedAsset) -> Bool {
+        guard let url = try? store.managedURL(relativePath: asset.relativePath), store.fileExists(at: url),
+              let hash = try? store.hashFile(at: url) else { return false }
+        return hash == asset.contentSHA256
+    }
+
+    private func restoredPath(_ asset: ManagedAsset) -> String {
+        let folder = asset.storageClass == .source ? "Source" : asset.storageClass == .cache ? "Cache" : "UserData"
+        return "\(folder)/Restored/\(UUID().uuidString.lowercased())/\((asset.relativePath as NSString).lastPathComponent)"
+    }
+
+    private func availableProfileName(_ name: String, gameID: UUID, in snapshot: LibraryBackupSnapshot) -> String {
+        let names = Set(snapshot.profiles.filter { $0.gameID == gameID }.map(\.displayName))
+        var candidate = name
+        var number = 2
+        while names.contains(candidate) { candidate = "\(name) \(number)"; number += 1 }
+        return candidate
+    }
+}

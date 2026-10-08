@@ -8,6 +8,7 @@ struct SharedFile: Identifiable {
         case rom
         case patch
         case save
+        case backup
     }
 
     let id: UUID
@@ -26,7 +27,7 @@ enum SharedFileError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unsupportedFile: "Choose a Game Boy ROM (.gb or .gbc), a patch (.ips or .bps), a save (.sav or .srm), or a zip holding them."
+        case .unsupportedFile: "Choose a Game Boy ROM (.gb or .gbc), a patch (.ips or .bps), a save (.sav or .srm), a library backup, or a zip holding game files."
         case .notAFile: "Only regular files can be opened. Folders and links aren’t supported."
         case .emptyArchive: "This zip has no Game Boy ROM, patch or save in it."
         }
@@ -57,8 +58,7 @@ final class SharedFileInbox {
         return try stage(url, filename: filename, kind: accepted.kind, limit: accepted.limit)
     }
 
-    /// A zip yields each ROM, patch and save inside it, in the archive's order; anything else is a
-    /// single file, as `receive` takes it.
+    /// Backups keep their archive intact for restore review. Other zips yield their game files.
     func receiveAll(_ url: URL) throws -> [SharedFile] {
         guard url.pathExtension.lowercased() == "zip" else { return [try receive(url)] }
         guard url.isFileURL else { throw SharedFileError.notAFile }
@@ -72,8 +72,14 @@ final class SharedFileInbox {
         let directory = staged.deletingLastPathComponent()
         defer { try? store.removeIfExists(directory) }
         try ImportSizeLimit.archive.check(fileAt: staged)
+        let data = try Data(contentsOf: staged)
+        if try ZipArchiveReader.isLibraryBackup(data) {
+            let filename = url.lastPathComponent.removingPercentEncoding ?? url.lastPathComponent
+            guard !filename.contains("/"), !filename.contains("\\") else { throw SharedFileError.notAFile }
+            return [try stage(staged, filename: filename, kind: .backup, limit: .archive)]
+        }
         let entries = try ZipArchiveReader.entries(
-            in: Data(contentsOf: staged),
+            in: data,
             extensions: Set(Self.extensions.keys)
         ) { Self.kind(forExtension: $0)?.limit.bytes ?? 0 }
         guard !entries.isEmpty else { throw SharedFileError.emptyArchive }

@@ -43,6 +43,7 @@ struct GameDetailView: View {
     @State private var renamingBuild: Build?
     @State private var buildName = ""
     @State private var showRenameGame = false
+    @State private var showGameExport = false
     @State private var gameTitle = ""
 
     private struct SettingsTarget: Identifiable {
@@ -253,6 +254,9 @@ struct GameDetailView: View {
                         showRenameGame = true
                     }
                     artworkMenu
+                    Button("Export Game...", systemImage: "square.and.arrow.up") {
+                        showGameExport = true
+                    }
                     Button {
                         showMerge = true
                     } label: {
@@ -299,6 +303,9 @@ struct GameDetailView: View {
 
     private func withPresentations(_ content: some View) -> some View {
         content
+            .sheet(isPresented: $showGameExport) {
+                LibraryBackupView(container: container, gameID: model.gameID)
+            }
             .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images)
             .onChange(of: photoItem) { _, item in
                 guard let item else { return }
