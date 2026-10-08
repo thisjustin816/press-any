@@ -20,14 +20,15 @@ migrating later.
 2. Multi-signal development-build matching, the one import item left in v1. Metadata provenance,
    Metadata Details and per-step patch input hashes are built, along with Game aliases, rename,
    Build notes, per-Build playtime, favorites, declared save compatibility and the cross-region save check.
-3. Library features on that data: sorting, play statistics, broader cleanup and in-flight
-   protection. The storage screen and verification on read are built.
+3. Library features on that data: broader cleanup and in-flight protection. Sorting, play
+   statistics, the storage screen and verification on read are built.
 4. Exports, last of the library work because their format follows the settled schema: Library
    Backup export and import (versioned archive, ROMs left out unless asked, merge restore by
    stable IDs) and a whole Game as a package in the same format. Save and ROM exports and the
-   Files folder they land in come first, as they don't depend on the schema.
-5. The rest of the v1 core: save state slots, crash recovery, reopening the last
-   game, and a fixed controller combo for the game menu.
+   Files folder they land in are built.
+
+The rest of the v1 core is built: save state slots, naming and cleanup, crash recovery, reopening
+the last game, Restart and Start Over, and the controller's Menu button.
 
 v1 is a good core experience; everything else waits for v1.1: 7z and multi-asset import,
 artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
