@@ -3,6 +3,7 @@ import EmulatorApplication
 import EmulatorDomain
 import EmulatorKitTestSupport
 import Foundation
+import GameIdentity
 @testable import Importing
 import XCTest
 
@@ -49,6 +50,33 @@ final class ExportLibraryFilesTests: XCTestCase {
             XCTAssertEqual($0 as? ExportLibraryFilesError, .noSave(blank.id))
         }
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.exports.path), "nothing is written")
+    }
+
+    func testAKnownDumpExportsUnderNoIntrosNameAndAHackOfItAddsTheHack() throws {
+        let fixture = try Fixture(title: "Moon Garden", region: "USA")
+        let dump = KnownDump(
+            name: "Moon Garden (USA) (Rev 1)", system: .gameBoyColor, title: "Moon Garden",
+            files: [KnownDumpFile(sha1: String(repeating: "1", count: 40), size: 4)]
+        )
+        let badDump = KnownDump(
+            name: "Moon Garden (Europe)", system: .gameBoyColor, title: "Moon Garden",
+            files: [KnownDumpFile(sha1: String(repeating: "2", count: 40), size: 4, bad: true)]
+        )
+        let index = try KnownDumpIndex(catalog: KnownDumpCatalog(source: "test", generated: "", systems: [], games: [dump, badDump]))
+        let base = fixture.build(sha1: String(repeating: "1", count: 40), kind: .importedImage)
+        let bad = fixture.build(sha1: String(repeating: "2", count: 40), kind: .importedImage)
+        let hack = fixture.build(
+            kind: .patchRecipe, parent: base.id,
+            baseTitle: "Moon Garden", hackTitle: "Night patch", author: "Jane", version: "0.3"
+        )
+        let bare = fixture.build(kind: .patchRecipe, parent: base.id)
+        let exporter = fixture.exporter(builds: [base, bad, hack, bare], knownDumps: index)
+        let name = { (build: Build) in try exporter.exportROM(buildID: build.id, to: fixture.exports).lastPathComponent }
+
+        XCTAssertEqual(try name(base), "Moon Garden (USA) (Rev 1) [!].gbc")
+        XCTAssertEqual(try name(bad), "Moon Garden (Europe) [b].gbc")
+        XCTAssertEqual(try name(hack), "Moon Garden (USA) (Rev 1) [Night patch by Jane v0.3].gbc")
+        XCTAssertEqual(try name(bare), "Moon Garden (USA) (Rev 1) [Hack].gbc", "a patched copy never passes for the dump")
     }
 
     func testANameCannotEscapeTheFolderOrHideTheFile() {
@@ -106,14 +134,29 @@ final class ExportLibraryFilesTests: XCTestCase {
             resolver = RecordingResolver(url: image)
         }
 
-        var exporter: ExportLibraryFiles {
+        var exporter: ExportLibraryFiles { exporter(builds: [build], knownDumps: nil) }
+
+        func exporter(builds: [Build], knownDumps: KnownDumpIndex?) -> ExportLibraryFiles {
             ExportLibraryFiles(
                 games: games,
-                builds: InMemoryBuildRepository([build]),
+                builds: InMemoryBuildRepository(builds),
                 profiles: profiles,
                 assets: assets,
                 assetStore: store,
-                images: resolver
+                images: resolver,
+                knownDumps: knownDumps
+            )
+        }
+
+        func build(
+            sha1: String? = nil, kind: BuildSourceKind, parent: UUID? = nil,
+            baseTitle: String? = nil, hackTitle: String? = nil, author: String? = nil, version: String? = nil
+        ) -> Build {
+            Build(
+                id: UUID(), gameID: game.id, system: .gameBoyColor, displayName: "Build", imageAssetID: UUID(),
+                imageSHA256: String(repeating: "a", count: 64), imageSHA1: sha1, sourceKind: kind,
+                parentBuildID: parent, versionString: version, baseTitle: baseTitle, hackTitle: hackTitle,
+                author: author, createdAt: now, modifiedAt: now
             )
         }
 

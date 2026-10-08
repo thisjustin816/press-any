@@ -207,9 +207,24 @@ not treat them as files.
 
 Press Any has a folder in the Files app for what it writes out. Exports go to its Exports folder:
 a Save Profile's battery save as a `.sav`, and a Build's ROM (the original, or the rebuilt patched
-ROM) under its canonical name. Exporting a whole Game as a package, in the Library Backup format
-with ROMs only when asked, comes with the backup work. Later captures (recordings, bug reports)
-land in the same folder.
+ROM) under its canonical name:
+
+Names use No-Intro for the game and GoodTools' codes for what was done to it:
+
+- A good copy of a known dump takes No-Intro's name with GoodTools' verified mark, "Moon Garden
+  (USA) (Rev 1) [!].gbc", and a bad one adds `[b]`.
+- A hack or translation of a known dump takes that dump's name, then the modification in brackets.
+  A hack names itself with its author and version, "[Night patch by Jane v0.3]", or "[Hack by Jane
+  v1.3]" without a title of its own. A translation takes GoodTools' form, "[T+Eng1.03_Jane]", with
+  a three-letter language code. A patched copy with nothing recorded about it adds "[Hack]", so it
+  never passes for the dump.
+- Anything else is named from its metadata in No-Intro's order and spelling: "Title (Region)
+  (En,Fr) (Rev A) (v1.2) (Beta 2)", with an ASCII title, a leading article moved to the end
+  ("Legend of Zelda, The") and "Proto" for a prototype. A hack keeps the base game's name with the
+  modification after it, as above. Import Review's Suggested Filename follows the same rules.
+
+Exporting a whole Game as a package, in the Library Backup format with ROMs only when asked, comes
+with the backup work. Later captures (recordings, bug reports) land in the same folder.
 
 ## Importing
 
@@ -392,6 +407,14 @@ isn't stored.
 - A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version,
   shown as "2026-10-06" and sorted by date; the words after it become the status. Only a valid
   eight-digit or hyphenated date counts, and never as the whole title.
+- A hack or translation is recognized in the bracket it's released with: "[Night patch by Jane
+  v0.3]" or "[Hack by Jane]" for a hack, GoodTools' "[T+Eng1.03_Jane]" or "[T-En by Jane v1.0]"
+  for a translation. The words before "by" are the hack's title unless they only say "Hack".
+- GoodTools names are read as No-Intro fields: a short region such as "(U)" is USA and "(UE)"
+  is USA, Europe ("(JUE)" is World), and "(V1.1)" is a version. Its dump codes are understood
+  and left out of the title: "[!]", "[a1]", "[b1]", "[o1]", "[p1]", "[x]", GoodGBx's "[C]" and
+  "[S]", "(M3)" and "(PD)" describe the copy, and "[h1]", "[h1C]", "[hI]", "[t1]" and "[f1]" mark
+  a modified one, which imports as a hack. Verification still comes from hashing, not the tags.
 - A file with no version tags is named for the day it's added, "2026-10-06", then the time for a
   second one the same day. A hack with nothing else to name it is "Hack".
 - A patch's Build is named by its title, followed by any version or other tag: "Mole Mania DX

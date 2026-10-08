@@ -1,6 +1,7 @@
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
+import GameIdentity
 
 public enum ExportLibraryFilesError: LocalizedError, Equatable {
     case buildNotFound(UUID)
@@ -29,6 +30,7 @@ public struct ExportLibraryFiles: Sendable {
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
     private let images: any BuildImageResolving
+    private let knownDumps: KnownDumpIndex?
 
     public init(
         games: any GameRepository,
@@ -36,7 +38,8 @@ public struct ExportLibraryFiles: Sendable {
         profiles: any SaveProfileRepository,
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
-        images: any BuildImageResolving
+        images: any BuildImageResolving,
+        knownDumps: KnownDumpIndex? = nil
     ) {
         self.games = games
         self.builds = builds
@@ -44,10 +47,14 @@ public struct ExportLibraryFiles: Sendable {
         self.assets = assets
         self.assetStore = assetStore
         self.images = images
+        self.knownDumps = knownDumps
     }
 
-    /// The Build's exact ROM, rebuilt first when it's patched, named as Import Review would suggest,
-    /// such as "Pokemon Crystal (USA) (Rev 1).gbc".
+    /// The Build's exact ROM, rebuilt first when it's patched. A good copy of a known dump takes
+    /// No-Intro's name with GoodTools' verified mark, "[!]", a bad copy "[b]", and a hack or
+    /// translation of one takes that name with the modification after it, as in
+    /// "Pokemon - Crystal Version (USA, Europe) (Rev 1) [Clear patch by Jane v2.0].gbc". Anything
+    /// else is named from its metadata the same way, as Import Review suggests.
     public func exportROM(buildID: UUID, to directory: URL) throws -> URL {
         guard let build = try builds.fetchBuild(id: buildID) else {
             throw ExportLibraryFilesError.buildNotFound(buildID)
@@ -67,12 +74,24 @@ public struct ExportLibraryFiles: Sendable {
             translation: build.translation,
             status: build.status
         )
-        let name = FilenameMetadataParser.canonicalFilename(
-            fileExtension: build.system.rawValue,
-            title: game.primaryTitle,
-            metadata: metadata,
-            unknownGroups: []
-        )
+        let fileExtension = build.system.rawValue
+        let name: String
+        switch knownDumps?.verification(of: build, sha1: \.imageSHA1, lookup: { try? builds.fetchBuild(id: $0) }) {
+        case .verified(let dump):
+            name = "\(dump.name) [!].\(fileExtension)"
+        case .badDump(let dump):
+            name = "\(dump.name) [b].\(fileExtension)"
+        case .modified(let dump):
+            let groups = FilenameMetadataParser.modificationGroups(for: metadata)
+            name = "\(([dump.name] + groups).joined(separator: " ")).\(fileExtension)"
+        case .unknown, nil:
+            name = FilenameMetadataParser.canonicalFilename(
+                fileExtension: fileExtension,
+                title: game.primaryTitle,
+                metadata: metadata,
+                unknownGroups: []
+            )
+        }
         return try copy(source, named: name, into: directory)
     }
 
