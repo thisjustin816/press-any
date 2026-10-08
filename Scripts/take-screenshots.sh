@@ -40,7 +40,8 @@ if [[ -n ${GAME_URL:-} ]]; then
   rm -rf "$game_dir"
   mkdir -p "$game_dir"
   curl -fsSL --retry 3 "$GAME_URL" -o "$game_dir/download"
-  game_entry="$(python3 - "$game_dir" "$GAME_URL" "$GAME_SHA256" "${GAME_NAME:-}" <<'PY'
+  # Heredocs stay out of $(...): macOS's bash 3.2 misreads one holding an odd number of quotes.
+  python3 - "$game_dir" "$GAME_URL" "$GAME_SHA256" "${GAME_NAME:-}" >"$game_dir/entry.json" <<'PY'
 import hashlib, json, sys, zipfile
 from pathlib import Path
 folder, url, expected, name = Path(sys.argv[1]), *sys.argv[2:]
@@ -69,7 +70,7 @@ if not name:
 print(json.dumps({"filename": filename, "name": name or "Game", "system": "GBC" if color else "GB",
                   "sha256": hashlib.sha256(data).hexdigest(), "hero": True, "tags": ["listing-game"]}))
 PY
-)"
+  game_entry="$(cat "$game_dir/entry.json")"
   echo "Gameplay shots use $(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["filename"])' "$game_entry")."
 fi
 
@@ -79,7 +80,9 @@ fi
 # `shot <scene> <seconds to wait> <name> <flags>` for each
 # screenshot. The waits let gameplay get past the boot logo with the game's picture moving. Flags
 # are the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
-plan="$(python3 - "$roms" "$shots" "$import_rom" "$game_entry" <<'PY'
+plan_file="build/screenshots/plan.tsv"
+mkdir -p "$(dirname "$plan_file")"
+python3 - "$roms" "$shots" "$import_rom" "$game_entry" >"$plan_file" <<'PY'
 import json, sys
 wanted_arg, shots, import_rom, game_entry = sys.argv[1:]
 game = json.loads(game_entry) if game_entry else None
@@ -161,7 +164,6 @@ shot(f"quick-play:{names[0]}", 10, "quick-play")
 shot(f"quick-play-info:{names[0]}", 4, "quick-play-info")
 print("\n".join(lines))
 PY
-)"
 files=()
 scenes=()
 only_test=""
@@ -174,7 +176,7 @@ while IFS=$'\t' read -r kind rest; do
     order) order="$rest" ;;
     shot) scenes+=("$rest") ;;
   esac
-done <<<"$plan"
+done <"$plan_file"
 echo "Seeding: ${files[*]}"
 
 mkdir -p "$output"
