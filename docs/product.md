@@ -35,7 +35,7 @@ change. There is no separate decision log.
   landscape (see Landscape).
 
 v1 is a good core experience: the library model with search, sorting and favorites, saves and
-states with Library Backup, patching, Quick Play, Fast Forward, rumble, Bluetooth controllers,
+states with Library Backup, patching, cheats, Quick Play, Fast Forward, rumble, Bluetooth controllers,
 landscape and the built-in layouts. Everything else waits for v1.1: iCloud sync, the Community
 Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
 artwork and documents, rewind, slow motion, frame advance and Quick Actions, the model override,
@@ -134,6 +134,15 @@ lifecycle Auto States and crash-recovery checkpoints are separate kinds.
 A recipe records its exact base Build and hash, its ordered IPS or BPS patches, each step's
 enabled state, each enabled step's input SHA-256, and the hash of its result. The executable
 identity is the result's hash, not the recipe.
+
+### Cheat
+
+A cheat belongs to one Build, because its codes only fit that Build's exact ROM. The
+`build_cheats` table keeps its name, its Game Genie or GameShark codes (one per line, applied
+together), whether it's on, its place in the list, and when it was made and last changed. Each
+Build also has a Cheats On switch for all of its cheats. Copying a Build copies its cheats, and
+moving a Build or merging Games keeps them. They go to Recently Deleted with their Build, come
+back with it, and are purged with it.
 
 ### Managed assets
 
@@ -659,8 +668,9 @@ fresh build.
   logo unless Settings > Skip Boot Logo is on.
 - A Quick Play session lives in a temporary workspace and never writes a library save. Using an
   existing save copies it in.
-- The game menu shows Quick Save and Quick Load grayed out, and States grayed out with
-  "Add to Library to save states". Add to Library closes the game and opens promotion. The session
+- The game menu shows Quick Save and Quick Load grayed out, States grayed out with "Add to
+  Library to save states", and Cheats grayed out with "Add to Library to use cheats". A promoted
+  session's Build starts with no cheats. Add to Library closes the game and opens promotion. The session
   screen opens the ROM's Technical Info.
 - Closing offers Keep for Later. Sessions expire after 24 hours; v1.1 makes that Immediately,
   24 hours or 7 days.
@@ -774,10 +784,11 @@ picture. A connected controller still hides the touch controls.
 - Opening the menu stops frames and audio and releases held input. A row of icons at the top
   holds Resume, Fast Forward (highlighted while on), Quick Save and Quick Load. Below it, States
   opens Save New State, Slots when enabled, and the remaining states, newest first, with their
-  pictures and dates; then Sound,
-  Settings, and Restart beside Close Game, in red, in their own section. The game stays paused after the menu closes, after changing Fast Forward
+  pictures and dates; then Cheats, Sound, Settings, and Restart beside Close Game, in red, in
+  their own section. The game stays paused after the menu closes, after changing Fast Forward
   and after returning from another app, until the player chooses Resume. A paused game's Resume
   button sits centered on the game picture.
+- **Cheats** opens the Build's cheats over the paused game at half height (see Cheats and memory tools).
 - **Settings** opens over the paused game at half height. A library game edits its Game's
   settings; Quick Play edits its system's. Layout, scaling, LCD filter and frame blending apply
   at once; the rest at the next launch.
@@ -1015,8 +1026,8 @@ exposes them; custom border editing is later.
   sections with one selection across both and Delete (n) in the bottom bar. Build taps select
   instead of playing.
 - A Build's menu, with an icon on each item, groups Play, Start Over and Play with Save; Set as
-  Preferred Build, Preferred Save and Mark as Base Build; Rename Build, Build Info and Build
-  Settings; ROM and Patches (Apply Patch, Attach Variable Map, Export ROM, Remove Generated Image);
+  Preferred Build, Preferred Save and Mark as Base Build; Rename Build, Build Info, Cheats and
+  Build Settings; ROM and Patches (Apply Patch, Attach Variable Map, Export ROM, Remove Generated Image);
   then Make Separate Game and Delete Build. Preferred Save picks which save this Build plays: the
   Game's preferred save, named, or one of its own.
 - A Save Profile's menu has Play with This Save; Save States, Set as Preferred Save, Badge and
@@ -1069,16 +1080,29 @@ or groups a Game and never proves two saves compatible.
 
 Areas marked v1.1 wait for it; the rest target v1.
 
-### Cheats and memory tools (v1.1)
+### Cheats and memory tools
 
-Cheat management (add, remove, enable, disable, keep) in Game Genie, GameShark and the formats
-SameBoy supports; a pluggable cheat database keyed to verified ROMs, adding selectively and never
-enabling anything on its own; optional groups and search. Memory search: exact, unknown, changed,
-unchanged, increased, decreased, by an amount, greater or less, in signed or unsigned 8 and 16-bit
-and hex; results can be edited, frozen, watched, turned into a cheat or copied. Named searches last
-for the session. A watch list with an optional Developer HUD and short in-memory history. Developer
-Mode writes take effect at once, with Undo Last Write and a clear frozen marker. A full debugger,
-disassembler and VRAM viewer are later.
+Each Build has its own cheats, opened from Cheats in the game menu or in the Build's menu. The
+list shows each cheat with its own switch, above a Cheats On switch for the whole Build. Its
+footer says once that cheats can change a game's save, and that a backup or a second Save
+Profile protects it. Add Cheat… asks for a name and codes, one per line, in Game Genie
+(`XXX-XXX` or `XXX-XXX-XXX`) or GameShark (`01VVAAAA`) format. SameBoy checks each line before
+anything is saved, and the first that doesn't read is named in place ("Line 2 isn't a Game Genie
+or GameShark code"). Touch and hold or swipe a cheat to edit or delete it; Reorder lets the list
+be dragged. A change applies as soon as it's made, from the next frame of a running game,
+without a restart. A game starts with its Build's cheats that are on, before its first frame.
+Save states don't record cheats, so loading one keeps the cheats that are on now. Playtime and
+statistics count as usual. Quick Play has no cheats. SameBoy's own cheat file format isn't
+imported.
+
+v1.1 adds a pluggable cheat database keyed to verified ROMs, adding selectively and never enabling
+anything on its own; optional groups and search; and states that record their cheat configuration.
+It also adds memory search: exact, unknown, changed, unchanged, increased, decreased, by an
+amount, greater or less, in signed or unsigned 8 and 16-bit and hex; results can be edited,
+frozen, watched, turned into a cheat or copied. Named searches last for the session. A watch list
+with an optional Developer HUD and short in-memory history. Developer Mode writes take effect at
+once, with Undo Last Write and a clear frozen marker. A full debugger, disassembler and VRAM
+viewer are later.
 
 ### Screenshots, notes and debug context (v1.1)
 
@@ -1235,8 +1259,9 @@ silently. The default shader must hold full speed on the slowest supported devic
 
 ## v1.1 and later
 
-- **v1.1:** full-text search and the accessibility work above; cheats and memory tools (above),
-  with states recording their cheat configuration and offering to restore it; the app's screens fitting above a controller that covers the bottom of the screen, as
+- **v1.1:** full-text search and the accessibility work above; the cheat database, cheat search
+  and memory tools (above), with states recording their cheat configuration and offering to
+  restore it; the app's screens fitting above a controller that covers the bottom of the screen, as
   with Playtiles, and navigable with its buttons; link cable (local first, then nearby; not built on Multipeer Connectivity), GB Studio
   save migration, Game Boy Camera and Printer, RAR, skin authoring beyond the editor, video and GIF
   capture framed like a Game Boy, `.gbproject` import and export, better ROM comparison and BPS

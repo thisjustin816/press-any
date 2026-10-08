@@ -148,3 +148,15 @@ the app. These checks remain pending until run on a physical iPhone.
 - [ ] Send a Build that wrote a profile's save to Recently Deleted, then back up the library and merge that backup back with no conflicts. Merge a backup that holds a profile now in Recently Deleted: review lists it under Left Alone and the restore succeeds.
 - [ ] Back up a library of legal GB/GBC ROMs larger than 32 MB with Include ROMs on, and restore it into an empty library with every ROM playable. Watch memory in Xcode during export and restore: it stays near the size of the largest file, not the archive. A library over 2 GB disables Back Up with the size note.
 - [ ] Back up while a game is saving to its battery: the backup either succeeds or asks to try again in a moment, never with a file path. Change the library from another screen while a review is open, then merge: the error offers Review Again, which reloads the review.
+
+## Cheat device checks
+
+Use `TestROMs/roms/rgbds-dmg.gb`. GameShark `015001C0` holds its ball's horizontal position, so
+the ball only moves up and down. These checks remain pending until run on a physical iPhone.
+
+- [ ] Import the ROM, open Cheats from its Build's menu, and add a cheat named Hold with `015001C0`. Play the Build: the ball moves only up and down from the first frame.
+- [ ] In the game menu, open Cheats and switch Hold off: the ball moves sideways again. Switch it back on mid-game and the ball holds again without a restart. Turn Cheats On off and on, and the ball follows. With a controller connected, the sheet works and the controller doesn't open the game menu under it.
+- [ ] Touch and hold a cheat to edit it, swipe one to delete it, and use Reorder to drag one to the top. Each change shows in the running game at once.
+- [ ] Close the game, quit Press Any and reopen it. The cheat, its switch and the list order are still there, and the ball holds again when the game starts.
+- [ ] Add a cheat whose second line is `123-456`. Save is refused with "Line 2 isn’t a Game Genie or GameShark code" under the codes, and nothing is added.
+- [ ] Back up the library and restore the backup with Replace Entire Library, or into a fresh install: the cheat comes back with its switch and order, and holds the ball again. A Game package of the ROM's Game carries the cheat too.
