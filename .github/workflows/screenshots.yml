@@ -17,7 +17,7 @@ on:
         default: hero
         required: true
       shots:
-        description: listing is the ten App Store screenshots in order; summary is every screen and menu for review; every-rom adds each ROM's screens
+        description: listing is the nine App Store screenshots in order; summary is every screen and menu for review; every-rom adds each ROM's screens
         type: choice
         options: [listing, summary, every-rom]
         default: listing

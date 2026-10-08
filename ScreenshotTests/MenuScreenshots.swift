@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 /// Opens the app's pop-up menus, which only a tap can open, and saves a screenshot of each for
@@ -189,7 +190,35 @@ final class MenuScreenshots: XCTestCase {
         let opened = item.waitForExistence(timeout: 5)
         let output = try settings().output
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
-        try XCUIScreen.main.screenshot().pngRepresentation.write(to: output.appendingPathComponent("\(name).png"))
+        try upright(XCUIScreen.main.screenshot()).write(to: output.appendingPathComponent("\(name).png"))
         XCTAssertTrue(opened, "\(name) opens")
+    }
+
+    /// XCTest captures a landscape screen as the portrait display holds it, on its side. App Store
+    /// Connect takes a landscape screenshot as a landscape image, so this turns it upright: a
+    /// quarter turn counterclockwise when the device's right side is up (landscape left), clockwise
+    /// when its left side is.
+    private func upright(_ screenshot: XCUIScreenshot) -> Data {
+        let turn: CGFloat
+        switch XCUIDevice.shared.orientation {
+        case .landscapeLeft: turn = .pi / 2
+        case .landscapeRight: turn = -.pi / 2
+        default: return screenshot.pngRepresentation
+        }
+        // Core Graphics' y axis points up, so a positive angle turns counterclockwise. Drawn
+        // without alpha, since App Store Connect refuses screenshots with transparency.
+        guard let image = screenshot.image.cgImage, image.width < image.height,
+              let space = image.colorSpace?.model == .rgb ? image.colorSpace : CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                  data: nil, width: image.height, height: image.width, bitsPerComponent: 8, bytesPerRow: 0,
+                  space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+              ) else { return screenshot.pngRepresentation }
+        context.translateBy(x: turn > 0 ? CGFloat(image.height) : 0, y: turn > 0 ? 0 : CGFloat(image.width))
+        context.rotate(by: turn)
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        guard let rotated = context.makeImage(), let png = UIImage(cgImage: rotated).pngData() else {
+            return screenshot.pngRepresentation
+        }
+        return png
     }
 }

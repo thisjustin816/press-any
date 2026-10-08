@@ -7,7 +7,7 @@ set -euo pipefail
 #   Scripts/take-screenshots.sh [ROMS] [OUTPUT_DIR]
 #
 # ROMS is `hero` (the default), `all`, or a comma-separated list of manifest tags and filenames.
-# Optional environment: SHOTS (`listing`, the default: the ten App Store screenshots, numbered in
+# Optional environment: SHOTS (`listing`, the default: the nine App Store screenshots, numbered in
 # listing order; `summary`: one of each screen and every menu, for review; `every-rom`: summary
 # plus each ROM's game, Technical Info and gameplay), DEVICE (simulator name), APPEARANCE (light or dark),
 # TEXT_SIZE (`default`, or a `simctl ui content_size` value such as
@@ -76,8 +76,8 @@ fi
 
 # The plan, tab-separated: `file <name>` for each ROM or patch to copy (the chosen ROMs, then any
 # patch whose source was chosen), `menus <game ROM> <gameplay ROM>` for the menu UI tests,
-# `only <test>` to run just that UI test, `order <names>` for the final numbering, then
-# `shot <scene> <seconds to wait> <name> <flags>` for each
+# `only <test>` for each UI test to run (all of them when there is none), `order <names>` for the
+# final numbering, then `shot <scene> <seconds to wait> <name> <flags>` for each
 # screenshot. The waits let gameplay get past the boot logo with the game's picture moving. Flags
 # are the Debug-only launch arguments in App/Screenshots/ScreenshotScene.swift, or `-` for none.
 plan_file="build/screenshots/plan.tsv"
@@ -123,14 +123,13 @@ if shots == "listing":
     shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info")
     shot(f"play:{gbc}", 10, "play")
     shot(f"play:{gb}", 10, "play-lcd", "-ScreenshotLCDFilter lcd3x")
-    shot(f"play:{gbc}", 10, "playtiles", "-ScreenshotLayout playtiles")
-    shot(f"play:{gb}", 10, "play-gamepad", "-ScreenshotGamepad YES")
     shot(f"import:unimported/{import_rom}", 4, "import-review")
     shot(f"quick-play:{gb}", 10, "quick-play")
     # Landscape gameplay needs the device turned, which only a UI test can do.
-    lines.append("only\tPressAnyScreenshotTests/MenuScreenshots/test9LandscapeGameplayAndClosingReturnsToPortrait")
+    for test in ("test9LandscapeGameplayAndClosingReturnsToPortrait", "testLandscapeQuickPlayWithController"):
+        lines.append(f"only\tPressAnyScreenshotTests/MenuScreenshots/{test}")
     lines.append("order\t" + " ".join(["play", "library", "game", "play-landscape", "import-review",
-        "playtiles", "play-lcd", "build-info", "quick-play", "play-gamepad"]))
+        "play-lcd", "build-info", "quick-play", "play-landscape-gamepad"]))
     print("\n".join(lines))
     sys.exit()
 # The first launch seeds the library, so it waits longest.
@@ -166,13 +165,13 @@ print("\n".join(lines))
 PY
 files=()
 scenes=()
-only_test=""
+only=()
 order=""
 while IFS=$'\t' read -r kind rest; do
   case "$kind" in
     file) files+=("$rest") ;;
     menus) IFS=$'\t' read -r game_rom play_rom <<<"$rest" ;;
-    only) only_test="$rest" ;;
+    only) only+=("-only-testing:$rest") ;;
     order) order="$rest" ;;
     shot) scenes+=("$rest") ;;
   esac
@@ -306,8 +305,6 @@ rm -f "$log.tmp"
 # screenshot of each. A menu that doesn't open fails the run once everything else is saved.
 menus="$output/menus"
 # Without -quiet, which hides why a test failed; the filter keeps the results and failures.
-only=()
-[[ -z $only_test ]] || only=("-only-testing:$only_test")
 set +e
 TEST_RUNNER_SCREENSHOT_ROMS="$staging" TEST_RUNNER_SCREENSHOT_OUTPUT="$menus" \
   TEST_RUNNER_SCREENSHOT_GAME_ROM="$game_rom" TEST_RUNNER_SCREENSHOT_PLAY_ROM="$play_rom" \

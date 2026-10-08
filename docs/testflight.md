@@ -215,7 +215,7 @@ Open **Actions → Screenshots → Run workflow**. The defaults take the App Sto
 | text_size | default |
 | import_rom | zgb-dmg.gb |
 
-The **listing** set is ten screenshots, numbered in the order to upload them. The first three
+The **listing** set is nine screenshots, numbered in the order to upload them. The first three
 appear in search results.
 
 1. Gameplay
@@ -223,11 +223,10 @@ appear in search results.
 3. A Game with its Builds and saves
 4. Gameplay in landscape
 5. Import Review
-6. The Playtiles layout
-7. Gameplay with the LCD effect
-8. Technical Info, showing what a game was made with
-9. Quick Play
-10. Gameplay with a controller connected
+6. Gameplay with the LCD effect
+7. Technical Info, showing what a game was made with
+8. Quick Play
+9. Gameplay in landscape with a controller connected
 
 **summary** takes every screen and menu for checking layouts, and **every-rom** adds each ROM's
 own screens. `gbdk450-badsum.gb` as the import ROM shows Import Review's checksum warning.
@@ -251,11 +250,12 @@ ROMs still fill the library, the Game page and Import Review.
 After the run, download `screenshots-light-6.9-inch` and/or `screenshots-dark-6.9-inch` from its
 **Artifacts** section and unzip them. Upload the numbered PNGs, not the included logs.
 
-The iPhone 17 Pro Max captures are 1320 × 2868 pixels (2868 × 1320 in landscape), Apple's
-6.9-inch size, which App Store Connect scales down for smaller iPhones. Choose iPhone 14 Plus for
-the 6.5-inch slot: 1284 × 2778 pixels, in artifacts ending `-6.5-inch`. The workflow checks every
-PNG's dimensions, and each set fits only its own slot. Check that each image shows a loaded app,
-readable content, and features present in the Release build; screenshot seeding runs in Debug.
+The iPhone 17 Pro Max captures are 1320 × 2868 pixels, Apple's 6.9-inch size, which App Store
+Connect scales down for smaller iPhones. The landscape shots are saved upright at 2868 × 1320.
+Choose iPhone 14 Plus for the 6.5-inch slot: 1284 × 2778 pixels, in artifacts ending `-6.5-inch`.
+The workflow checks every PNG's dimensions, and each set fits only its own slot. Check that each
+image shows a loaded app, readable content, and features present in the Release build;
+screenshot seeding runs in Debug.
 
 In **Apps → Press Any → the iOS version page → App Previews and Screenshots**,
 select the iPhone display-size group and drag in the chosen PNGs. Screenshots
