@@ -294,15 +294,16 @@ final class ImportReviewViewModel: ObservableObject {
 
     func metadataRankingChanged() { refreshIdentityProposals() }
 
-    /// A hack that becomes an existing Game's Preferred Build offers its own title for the Game, as
-    /// "Mole Mania DX" for Mole Mania. Accepting it keeps the old title as an alias.
+    /// A hack that becomes an existing Game's Preferred Build offers its own title for the Game when
+    /// that title is the Game's followed by more words, as "Mole Mania DX" for Mole Mania. A hack
+    /// titled "Co-op sync patch" names its Build and leaves the Game alone. Accepting keeps the old
+    /// title as an alias.
     var proposedHackTitle: String? {
         guard markAsPreferred, case .existing(let id) = destination,
               analysis.filenameMetadata.releaseKind == .romHack || (baseGameReference != nil && matchedAsHack),
               let game = games.first(where: { $0.id == id }) else { return nil }
         let title = hackTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty, GameMatcher.normalized(title) != GameMatcher.normalized(game.primaryTitle) else { return nil }
-        return title
+        return BuildNaming.offersTitle(title, for: game.primaryTitle) ? title : nil
     }
 
     /// The title review offers for the Game: a hack's own, or the best regional release title.

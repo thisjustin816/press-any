@@ -10,6 +10,22 @@ public enum CreatePatchedBuildError: Error, Equatable {
     case baseBuildBelongsToDifferentGame(buildID: UUID, gameID: UUID)
     /// The patches produced something too short to hold a cartridge header.
     case resultNotAROM(byteCount: Int)
+    /// The Game already holds the ROM the patches make, as this Build. A Game keeps one Build per
+    /// image, so applying the patch again would duplicate it.
+    case resultAlreadyInGame(buildName: String)
+}
+
+extension CreatePatchedBuildError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .resultAlreadyInGame(let buildName):
+            "This patch makes a ROM that's already in this Game as “\(buildName)”."
+        case .resultNotAROM:
+            "The patch didn't make a Game Boy ROM."
+        case .gameNotFound, .baseBuildNotFound, .baseBuildBelongsToDifferentGame:
+            nil
+        }
+    }
 }
 
 public struct CreatePatchedBuild: Sendable {
@@ -191,6 +207,10 @@ public struct CreatePatchedBuild: Sendable {
             }
 
             let resultSHA = assetStore.hashData(output)
+            // Checked before anything is written, so the Game is left as it was.
+            if let existing = try builds.fetchBuilds(gameID: input.gameID).first(where: { $0.imageSHA256 == resultSHA }) {
+                throw CreatePatchedBuildError.resultAlreadyInGame(buildName: existing.displayName)
+            }
             let generatedURL = assetStore.generatedImageURL(sha256: resultSHA)
             let generatedExistedBefore = assetStore.fileExists(at: generatedURL)
             try assetStore.writeDataAtomically(output, to: generatedURL)

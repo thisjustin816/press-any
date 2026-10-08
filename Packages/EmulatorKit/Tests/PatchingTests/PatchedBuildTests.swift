@@ -40,6 +40,24 @@ final class PatchedBuildTests: XCTestCase {
         XCTAssertTrue(harness.store.fileExists(at: try harness.store.managedURL(relativePath: patchAsset.relativePath)))
     }
 
+    func testAPatchWhoseResultTheGameHoldsIsRefusedWithTheBuildsName() throws {
+        let harness = try PatchBuildHarness.make()
+        let patchURL = try harness.writePatch(singleByteIPS(offset: 1, value: 0x58), name: "test.ips")
+        let first = try harness.creator.execute(.init(
+            gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patchURLs: [patchURL], displayName: "Co-op Sync"
+        ))
+        let assetCount = try harness.assets.fetchAssets().count
+
+        XCTAssertThrowsError(try harness.creator.execute(.init(
+            gameID: harness.gameID, baseBuildID: harness.baseBuild.id, patchURLs: [patchURL], displayName: "Again"
+        ))) { error in
+            XCTAssertEqual(error as? CreatePatchedBuildError, .resultAlreadyInGame(buildName: first.displayName))
+            XCTAssertEqual(error.localizedDescription, "This patch makes a ROM that's already in this Game as “Co-op Sync”.")
+        }
+        XCTAssertEqual(try harness.builds.fetchBuilds(gameID: harness.gameID).count, 2, "the base and the first patched Build")
+        XCTAssertEqual(try harness.assets.fetchAssets().count, assetCount)
+    }
+
     func testAnOversizedPatchIsRefusedBeforeItIsStaged() throws {
         let harness = try PatchBuildHarness.make()
         let huge = try ImportTestFiles.sparse(at: harness.external.appendingPathComponent("huge.ips"), byteCount: 65 * 1_048_576)

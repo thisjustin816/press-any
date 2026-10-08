@@ -39,25 +39,54 @@ public enum BuildNaming {
     /// The Build name a patch's filename suggests. A patch makes a variant, so the parser's generic
     /// names for an untagged file, "Original" and "Hack", give way to the patch's own title. A
     /// version or other tag follows the title, "Mole Mania DX v1.3", unless the title is the Game's
-    /// own: "Example (Rev 1)" applied to Example is "Rev 1".
+    /// own: "Example (Rev 1)" applied to Example is "Rev 1". A tag joined to the Game's title as a
+    /// filename joins words is the name on its own: "Moon Garden-coop-sync" is "Coop Sync".
     public static func patchBuildName(for naming: FilenameMetadata, gameTitle: String? = nil) -> String {
         let title = naming.buildMetadata.hackTitle ?? naming.suggestedTitle
-        guard !["Original", "Hack"].contains(naming.suggestedBuildName) else { return title }
+        let tag = gameTitle.flatMap { addition(to: $0, in: title) }.flatMap { $0.isWords ? nil : tagName($0.text) }
+        guard !["Original", "Hack"].contains(naming.suggestedBuildName) else { return tag ?? title }
         if let gameTitle, GameMatcher.normalized(gameTitle) == GameMatcher.normalized(title) { return naming.suggestedBuildName }
-        return "\(title) \(naming.suggestedBuildName)"
+        return "\(tag ?? title) \(naming.suggestedBuildName)"
     }
 
-    /// The title a patch offers for the Game it becomes Preferred in. A hack offers its own title.
-    /// Another patch offers its title only when that title adds words without digits to the Game's,
-    /// as "Mole Mania DX" does to "Mole Mania". A patch named "Translation", or an update such as
-    /// "Example v1.0 to v1.1", never offers its name as a Game title.
+    /// The title a patch offers for the Game it becomes Preferred in: its own title, only when that
+    /// title is the Game's followed by more words, as "Mole Mania DX" is "Mole Mania" and "DX". A
+    /// hack titled "Better" or "Co-op sync patch" names its Build, not the Game. A patch without
+    /// hack tags also offers nothing when the added words hold digits, so an update such as
+    /// "Example v1.0 to v1.1" never renames the Game.
     public static func patchGameTitle(for naming: FilenameMetadata, gameTitle: String) -> String? {
         let title = (naming.buildMetadata.hackTitle ?? naming.suggestedTitle).trimmingCharacters(in: .whitespacesAndNewlines)
-        let key = GameMatcher.normalized(title)
-        let gameKey = GameMatcher.normalized(gameTitle)
-        guard !key.isEmpty, key != gameKey else { return nil }
+        guard offersTitle(title, for: gameTitle) else { return nil }
         guard naming.releaseKind != .romHack else { return title }
-        return key.hasPrefix(gameKey) && !key.dropFirst(gameKey.count).contains(where: \.isNumber) ? title : nil
+        return addition(to: gameTitle, in: title)?.text.contains(where: \.isNumber) == true ? nil : title
+    }
+
+    /// Whether a hack or patch title may become the Game's: the Game's title followed by more words.
+    public static func offersTitle(_ title: String, for gameTitle: String) -> Bool {
+        addition(to: gameTitle, in: title)?.isWords == true
+    }
+
+    /// What a title adds after the Game's. `isWords` is true when it continues after a space with
+    /// more words, as "Mole Mania DX" does; false for a tag joined by a hyphen, a colon or a
+    /// spaced dash, as in "Moon Garden-coop-sync" or "Example - Beta".
+    static func addition(to gameTitle: String, in title: String) -> (text: String, isWords: Bool)? {
+        let game = gameTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !game.isEmpty, title.count > game.count,
+              title.prefix(game.count).lowercased() == game.lowercased() else { return nil }
+        let rest = title.dropFirst(game.count)
+        guard let joiner = rest.first, " -_:".contains(joiner) else { return nil }
+        let text = rest.trimmingCharacters(in: CharacterSet(charactersIn: " -_:"))
+        guard !text.isEmpty else { return nil }
+        let isWords = joiner == " " && rest.dropFirst().first.map { $0.isLetter || $0.isNumber } == true
+        return (text, isWords)
+    }
+
+    /// A filename-style tag as a name: separators become spaces and an all-lowercase tag is
+    /// capitalized, so "coop-sync" is "Coop Sync".
+    private static func tagName(_ tag: String) -> String {
+        let words = tag.split(whereSeparator: { $0 == "-" || $0 == "_" || $0 == " " }).map(String.init)
+        guard tag.allSatisfy({ !$0.isUppercase }) else { return words.joined(separator: " ") }
+        return words.map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
     }
 
     /// The metadata a patch's filename gives the Build it makes. A patch with no hack title in its
