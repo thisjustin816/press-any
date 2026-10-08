@@ -34,4 +34,8 @@ public final class InMemoryLibraryBackupRepository: LibraryBackupRepository, @un
     public func lastRestoreReport() throws -> RestoreReport? { lock.withLock { report } }
 }
 
-public enum InMemoryBackupError: Error { case failedCommit }
+public enum InMemoryBackupError: LocalizedError {
+    case failedCommit
+
+    public var errorDescription: String? { "The test library failed to save the restore." }
+}
