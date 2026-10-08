@@ -73,7 +73,7 @@ final class ExportLibraryFilesTests: XCTestCase {
         let exporter = fixture.exporter(builds: [base, bad, hack, bare], knownDumps: index)
         let name = { (build: Build) in try exporter.exportROM(buildID: build.id, to: fixture.exports).lastPathComponent }
 
-        XCTAssertEqual(try name(base), "Moon Garden (USA) (Rev 1).gbc")
+        XCTAssertEqual(try name(base), "Moon Garden (USA) (Rev 1) [!].gbc")
         XCTAssertEqual(try name(bad), "Moon Garden (Europe) [b].gbc")
         XCTAssertEqual(try name(hack), "Moon Garden (USA) (Rev 1) [Night patch by Jane v0.3].gbc")
         XCTAssertEqual(try name(bare), "Moon Garden (USA) (Rev 1) [Hack].gbc", "a patched copy never passes for the dump")

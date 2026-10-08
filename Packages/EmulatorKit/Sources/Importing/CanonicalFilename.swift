@@ -1,8 +1,8 @@
 import Foundation
 
-/// Names a ROM file the way No-Intro names a dump, then a hack or translation the way they're
-/// released, in brackets after the base game's name:
-/// "Title (Region) (Languages) (Rev X) (vX.Y) (Status) [Hack Title by Author vX.Y] [T-En]".
+/// Names a ROM file the way No-Intro names a dump, then a hack or translation in brackets after
+/// the base game's name, a translation in GoodTools' form:
+/// "Title (Region) (Languages) (Rev X) (vX.Y) (Status) [Night patch by Jane v0.3] [T+Eng1.03_Jane]".
 extension FilenameMetadataParser {
     public static func canonicalFilename(
         fileExtension: String,
@@ -29,21 +29,23 @@ extension FilenameMetadataParser {
         return fileExtension.isEmpty ? stem : "\(stem).\(fileExtension)"
     }
 
-    /// The brackets that follow a base game's name for a hack or translation: the hack's own title
-    /// (or "Hack", or "T-En" for a translation) with its author and version, as in
-    /// "[Night patch by Jane v0.3]" or "[T-En by Jane v1.0]", then its status.
+    /// The brackets that follow a base game's name for a hack or translation, then its status. A
+    /// hack names itself with its author and version, "[Night patch by Jane v0.3]", or "[Hack by
+    /// Jane v1.3]" without a title of its own. A translation takes GoodTools' form,
+    /// "[T+Eng1.03_Jane]", and its credit goes with the hack when it's part of one.
     public static func modificationGroups(for metadata: BuildImportMetadata) -> [String] {
         let ownTitle = metadata.hackTitle.flatMap { hackTitle in
             metadata.baseTitle?.localizedCaseInsensitiveCompare(hackTitle) == .orderedSame ? nil : hackTitle
         }
-        let translation = metadata.translation.map { "T-\(languageCode(for: $0))" }
-        let credit = [metadata.author.map { "by \($0)" }, metadata.versionString.map { "v\($0)" }].compactMap { $0 }
         var groups: [String] = []
-        if let ownTitle {
-            groups.append("[\(([ownTitle] + credit).joined(separator: " "))]")
-            if let translation { groups.append("[\(translation)]") }
-        } else {
-            groups.append("[\(([translation ?? "Hack"] + credit).joined(separator: " "))]")
+        if ownTitle != nil || metadata.translation == nil {
+            let credit = [metadata.author.map { "by \($0)" }, metadata.versionString.map { "v\($0)" }]
+            groups.append("[\(([ownTitle ?? "Hack"] + credit.compactMap { $0 }).joined(separator: " "))]")
+            if let translation = metadata.translation { groups.append("[T+\(goodToolsLanguage(for: translation))]") }
+        } else if let translation = metadata.translation {
+            let version = metadata.versionString ?? ""
+            let author = metadata.author.map { "_\($0)" } ?? ""
+            groups.append("[T+\(goodToolsLanguage(for: translation))\(version)\(author)]")
         }
         if let status = metadata.status { groups.append("[\(noIntroStatus(status))]") }
         return groups
@@ -77,27 +79,34 @@ extension FilenameMetadataParser {
         return "Proto" + status.dropFirst("prototype".count)
     }
 
-    /// The two-letter code a translation tag uses, as No-Intro writes languages: "Spanish" and
-    /// GoodTools' "Spa" both become "Es". An unknown name stays as written.
-    static func languageCode(for language: String) -> String {
+    /// GoodTools' three-letter language code for a translation tag: "Spanish", "Es" and "Spa" all
+    /// become "Spa". An unknown name stays as written.
+    static func goodToolsLanguage(for language: String) -> String {
         let key = language.trimmingCharacters(in: .whitespaces).lowercased()
         let codes: [String: String] = [
-            "english": "En", "eng": "En", "en": "En",
-            "japanese": "Ja", "jpn": "Ja", "jap": "Ja", "ja": "Ja",
-            "french": "Fr", "fre": "Fr", "fra": "Fr", "fr": "Fr",
-            "german": "De", "ger": "De", "deu": "De", "de": "De",
-            "spanish": "Es", "spa": "Es", "es": "Es",
-            "italian": "It", "ita": "It", "it": "It",
-            "portuguese": "Pt", "por": "Pt", "pt": "Pt",
-            "dutch": "Nl", "dut": "Nl", "nld": "Nl", "nl": "Nl",
-            "swedish": "Sv", "swe": "Sv", "sv": "Sv",
-            "russian": "Ru", "rus": "Ru", "ru": "Ru",
-            "chinese": "Zh", "chi": "Zh", "zho": "Zh", "zh": "Zh",
-            "korean": "Ko", "kor": "Ko", "ko": "Ko",
-            "polish": "Pl", "pol": "Pl", "pl": "Pl",
-            "greek": "El", "gre": "El", "ell": "El", "el": "El",
-            "turkish": "Tr", "tur": "Tr", "tr": "Tr",
-            "arabic": "Ar", "ara": "Ar", "ar": "Ar",
+            "english": "Eng", "en": "Eng", "eng": "Eng",
+            "japanese": "Jap", "ja": "Jap", "jap": "Jap", "jpn": "Jap",
+            "french": "Fre", "fr": "Fre", "fre": "Fre", "fra": "Fre",
+            "german": "Ger", "de": "Ger", "ger": "Ger", "deu": "Ger",
+            "spanish": "Spa", "es": "Spa", "spa": "Spa",
+            "italian": "Ita", "it": "Ita", "ita": "Ita",
+            "portuguese": "Por", "pt": "Por", "por": "Por",
+            "brazilian portuguese": "Bra", "pt-br": "Bra", "bra": "Bra",
+            "dutch": "Dut", "nl": "Dut", "dut": "Dut", "nld": "Dut",
+            "swedish": "Swe", "sv": "Swe", "swe": "Swe",
+            "norwegian": "Nor", "no": "Nor", "nor": "Nor",
+            "danish": "Dan", "da": "Dan", "dan": "Dan",
+            "finnish": "Fin", "fi": "Fin", "fin": "Fin",
+            "russian": "Rus", "ru": "Rus", "rus": "Rus",
+            "polish": "Pol", "pl": "Pol", "pol": "Pol",
+            "greek": "Gre", "el": "Gre", "gre": "Gre",
+            "turkish": "Tur", "tr": "Tur", "tur": "Tur",
+            "hungarian": "Hun", "hu": "Hun", "hun": "Hun",
+            "catalan": "Cat", "ca": "Cat", "cat": "Cat",
+            "hebrew": "Heb", "he": "Heb", "heb": "Heb",
+            "arabic": "Ara", "ar": "Ara", "ara": "Ara",
+            "chinese": "Chi", "zh": "Chi", "chi": "Chi",
+            "korean": "Kor", "ko": "Kor", "kor": "Kor",
         ]
         return codes[key] ?? language
     }

@@ -50,8 +50,9 @@ public struct ExportLibraryFiles: Sendable {
         self.knownDumps = knownDumps
     }
 
-    /// The Build's exact ROM, rebuilt first when it's patched. A copy of a known dump takes No-Intro's
-    /// name, and a hack of one takes that name with the hack after it, as in
+    /// The Build's exact ROM, rebuilt first when it's patched. A good copy of a known dump takes
+    /// No-Intro's name with GoodTools' verified mark, "[!]", a bad copy "[b]", and a hack or
+    /// translation of one takes that name with the modification after it, as in
     /// "Pokemon - Crystal Version (USA, Europe) (Rev 1) [Clear patch by Jane v2.0].gbc". Anything
     /// else is named from its metadata the same way, as Import Review suggests.
     public func exportROM(buildID: UUID, to directory: URL) throws -> URL {
@@ -77,7 +78,7 @@ public struct ExportLibraryFiles: Sendable {
         let name: String
         switch knownDumps?.verification(of: build, sha1: \.imageSHA1, lookup: { try? builds.fetchBuild(id: $0) }) {
         case .verified(let dump):
-            name = "\(dump.name).\(fileExtension)"
+            name = "\(dump.name) [!].\(fileExtension)"
         case .badDump(let dump):
             name = "\(dump.name) [b].\(fileExtension)"
         case .modified(let dump):

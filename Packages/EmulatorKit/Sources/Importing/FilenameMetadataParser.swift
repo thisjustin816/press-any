@@ -82,14 +82,34 @@ public enum FilenameMetadataParser {
         var status: String?
         var isHack = false
         var recognizedGroups = Set<String>()
-        for group in parenthetical + bracketed {
-            // A translation as released: "T-En by Jane v1.0", or GoodTools' "T+Eng1.00_Group".
+        for (index, group) in (parenthetical + bracketed).enumerated() {
+            let inParentheses = index < parenthetical.count
+            // GoodTools codes: short regions in parentheses, dump flags in brackets.
+            if inParentheses, let names = goodToolsRegion(group) {
+                region = region ?? names
+                recognizedGroups.insert(group)
+                continue
+            }
+            if !inParentheses, let flag = goodToolsDumpFlag(group) {
+                // Trained, fixed and hacked dumps are modifications; the rest describe the copy,
+                // which hashing judges better than a tag.
+                if flag == .modified { isHack = true }
+                recognizedGroups.insert(group)
+                continue
+            }
+            if inParentheses, group.range(of: #"^(?:M[0-9]+|PD)$"#, options: .regularExpression) != nil {
+                // A language count, or public domain: neither names a field.
+                recognizedGroups.insert(group)
+                continue
+            }
+            // A translation as GoodTools names it, "T+Eng1.03_Group", or as some releases do,
+            // "T-En by Jane v1.0".
             if let parts = optionalMatchGroups(
                 in: group,
                 pattern: #"(?i)^\s*T[+\-]([A-Za-z]{2,3})(?:\s+by\s+(.+?))?(?:\s+v("# + versionPattern + #"))?\s*$"#
             ) ?? optionalMatchGroups(
                 in: group,
-                pattern: #"^\s*T[+\-]([A-Za-z]{2,3})([0-9]+(?:\.[0-9]+)*)(?:[_ ](.+?))?\s*$"#
+                pattern: #"^\s*T[+\-]([A-Za-z]{2,3})([0-9]+(?:\.[0-9]+)*)?(?:[_ ](.+?))?\s*$"#
             ).map({ [$0[0], $0[2], $0[1]] }), parts[1] != nil || parts[2] != nil {
                 translation = translation ?? parts[0]
                 author = author ?? parts[1]
@@ -399,6 +419,36 @@ public enum FilenameMetadataParser {
 
     private static func firstCapture(in value: String, patterns: [String]) -> String? {
         patterns.lazy.compactMap { captures(in: value, pattern: $0).first }.first
+    }
+
+    private enum GoodToolsDumpFlag { case modified, described }
+
+    /// GoodTools' bracketed dump codes: [!] verified, [a1] alternate, [b1] bad, [o1] overdump,
+    /// [p1] pirate, [x] bad checksum, [c] cracked, [BF] bung fix, and GoodGBx's [C] and [S]
+    /// describe the copy; [t1] trained, [f1] fixed and hacks such as [h1], [h1C], [hI] or [hM04]
+    /// modify it.
+    private static func goodToolsDumpFlag(_ group: String) -> GoodToolsDumpFlag? {
+        let code = group.trimmingCharacters(in: .whitespaces)
+        if code.range(of: #"^(?:[tf][0-9]*|h[0-9A-Z]*)$"#, options: .regularExpression) != nil { return .modified }
+        if code.range(of: #"^(?:!p?|[abop][0-9]*|x|c|BF|C|S)$"#, options: .regularExpression) != nil { return .described }
+        return nil
+    }
+
+    /// GoodTools' short regions as No-Intro names them: "U" is "USA", and joined codes such as "UE"
+    /// list each, in No-Intro's Japan, USA, Europe order, with all three being "World".
+    private static func goodToolsRegion(_ group: String) -> String? {
+        let code = group.trimmingCharacters(in: .whitespaces)
+        let single: [String: String] = [
+            "U": "USA", "E": "Europe", "J": "Japan", "W": "World", "A": "Australia", "B": "Brazil",
+            "C": "China", "F": "France", "G": "Germany", "I": "Italy", "K": "Korea", "S": "Spain",
+            "Sw": "Sweden", "Nl": "Netherlands", "D": "Netherlands", "UK": "United Kingdom",
+            "As": "Asia", "Ca": "Canada", "Tw": "Taiwan",
+        ]
+        if let name = single[code] { return name }
+        guard code.count > 1, code.allSatisfy({ "JUE".contains($0) }), Set(code).count == code.count else { return nil }
+        if code.count == 3 { return "World" }
+        return [("J", "Japan"), ("U", "USA"), ("E", "Europe")]
+            .filter { code.contains($0.0) }.map(\.1).joined(separator: ", ")
     }
 
     /// Every capture group of the first match, nil where a group took no part in it.
