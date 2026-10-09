@@ -35,7 +35,7 @@ jobs:
           persist-credentials: false
           submodules: true
       - name: Install package and boot ROM build tools
-        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev bison cmake libpng-dev pkg-config
+        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev bison cmake g++ libpng-dev make pkg-config
       - name: Build RGBDS and the open boot ROMs
         run: |
           git clone -q --depth 1 --branch v0.9.0 https://github.com/gbdev/rgbds /tmp/rgbds
