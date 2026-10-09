@@ -40,7 +40,7 @@ extension SaveState {
             core: core, stateSerializationVersion: stateSerializationVersion,
             stateAssetID: assetID ?? stateAssetID, screenshotAssetID: thumbnailID ?? screenshotAssetID,
             kind: asManual ? .manual : kind, slot: asManual ? nil : slot,
-            isPinned: asManual ? true : isPinned, autoSequence: asManual ? nil : autoSequence,
+            isPinned: asManual ? true : isPinned, isTimed: isTimed, autoSequence: asManual ? nil : autoSequence,
             label: label ?? self.label, playtimeSeconds: playtimeSeconds, createdAt: createdAt)
     }
 }

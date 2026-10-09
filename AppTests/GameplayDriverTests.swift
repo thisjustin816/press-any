@@ -1,10 +1,32 @@
 import EmulationCore
 import EmulatorDomain
+import EmulatorApplication
 import Foundation
 import XCTest
 @testable import PressAny
 
 final class GameplayDriverTests: XCTestCase {
+    func testTimedStateUsesSaveQueueAndFramesContinueDuringTheWrite() throws {
+        let runtime = BlockingTimedStateRuntime()
+        let refreshes = ManualRefreshes()
+        let driver = GameplayDriver(runtime: runtime, input: GameplayInputAccumulator(), savePollNanoseconds: 1,
+            makeRefreshes: { refreshes.attach($0) })
+        driver.start()
+        defer {
+            runtime.allowSaveToFinish.signal()
+            driver.stop()
+        }
+        XCTAssertEqual(runtime.intervalResets, 1)
+        XCTAssertTrue(refreshes.send(until: { runtime.saveStarted.wait(timeout: .now()) == .success }))
+        XCTAssertFalse(runtime.timedWriteOnMainThread)
+        let before = runtime.frameCount
+        XCTAssertTrue(refreshes.send(until: { runtime.frameCount > before }))
+        runtime.allowSaveToFinish.signal()
+        driver.stop()
+        driver.start()
+        XCTAssertEqual(runtime.intervalResets, 2, "a menu or sheet restarts the interval")
+    }
+
     func testPeriodicSaveDoesNotBlockFramePacing() throws {
         let runtime = BlockingSaveRuntime()
         let refreshes = ManualRefreshes()
@@ -34,7 +56,10 @@ private final class ManualRefreshes: DisplayRefreshSource, @unchecked Sendable {
     private var cancelled = false
 
     func attach(_ handler: @escaping DisplayRefreshHandler) -> any DisplayRefreshSource {
-        lock.withLock { self.handler = handler }
+        lock.withLock {
+            self.handler = handler
+            cancelled = false
+        }
         return self
     }
 
@@ -57,7 +82,7 @@ private final class ManualRefreshes: DisplayRefreshSource, @unchecked Sendable {
     }
 }
 
-private final class BlockingSaveRuntime: GameplayRuntime, @unchecked Sendable {
+private class BlockingSaveRuntime: GameplayRuntime, @unchecked Sendable {
     let saveStarted = DispatchSemaphore(value: 0)
     let allowSaveToFinish = DispatchSemaphore(value: 0)
     private let lock = NSLock()
@@ -97,4 +122,29 @@ private final class BlockingSaveRuntime: GameplayRuntime, @unchecked Sendable {
         }
         return true
     }
+}
+
+private final class BlockingTimedStateRuntime: BlockingSaveRuntime, SaveStateRuntime, @unchecked Sendable {
+    private let timedLock = NSLock()
+    private var resets = 0
+    private var wroteOnMain = false
+    var intervalResets: Int { timedLock.withLock { resets } }
+    var timedWriteOnMainThread: Bool { timedLock.withLock { wroteOnMain } }
+
+    func resetTimedStateInterval() { timedLock.withLock { resets += 1 } }
+    func saveTimedStateIfDue() throws -> Bool {
+        timedLock.withLock { wroteOnMain = Thread.isMainThread }
+        return try super.flushBatteryIfChanged()
+    }
+    override func flushBatteryIfChanged() throws -> Bool { false }
+    func saveCrashRecoveryIfDue() throws -> Bool { false }
+    func saveStates() throws -> [SaveState] { [] }
+    func saveManualState(label: String?) throws -> SaveState { throw NotSupported() }
+    func saveQuickState() throws -> SaveState { throw NotSupported() }
+    func saveSlotState(slot: Int) throws -> SaveState { throw NotSupported() }
+    func loadState(_ saveState: SaveState) throws {}
+    func loadingWouldRollBackSave(_ saveState: SaveState) throws -> Bool { false }
+    func loadStateKeepingCopy(_ saveState: SaveState) throws -> SaveProfile { throw NotSupported() }
+    func thumbnailData(for state: SaveState) -> Data? { nil }
+    private struct NotSupported: Error {}
 }

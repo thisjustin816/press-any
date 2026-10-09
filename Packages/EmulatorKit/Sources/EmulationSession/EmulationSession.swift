@@ -58,6 +58,8 @@ public final class EmulationSession: @unchecked Sendable {
     private let inFlight: InFlightFiles?
     private let cheats: (any BuildCheatRepository)?
     private var lastCheckpointNanoseconds: UInt64 = 0
+    private let writesTimedStates: @Sendable () -> Bool
+    private var timedStateStartedAt: Date?
 
     private let lock = NSLock()
     private let playtimeRecordingLock = NSLock()
@@ -93,6 +95,7 @@ public final class EmulationSession: @unchecked Sendable {
         inFlight: InFlightFiles? = nil,
         cheats: (any BuildCheatRepository)? = nil,
         keepsAutoStateHistory: @escaping @Sendable () -> Bool = { true },
+        writesTimedStates: @escaping @Sendable () -> Bool = { false },
         batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -103,6 +106,7 @@ public final class EmulationSession: @unchecked Sendable {
         self.assetStore = assetStore
         self.imageResolver = imageResolver
         self.now = now
+        self.writesTimedStates = writesTimedStates
         self.coreResolver = ResolveCoreForBuild(builds: builds, registry: coreRegistry, now: now)
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
         self.stateService = SaveStateService(
@@ -216,6 +220,7 @@ public final class EmulationSession: @unchecked Sendable {
                 latestFrame = nil
                 lastBatteryCheckNanoseconds = 0
                 lastCheckpointNanoseconds = 0
+                timedStateStartedAt = now()
                 lastWrittenBattery = savedBattery
                 _state = .running(context)
             }
@@ -349,13 +354,19 @@ public final class EmulationSession: @unchecked Sendable {
 
     public func pause() throws {
         let (_, context, _) = try snapshotActive()
-        lock.withLock { _state = .paused(context) }
+        lock.withLock {
+            _state = .paused(context)
+            timedStateStartedAt = nil
+        }
     }
 
     public func resume() throws {
         let (_, context, _) = try snapshotActive()
         try launchHistory?.started(context)
-        lock.withLock { _state = .running(context) }
+        lock.withLock {
+            _state = .running(context)
+            timedStateStartedAt = now()
+        }
     }
 
     @discardableResult
@@ -442,18 +453,52 @@ public final class EmulationSession: @unchecked Sendable {
     }
 
     @discardableResult
-    public func saveAutoState() throws -> SaveState {
+    public func saveAutoState(isTimed: Bool = false) throws -> SaveState {
         let (worker, context, _) = try snapshotActive()
         _ = try? flushBatteryIfDirty()
         let state = try stateService.save(
             worker: worker,
             context: context,
             kind: .auto,
+            isTimed: isTimed,
             playtimeSeconds: playtimeSeconds,
             frame: currentFrame
         )
         try stateService.removeCrashRecoveryStates(context: context)
         return state
+    }
+
+    /// A frame-driver restart begins a full interval even when only presentation was paused.
+    public func resetTimedStateInterval() {
+        lock.withLock { timedStateStartedAt = now() }
+    }
+
+    /// The frame driver polls this only during library play, on its save queue.
+    @discardableResult
+    public func saveTimedStateIfDue() throws -> Bool {
+        let (_, context, running) = try snapshotActive()
+        guard running else { return false }
+        guard writesTimedStates(),
+              let build = try builds.fetchBuild(id: context.buildID),
+              let interval = try settings?.decode(
+                TimedStates.self, key: SettingKey.timedStates.rawValue,
+                system: build.system, gameID: build.gameID, buildID: build.id
+              ), interval != .off else {
+            lock.withLock { timedStateStartedAt = now() }
+            return false
+        }
+        let timestamp = now()
+        guard let started = lock.withLock({ timedStateStartedAt }) else { return false }
+        guard timestamp >= started else {
+            lock.withLock { timedStateStartedAt = timestamp }
+            return false
+        }
+        guard timestamp.timeIntervalSince(started) >= Double(interval.rawValue * 60) else { return false }
+        try saveAutoState(isTimed: true)
+        lock.withLock {
+            if activeContext == context, case .running = _state { timedStateStartedAt = now() }
+        }
+        return true
     }
 
     /// Starts the game again from its boot, the way switching the cartridge off and on does. The

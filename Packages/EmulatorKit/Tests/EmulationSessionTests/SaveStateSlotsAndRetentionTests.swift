@@ -40,6 +40,7 @@ struct SaveStateSlotsAndRetentionTests {
         var json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(state)) as? [String: Any])
         json.removeValue(forKey: "slot")
         json.removeValue(forKey: "isPinned")
+        json.removeValue(forKey: "isTimed")
         #expect(try JSONDecoder().decode(SaveState.self, from: JSONSerialization.data(withJSONObject: json)) == state)
     }
 

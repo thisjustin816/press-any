@@ -9,6 +9,195 @@ import Testing
 @testable import EmulationSession
 
 final class EmulationSessionTests: XCTestCase {
+    func testTimedStatesHandleClockChangesWithoutCatchUpWrites() throws {
+        let h = try SessionHarness.make()
+        defer { try? FileManager.default.removeItem(at: h.store.rootURL) }
+        let clock = TimedStateClock()
+        let settings = InMemorySettingsStore()
+        try settings.set(TimedStates.oneMinute, key: SettingKey.timedStates.rawValue, scope: .app)
+        let session = h.makeSession(settings: SettingsResolver(store: settings), writesTimedStates: { true }, clock: { clock.now })
+        try session.start(context: h.contextA)
+        clock.advance(600)
+        XCTAssertTrue(try session.saveTimedStateIfDue())
+        XCTAssertEqual(try session.saveStates().count, 1, "late polls write once")
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        clock.advance(-3_600)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        clock.advance(59)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        clock.advance(1)
+        XCTAssertTrue(try session.saveTimedStateIfDue(), "a backward clock starts a new interval")
+    }
+
+    func testTimedStatesResolveEveryScopeAndResetAfterAFrameHold() throws {
+        let h = try SessionHarness.make()
+        defer { try? FileManager.default.removeItem(at: h.store.rootURL) }
+        let clock = TimedStateClock()
+        let settings = InMemorySettingsStore()
+        let resolver = SettingsResolver(store: settings)
+        let scopes: [SettingsScope] = [.app, .system(.gameBoyColor), .game(h.game.id), .build(h.buildA.id)]
+        let choices: [TimedStates] = [.tenMinutes, .fiveMinutes, .twoMinutes, .oneMinute]
+        let session = h.makeSession(settings: resolver, writesTimedStates: { true }, clock: { clock.now })
+        try session.start(context: h.contextA)
+        for (scope, choice) in zip(scopes, choices) {
+            try settings.set(choice, key: SettingKey.timedStates.rawValue, scope: scope)
+            XCTAssertEqual(try resolver.decode(TimedStates.self, key: SettingKey.timedStates.rawValue,
+                system: .gameBoyColor, gameID: h.game.id, buildID: h.buildA.id), choice)
+        }
+        clock.advance(50)
+        session.resetTimedStateInterval()
+        clock.advance(59)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        clock.advance(1)
+        XCTAssertTrue(try session.saveTimedStateIfDue())
+        try settings.removeValue(key: SettingKey.timedStates.rawValue, scope: .build(h.buildA.id))
+        session.resetTimedStateInterval()
+        clock.advance(60)
+        XCTAssertFalse(try session.saveTimedStateIfDue(), "Game overrides System and App")
+        clock.advance(60)
+        XCTAssertTrue(try session.saveTimedStateIfDue())
+    }
+
+    func testTimedStateFailureRetriesAndBatteryFailureStillKeepsProgress() throws {
+        let h = try SessionHarness.make(seedBattery: Data([1]))
+        defer { try? FileManager.default.removeItem(at: h.store.rootURL) }
+        let clock = TimedStateClock()
+        let settings = InMemorySettingsStore()
+        try settings.set(TimedStates.oneMinute, key: SettingKey.timedStates.rawValue, scope: .app)
+        let session = h.makeSession(settings: SettingsResolver(store: settings), writesTimedStates: { true }, clock: { clock.now })
+        try session.start(context: h.contextA)
+        try XCTUnwrap(h.factory.cores.last).writeBattery(Data([9]))
+        try h.breakSaveDirectory()
+        clock.advance(60)
+        XCTAssertTrue(try session.saveTimedStateIfDue())
+        let state = try XCTUnwrap(session.saveStates().first)
+        XCTAssertTrue(state.isTimed)
+        XCTAssertEqual(try session.resumableAutoState(for: h.contextA), state)
+        try h.repairSaveDirectory()
+        let stateDirectory = h.store.stateURL(stateID: UUID()).deletingLastPathComponent()
+        try FileManager.default.removeItem(at: stateDirectory)
+        try Data().write(to: stateDirectory)
+        clock.advance(60)
+        XCTAssertThrowsError(try session.saveTimedStateIfDue())
+        try FileManager.default.removeItem(at: stateDirectory)
+        XCTAssertTrue(try session.saveTimedStateIfDue(), "the failed write did not consume the interval")
+    }
+
+    func testTimedStatesUseRunningWallTimeAndRestartAfterResume() throws {
+        let h = try SessionHarness.make(seedBattery: Data([1]))
+        defer { try? FileManager.default.removeItem(at: h.store.rootURL) }
+        let clock = TimedStateClock()
+        let settings = InMemorySettingsStore()
+        try settings.set(TimedStates.oneMinute, key: SettingKey.timedStates.rawValue, scope: .app)
+        let session = h.makeSession(settings: SettingsResolver(store: settings), writesTimedStates: { true }, clock: { clock.now })
+        try session.start(context: h.contextA)
+        clock.advance(59)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        try XCTUnwrap(h.factory.cores.last).writeBattery(Data([9]))
+        clock.advance(1)
+        XCTAssertTrue(try session.saveTimedStateIfDue())
+        let first = try XCTUnwrap(session.saveStates().first)
+        XCTAssertEqual(first.kind, .auto)
+        XCTAssertTrue(first.isTimed)
+        XCTAssertEqual(try h.batteryData(of: h.profile), Data([9]))
+        XCTAssertEqual(try session.resumableAutoState(for: h.contextA), first)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        clock.advance(50)
+        try session.pause()
+        clock.advance(600)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        try session.resume()
+        clock.advance(59)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        clock.advance(1)
+        XCTAssertTrue(try session.saveTimedStateIfDue())
+        try session.background()
+        let before = try session.saveStates()
+        clock.advance(600)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        XCTAssertEqual(try session.saveStates(), before)
+        XCTAssertTrue(try session.foreground(policy: .always))
+        clock.advance(59)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        clock.advance(1)
+        XCTAssertTrue(try session.saveTimedStateIfDue())
+    }
+
+    func testTimedStatesOffAndPlusRevocationKeepExistingStates() throws {
+        let h = try SessionHarness.make()
+        defer { try? FileManager.default.removeItem(at: h.store.rootURL) }
+        let clock = TimedStateClock()
+        let settings = InMemorySettingsStore()
+        let session = h.makeSession(settings: SettingsResolver(store: settings), writesTimedStates: { clock.owned }, clock: { clock.now })
+        try session.start(context: h.contextA)
+        clock.advance(600)
+        XCTAssertFalse(try session.saveTimedStateIfDue(), "unset is Off")
+        try settings.set(TimedStates.off, key: SettingKey.timedStates.rawValue, scope: .app)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        try settings.set(TimedStates.oneMinute, key: SettingKey.timedStates.rawValue, scope: .app)
+        clock.setOwned(false)
+        clock.advance(600)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        XCTAssertTrue(try session.saveStates().isEmpty)
+        clock.setOwned(true)
+        try session.resume()
+        clock.advance(60)
+        XCTAssertTrue(try session.saveTimedStateIfDue())
+        let before = try session.saveStates()
+        clock.setOwned(false)
+        clock.advance(600)
+        XCTAssertFalse(try session.saveTimedStateIfDue())
+        XCTAssertEqual(try session.saveStates(), before)
+        XCTAssertEqual(try SettingsResolver(store: settings).appValue(TimedStates.self, key: .timedStates), .oneMinute)
+    }
+
+    func testTimedStatesFastForwardAndAllIntervals() throws {
+        for interval in TimedStates.allCases where interval != .off {
+            let h = try SessionHarness.make()
+            defer { try? FileManager.default.removeItem(at: h.store.rootURL) }
+            let clock = TimedStateClock()
+            let settings = InMemorySettingsStore()
+            try settings.set(interval, key: SettingKey.timedStates.rawValue, scope: .app)
+            let session = h.makeSession(settings: SettingsResolver(store: settings), writesTimedStates: { true }, clock: { clock.now })
+            try session.start(context: h.contextA)
+            try session.setSpeed(.multiplier(8))
+            for _ in 0..<4_000 { _ = try session.stepFrame() }
+            XCTAssertFalse(try session.saveTimedStateIfDue(), "emulated time cannot make a timed state due")
+            clock.advance(Double(interval.rawValue * 60) - 1)
+            XCTAssertFalse(try session.saveTimedStateIfDue())
+            try session.setSpeed(.unlimited)
+            clock.advance(1)
+            XCTAssertTrue(try session.saveTimedStateIfDue())
+            clock.advance(Double(interval.rawValue * 60))
+            XCTAssertTrue(try session.saveTimedStateIfDue())
+        }
+    }
+
+    func testTimedStatesShareAutoRetentionAndKeepPins() throws {
+        for keep in KeepAutoStates.allCases {
+            let h = try SessionHarness.make()
+            defer { try? FileManager.default.removeItem(at: h.store.rootURL) }
+            let clock = TimedStateClock()
+            let settings = InMemorySettingsStore()
+            try settings.set(TimedStates.oneMinute, key: SettingKey.timedStates.rawValue, scope: .app)
+            try settings.set(keep, key: SettingKey.keepAutoStates.rawValue, scope: .app)
+            let session = h.makeSession(settings: SettingsResolver(store: settings), writesTimedStates: { true }, clock: { clock.now })
+            try session.start(context: h.contextA)
+            clock.advance(60)
+            XCTAssertTrue(try session.saveTimedStateIfDue())
+            var pinned = try XCTUnwrap(session.saveStates().first)
+            pinned.isPinned = true
+            try h.states.updateSaveState(pinned)
+            _ = try session.saveAutoState()
+            for _ in 0..<(keep.rawValue + 1) {
+                clock.advance(60)
+                XCTAssertTrue(try session.saveTimedStateIfDue())
+            }
+            XCTAssertEqual(try session.saveStates().filter { !$0.isPinned }.count, keep.rawValue)
+            XCTAssertEqual(try h.states.fetchSaveState(id: pinned.id), pinned)
+        }
+    }
+
     func testQuickSaveFlushesTheBatteryAndQuickLoadKeepsANewerSave() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1]))
         let session = harness.makeSession(thumbnails: FrameSizeEncoder())
@@ -902,6 +1091,16 @@ extension EmulationSessionTests {
     }
 }
 
+private final class TimedStateClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var date = Date(timeIntervalSince1970: 1_700_000_000)
+    private var ownership = true
+    var now: Date { lock.withLock { date } }
+    var owned: Bool { lock.withLock { ownership } }
+    func advance(_ seconds: TimeInterval) { lock.withLock { date.addTimeInterval(seconds) } }
+    func setOwned(_ owned: Bool) { lock.withLock { ownership = owned } }
+}
+
 /// Fails every delete, so pruning old Auto States fails.
 private final class UndeletableSaveStateRepository: SaveStateRepository, @unchecked Sendable {
     private let inner = InMemorySaveStateRepository()
@@ -1090,6 +1289,8 @@ private struct SessionHarness {
         history: SessionLaunchHistory? = nil,
         thumbnails: (any FrameImageEncoding)? = nil,
         cheats: (any BuildCheatRepository)? = nil,
+        writesTimedStates: @escaping @Sendable () -> Bool = { false },
+        clock: (@Sendable () -> Date)? = nil,
         now: Date = Date(timeIntervalSince1970: 1_700_000_000)
     ) -> EmulationSession {
         EmulationSession(
@@ -1104,7 +1305,8 @@ private struct SessionHarness {
             launchHistory: history,
             thumbnails: thumbnails,
             cheats: cheats,
-            now: { now }
+            writesTimedStates: writesTimedStates,
+            now: clock ?? { now }
         )
     }
 

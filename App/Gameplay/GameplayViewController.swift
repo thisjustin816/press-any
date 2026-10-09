@@ -409,10 +409,10 @@ final class GameplayViewController: UIViewController {
             guard let slot = state.slot else { return true }
             return slot > saveStateSlots.rawValue
         }.map { state in
-            // A pin takes the subtitle, so the thumbnail still tells the states apart.
             UIAction(
                 title: state.displayName,
-                subtitle: (state.isPinned ? "Pinned · " : "") + formatter.string(from: state.createdAt),
+                subtitle: [state.isPinned ? "Pinned" : nil, state.timingNote, formatter.string(from: state.createdAt)]
+                    .compactMap { $0 }.joined(separator: " · "),
                 image: states?.thumbnailData(for: state).flatMap { Self.menuThumbnail($0) }
             ) { [weak self] _ in self?.loadState(state) }
         }
