@@ -507,8 +507,9 @@ isn't stored.
   A Game with No-Intro releases gets a title suggestion when its best-ranked release under the
   app's region and language order has a different title. This uses the same selection as Import
   Review, including stable ties; missing Build region or language fields use the matched release's
-  data. It includes protected titles because choosing Rename is an explicit opt-in. Games without
-  a No-Intro release get no title suggestion.
+  data. Titles recorded as the player's, including accepted patch and hack titles, get no regional
+  suggestion. Older titles without recorded provenance are included because choosing Rename is
+  an explicit opt-in. Games without a No-Intro release get no title suggestion.
   Each row shows the current title, proposed title and release region. Accepting the proposed
   title keeps the old title as an alias and leaves the Game following the order, so later imports
   can offer regional title proposals again. An edited title is the player's and stays protected;

@@ -5,7 +5,31 @@ import GameIdentity
 import XCTest
 
 final class GameTitleSuggesterTests: XCTestCase {
-    func testRegionalSuggestionsIncludeProtectedTitlesAndExcludeHomebrewAndBestTitles() throws {
+    func testRegionalSuggestionsPreserveAdoptedPatchAndEditedTitles() throws {
+        let games = InMemoryGameRepository()
+        let builds = InMemoryBuildRepository()
+        let dump = KnownDump(name: "Mole Mania (USA, Europe)", system: .gameBoy, title: "Mole Mania",
+            region: "USA, Europe", languages: "En", files: [.init(sha1: "retail", size: 1)])
+        let index = try KnownDumpIndex(catalog: .init(source: "synthetic", generated: "", systems: [], games: [dump]))
+
+        for title in ["Mole Mania DX", "My Mole Mania"] {
+            let game = Game(id: UUID(), primaryTitle: title, systemFamily: "gameboy", aliases: [dump.title],
+                createdAt: .now, modifiedAt: .now)
+            try games.insertGame(game)
+            try games.saveMetadataProvenance(MetadataProvenance(field: .title, source: .player,
+                providedValue: title == "Mole Mania DX" ? title : dump.title, recordedAt: .now), ownerID: game.id)
+            try builds.insertBuild(Build(id: UUID(), gameID: game.id, system: .gameBoy, displayName: "Original",
+                imageAssetID: UUID(), imageSHA256: UUID().uuidString, imageSHA1: "retail",
+                sourceKind: .importedImage, createdAt: .now, modifiedAt: .now))
+        }
+
+        let before = try games.fetchGames()
+        let suggester = GameTitleSuggester(games: games, builds: builds, index: index, preference: ReleasePreference())
+        XCTAssertTrue(try suggester.suggestions().isEmpty)
+        XCTAssertEqual(try games.fetchGames(), before)
+    }
+
+    func testRegionalSuggestionsIncludeLegacyTitlesAndExcludeHomebrewAndBestTitles() throws {
         let games = InMemoryGameRepository()
         let builds = InMemoryBuildRepository()
         let usa = KnownDump(name: "Crystal (USA)", system: .gameBoy, title: "Crystal", region: "USA", languages: "En",
