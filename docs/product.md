@@ -1081,7 +1081,9 @@ exposes them; custom border editing is later.
   Game whose title matches the patch's is preselected with its Base Build. A shared save opens
   Open Save, which imports it as a new Save Profile in the chosen Game. The Game is preselected
   when the save is named like exactly one Game's ROM file, as emulators name saves, or when its
-  title matches one Game.
+  title matches one Game. A switch, on by default, makes the profile the Game's preferred save so
+  Play uses it; turned off, the Game's current preferred save stays. Importing a save from a
+  Game's page makes it the preferred save too. Existing profiles and saves are never changed.
 - A file shared mid-game opens over the game, which pauses as for the game menu and stays paused
   afterward. Quick Play from that sheet reads "Close Game and Quick Play": the running game closes
   the normal way, saving first, and a Quick Play session still offers Keep for Later before the new
