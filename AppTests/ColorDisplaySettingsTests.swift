@@ -1,6 +1,7 @@
 import EmulatorApplication
 import EmulatorDomain
 import Importing
+import UIKit
 import XCTest
 @testable import PressAny
 
@@ -67,14 +68,42 @@ final class ColorDisplaySettingsTests: XCTestCase {
             switch view.screenColorChoices {
             case .dmg(let choices):
                 XCTAssertEqual(system, .gameBoy)
-                XCTAssertEqual(Array(choices.prefix(4)), [.dmgGreen, .pocket, .light, .grey])
-                XCTAssertEqual(choices.dropFirst(4).map(\.displayName), [
-                    "Up", "Up + A", "Up + B", "Down", "Down + A", "Down + B",
-                    "Left", "Left + A", "Left + B", "Right", "Right + A", "Right + B",
+                XCTAssertEqual(Array(choices.prefix(3)), [.dmgGreen, .pocket, .light])
+                XCTAssertEqual(choices.dropFirst(3).map(\.displayName), [
+                    "Brown (Up)", "Red (Up + A)", "Dark Brown (Up + B)",
+                    "Pastel (Down)", "Orange (Down + A)", "Yellow (Down + B)",
+                    "Blue (Left)", "Dark Blue (Left + A)", "Black & White (Left + B)",
+                    "Green (Right)", "Dark Green (Right + A)", "Inverted (Right + B)",
+                    "Olive & Orange (Mole Mania)",
                 ])
             case .correction(let choices):
                 XCTAssertEqual(system, .gameBoyColor)
                 XCTAssertEqual(choices, [.balanced, .accurate, .boostContrast, .reduceContrast, .lowContrast, .off])
+            }
+        }
+    }
+
+    func testPaletteThumbnailsShowAllBackgroundAndSpriteColorsWithoutTinting() throws {
+        for palette in DMGPalette.selectableCases {
+            let image = DMGPalettePreview.thumbnail(for: palette)
+            XCTAssertEqual(image.renderingMode, .alwaysOriginal)
+            XCTAssertEqual(image.size, CGSize(width: 32, height: 24))
+            let cgImage = try XCTUnwrap(image.cgImage)
+            var pixels = [UInt8](repeating: 0, count: 32 * 24 * 4)
+            try pixels.withUnsafeMutableBytes { buffer in
+                let context = try XCTUnwrap(CGContext(
+                    data: buffer.baseAddress, width: 32, height: 24, bitsPerComponent: 8, bytesPerRow: 32 * 4,
+                    space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+                ))
+                context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 32, height: 24))
+            }
+            for (row, colors) in palette.previewColors.enumerated() {
+                for (column, expected) in colors.enumerated() {
+                    let offset = ((row * 8 + 4) * 32 + column * 8 + 4) * 4
+                    let rgb = UInt32(pixels[offset]) << 16 | UInt32(pixels[offset + 1]) << 8 | UInt32(pixels[offset + 2])
+                    XCTAssertEqual(rgb, expected, "\(palette), row \(row), shade \(column)")
+                }
             }
         }
     }

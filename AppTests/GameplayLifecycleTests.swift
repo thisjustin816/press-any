@@ -526,6 +526,103 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertTrue(gameplay.isShowingPaused)
     }
 
+    func testControllerFaceAndStartSelectButtonsResumeTheOverlayAndConsumeThePress() {
+        for press in [EmulatorInputState(a: true), .init(b: true), .init(start: true), .init(select: true)] {
+            let (gameplay, runtime, monitor) = makeGameplay()
+            _ = gameplay.prepareGameMenu()
+            monitor.onInputChanged?(press)
+            XCTAssertTrue(gameplay.isRunningFrames)
+            XCTAssertFalse(gameplay.isShowingPaused)
+            XCTAssertEqual(gameplay.heldInput, .init())
+            monitor.onInputChanged?(press)
+            XCTAssertEqual(gameplay.heldInput, .init())
+            monitor.onInputChanged?(.init())
+            monitor.onInputChanged?(press)
+            XCTAssertEqual(gameplay.heldInput, press)
+            XCTAssertFalse(runtime.failedFrame)
+        }
+    }
+
+    func testControllerResumeWaitsForSettingsToCloseAndAFreshPress() {
+        let (gameplay, _, monitor) = makeGameplay()
+        gameplay.setCoveredBySheet(true)
+        monitor.onInputChanged?(.init(a: true))
+        XCTAssertFalse(gameplay.isRunningFrames)
+        gameplay.setCoveredBySheet(false)
+        monitor.onInputChanged?(.init(right: true, a: true))
+        XCTAssertFalse(gameplay.isRunningFrames)
+        monitor.onInputChanged?(.init())
+        monitor.onInputChanged?(.init(a: true))
+        XCTAssertTrue(gameplay.isRunningFrames)
+    }
+
+    func testControllerResumeCannotClearAPauseWhileTheSceneIsInactive() {
+        let (gameplay, _, monitor) = makeGameplay()
+        _ = gameplay.prepareGameMenu()
+        gameplay.sceneWillDeactivate()
+        monitor.onInputChanged?(.init(start: true))
+        gameplay.sceneDidActivate()
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertTrue(gameplay.isShowingPaused)
+        monitor.onInputChanged?(.init(start: true))
+        XCTAssertFalse(gameplay.isRunningFrames)
+        monitor.onInputChanged?(.init())
+        monitor.onInputChanged?(.init(start: true))
+        XCTAssertTrue(gameplay.isRunningFrames)
+    }
+
+    func testControllerDirectionsLeaveTheResumeOverlayPaused() {
+        let (gameplay, _, monitor) = makeGameplay()
+        _ = gameplay.prepareGameMenu()
+        monitor.onInputChanged?(.init(up: true, right: true))
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertTrue(gameplay.isShowingPaused)
+    }
+
+    func testAuxiliaryControllerButtonsResumeOnlyTheExposedOverlay() {
+        let (gameplay, _, monitor) = makeGameplay()
+        gameplay.setCoveredBySheet(true)
+        monitor.onAuxiliaryButtonPressed?()
+        XCTAssertFalse(gameplay.isRunningFrames)
+        gameplay.setCoveredBySheet(false)
+        gameplay.sceneWillDeactivate()
+        monitor.onAuxiliaryButtonPressed?()
+        gameplay.sceneDidActivate()
+        XCTAssertFalse(gameplay.isRunningFrames)
+        monitor.onAuxiliaryButtonPressed?()
+        XCTAssertTrue(gameplay.isRunningFrames)
+        XCTAssertFalse(gameplay.isShowingPaused)
+        XCTAssertEqual(gameplay.heldInput, .init())
+    }
+
+    func testPhysicalStartMenuButtonResumesTheExposedOverlayOncePerPress() {
+        let (gameplay, _, monitor) = makeGameplay()
+        _ = gameplay.prepareGameMenu()
+        monitor.onMenuChanged?(true)
+        XCTAssertTrue(gameplay.isRunningFrames)
+        XCTAssertFalse(gameplay.isShowingPaused)
+        XCTAssertFalse(gameplay.isGameMenuOpen)
+        _ = gameplay.prepareGameMenu()
+        monitor.onMenuChanged?(true)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        monitor.onMenuChanged?(false)
+        monitor.onMenuChanged?(true)
+        XCTAssertTrue(gameplay.isRunningFrames)
+    }
+
+    func testPhysicalStartMenuButtonCannotResumeBehindSettings() {
+        let (gameplay, _, monitor) = makeGameplay()
+        gameplay.setCoveredBySheet(true)
+        monitor.onMenuChanged?(true)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        gameplay.setCoveredBySheet(false)
+        monitor.onMenuChanged?(true)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        monitor.onMenuChanged?(false)
+        monitor.onMenuChanged?(true)
+        XCTAssertTrue(gameplay.isRunningFrames)
+    }
+
     func testResumeSitsOnTheGamePictureOnBothLayouts() {
         for style in [TouchControlStyle.gameBoy, .playtiles] {
             let (gameplay, _, _) = makeGameplay(policy: .never)

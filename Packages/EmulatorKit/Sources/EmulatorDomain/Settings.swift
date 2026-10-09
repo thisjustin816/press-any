@@ -182,29 +182,77 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
     case cgbRight = "cgbRight"
     case cgbRightA = "cgbRightA"
     case cgbRightB = "cgbRightB"
+    case cgbOlive = "cgbOlive"
 
     public static let defaultValue: Self = .dmgGreen
-    public static let explanation = "Choose four shades or a boot palette with separate background and sprite colors. Button names identify palettes; no buttons need to be held."
+    public static let explanation = "Previews show background colors above the two sprite palettes. Button combos identify Game Boy Color boot palettes; no buttons need to be held."
+
+    // The legacy grayscale value stays decodable for saved settings.
+    public static var selectableCases: [Self] { allCases.filter { $0 != .grey } }
+    public var selectionValue: Self { self == .grey ? .cgbLeftB : self }
 
     public var displayName: String {
         switch self {
-        case .dmgGreen: "Green (Game Boy)"
+        case .dmgGreen: "Green (DMG)"
         case .pocket: "Olive (Pocket)"
         case .light: "Teal (Light)"
-        case .grey: "Black & White"
-        case .cgbUp: "Up"
-        case .cgbUpA: "Up + A"
-        case .cgbUpB: "Up + B"
-        case .cgbDown: "Down"
-        case .cgbDownA: "Down + A"
-        case .cgbDownB: "Down + B"
-        case .cgbLeft: "Left"
-        case .cgbLeftA: "Left + A"
-        case .cgbLeftB: "Left + B"
-        case .cgbRight: "Right"
-        case .cgbRightA: "Right + A"
-        case .cgbRightB: "Right + B"
+        case .grey, .cgbLeftB: "Black & White (Left + B)"
+        case .cgbUp: "Brown (Up)"
+        case .cgbUpA: "Red (Up + A)"
+        case .cgbUpB: "Dark Brown (Up + B)"
+        case .cgbDown: "Pastel (Down)"
+        case .cgbDownA: "Orange (Down + A)"
+        case .cgbDownB: "Yellow (Down + B)"
+        case .cgbLeft: "Blue (Left)"
+        case .cgbLeftA: "Dark Blue (Left + A)"
+        case .cgbRight: "Green (Right)"
+        case .cgbRightA: "Dark Green (Right + A)"
+        case .cgbRightB: "Inverted (Right + B)"
+        case .cgbOlive: "Olive & Orange (Mole Mania)"
         }
+    }
+
+    /// RGB888 swatches in Game Boy shade order (0-3), with background, OBJ0 and OBJ1 rows.
+    /// Boot colors are uncorrected.
+    public var previewColors: [[UInt32]] {
+        let brown: [UInt16] = [0x7fff, 0x32bf, 0x00d0, 0x0000]
+        let red: [UInt16] = [0x7fff, 0x421f, 0x1cf2, 0x0000]
+        let green: [UInt16] = [0x7fff, 0x1bef, 0x0200, 0x0000]
+        let blue: [UInt16] = [0x7fff, 0x7e8c, 0x7c00, 0x0000]
+        let colors: [[UInt16]]
+        switch self {
+        case .dmgGreen:
+            return Array(repeating: [0xc6de8c, 0x84a563, 0x396139, 0x081810], count: 3)
+        case .pocket:
+            return Array(repeating: [0xc2ce93, 0x818d66, 0x3a4c3a, 0x07100e], count: 3)
+        case .light:
+            return Array(repeating: [0x7fe2c3, 0x56b495, 0x357862, 0x0a1c15], count: 3)
+        case .grey:
+            return Array(repeating: [0xffffff, 0xaaaaaa, 0x555555, 0x000000], count: 3)
+        case .cgbUp: colors = [brown, brown, brown]
+        case .cgbUpA: colors = [red, green, blue]
+        case .cgbUpB: colors = [[0x639f, 0x4279, 0x15b0, 0x04cb], brown, brown]
+        case .cgbDown: colors = Array(repeating: [0x53ff, 0x4a5f, 0x7e52, 0x0000], count: 3)
+        case .cgbDownA: colors = Array(repeating: [0x7fff, 0x03ff, 0x001f, 0x0000], count: 3)
+        case .cgbDownB: colors = [[0x7fff, 0x03ff, 0x012f, 0x0000], blue, green]
+        case .cgbLeft: colors = [blue, red, green]
+        case .cgbLeftA: colors = [[0x7fff, 0x6e31, 0x454a, 0x0000], red, brown]
+        case .cgbLeftB: colors = Array(repeating: [0x7fff, 0x5294, 0x294a, 0x0000], count: 3)
+        case .cgbRight: colors = Array(repeating: [0x7fff, 0x03ea, 0x011f, 0x0000], count: 3)
+        case .cgbRightA: colors = [[0x7fff, 0x1bef, 0x6180, 0x0000], red, red]
+        case .cgbRightB: colors = Array(repeating: [0x0000, 0x4200, 0x037f, 0x7fff], count: 3)
+        case .cgbOlive:
+            colors = [[0x7fff, 0x42b5, 0x3dc8, 0x0000],
+                      [0x7fff, 0x01df, 0x0112, 0x0000],
+                      [0x7fff, 0x01df, 0x0112, 0x0000]]
+        }
+        return colors.map { $0.map { color in
+            func channel(_ shift: UInt16) -> UInt32 {
+                let value = UInt32((color >> shift) & 31)
+                return (value << 3) | (value >> 2)
+            }
+            return channel(0) << 16 | channel(5) << 8 | channel(10)
+        } }
     }
 }
 

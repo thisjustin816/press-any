@@ -353,13 +353,15 @@ file format isn't imported.
 | partial | Fast-forward | MVP basic / v1.1 full | menu toggle at the Fast Forward Speed setting (1.5x/2x/3x/4x/8x/Unlimited, default 2x, inheritable, changes live from the game menu's Settings); Fast Forward Audio setting Muted (default) or Accelerated up to 4x; hold vs toggle waits for Quick Actions |
 | missing | Slow motion 0.25x/0.5x/0.75x | v1.1 |  |
 
-Done: Pause / Resume from menu with paused overlay.
+Done: Pause / Resume from menu with paused overlay; any fresh non-directional controller button
+press resumes the exposed overlay and is consumed until released. Directional input leaves it paused.
 
 ### Rendering, shaders, display
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| done | Twelve free boot palettes for original Game Boy games | v1 | Separate background/OBJ0/OBJ1 colors; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors |
+| done | Free built-in palettes for original Game Boy games | v1 | Twelve button-combo palettes and Olive & Orange (Mole Mania, combination 17), alongside DMG/Pocket/Light; color names with combos, BG/OBJ0/OBJ1 thumbnails, one Black & White choice; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors |
+| missing | Custom Game Boy palettes and GBC game-palette selection | v1.1 | Specify separate background/OBJ0/OBJ1 colors, enter a GBC boot-ROM palette combination number (such as 17), or select a recognized game (such as Mole Mania) to use its built-in colors; include color previews |
 | done | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check is still to run |
 | partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1.1 | LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented as Press Any's own code, modelled on the libretro LCD shaders and credited to them; remaining effects and catalog missing; each shader that ships is credited by author in Acknowledgements and `THIRD_PARTY_NOTICES.md` |
 | partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1.1 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
@@ -370,7 +372,8 @@ Done: Pause / Resume from menu with paused overlay.
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
 Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable; Frame
 Blending Off (default) / Blend / LCD Ghosting, inheritable; Screen Colors per system: Game Boy
-Green (default) / Olive / Teal / Black & White plus twelve free button-combo boot palettes,
+Green (DMG, default) / Olive (Pocket) / Teal (Light), twelve free button-combo boot palettes (including Black & White),
+and Olive & Orange (Mole Mania); color names and background/sprite thumbnails,
 Game Boy Color Balanced (default) / Accurate / Boost Contrast / Reduce Contrast / Low Contrast /
 Original. Both inherit App -> System -> Game -> Build, with the picker from System down, update
 the open picture from Settings, and survive reset and state loads.
@@ -410,7 +413,8 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 
 Done: Apple GameController input (extendedGamepad), D-pad and left thumbstick with a radial dead
 zone and eight equal sectors; A and B by the controller's letters (Circle = A and Cross = B on PlayStation),
-Menu opens the game menu and closes it with Resume; X = START, Options or Y = SELECT (Triangle and Square on PlayStation), shoulders free; iOS controller customizations, including per-app ones, are the only button mapping; Connected controllers use Game
+Menu opens the game menu and closes it with Resume; any non-directional button resumes the exposed pause overlay;
+X = START, Options or Y = SELECT (Triangle and Square on PlayStation), shoulders free; iOS controller customizations, including per-app ones, are the only button mapping; Connected controllers use Game
 Boy and follow Orientation even with Playtiles chosen; Disconnect releases input, restores the
 chosen layout, pauses and shows a notice without restarting; A controller hides the touch
 controls, a touch brings them back until its next button press, and Settings can keep them;

@@ -869,7 +869,10 @@ picture. A connected controller still hides the touch controls.
   pictures and dates; then Cheats, Sound, Settings, and Restart beside Close Game, in red, in
   their own section. The game stays paused after the menu closes, after changing Fast Forward
   and after returning from another app, until the player chooses Resume. A paused game's Resume
-  button sits centered on the game picture.
+  button sits centered on the game picture. With that overlay exposed, any fresh non-directional
+  controller button press resumes too: face buttons, Start/Menu, Select/Options, shoulders,
+  triggers and stick clicks. Directional input leaves it paused. The resume press is consumed
+  until released.
 - **Cheats** opens the Build's cheats over the paused game at half height (see Cheats and memory tools).
 - **Settings** opens over the paused game at half height. A library game edits its Game's
   settings; Quick Play edits its system's. Layout, scaling, LCD filter and frame blending apply
@@ -889,12 +892,15 @@ picture. A connected controller still hides the touch controls.
   one for the system at hand shows: in Game Boy or Game Boy Color settings, and in the Settings
   of a Game, a Build or the open game. App Settings doesn't show it, and a choice made there in
   an earlier version became that system's setting.
-  - Original Game Boy games choose Green (Game Boy, the default), Olive (Pocket), Teal (Light)
-    or Black & White, plus 12 free boot palettes: Up, Down, Left and Right, each alone, with A,
-    or with B. These keep separate background, OBJ0 and OBJ1 colors. Select the button name in
-    Settings; no buttons need to be held. They work with Skip Boot Logo on or off, and use the
-    resolved color correction setting. Game Boy Color games keep their own colors and correction
-    choices.
+  - Original Game Boy games choose Green (DMG, the default), Olive (Pocket), Teal (Light),
+    twelve free boot palettes, and Olive & Orange (Mole Mania), GBC game palette combination 17.
+    Boot palettes have color names with the button combo in parentheses, such as Brown (Up) and
+    Black & White (Left + B). Black & White is the only grayscale menu choice; saved legacy
+    grayscale selections resolve to it in the picker. Each choice includes a thumbnail showing
+    four background swatches above the two sprite palettes, in Game Boy shade order (0-3).
+    Thumbnails use uncorrected colors. No buttons need to be held. The palettes keep separate
+    background, OBJ0 and OBJ1 colors, work with Skip Boot Logo on or off, and use the resolved
+    color correction setting. Game Boy Color games keep their own colors and correction choices.
   - Game Boy Color games choose how their colors are adjusted for a modern screen: Balanced (the
     default, SameBoy's Modern Balanced), Accurate (Modern Accurate), Boost Contrast, Reduce
     Contrast, Low Contrast, or Original, which shows the colors as the game stores them.
@@ -965,8 +971,10 @@ picture. A connected controller still hides the touch controls.
   A and B; X is START, and Options or Y is SELECT. A PlayStation controller has no
   lettered buttons, so Circle is A and Cross is B, where a Game Boy has them, Triangle is START
   and Square is SELECT. Menu opens the game menu; pressing Menu again while it is open closes it
-  and resumes, as Resume does. This works with touch controls hidden and uses no combo. Every
-  Game Boy button keeps a controller button. The shoulders and triggers are left for Rewind and
+  and resumes, as Resume does. This works with touch controls hidden and uses no combo. The
+  exposed Resume overlay accepts any fresh non-directional button press. A menu, sheet, alert,
+  inactive scene or state operation blocks that shortcut, and its press is consumed until released.
+  Every Game Boy button keeps a controller button. The shoulders and triggers are left for Rewind and
   Fast Forward.
 - Button mapping belongs to iOS: Settings > General > Game Controller customizations apply,
   including per-app ones, and are how a player moves any button. Press Any's defaults above are fixed: it has no button

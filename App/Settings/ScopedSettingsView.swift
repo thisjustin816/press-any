@@ -160,6 +160,8 @@ struct ScopedSettingsView: View {
                 key: .dmgPalette,
                 defaultValue: DMGPalette.defaultValue,
                 options: palettes.map { ($0, $0.displayName) },
+                optionImage: { DMGPalettePreview.image(for: $0) },
+                normalizeValue: { $0.selectionValue },
                 context: context
             )
         case .correction(let corrections):
@@ -193,7 +195,7 @@ enum ScreenColorChoices {
 
     init(system: GameSystem) {
         switch system {
-        case .gameBoy: self = .dmg(DMGPalette.allCases)
+        case .gameBoy: self = .dmg(DMGPalette.selectableCases)
         case .gameBoyColor: self = .correction(ColorCorrection.allCases)
         }
     }
@@ -230,6 +232,8 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     let key: SettingKey
     let defaultValue: Value
     let options: [(Value, String)]
+    var optionImage: ((Value) -> Image)?
+    var normalizeValue: (Value) -> Value = { $0 }
     /// Values that need Plus. Without it they're marked Plus, and choosing one opens the Plus screen.
     var needsPlus: (Value) -> Bool = { _ in false }
     let context: InheritableSettingContext
@@ -244,9 +248,11 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     var body: some View {
         Menu {
             Picker(title, selection: Binding(get: { choice }, set: { choose($0) })) {
-                Text("\(inheritNote) (\(label(for: inheritedValue)))").tag(Choice.inherit)
+                optionLabel("\(inheritNote) (\(label(for: inheritedValue)))", value: inheritedValue)
+                    .tag(Choice.inherit)
                 ForEach(options.indices, id: \.self) { index in
-                    Text(context.plus.label(options[index].1, needsPlus: needsPlus(options[index].0)))
+                    optionLabel(context.plus.label(options[index].1, needsPlus: needsPlus(options[index].0)),
+                                value: options[index].0)
                         .tag(Choice.value(options[index].0))
                 }
             }
@@ -272,7 +278,8 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                         .imageScale(.small)
                 }
                 .foregroundStyle(Color.secondary)
-                .fixedSize()
+                .multilineTextAlignment(.trailing)
+                .fixedSize(horizontal: optionImage == nil, vertical: true)
             }
             .contentShape(Rectangle())
         }
@@ -283,7 +290,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     }
 
     private var inheritedValue: Value {
-        inherited.flatMap { try? $0.decode(Value.self) } ?? defaultValue
+        normalizeValue(inherited.flatMap { try? $0.decode(Value.self) } ?? defaultValue)
     }
 
     private var effectiveValue: Value {
@@ -322,6 +329,18 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         options.first { $0.0 == value }?.1 ?? String(describing: value)
     }
 
+    @ViewBuilder private func optionLabel(_ text: String, value: Value) -> some View {
+        if let optionImage {
+            Label {
+                Text(text)
+            } icon: {
+                optionImage(value).accessibilityHidden(true)
+            }
+        } else {
+            Text(text)
+        }
+    }
+
     private func sourceName(_ source: SettingsScope?) -> String {
         switch source {
         case nil: "the default"
@@ -337,7 +356,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         guard let setting = context.edit(key) else { return }
         inherited = setting.inherited
         if let json = setting.overrideJSON, let value = try? JSONDecoder().decode(Value.self, from: Data(json.utf8)) {
-            choice = .value(value)
+            choice = .value(normalizeValue(value))
         } else {
             choice = .inherit
         }

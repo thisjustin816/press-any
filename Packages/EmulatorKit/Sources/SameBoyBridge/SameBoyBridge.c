@@ -289,7 +289,7 @@ void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode)
 void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette)
 {
     if (!instance || !instance->gb) return;
-    if (palette < SB_DMG_PALETTE_GREY || palette > SB_DMG_PALETTE_CGB_RIGHT_B) return;
+    if (palette < SB_DMG_PALETTE_GREY || palette > SB_DMG_PALETTE_CGB_OLIVE) return;
     instance->dmg_palette = palette;
     sb_apply_dmg_palette(instance);
 }
