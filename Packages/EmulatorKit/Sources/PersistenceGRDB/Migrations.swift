@@ -59,6 +59,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v18-build-cheats") { db in
             try db.execute(sql: V1V18BuildCheatsSchema.sql)
         }
+        migrator.registerMigration("v1-v19-timed-states") { db in
+            try db.execute(sql: "ALTER TABLE save_states ADD COLUMN is_timed INTEGER NOT NULL DEFAULT 0 CHECK (is_timed IN (0, 1))")
+        }
         return migrator
     }
 }

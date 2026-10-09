@@ -351,7 +351,8 @@ final class AppContainer {
             deletion: libraryDeletion,
             inFlight: inFlightFiles,
             cheats: repositories.cheats,
-            keepsAutoStateHistory: { ownership.keepsAutoStateHistory }
+            keepsAutoStateHistory: { ownership.keepsAutoStateHistory },
+            writesTimedStates: { ownership.isOwned }
         )
     }
 

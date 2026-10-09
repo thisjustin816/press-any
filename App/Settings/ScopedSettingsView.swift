@@ -125,6 +125,14 @@ struct ScopedSettingsView: View {
     private var playingSection: some View {
         Section("Playing") {
             InheritableSettingRow(
+                title: "Timed States",
+                key: .timedStates,
+                defaultValue: TimedStates.off,
+                options: TimedStates.allCases.map { ($0, $0.displayName) },
+                needsPlus: \.needsPlus,
+                context: context
+            )
+            InheritableSettingRow(
                 title: "Resume Games",
                 key: .autoResumePolicy,
                 defaultValue: AutoResumePolicy.always,

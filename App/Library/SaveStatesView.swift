@@ -84,6 +84,9 @@ struct SaveStatesView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(state.displayName)
+                    if let note = state.timingNote {
+                        Text(note).font(.caption).foregroundStyle(.secondary)
+                    }
                     if state.isPinned {
                         Image(systemName: "pin.fill").accessibilityLabel("Pinned")
                     }

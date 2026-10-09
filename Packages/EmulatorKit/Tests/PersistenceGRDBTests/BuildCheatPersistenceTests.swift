@@ -34,7 +34,7 @@ struct BuildCheatPersistenceTests {
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM build_cheats") == 0)
             #expect(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM builds WHERE cheats_enabled != 1") == 0)
             #expect(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
-            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").last == "v1-v18-build-cheats")
+            #expect(try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations").contains("v1-v18-build-cheats"))
         }
         let repositories = database.makeRepositories()
         #expect(try repositories.builds.fetchBuild(id: fixture.build.id)?.cheatsEnabled == true)

@@ -482,6 +482,7 @@ struct SaveStateRecord: Codable, FetchableRecord, PersistableRecord {
     var kind: String
     var slot: Int?
     var isPinned: Bool
+    var isTimed: Bool
     var autoSequence: Int?
     var label: String?
     var playtimeSeconds: Double
@@ -490,6 +491,7 @@ struct SaveStateRecord: Codable, FetchableRecord, PersistableRecord {
     enum CodingKeys: String, CodingKey {
         case id, kind, label, slot
         case isPinned = "is_pinned"
+        case isTimed = "is_timed"
         case buildID = "build_id"
         case saveProfileID = "save_profile_id"
         case coreID = "core_id"
@@ -514,6 +516,7 @@ struct SaveStateRecord: Codable, FetchableRecord, PersistableRecord {
         kind = value.kind.rawValue
         slot = value.slot
         isPinned = value.isPinned
+        isTimed = value.isTimed
         autoSequence = value.autoSequence
         label = value.label
         playtimeSeconds = value.playtimeSeconds
@@ -535,6 +538,7 @@ struct SaveStateRecord: Codable, FetchableRecord, PersistableRecord {
             kind: stateKind,
             slot: slot,
             isPinned: isPinned,
+            isTimed: isTimed,
             autoSequence: autoSequence,
             label: label,
             playtimeSeconds: playtimeSeconds,

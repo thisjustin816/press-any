@@ -84,6 +84,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case keepSaveStates
     /// `KeepAutoStates`, App scope only; unset means `.five`.
     case keepAutoStates
+    /// `TimedStates`, unset means `.off`.
+    case timedStates
 
     public var isAppOnly: Bool {
         switch self {
@@ -310,4 +312,20 @@ public enum KeepAutoStates: Int, Codable, Sendable, CaseIterable {
     case ten = 10
 
     public var displayName: String { String(rawValue) }
+}
+
+public enum TimedStates: Int, Codable, Sendable, CaseIterable {
+    case off = 0
+    case oneMinute = 1
+    case twoMinutes = 2
+    case fiveMinutes = 5
+    case tenMinutes = 10
+
+    public var displayName: String {
+        switch self {
+        case .off: "Off"
+        case .oneMinute: "Every 1 Minute"
+        default: "Every \(rawValue) Minutes"
+        }
+    }
 }

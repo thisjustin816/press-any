@@ -57,15 +57,16 @@ In v1, Plus includes:
   Settings > App Icon. The default icon is always available.
 - **Auto State history**: Keep Auto States at 3, 5 or 10 (see Save states and lifecycle). Without
   Plus a game keeps its latest Auto State.
+- **Timed States**: an Auto State every 1, 2, 5 or 10 minutes of library play, with Off as the
+  default. Pausing restarts the interval (see Auto State).
 
-Everything else is free: play, saves and states, Library Backup and every export, patches,
-cheats, controllers, landscape, Quick Play, Fast Forward, Frame Blending, Screen Colors and the
-layouts.
+Everything else is free: play, saves, manual, Quick and slot states, close and background Auto
+States, Library Backup and every export, patches, cheats, controllers, landscape, Quick Play,
+Fast Forward, Frame Blending, Screen Colors and the layouts.
 
 Plus also includes everything on its roadmap and anything added later, at no extra cost. Some of
 it will be free for everyone, too. The roadmap on the Plus screen is the v1.1 list above, without
-crash reporting and usage counts, followed by timed Auto States (one every few minutes of play),
-a later Plus addition. GBA isn't on it. `App/Plus/PlusRoadmap.swift` holds the list.
+crash reporting and usage counts. GBA isn't on it. `App/Plus/PlusRoadmap.swift` holds the list.
 
 Plus follows these rules:
 
@@ -78,7 +79,7 @@ Plus follows these rules:
 - Without Plus, Plus choices stay listed. Choosing one opens the Plus screen once and saves
   nothing; nothing reminds the player after it closes.
 - A stored Plus choice is kept without Plus, so buying or restoring brings it back. A stored LCD
-  filter plays as Off, and Keep Auto States reads 1.
+  filter plays as Off, Timed States stops writing, and Keep Auto States reads 1.
 - Losing Plus, through a refund, a revocation or leaving Family Sharing, deletes nothing at that
   moment. The next Auto State write prunes to the latest unpinned one, as pruning always does. The
   chosen app icon stays until the player changes it, since iOS shows an alert for every icon
@@ -664,7 +665,8 @@ claims reliability from just an old ROM, old save and new ROM.
   context menu and leading swipe. Pinned rows show a pin here, and the game menu's list marks
   them "Pinned" beside their date, keeping their pictures. A pin prevents automatic cleanup;
   deleting a pinned state still works. Crash-recovery checkpoints are hidden from both state
-  lists.
+  lists. Timed states appear as Auto States with a small "Timed" note. The note survives a rename
+  or Library Backup restore.
 - **Auto State.** Backgrounding, closing and switching sessions write the battery save and an
   Auto State. With Plus, Keep Auto States in Settings > Playing keeps 3, 5 (the default) or 10
   unpinned Auto States per Build + Save Profile; without it, the latest one is kept, the row reads
@@ -674,6 +676,17 @@ claims reliability from just an old ROM, old save and new ROM.
   limit. Pruned Auto States are removed permanently. Each step is attempted even if an earlier
   one fails, so the Auto State can recover progress a failed battery write lost. A close that
   fails keeps the game open, to retry or close without saving.
+  Timed States in Settings > Playing is Off by default, or every 1, 2, 5 or 10 minutes, inherited
+  at App, System, Game and Build scopes. It needs Plus: without it, the row has a Plus badge and
+  choosing an interval opens the Plus screen without saving the choice. During library play,
+  it writes into the same Auto State history and uses the same Keep Auto States limit and pin
+  rules. Only running wall time counts, including Fast Forward; paused time, menus, covering
+  sheets and background time do not. Each resume starts a full interval. The periodic save
+  queue writes the battery save first and then the state off the main and frame-pacing threads.
+  A failed write is retried without consuming the interval. Quick Play never writes timed states.
+  Losing Plus stops timed writing and keeps its stored interval and every existing state;
+  later close or background Auto States still apply the usual retention rules. Restoring and
+  Resume Games choose the newest eligible Auto State, whether timed or taken when leaving.
 - **Cleanup.** Keep Save States in Settings > Playing is App-only: All (the default), 10, 25 or
   50 unpinned manual states per Build + Save Profile. After a successful manual save, the oldest
   unpinned manual states beyond the limit move to Recently Deleted in one entry per cleanup.
@@ -972,7 +985,8 @@ clears an override. The System level covers Game Boy and Game Boy Color. Save Pr
 the narrow playthrough overrides above. Sound is app-wide.
 
 Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (picker from System
-down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games and Skip Boot Logo.
+down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games, Timed States and
+Skip Boot Logo.
 App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics, Hide Touch Controls with a
 Controller, and the region and language order.
 
@@ -983,7 +997,8 @@ Game's or Build's settings use:
 - **Controls**: Controller Layout and Controller Theme; Touch Haptics and Tap Game for Menu under
   Touch; Hide Touch Controls under With a Controller.
 - **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo; Save States
-  (Slots, Name New States, Keep Save States and Keep Auto States, all App-only).
+  (Slots, Name New States, Keep Save States and Keep Auto States, all App-only; Timed States is
+  inheritable and needs Plus).
 - **App Icon** (Plus): the default icon and its colorways, each with a preview.
 - **Systems**: Game Boy and Game Boy Color, each a page with that system's settings.
 - **Library**: Regions and Languages, Recently Deleted, Check Library Files, Storage, and the
@@ -994,8 +1009,8 @@ Game's or Build's settings use:
 The settings for a system, a Game, a Build or the open game are one form: a page in App Settings
 for a system, and otherwise a sheet short enough to sit at half height over a paused game. They're
 grouped under Display (Orientation, Screen Scaling, Screen Colors, LCD Filter, Frame Blending),
-Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Skip Boot
-Logo). Under each setting's name a note says where its value
+Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States,
+Skip Boot Logo). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
 v1.1 adds automatic DMG, GBC or SGB model selection with overrides at every level (no promise that

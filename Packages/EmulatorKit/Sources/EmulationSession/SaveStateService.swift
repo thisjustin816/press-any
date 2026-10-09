@@ -65,6 +65,7 @@ public struct SaveStateService: Sendable {
         kind: SaveStateKind,
         label: String? = nil,
         slot: Int? = nil,
+        isTimed: Bool = false,
         playtimeSeconds: Double,
         frame: EmulatorVideoFrame? = nil
     ) throws -> SaveState {
@@ -116,6 +117,7 @@ public struct SaveStateService: Sendable {
                     screenshotAssetID: thumbnail?.id,
                     kind: kind,
                     slot: kind == .slot ? slot : nil,
+                    isTimed: isTimed,
                     autoSequence: autoSequence,
                     label: label,
                     playtimeSeconds: playtimeSeconds,

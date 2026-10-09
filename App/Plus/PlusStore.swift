@@ -162,4 +162,16 @@ struct PlusGate: Equatable {
     func keptAutoStates(_ choice: KeepAutoStates) -> Int {
         isLocked(choice.needsPlus) ? 1 : choice.rawValue
     }
+
+    func timedStates(_ choice: TimedStates) -> TimedStates {
+        isLocked(choice.needsPlus) ? .off : choice
+    }
+
+    func chooseTimedStates(_ choice: TimedStates, openPlus: () -> Void, apply: (TimedStates) -> Void) {
+        if isLocked(choice.needsPlus) {
+            openPlus()
+        } else {
+            apply(choice)
+        }
+    }
 }

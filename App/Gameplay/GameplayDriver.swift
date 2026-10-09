@@ -71,6 +71,7 @@ final class GameplayDriver: @unchecked Sendable {
         // However the loop last stopped, its display link goes before a new one starts.
         stale?.cancel()
         guard shouldStart else { return }
+        (runtime as? any SaveStateRuntime)?.resetTimedStateInterval()
         queue.async { [weak self] in
             self?.scheduler = FrameScheduler()
         }
@@ -184,12 +185,18 @@ final class GameplayDriver: @unchecked Sendable {
         saveQueue.async { [weak self] in
             guard let self else { return }
             defer { self.saveStateLock.withLock { self.saveCheckInFlight = false } }
+            guard self.isRunning else { return }
             do {
                 var wroteSave = false
                 try SessionSaveError.attempting([
                     {
                         if let states = self.runtime as? any SaveStateRuntime {
-                            wroteSave = try states.saveCrashRecoveryIfDue()
+                            wroteSave = try states.saveTimedStateIfDue()
+                        }
+                    },
+                    {
+                        if let states = self.runtime as? any SaveStateRuntime {
+                            wroteSave = try states.saveCrashRecoveryIfDue() || wroteSave
                         }
                     },
                     { wroteSave = try self.runtime.flushBatteryIfChanged() || wroteSave },

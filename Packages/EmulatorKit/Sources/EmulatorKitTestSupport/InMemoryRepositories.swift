@@ -317,6 +317,7 @@ public final class InMemorySaveStateRepository: SaveStateRepository, @unchecked 
                     kind: state.kind,
                     slot: state.slot,
                     isPinned: state.isPinned,
+                    isTimed: state.isTimed,
                     autoSequence: state.autoSequence,
                     label: state.label,
                     playtimeSeconds: state.playtimeSeconds,
