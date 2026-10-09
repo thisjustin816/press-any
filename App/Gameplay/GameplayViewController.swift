@@ -52,6 +52,8 @@ final class GameplayViewController: UIViewController {
     /// The wordmark button and optional clear picture target share the same game menu.
     private var menuButtons: [GameMenuButton] = []
     private var controllerMenuButton = GamepadMenuButton()
+    /// Set once a screenshot scene's button script has played.
+    private var screenshotInputPlayed = false
 
     var isGameMenuOpen: Bool { menuButtons.contains { $0.isMenuPresented } }
     private var fastForward = false
@@ -175,12 +177,29 @@ final class GameplayViewController: UIViewController {
             UserDefaults.standard.set(true, forKey: Self.menuHintShownKey)
             message = [message, "Tap \(AppBrand.displayName) for the menu."].compactMap { $0 }.joined(separator: " ")
         }
+        playScreenshotInput()
         // Nothing is paused yet. Starting directly keeps a failed audio start to the one message.
         driver.start()
         if let message { showTransientMessage(message) }
     }
 
     private static let menuHintShownKey = "gameplay.menuHintShown"
+
+    /// Plays a screenshot scene's button script through the same input as the touch controls, a
+    /// frame at a time from the first.
+    private func playScreenshotInput() {
+        guard let script = ScreenshotScene.input else { return }
+        let player = ScreenshotInputPlayer(script) { [weak self] in
+            DispatchQueue.main.async { self?.screenshotInputFinished() }
+        }
+        driver.willRunFrame = { [input] in input.setScripted(player.advance()) }
+    }
+
+    private func screenshotInputFinished() {
+        screenshotInputPlayed = true
+        ScreenshotScene.log(ScreenshotScene.readyMessage)
+        placeMenuButtons(over: touchControls.layout.menuAreas)
+    }
 
     /// Whether the touch controls are showing, for tests.
     var showsTouchControls: Bool { touchControls.showsControls }
@@ -640,6 +659,8 @@ final class GameplayViewController: UIViewController {
             button.frame = CGRect(x: area.x, y: area.y, width: area.width, height: area.height)
             // The first area is the logo; VoiceOver finds the menu there, once.
             button.isAccessibilityElement = index == 0
+            // The screenshot UI tests wait for this before their own wait.
+            button.accessibilityValue = screenshotInputPlayed ? ScreenshotScene.readyMessage : nil
         }
         updateMenuButtonAppearance()
     }

@@ -54,6 +54,8 @@ final class GameplayInputAccumulator: @unchecked Sendable {
     private let lock = NSLock()
     private var touch = EmulatorInputState()
     private var controller = EmulatorInputState()
+    /// A screenshot scene's button script, set for each frame as it runs.
+    private var scripted = EmulatorInputState()
 
     func setTouch(_ input: EmulatorInputState) {
         lock.withLock { touch = input }
@@ -61,6 +63,10 @@ final class GameplayInputAccumulator: @unchecked Sendable {
 
     func setController(_ input: EmulatorInputState) {
         lock.withLock { controller = input }
+    }
+
+    func setScripted(_ input: EmulatorInputState) {
+        lock.withLock { scripted = input }
     }
 
     func resetTouch() {
@@ -74,14 +80,14 @@ final class GameplayInputAccumulator: @unchecked Sendable {
     func current() -> EmulatorInputState {
         lock.withLock {
             EmulatorInputState(
-                up: touch.up || controller.up,
-                down: touch.down || controller.down,
-                left: touch.left || controller.left,
-                right: touch.right || controller.right,
-                a: touch.a || controller.a,
-                b: touch.b || controller.b,
-                start: touch.start || controller.start,
-                select: touch.select || controller.select
+                up: touch.up || controller.up || scripted.up,
+                down: touch.down || controller.down || scripted.down,
+                left: touch.left || controller.left || scripted.left,
+                right: touch.right || controller.right || scripted.right,
+                a: touch.a || controller.a || scripted.a,
+                b: touch.b || controller.b || scripted.b,
+                start: touch.start || controller.start || scripted.start,
+                select: touch.select || controller.select || scripted.select
             )
         }
     }

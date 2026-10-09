@@ -216,7 +216,7 @@ Open **Actions → Screenshots → Run workflow**. The defaults take the App Sto
 | text_size | default |
 | import_rom | zgb-dmg.gb |
 
-The **listing** set is ten screenshots, numbered in the order to upload them. The first three
+The **listing** set is nine screenshots, numbered in the order to upload them. The first three
 appear in search results.
 
 1. Gameplay
@@ -224,37 +224,69 @@ appear in search results.
 3. A Game with its Builds and saves
 4. Gameplay in landscape
 5. Import Review
-6. The Playtiles layout
-7. Gameplay with the LCD effect
-8. Technical Info, showing what a game was made with
-9. Quick Play
-10. Gameplay with a controller connected
+6. Gameplay with the LCD effect
+7. Technical Info, showing what a game was made with
+8. Quick Play
+9. Gameplay in landscape with a controller connected
 
 **summary** takes every screen and menu for checking layouts, and **every-rom** adds each ROM's
 own screens. `gbdk450-badsum.gb` as the import ROM shows Import Review's checksum warning.
 
 By default the test ROMs from `TestROMs/` play, so no commercial game appears. To show a real
-game in the gameplay shots, set three repository variables under **Settings → Secrets and
-variables → Actions → Variables**:
+game in the gameplay shots, fill in `game_url`, `game_sha256` and, if you like, `game_name` when
+you run the workflow. To use the same game every time, set three repository variables under
+**Settings → Secrets and variables → Actions → Variables** instead. A game given when running
+the workflow wins over the variables.
 
 | Variable | Value |
 |---|---|
 | `SCREENSHOT_GAME_URL` | A direct download of the game: a `.gb`, `.gbc`, or a `.zip` holding one |
 | `SCREENSHOT_GAME_SHA256` | The ROM's SHA-256, so a changed download is refused |
 | `SCREENSHOT_GAME_NAME` | The game's title in the library (optional; the ROM header's title otherwise) |
+| `SCREENSHOT_GAME_INPUT` | A button script for the gameplay shots (optional; see below) |
 
 The game is downloaded for each run and never stored in the repository. Use only a game whose
 author allows its use in your listing, and credit them if its license asks for it. The test
-ROMs still fill the library, the Game page and Import Review.
+ROMs still fill the library, the Game page and Import Review. A game given when running the
+workflow takes its name and script from that run too, so an empty `game_name` or `game_input`
+there means none rather than the variable's.
+
+Most games open with logos and an intro, so a shot taken a few seconds in shows those. A button
+script in `game_input` plays the game first. Every gameplay shot of the game plays it from the
+game's first frame, then waits a little and takes the screenshot.
+
+- A number waits that many seconds.
+- `a`, `b`, `start`, `select`, `up`, `down`, `left` or `right` taps that button.
+- `button:seconds` holds it, such as `right:2`.
+- Buttons joined with `+` press together, such as `right+a` or `up+a:0.5`.
+
+Seconds are the game's own, counted in frames, so a slow runner plays the script exactly as a
+fast one does. With a script, the game skips the boot logo and starts with a new save in every
+shot, so each shot sees the same game. After the script, `|` and `<shot>=<seconds>` pairs set
+each shot's wait; a shot not named waits 1 second. The shots are `play`, `play-lcd`,
+`quick-play`, `play-landscape` and `play-landscape-gamepad`, and different waits show different
+moments. For example:
+
+```text
+8 start 1.5 a 2 right:1.5 up+a | play=1 play-lcd=2.5 quick-play=4
+```
+
+To work out a script, play the game in an emulator, note when each press happens, and keep the
+script ending somewhere the game stays playable for the longest wait.
 
 After the run, download `screenshots-light-6.9-inch` and/or `screenshots-dark-6.9-inch` from its
 **Artifacts** section and unzip them. Upload the numbered PNGs, not the included logs.
 
-The iPhone 17 Pro Max captures are 1320 × 2868 pixels (2868 × 1320 in landscape), Apple's
-6.9-inch size, which App Store Connect scales down for smaller iPhones. Choose iPhone 14 Plus for
-the 6.5-inch slot: 1284 × 2778 pixels, in artifacts ending `-6.5-inch`. The workflow checks every
-PNG's dimensions, and each set fits only its own slot. Check that each image shows a loaded app,
-readable content, and features present in the Release build; screenshot seeding runs in Debug.
+The iPhone 17 Pro Max captures are 1320 × 2868 pixels, Apple's 6.9-inch size, which App Store
+Connect scales down for smaller iPhones. The landscape shots are saved upright at 2868 × 1320.
+Choose iPhone 14 Plus for the 6.5-inch slot: 1284 × 2778 pixels, in artifacts ending `-6.5-inch`.
+The workflow checks every PNG's dimensions, and each set fits only its own slot. Check that each
+image shows a loaded app, readable content, and features present in the Release build;
+screenshot seeding runs in Debug.
+
+A new simulator can show a system notification, such as one about Apple Intelligence, at any
+moment. The script compares each portrait shot with another taken seven seconds later and takes
+the scene again when a banner covered one of them, so check the landscape shots for one.
 
 In **Apps → Press Any → the iOS version page → App Previews and Screenshots**,
 select the iPhone display-size group and drag in the chosen PNGs. Screenshots
