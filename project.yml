@@ -92,9 +92,6 @@ targets:
       - path: AppTests
       - path: Packages/EmulatorKit/Sources/EmulatorKitTestSupport
         includes: [InMemoryRepositories.swift, InMemoryImageFingerprintRepository.swift, TestROM.swift]
-      # The purchase tests load it into an SKTestSession.
-      - path: Config/PressAnyPlus.storekit
-        buildPhase: resources
     dependencies:
       - target: PressAny
   ShareTestSender:

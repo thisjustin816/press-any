@@ -98,7 +98,7 @@ count. Restore Purchases calls `AppStore.sync()`. StoreKit's own on-device cache
 working offline; there's no receipt storage, no server and no analytics, and StoreKit makes the
 only network calls. Debug builds take `-GrantPlus YES` for screenshots and UI tests, and
 `-ScreenshotLCDFilter` implies it. `Config/PressAnyPlus.storekit` defines the product for Xcode
-runs and the StoreKitTest app tests.
+runs.
 
 ## Library model
 
