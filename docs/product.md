@@ -891,26 +891,31 @@ picture. A connected controller still hides the touch controls.
 - **Screen Colors** (System, Game or Build) is a different setting on each system, and only the
   one for the system at hand shows: in Game Boy or Game Boy Color settings, and in the Settings
   of a Game, a Build or the open game. App Settings doesn't show it, and a choice made there in
-  an earlier version became that system's setting.
+  an earlier version became that system's setting. Screen Colors opens a scrolling list inside
+  Settings, including from the in-game menu. The first row restores the inherited value and names
+  its source, or says Default when no parent sets it. A checkmark marks the selected row; choosing
+  a value keeps the list open so the paused picture stays visible above the half-height sheet.
   - Original Game Boy games choose Green (DMG, the default), Olive (Pocket), Teal (Light),
     twelve free boot palettes, and Olive & Orange (Mole Mania), GBC game palette combination 17.
-    Boot palettes have color names with the button combo in parentheses, such as Brown (Up) and
-    Black & White (Left + B). Black & White is the only grayscale menu choice; saved legacy
-    grayscale selections resolve to it in the picker. Each choice includes a thumbnail showing
+    The list groups Console Palettes, Button Palettes and Game Palettes. Color names appear above
+    a smaller subtitle with the console, button combo or game in parentheses, such as Brown (Up)
+    and Black & White (Left + B). Black & White is the only grayscale choice; saved legacy
+    grayscale selections resolve to it in the list. Each choice includes an aligned thumbnail showing
     four background swatches above the two sprite palettes, in Game Boy shade order (0-3).
     Thumbnails use uncorrected colors. No buttons need to be held. The palettes keep separate
     background, OBJ0 and OBJ1 colors, work with Skip Boot Logo on or off, and use the resolved
     color correction setting. Game Boy Color games keep their own colors and correction choices.
-  - Game Boy Color games choose how their colors are adjusted for a modern screen: Balanced (the
-    default, SameBoy's Modern Balanced), Accurate (Modern Accurate), Boost Contrast, Reduce
-    Contrast, Low Contrast, or Original, which shows the colors as the game stores them.
+  - Game Boy Color games have a Color Correction list and choose how their colors are adjusted
+    for a modern screen: Balanced (the default, SameBoy's Modern Balanced), Accurate (Modern
+    Accurate), Boost Contrast, Reduce Contrast, Low Contrast, or Original, which shows the colors
+    as the game stores them.
 
   Both change the open picture at once, including behind a paused Settings sheet, and stay
   applied through reset and state loads. A boot palette changes only the displayed colors;
   loading a state made with another palette restores the game with the current Screen Colors
   choice. It does not change the emulated hardware, battery save or state format. Palette and
   correction values inherit App -> System -> Game -> Build, including stored App values; the
-  Screen Colors picker stays in System, Game and Build settings.
+  Screen Colors lists stay in System, Game and Build settings.
 - **LCD filter** (Plus): LCD 1× and LCD 3×, the first of the display effects. Without Plus both
   stay listed with a Plus badge wherever the filter is chosen, and choosing one opens the Plus
   screen. A stored filter plays as Off and comes back with Plus, changing an open game at once.
@@ -1004,7 +1009,7 @@ explicit overrides, the UI shows where an inherited value comes from, and Reset 
 clears an override. The System level covers Game Boy and Game Boy Color. Save Profiles get only
 the narrow playthrough overrides above. Sound is app-wide.
 
-Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (picker from System
+Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (lists from System
 down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games, Timed States and
 Skip Boot Logo.
 App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics, Hide Touch Controls with a

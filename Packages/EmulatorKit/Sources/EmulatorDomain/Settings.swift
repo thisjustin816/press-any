@@ -192,23 +192,30 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
     public var selectionValue: Self { self == .grey ? .cgbLeftB : self }
 
     public var displayName: String {
+        "\(colorName) (\(originDescription))"
+    }
+
+    public var colorName: String { label.name }
+    public var originDescription: String { label.origin }
+
+    private var label: (name: String, origin: String) {
         switch self {
-        case .dmgGreen: "Green (DMG)"
-        case .pocket: "Olive (Pocket)"
-        case .light: "Teal (Light)"
-        case .grey, .cgbLeftB: "Black & White (Left + B)"
-        case .cgbUp: "Brown (Up)"
-        case .cgbUpA: "Red (Up + A)"
-        case .cgbUpB: "Dark Brown (Up + B)"
-        case .cgbDown: "Pastel (Down)"
-        case .cgbDownA: "Orange (Down + A)"
-        case .cgbDownB: "Yellow (Down + B)"
-        case .cgbLeft: "Blue (Left)"
-        case .cgbLeftA: "Dark Blue (Left + A)"
-        case .cgbRight: "Green (Right)"
-        case .cgbRightA: "Dark Green (Right + A)"
-        case .cgbRightB: "Inverted (Right + B)"
-        case .cgbOlive: "Olive & Orange (Mole Mania)"
+        case .dmgGreen: ("Green", "DMG")
+        case .pocket: ("Olive", "Pocket")
+        case .light: ("Teal", "Light")
+        case .grey, .cgbLeftB: ("Black & White", "Left + B")
+        case .cgbUp: ("Brown", "Up")
+        case .cgbUpA: ("Red", "Up + A")
+        case .cgbUpB: ("Dark Brown", "Up + B")
+        case .cgbDown: ("Pastel", "Down")
+        case .cgbDownA: ("Orange", "Down + A")
+        case .cgbDownB: ("Yellow", "Down + B")
+        case .cgbLeft: ("Blue", "Left")
+        case .cgbLeftA: ("Dark Blue", "Left + A")
+        case .cgbRight: ("Green", "Right")
+        case .cgbRightA: ("Dark Green", "Right + A")
+        case .cgbRightB: ("Inverted", "Right + B")
+        case .cgbOlive: ("Olive & Orange", "Mole Mania")
         }
     }
 
