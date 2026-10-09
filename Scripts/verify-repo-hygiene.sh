@@ -51,5 +51,10 @@ if [[ -f "$sameboy_license" ]] && ! cmp -s "$sameboy_license" App/Acknowledgemen
   status=1
 fi
 
+# Every required-reason API the code uses is declared in the privacy manifest.
+if ! python3 -I Scripts/verify-required-reason-apis.py; then
+  status=1
+fi
+
 (( status == 0 )) && echo "Repository hygiene checks passed."
 exit "$status"

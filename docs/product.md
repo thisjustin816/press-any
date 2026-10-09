@@ -1312,8 +1312,12 @@ filenames or library contents; where they go and the privacy copy are still open
 automatic ever uploads ROM, save or state bytes, screenshots, memory, filenames, notes or library
 contents. Provider queries and catalog uploads describe their consent accurately. Service keys
 stay on servers and user keys in secure storage. Press Any Plus talks only to the App Store,
-through StoreKit, and needs nothing in the privacy manifest. The privacy manifest declares file
-timestamp access (C617.1) for cleaning stale temporary files.
+through StoreKit, and needs nothing in the privacy manifest. The privacy manifest declares the
+required-reason APIs the app uses: User Defaults (CA92.1), file timestamps (C617.1) for cleaning
+stale temporary files, system boot time (35F9.1), and disk space (85F4.1 for the free space Storage
+shows, and E174.1 for checking there is room before trimming caches). `Scripts/verify-required-
+reason-apis.py` fails the hygiene check when the code uses one of these APIs and the manifest
+doesn't declare its category.
 
 ### Accessibility
 
