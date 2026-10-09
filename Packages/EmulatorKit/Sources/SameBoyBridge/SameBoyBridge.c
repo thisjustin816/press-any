@@ -1,10 +1,16 @@
 #include "SameBoyBridge.h"
 
+// The pinned core keeps its three render-color tables in the unsaved struct section.
+#ifndef GB_INTERNAL
+#define GB_INTERNAL
+#endif
 #if __has_include(<sameboy/gb.h>)
 #include <sameboy/gb.h>
 #else
 #include "gb.h"
 #endif
+
+#include "SameBoyBootPalettes.h"
 
 #include <ctype.h>
 #include <stdatomic.h>
@@ -37,11 +43,36 @@ struct SBInstance {
     bool vblank;
     bool has_run; // Whether any emulation has run since the image was loaded or reset.
     bool previewing;
+    SBDMGPalette dmg_palette;
     uint8_t serial[SB_SERIAL_CAPACITY];
     size_t serial_count;
     uint8_t serial_byte;
     uint8_t serial_bits;
 };
+
+static void sb_apply_dmg_palette(SBInstance *instance)
+{
+    GB_gameboy_t *gb = instance->gb;
+    if (GB_is_cgb(gb)) return;
+
+    const GB_palette_t *colors;
+    switch (instance->dmg_palette) {
+        case SB_DMG_PALETTE_DMG: colors = &GB_PALETTE_DMG; break;
+        case SB_DMG_PALETTE_MGB: colors = &GB_PALETTE_MGB; break;
+        case SB_DMG_PALETTE_GBL: colors = &GB_PALETTE_GBL; break;
+        default: colors = &GB_PALETTE_GREY; break;
+    }
+    GB_set_palette(gb, colors);
+
+    if (instance->dmg_palette < SB_DMG_PALETTE_CGB_UP) return;
+    const uint8_t *combination = sb_boot_palette_combinations[instance->dmg_palette - SB_DMG_PALETTE_CGB_UP];
+    for (unsigned shade = 0; shade < 4; shade++) {
+        gb->background_palettes_rgb[shade] = GB_convert_rgb15(gb, sb_boot_palette_colors[combination[0]][shade], false);
+        gb->object_palettes_rgb[shade] = GB_convert_rgb15(gb, sb_boot_palette_colors[combination[1]][shade], false);
+        gb->object_palettes_rgb[4 + shade] = GB_convert_rgb15(gb, sb_boot_palette_colors[combination[2]][shade], false);
+    }
+    gb->background_palettes_rgb[4] = GB_convert_rgb15(gb, 0x7fff, false);
+}
 
 static uint32_t sb_encode_bgra(GB_gameboy_t *gb, uint8_t r, uint8_t g, uint8_t b)
 {
@@ -174,6 +205,7 @@ bool SBLoadROM(SBInstance *instance, const uint8_t *bytes, size_t size)
     free(probe);
     GB_load_rom_from_buffer(instance->gb, bytes, size);
     GB_reset(instance->gb);
+    sb_apply_dmg_palette(instance);
     instance->has_run = false;
     return true;
 }
@@ -251,20 +283,15 @@ void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode)
         default: return;
     }
     GB_set_color_correction_mode(instance->gb, correction);
+    sb_apply_dmg_palette(instance);
 }
 
 void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette)
 {
     if (!instance || !instance->gb) return;
-    const GB_palette_t *colors;
-    switch (palette) {
-        case SB_DMG_PALETTE_GREY: colors = &GB_PALETTE_GREY; break;
-        case SB_DMG_PALETTE_DMG: colors = &GB_PALETTE_DMG; break;
-        case SB_DMG_PALETTE_MGB: colors = &GB_PALETTE_MGB; break;
-        case SB_DMG_PALETTE_GBL: colors = &GB_PALETTE_GBL; break;
-        default: return;
-    }
-    GB_set_palette(instance->gb, colors);
+    if (palette < SB_DMG_PALETTE_GREY || palette > SB_DMG_PALETTE_CGB_RIGHT_B) return;
+    instance->dmg_palette = palette;
+    sb_apply_dmg_palette(instance);
 }
 
 bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame)
@@ -360,7 +387,9 @@ bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size)
 {
     if (!instance || !instance->gb || !bytes || size == 0) return false;
     instance->has_run = true;
-    return GB_load_state_from_buffer(instance->gb, bytes, size) == 0;
+    if (GB_load_state_from_buffer(instance->gb, bytes, size) != 0) return false;
+    sb_apply_dmg_palette(instance);
+    return true;
 }
 
 SBRegisters SBReadRegisters(SBInstance *instance)
@@ -416,6 +445,7 @@ void SBReset(SBInstance *instance)
 {
     if (!instance || !instance->gb) return;
     GB_reset(instance->gb);
+    sb_apply_dmg_palette(instance);
     instance->has_run = false;
 }
 

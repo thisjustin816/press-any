@@ -275,6 +275,25 @@
         "dmg",
         "bad-checksum"
       ]
+    },
+    {
+      "filename": "palette-dmg.gb",
+      "name": "DMG background and sprite palettes",
+      "system": "GB",
+      "sdk": "RGBDS",
+      "sdk_version": "1.0.4",
+      "mapper": "ROM ONLY",
+      "cartridge_type": "0x00",
+      "cgb_flag": "0x00",
+      "sha256": "56912358ac8d75a54b921df212d2bdddd33b1f87f3fe3eb8621a45ffb90d42d1",
+      "size": 32768,
+      "header_checksum_ok": true,
+      "hero": false,
+      "tags": [
+        "rgbds",
+        "dmg",
+        "palettes"
+      ]
     }
   ],
   "patches": [

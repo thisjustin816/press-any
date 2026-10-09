@@ -167,9 +167,21 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
     case pocket = "pocket"
     case light = "light"
     case grey = "grey"
+    case cgbUp = "cgbUp"
+    case cgbUpA = "cgbUpA"
+    case cgbUpB = "cgbUpB"
+    case cgbDown = "cgbDown"
+    case cgbDownA = "cgbDownA"
+    case cgbDownB = "cgbDownB"
+    case cgbLeft = "cgbLeft"
+    case cgbLeftA = "cgbLeftA"
+    case cgbLeftB = "cgbLeftB"
+    case cgbRight = "cgbRight"
+    case cgbRightA = "cgbRightA"
+    case cgbRightB = "cgbRightB"
 
     public static let defaultValue: Self = .dmgGreen
-    public static let explanation = "The four shades of an original Game Boy game, named for the Game Boy screen each looks like."
+    public static let explanation = "Choose four shades or a boot palette with separate background and sprite colors. Button names identify palettes; no buttons need to be held."
 
     public var displayName: String {
         switch self {
@@ -177,6 +189,18 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
         case .pocket: "Olive (Pocket)"
         case .light: "Teal (Light)"
         case .grey: "Black & White"
+        case .cgbUp: "Up"
+        case .cgbUpA: "Up + A"
+        case .cgbUpB: "Up + B"
+        case .cgbDown: "Down"
+        case .cgbDownA: "Down + A"
+        case .cgbDownB: "Down + B"
+        case .cgbLeft: "Left"
+        case .cgbLeftA: "Left + A"
+        case .cgbLeftB: "Left + B"
+        case .cgbRight: "Right"
+        case .cgbRightA: "Right + A"
+        case .cgbRightB: "Right + B"
         }
     }
 }

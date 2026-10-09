@@ -34,8 +34,15 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
-      - name: Install SQLite headers for GRDB
-        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev
+      - name: Install package and boot ROM build tools
+        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev bison cmake libpng-dev pkg-config
+      - name: Build RGBDS and the open boot ROMs
+        run: |
+          git clone -q --depth 1 --branch v0.9.0 https://github.com/gbdev/rgbds /tmp/rgbds
+          cmake -S /tmp/rgbds -B /tmp/rgbds/build -DCMAKE_BUILD_TYPE=Release >/dev/null
+          cmake --build /tmp/rgbds/build -j "$(nproc)" >/dev/null
+          cmake --install /tmp/rgbds/build >/dev/null
+          make bootroms
       - name: Run the package tests
         run: swift test --package-path Packages/EmulatorKit
       - name: Run C bridge smoke test
