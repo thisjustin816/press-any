@@ -1033,3 +1033,92 @@ struct QuickPlayMetadataProvenanceTests {
         #expect(try harness.games.fetchMetadataProvenance(ownerID: result.importResult.game.id).first?.source == .filename)
     }
 }
+
+// Quick Play writes its autosave and the record beside it as two files. These set up the files
+// the app would leave if it stopped between the writes, since a test can't stop it mid-call.
+extension QuickPlayTests {
+    /// Two autosaves with a battery save written between them. Returns each one's state and record.
+    private func twoAutosaves(
+        _ harness: QuickPlayHarness, title: String
+    ) throws -> (session: QuickPlaySession, first: (state: Data, record: Data), second: (state: Data, record: Data)) {
+        let rom = try harness.writeExternalROM(TestROM.make(title: title, cgb: false))
+        let session = try harness.workspace.start(romURL: rom, copiedSaveProfileID: harness.profile.id)
+        let factory = CapturingQuickPlayFactory()
+        let runtime = harness.makeRuntime(session, factory: factory)
+        try runtime.start(resumeAutoState: false)
+        _ = try runtime.stepFrame()
+        try runtime.background()
+        let first = (try Data(contentsOf: session.autoStateURL), try Data(contentsOf: session.autoStateRecordURL))
+        _ = try runtime.foreground(policy: .always)
+        for _ in 0..<3 { _ = try runtime.stepFrame() }
+        try XCTUnwrap(factory.cores.last).writeBattery(Data([2]))
+        try runtime.background()
+        let second = (try Data(contentsOf: session.autoStateURL), try Data(contentsOf: session.autoStateRecordURL))
+        try runtime.stop(createAutoState: false)
+        XCTAssertNotEqual(first.0, second.0)
+        XCTAssertEqual(try harness.workspace.temporaryBatteryData(sessionID: session.id), Data([2]))
+        return (session, first, second)
+    }
+
+    private func resumes(_ harness: QuickPlayHarness, _ session: QuickPlaySession) throws -> Bool {
+        let factory = CapturingQuickPlayFactory()
+        let runtime = harness.makeRuntime(session, factory: factory)
+        try runtime.start()
+        defer { try? runtime.stop(createAutoState: false) }
+        XCTAssertFalse(runtime.autoStateRejected)
+        return factory.cores.map(\.bootAnimationSkips) == [0]
+    }
+
+    func testAFinishedAutosaveLeavesNoPendingRecord() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let saves = try twoAutosaves(harness, title: "DONE")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: saves.session.pendingAutoStateRecordURL.path))
+        XCTAssertTrue(try resumes(harness, saves.session))
+    }
+
+    func testAnAutosaveWrittenWithoutItsRecordIsStillResumed() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let saves = try twoAutosaves(harness, title: "TORN")
+        // Stopped after the new state was in place and before its record replaced the old one.
+        try saves.first.record.write(to: saves.session.autoStateRecordURL)
+        try saves.second.record.write(to: saves.session.pendingAutoStateRecordURL)
+
+        XCTAssertTrue(saves.session.hasResumePoint(files: harness.store))
+        XCTAssertTrue(try resumes(harness, saves.session), "the newest autosave is resumed, not lost")
+    }
+
+    func testAnAutosaveStoppedBeforeItsStateKeepsTheOlderPairsRules() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let saves = try twoAutosaves(harness, title: "EARLY")
+        // Stopped after the pending record and before the new state: the older pair is on disk,
+        // but the battery save is newer than it, so it can't be restored.
+        try saves.first.state.write(to: saves.session.autoStateURL)
+        try saves.first.record.write(to: saves.session.autoStateRecordURL)
+        try saves.second.record.write(to: saves.session.pendingAutoStateRecordURL)
+
+        XCTAssertFalse(saves.session.hasResumePoint(files: harness.store))
+        XCTAssertFalse(try resumes(harness, saves.session))
+        XCTAssertEqual(try harness.workspace.temporaryBatteryData(sessionID: saves.session.id), Data([2]), "the save stays")
+    }
+
+    func testAnAutosaveNoRecordDescribesIsNotResumed() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let saves = try twoAutosaves(harness, title: "ODD")
+        // A state the record doesn't describe, with no pending record to explain it.
+        try saves.first.state.write(to: saves.session.autoStateURL)
+
+        XCTAssertFalse(saves.session.hasResumePoint(files: harness.store))
+        XCTAssertFalse(try resumes(harness, saves.session))
+    }
+
+    func testARecordFromBeforeStateHashesIsStillTrusted() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        let saves = try twoAutosaves(harness, title: "OLDREC")
+        var record = try XCTUnwrap(JSONSerialization.jsonObject(with: saves.second.record) as? [String: Any])
+        record.removeValue(forKey: "stateSHA256")
+        try JSONSerialization.data(withJSONObject: record).write(to: saves.session.autoStateRecordURL)
+
+        XCTAssertTrue(saves.session.hasResumePoint(files: harness.store))
+        XCTAssertTrue(try resumes(harness, saves.session))
+    }
+}

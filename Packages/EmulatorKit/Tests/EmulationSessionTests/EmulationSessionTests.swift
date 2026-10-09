@@ -1470,3 +1470,137 @@ extension EmulationSessionTests {
         XCTAssertEqual(core.cheatCodes, ["010900C0"], "a restart keeps the core's cheats")
     }
 }
+
+// A battery save is written to its file before the database records its hash. These cover the
+// app stopping between the two, which a test can't do mid-call, so each sets up the files that
+// stop would leave.
+extension EmulationSessionTests {
+    func testASaveWrittenButNotRecordedLoadsAndIsRecorded() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        let url = try harness.store.managedURL(relativePath: asset.relativePath)
+        let newer = Data([4, 5, 6, 7])
+        try harness.store.beginPendingSaveWrite(
+            PendingSaveWrite(sha256: harness.store.hashData(newer), writtenByBuildID: harness.contextA.buildID),
+            for: url
+        )
+        try harness.store.writeDataAtomically(newer, to: url)
+        let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+
+        XCTAssertEqual(try service.loadPersistentSave(for: harness.profile), newer, "not reported as damaged")
+        let recorded = try XCTUnwrap(harness.assets.fetchAsset(id: asset.id))
+        XCTAssertEqual(recorded.contentSHA256, harness.store.hashData(newer))
+        XCTAssertEqual(recorded.byteLength, 4)
+        XCTAssertEqual(recorded.integrityStatus, .verified)
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.saveWrittenByBuildID, harness.contextA.buildID)
+        XCTAssertFalse(harness.store.fileExists(at: harness.store.pendingSaveWriteURL(for: url)))
+        XCTAssertEqual(try service.loadPersistentSave(for: harness.profile), newer, "and it loads normally after")
+    }
+
+    func testADamagedSaveIsNotTakenForAnInterruptedWrite() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        let url = try harness.store.managedURL(relativePath: asset.relativePath)
+        try harness.store.beginPendingSaveWrite(
+            PendingSaveWrite(sha256: harness.store.hashData(Data([4, 5, 6])), writtenByBuildID: nil), for: url
+        )
+        let damaged = Data([9, 8, 7])
+        try harness.store.writeDataAtomically(damaged, to: url)
+        let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+
+        XCTAssertThrowsError(try service.loadPersistentSave(for: harness.profile)) { error in
+            XCTAssertEqual(error as? PersistentSaveServiceError, .hashMismatch(
+                assetID: asset.id, expected: asset.contentSHA256, actual: harness.store.hashData(damaged)
+            ))
+        }
+        XCTAssertEqual(try harness.store.readData(at: url), damaged, "the file was kept")
+    }
+
+    func testAWriteStoppedBeforeTheFileChangedKeepsTheOldSave() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        let url = try harness.store.managedURL(relativePath: asset.relativePath)
+        try harness.store.beginPendingSaveWrite(
+            PendingSaveWrite(sha256: harness.store.hashData(Data([4, 5, 6])), writtenByBuildID: nil), for: url
+        )
+        let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+
+        XCTAssertEqual(try service.loadPersistentSave(for: harness.profile), Data([1, 2, 3]))
+        XCTAssertEqual(try harness.assets.fetchAsset(id: asset.id), asset)
+    }
+
+    func testAFirstSaveWrittenButNotRecordedIsAdopted() throws {
+        let harness = try SessionHarness.make()
+        XCTAssertNil(harness.profile.persistentSaveAssetID)
+        let url = harness.store.persistentSaveURL(profileID: harness.profile.id)
+        let first = Data([7, 7])
+        try harness.store.beginPendingSaveWrite(
+            PendingSaveWrite(sha256: harness.store.hashData(first), writtenByBuildID: harness.contextA.buildID),
+            for: url
+        )
+        try harness.store.writeDataAtomically(first, to: url)
+        let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+
+        XCTAssertEqual(try service.loadPersistentSave(for: harness.profile), first)
+        let profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(profile.persistentSaveAssetID)))
+        XCTAssertEqual(asset.kind, .persistentSave)
+        XCTAssertEqual(asset.contentSHA256, harness.store.hashData(first))
+        XCTAssertEqual(try harness.store.managedURL(relativePath: asset.relativePath), url)
+        XCTAssertEqual(profile.saveWrittenByBuildID, harness.contextA.buildID)
+        XCTAssertFalse(harness.store.fileExists(at: harness.store.pendingSaveWriteURL(for: url)))
+        XCTAssertEqual(try service.loadPersistentSave(for: profile), first)
+    }
+
+    func testAFirstSaveRecordedButNotGivenToItsProfileIsAdoptedOnce() throws {
+        let harness = try SessionHarness.make()
+        let url = harness.store.persistentSaveURL(profileID: harness.profile.id)
+        let first = Data([7, 7])
+        try harness.store.beginPendingSaveWrite(
+            PendingSaveWrite(sha256: harness.store.hashData(first), writtenByBuildID: nil), for: url
+        )
+        try harness.store.writeDataAtomically(first, to: url)
+        // Stopped after the asset was recorded and before the profile pointed at it.
+        let recorded = ManagedAsset(
+            id: UUID(), kind: .persistentSave, storageClass: .userData,
+            contentSHA256: harness.store.hashData(first), byteLength: 2,
+            relativePath: try harness.store.managedRelativePath(for: url),
+            integrityStatus: .verified, createdAt: Date(timeIntervalSince1970: 1)
+        )
+        try harness.assets.insertAsset(recorded)
+        let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+
+        XCTAssertEqual(try service.loadPersistentSave(for: harness.profile), first)
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.persistentSaveAssetID, recorded.id)
+        XCTAssertEqual(try harness.assets.fetchAsset(relativePath: recorded.relativePath)?.id, recorded.id)
+    }
+
+    func testAFirstSaveFileNoWriteAccountsForIsLeftAlone() throws {
+        let harness = try SessionHarness.make()
+        let url = harness.store.persistentSaveURL(profileID: harness.profile.id)
+        try harness.store.writeDataAtomically(Data([7, 7]), to: url)
+        let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+
+        XCTAssertNil(try service.loadPersistentSave(for: harness.profile))
+        XCTAssertNil(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.persistentSaveAssetID)
+    }
+
+    func testFinishedAndFailedWritesLeaveNoPendingRecord() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: try XCTUnwrap(harness.profile.persistentSaveAssetID)))
+        let url = try harness.store.managedURL(relativePath: asset.relativePath)
+        let pending = harness.store.pendingSaveWriteURL(for: url)
+        let service = PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+
+        try service.replacePersistentSaveData(Data([4, 5, 6]), profileID: harness.profile.id, writtenByBuildID: nil)
+        XCTAssertFalse(harness.store.fileExists(at: pending))
+        XCTAssertEqual(try service.loadPersistentSave(for: try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))), Data([4, 5, 6]))
+
+        let refusing = PersistentSaveService(
+            profiles: harness.profiles, assets: RefusingAssetUpdateRepository(inner: harness.assets), assetStore: harness.store
+        )
+        XCTAssertThrowsError(try refusing.replacePersistentSaveData(Data([8]), profileID: harness.profile.id, writtenByBuildID: nil))
+        XCTAssertFalse(harness.store.fileExists(at: pending))
+        XCTAssertEqual(try harness.store.readData(at: url), Data([4, 5, 6]), "the earlier save was put back")
+    }
+}

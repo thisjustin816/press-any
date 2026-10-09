@@ -233,11 +233,15 @@ not treat them as files.
   mismatched state isn't loaded, so the game boots from its battery save and says the resume point
   was kept. Either file is marked corrupt and left untouched: loading a damaged save would let the
   next flush write it back as the player's save.
-- The mismatch can also mean the app closed between writing a battery save and recording its hash,
-  when the file is the newest good save, so the stopped launch asks: Use It Anyway, Start a New
-  Save, or Cancel. Use It Anyway first copies the file as found to "<profile> before playing", then
-  records it as the profile's save and starts the game. The alert also points to Replace Save from
-  File.
+- Before writing a battery save, the app writes the hash it's about to have to a `.pending` file
+  beside it, and removes that file once the database records the hash. If the app closes in
+  between, the next load finds a file matching the pending hash, records it and plays it, including
+  a profile's first save. A file the pending hash doesn't match is treated as damaged.
+- A mismatch with no matching pending hash can still be a good save, such as one written by an
+  older version that closed before recording it, so the stopped launch asks: Use It Anyway, Start a
+  New Save, or Cancel. Use It Anyway first copies the file as found to "<profile> before playing",
+  then records it as the profile's save and starts the game. The alert also points to Replace Save
+  from File.
 - Launch rehashes the ROM and patches it's about to use. Settings > Check Library Files rehashes
   every ROM and patch on demand, marks damaged ones, reports missing files, and removes files
   nothing uses and temporary files an interrupted write left over ten minutes ago. It runs only
@@ -752,6 +756,9 @@ fresh build.
   discards the selected sessions and warns that it can't be undone. Tapping a row while selecting
   changes its selection; Done returns to opening sessions.
 - An autosave records the battery file it was taken with and is skipped once that file is newer.
+  Its record also holds the state's hash. The record goes to `autosave.pending.json` before the
+  state is written and to the main record after, so a session closed partway resumes from the
+  state the pending record describes. A state that neither record describes is skipped.
 - **Add to Library** runs Import Review and can keep the library's existing save, replace it after
   a "<profile> before Quick Play" copy, or create a new profile. Kept progress becomes what the
   promoted Build plays, even when its ROM was already in the library; the Game's default and other
