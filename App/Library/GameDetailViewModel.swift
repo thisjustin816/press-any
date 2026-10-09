@@ -308,9 +308,10 @@ final class GameDetailViewModel: ObservableObject {
             let profile = try saveImporter.execute(
                 gameID: gameID,
                 sourceURL: url,
-                name: url.deletingPathExtension().lastPathComponent
+                name: url.deletingPathExtension().lastPathComponent,
+                makePreferred: true
             )
-            infoMessage = "Imported the save as \(profile.displayName)."
+            infoMessage = "Imported the save as \(profile.displayName). Play uses it now."
         }
     }
 
