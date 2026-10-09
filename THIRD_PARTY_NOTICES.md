@@ -17,7 +17,8 @@ copying source snapshots into this repository. Adapted code and data carry their
 - Usage: only `Core/` is compiled, behind Press Any's `SameBoyBridge`. The boot ROMs are built
   from the submodule's `BootROMs/` sources. Nothing from SameBoy's iOS frontend (`iOS/`), whose
   license needs the author's written permission for App Store distribution, is compiled,
-  bundled or adapted. The twelve boot palette choices copy RGB555 values and combination
+  bundled or adapted. The thirteen boot palette choices (the twelve button combinations and
+  Mole Mania, combination 17) copy RGB555 values and combination
   mappings from `BootROMs/cgb_boot.asm` into `SameBoyBridge/SameBoyBootPalettes.h`, which carries
   the Expat notice. Their background/OBJ0/OBJ1 use is checked against Pan Docs:
   https://gbdev.io/pandocs/Power_Up_Sequence.html#compatibility-palettes.
