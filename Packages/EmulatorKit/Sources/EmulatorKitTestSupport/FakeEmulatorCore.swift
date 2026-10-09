@@ -120,7 +120,10 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
     }
 
     public func serializeState() throws -> Data {
-        try JSONEncoder().encode(
+        // JSONEncoder doesn't promise a key order, so two encodes of one state could differ.
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return try encoder.encode(
             SerializedState(frameCounter: frameCounter, battery: battery, system: loadedSystem)
         )
     }
