@@ -10,7 +10,8 @@ import XCTest
 final class PlusTests: XCTestCase {
     func testRoadmapListsWhatPlusHoldsAndWhatsComing() {
         XCTAssertFalse(PlusRoadmap.upcoming.isEmpty)
-        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History"])
+        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History", "Timed States"])
+        XCTAssertFalse(PlusRoadmap.upcoming.contains { $0.title.contains("Timed") })
         let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming
         XCTAssertEqual(Set(items.map(\.id)).count, items.count, "titles are unique")
         for item in items {
@@ -57,6 +58,45 @@ final class PlusTests: XCTestCase {
         XCTAssertTrue(PlayingSettingsPage.saveStatesFooter(locked)
             .hasPrefix("Without Plus, \(AppBrand.displayName) keeps your latest Auto State."))
         XCTAssertFalse(PlayingSettingsPage.saveStatesFooter(PlusGate(isUnlocked: true)).contains("Without Plus"))
+    }
+
+    func testTimedStatesAreLockedWithoutPlusAndKeepTheStoredInterval() throws {
+        let fixture = try LCDFixture(plus: .fixed(ownsPlus: false))
+        defer { fixture.remove() }
+        let storage = AppSettingsStorage(store: fixture.container.repositories.settings)
+        XCTAssertNil(storage.save(TimedStates.fiveMinutes, .timedStates))
+        let locked = fixture.container.plus.gate
+        XCTAssertEqual(locked.timedStates(.fiveMinutes), .off)
+        XCTAssertEqual(storage.value(TimedStates.self, .timedStates), .fiveMinutes)
+        XCTAssertFalse(locked.isLocked(TimedStates.off.needsPlus))
+        var openedPlus = 0
+        for interval in TimedStates.allCases where interval != .off {
+            XCTAssertTrue(locked.isLocked(interval.needsPlus))
+            XCTAssertEqual(locked.label(interval.displayName, needsPlus: interval.needsPlus), interval.displayName + " (Plus)")
+            locked.chooseTimedStates(interval, openPlus: { openedPlus += 1 }, apply: { _ in XCTFail("a locked interval must not be saved") })
+        }
+        XCTAssertEqual(openedPlus, 4)
+        XCTAssertEqual(storage.value(TimedStates.self, .timedStates), .fiveMinutes)
+    }
+
+    func testChoosingTimedStateIntervalsWithPlusPersistsAtAppAndBuildScopes() throws {
+        let fixture = try LCDFixture(plus: .fixed(ownsPlus: true))
+        defer { fixture.remove() }
+        let storage = AppSettingsStorage(store: fixture.container.repositories.settings)
+        let gate = fixture.container.plus.gate
+        for interval in TimedStates.allCases {
+            XCTAssertFalse(gate.isLocked(interval.needsPlus))
+            XCTAssertEqual(gate.timedStates(interval), interval)
+            gate.chooseTimedStates(interval, openPlus: { XCTFail("Plus is already owned") }, apply: {
+                XCTAssertNil(storage.save($0, .timedStates))
+            })
+            XCTAssertEqual(storage.value(TimedStates.self, .timedStates), interval)
+        }
+        try storage.store.set(TimedStates.twoMinutes, key: SettingKey.timedStates.rawValue, scope: .build(fixture.context.buildID))
+        let editor = InheritableSettingContext(scope: .build(fixture.context.buildID), system: .gameBoy,
+            gameID: fixture.context.gameID, buildID: fixture.context.buildID, store: storage.store, plus: gate)
+        XCTAssertEqual(try editor.edit(.timedStates)?.inherited?.decode(TimedStates.self), .tenMinutes)
+        XCTAssertEqual(editor.edit(.timedStates)?.overrideJSON, "2")
     }
 
     func testGameSessionsReadOwnershipOffTheMainActor() async {

@@ -10,6 +10,22 @@ import XCTest
 @testable import QuickPlay
 
 final class QuickPlayTests: XCTestCase {
+    func testRunningQuickPlayNeverWritesTimedStates() throws {
+        let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
+        defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+        let session = try harness.workspace.start(romURL: harness.writeExternalROM(TestROM.make(title: "SMOKE")))
+        let runtime = harness.makeRuntime(session)
+        try runtime.start()
+        try runtime.setSpeed(.unlimited)
+        for _ in 0..<4_000 {
+            _ = try runtime.stepFrame()
+            _ = try runtime.flushBatteryIfChanged()
+        }
+        XCTAssertGreaterThan(runtime.playtimeSeconds, 60)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: session.autoStateURL.path))
+        XCTAssertTrue(try harness.states.fetchSaveStates(saveProfileID: harness.profile.id).isEmpty)
+    }
+
     func testPromotionPreservesThePickedFilenameAndItsMetadata() throws {
         let harness = try QuickPlayHarness.make()
         let rom = harness.external.appendingPathComponent("Example%20v1.10%20(Europe)%20(En,Fr).gb")

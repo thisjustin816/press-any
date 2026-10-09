@@ -214,6 +214,7 @@ struct PlayingSettingsPage: View {
     @State private var nameNewStates: Bool
     @State private var keepSaveStates: KeepSaveStates
     @State private var keepAutoStates: KeepAutoStates
+    @State private var timedStates: TimedStates
     @State private var errorMessage: String?
 
     init(storage: AppSettingsStorage, plus: PlusStore) {
@@ -223,6 +224,7 @@ struct PlayingSettingsPage: View {
         _nameNewStates = State(initialValue: storage.value(Bool.self, .nameNewStates) ?? false)
         _keepSaveStates = State(initialValue: storage.value(KeepSaveStates.self, .keepSaveStates) ?? .all)
         _keepAutoStates = State(initialValue: storage.value(KeepAutoStates.self, .keepAutoStates) ?? .five)
+        _timedStates = State(initialValue: storage.value(TimedStates.self, .timedStates) ?? .off)
         _soundMode = State(initialValue: storage.value(SoundMode.self, .soundMode) ?? .followSilentSwitch)
         _fastForwardSpeed = State(initialValue: storage.value(FastForwardSpeed.self, .fastForwardSpeed) ?? .x2)
         _fastForwardAudio = State(initialValue: storage.value(FastForwardAudio.self, .fastForwardAudio) ?? .muted)
@@ -279,6 +281,7 @@ struct PlayingSettingsPage: View {
                     ForEach(KeepSaveStates.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
                 keepAutoStatesControl
+                timedStatesControl
             } header: {
                 Text("Save States")
             } footer: {
@@ -296,6 +299,7 @@ struct PlayingSettingsPage: View {
         .onChange(of: nameNewStates) { _, newValue in save(newValue, .nameNewStates) }
         .onChange(of: keepSaveStates) { _, newValue in save(newValue, .keepSaveStates) }
         .onChange(of: keepAutoStates) { _, newValue in save(newValue, .keepAutoStates) }
+        .onChange(of: timedStates) { _, newValue in save(newValue, .timedStates) }
         .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
         .onChange(of: fastForwardSpeed) { _, newValue in save(newValue, .fastForwardSpeed) }
         .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
@@ -330,8 +334,24 @@ struct PlayingSettingsPage: View {
         }
     }
 
+    private var timedStatesControl: some View {
+        Picker(selection: Binding(get: { plus.gate.timedStates(timedStates) }, set: { choice in
+            plus.gate.chooseTimedStates(choice, openPlus: { showsPlus = true }, apply: { timedStates = $0 })
+        })) {
+            ForEach(TimedStates.allCases, id: \.self) { choice in
+                Text(plus.gate.label(choice.displayName, needsPlus: choice.needsPlus)).tag(choice)
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Timed States")
+                if !plus.isUnlocked { PlusBadge() }
+            }
+        }
+        .accessibilityLabel("Timed States")
+    }
+
     static func saveStatesFooter(_ gate: PlusGate) -> String {
-        let cleanup = "Pinned states are never cleaned up. Cleaned-up save states go to Recently Deleted. Auto States are removed permanently. Changes apply after the next save of that kind."
+        let cleanup = "Pinned states are never cleaned up. Cleaned-up save states go to Recently Deleted. Auto States are removed permanently. Changes apply after the next save of that kind. Timed States uses running play time. Pausing restarts its interval."
         guard gate.isLocked(KeepAutoStates.five.needsPlus) else { return cleanup }
         return "Without Plus, \(AppBrand.displayName) keeps your latest Auto State. " + cleanup
     }

@@ -337,7 +337,7 @@ enum BackupCoverage {
         "game_manual_positions": "Manual sort positions of live Games; follows the Game conflict choice.",
         "builds": "All live Build metadata, source and generated image references, playtime and the Cheats On switch.",
         "save_profiles": "All live Save Profiles, battery references, RTC, and session history.",
-        "save_states": "Live states and thumbnails except crash recovery checkpoints.",
+        "save_states": "Live states, their timed origin and thumbnails except crash recovery checkpoints.",
         "patch_recipes": "Recipes whose result and base Builds are live.",
         "patch_recipe_items": "All steps of included recipes, including disabled steps and input hashes.",
         "build_variable_maps": "Maps attached to live Builds.",
@@ -402,7 +402,7 @@ enum BackupCoverage {
         "save_states": [
             "id", "build_id", "save_profile_id", "core_id", "core_version", "state_serialization_version",
             "state_asset_id", "screenshot_asset_id", "kind", "auto_sequence", "label", "playtime_seconds",
-            "created_at", "deletion_id", "slot", "is_pinned"
+            "created_at", "deletion_id", "slot", "is_pinned", "is_timed"
         ],
         "settings_overrides": ["scope_type", "scope_id", "key", "value_json"],
         "tombstones": ["record_id", "record_kind", "deleted_at", "purged_at"],

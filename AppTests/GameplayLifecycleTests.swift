@@ -11,6 +11,12 @@ import XCTest
 /// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
+    func testStatesListCallsTimedStatesAutoStatesAndKeepsTheirNote() throws {
+        let gameplay = GameplayViewController(runtime: StateMenuRuntime(), autoResumePolicy: .always)
+        let timed = try XCTUnwrap(gameplay.prepareGameMenu().allActions.first { $0.title == "Auto State" })
+        XCTAssertTrue(timed.subtitle?.hasPrefix("Pinned · Timed · ") == true)
+    }
+
     func testSlotsMenuIsOptInAndEmptyLoadIsDisabled() throws {
         let runtime = StateMenuRuntime()
         let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: .always)
@@ -651,6 +657,8 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
 private final class StateMenuRuntime: LifecycleRuntime, SaveStateRuntime, @unchecked Sendable {
     private let saved: [SaveState] = [
         SaveState(id: UUID(), buildID: UUID(), saveProfileID: UUID(), core: .init(identifier: "test", version: "1"),
+            stateSerializationVersion: "1", stateAssetID: UUID(), kind: .auto, isPinned: true, isTimed: true, playtimeSeconds: 0, createdAt: Date()),
+        SaveState(id: UUID(), buildID: UUID(), saveProfileID: UUID(), core: .init(identifier: "test", version: "1"),
             stateSerializationVersion: "1", stateAssetID: UUID(), kind: .slot, slot: 2, isPinned: true, playtimeSeconds: 0, createdAt: Date()),
         SaveState(id: UUID(), buildID: UUID(), saveProfileID: UUID(), core: .init(identifier: "test", version: "1"),
             stateSerializationVersion: "1", stateAssetID: UUID(), kind: .slot, slot: 5, playtimeSeconds: 0, createdAt: Date()),
@@ -658,6 +666,8 @@ private final class StateMenuRuntime: LifecycleRuntime, SaveStateRuntime, @unche
             stateSerializationVersion: "1", stateAssetID: UUID(), kind: .manual, isPinned: true, label: "Pinned manual", playtimeSeconds: 0, createdAt: Date()),
     ]
     func saveCrashRecoveryIfDue() throws -> Bool { false }
+    func saveTimedStateIfDue() throws -> Bool { false }
+    func resetTimedStateInterval() {}
     func saveManualState(label: String?) throws -> SaveState { throw NotRunning() }
     func saveQuickState() throws -> SaveState { throw NotRunning() }
     func saveSlotState(slot: Int) throws -> SaveState { throw NotRunning() }

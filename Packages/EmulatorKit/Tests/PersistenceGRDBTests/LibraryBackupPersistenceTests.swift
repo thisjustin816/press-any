@@ -49,7 +49,7 @@ import Testing
         #expect(actual.gameProvenance == input.gameProvenance)
         #expect(actual.settings == input.settings)
         #expect(try repos.backup.lastRestoreReport() == report)
-        #expect(actual.migrationID == "v1-v18-build-cheats")
+        #expect(actual.migrationID == "v1-v19-timed-states")
         try db.writer.write { try $0.execute(sql: """
             CREATE TRIGGER fail_restore BEFORE INSERT ON settings_overrides
             WHEN NEW.key = 'backup.lastRestoreReport'

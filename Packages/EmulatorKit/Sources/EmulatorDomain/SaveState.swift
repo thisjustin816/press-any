@@ -19,6 +19,7 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
     public var kind: SaveStateKind
     public var slot: Int?
     public var isPinned: Bool
+    public let isTimed: Bool
     public let autoSequence: Int?
     public var label: String?
     public let playtimeSeconds: Double
@@ -35,6 +36,7 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
         kind: SaveStateKind,
         slot: Int? = nil,
         isPinned: Bool = false,
+        isTimed: Bool = false,
         autoSequence: Int? = nil,
         label: String? = nil,
         playtimeSeconds: Double,
@@ -50,6 +52,7 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
         self.kind = kind
         self.slot = slot
         self.isPinned = isPinned
+        self.isTimed = isTimed
         self.autoSequence = autoSequence
         self.label = label
         self.playtimeSeconds = playtimeSeconds
@@ -58,7 +61,7 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case id, buildID, saveProfileID, core, stateSerializationVersion, stateAssetID, screenshotAssetID
-        case kind, slot, isPinned, autoSequence, label, playtimeSeconds, createdAt
+        case kind, slot, isPinned, isTimed, autoSequence, label, playtimeSeconds, createdAt
     }
 
     public init(from decoder: any Decoder) throws {
@@ -74,6 +77,7 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
             kind: try values.decode(SaveStateKind.self, forKey: .kind),
             slot: try values.decodeIfPresent(Int.self, forKey: .slot),
             isPinned: try values.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false,
+            isTimed: try values.decodeIfPresent(Bool.self, forKey: .isTimed) ?? false,
             autoSequence: try values.decodeIfPresent(Int.self, forKey: .autoSequence),
             label: try values.decodeIfPresent(String.self, forKey: .label),
             playtimeSeconds: try values.decode(Double.self, forKey: .playtimeSeconds),
@@ -83,6 +87,8 @@ public struct SaveState: Identifiable, Codable, Equatable, Sendable {
 }
 
 extension SaveState {
+    public var timingNote: String? { isTimed ? "Timed" : nil }
+
     /// What a state is called without a label.
     public var kindName: String {
         switch kind {
