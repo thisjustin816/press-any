@@ -13,7 +13,8 @@
     {"file": "mbc5-battery.gb", "name": "MBC5 battery save counter", "system": "GB", "sdk": "GBDK-2020", "sdk_version": "4.5.0", "hero": true, "tags": ["gbdk", "dmg", "battery", "mbc5", "hero"]},
     {"file": "gbdk450-rev-v1.0.gb", "name": "Revision pair v1.0", "system": "GB", "sdk": "GBDK-2020", "sdk_version": "4.5.0", "hero": true, "tags": ["gbdk", "dmg", "patch-pair", "revision-1.0", "hero"]},
     {"file": "gbdk450-rev-v1.1.gb", "name": "Revision pair v1.1", "system": "GB", "sdk": "GBDK-2020", "sdk_version": "4.5.0", "hero": false, "tags": ["gbdk", "dmg", "patch-pair", "revision-1.1"]},
-    {"file": "gbdk450-badsum.gb", "name": "Bad header checksum", "system": "GB", "sdk": "GBDK-2020", "sdk_version": "4.5.0", "hero": false, "tags": ["gbdk", "dmg", "bad-checksum"]}
+    {"file": "gbdk450-badsum.gb", "name": "Bad header checksum", "system": "GB", "sdk": "GBDK-2020", "sdk_version": "4.5.0", "hero": false, "tags": ["gbdk", "dmg", "bad-checksum"]},
+    {"file": "palette-dmg.gb", "name": "DMG background and sprite palettes", "system": "GB", "sdk": "RGBDS", "sdk_version": "1.0.4", "hero": false, "tags": ["rgbds", "dmg", "palettes"]}
   ],
   "patches": [
     {"file": "gbdk450-rev-v1.0-to-v1.1.ips", "format": "IPS", "source": "gbdk450-rev-v1.0.gb", "target": "gbdk450-rev-v1.1.gb", "hero": true, "tags": ["patch-pair", "ips", "hero"]},

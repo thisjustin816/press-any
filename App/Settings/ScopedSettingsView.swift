@@ -149,23 +149,25 @@ struct ScopedSettingsView: View {
         }
     }
 
+    var screenColorChoices: ScreenColorChoices { ScreenColorChoices(system: system) }
+
     /// Each system has its own Screen Colors, so only the one that applies shows.
     @ViewBuilder private var screenColors: some View {
-        switch system {
-        case .gameBoy:
+        switch screenColorChoices {
+        case .dmg(let palettes):
             InheritableSettingRow(
                 title: "Screen Colors",
                 key: .dmgPalette,
                 defaultValue: DMGPalette.defaultValue,
-                options: DMGPalette.allCases.map { ($0, $0.displayName) },
+                options: palettes.map { ($0, $0.displayName) },
                 context: context
             )
-        case .gameBoyColor:
+        case .correction(let corrections):
             InheritableSettingRow(
                 title: "Screen Colors",
                 key: .colorCorrection,
                 defaultValue: ColorCorrection.defaultValue,
-                options: ColorCorrection.allCases.map { ($0, $0.displayName) },
+                options: corrections.map { ($0, $0.displayName) },
                 context: context
             )
         }
@@ -182,6 +184,18 @@ struct ScopedSettingsView: View {
             plus: plus.gate,
             openPlus: { showsPlus = true }
         )
+    }
+}
+
+enum ScreenColorChoices {
+    case dmg([DMGPalette])
+    case correction([ColorCorrection])
+
+    init(system: GameSystem) {
+        switch system {
+        case .gameBoy: self = .dmg(DMGPalette.allCases)
+        case .gameBoyColor: self = .correction(ColorCorrection.allCases)
+        }
     }
 }
 

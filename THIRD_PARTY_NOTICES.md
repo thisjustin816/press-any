@@ -1,7 +1,7 @@
 # Third-Party Notices
 
-Press Any depends on these third-party open-source projects. None of their source is copied into
-this repository.
+Press Any depends on these third-party open-source projects. Dependencies are pinned without
+copying source snapshots into this repository. Adapted code and data carry their source notices.
 
 ## SameBoy
 
@@ -17,7 +17,11 @@ this repository.
 - Usage: only `Core/` is compiled, behind Press Any's `SameBoyBridge`. The boot ROMs are built
   from the submodule's `BootROMs/` sources. Nothing from SameBoy's iOS frontend (`iOS/`), whose
   license needs the author's written permission for App Store distribution, is compiled,
-  bundled or adapted; Press Any's controller layouts, artwork and colors are its own.
+  bundled or adapted. The twelve boot palette choices copy RGB555 values and combination
+  mappings from `BootROMs/cgb_boot.asm` into `SameBoyBridge/SameBoyBootPalettes.h`, which carries
+  the Expat notice. Their background/OBJ0/OBJ1 use is checked against Pan Docs:
+  https://gbdev.io/pandocs/Power_Up_Sequence.html#compatibility-palettes.
+  Press Any's controller layouts and artwork are its own.
 - License: Expat (MIT-style); see the submodule's `LICENSE`.
 
 ## GRDB.swift

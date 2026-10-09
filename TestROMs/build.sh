@@ -23,7 +23,7 @@ mkdir -p "$ROOT/roms" "$ROOT/patches"
 export OUT_DIR="$ROOT/roms"
 
 for rom in gbdk450-dmg gbdk406-dmg gbdk450-gbc gbdk450-dual mbc5-battery rev-pair bad-checksum \
-           rgbds-dmg rgbds-gbc hugedriver-dmg gbstudio-dmg gbstudio-gbc; do
+           rgbds-dmg rgbds-gbc palette-dmg hugedriver-dmg gbstudio-dmg gbstudio-gbc; do
   echo "== $rom"
   sh "$ROOT/src/$rom/build.sh"
 done

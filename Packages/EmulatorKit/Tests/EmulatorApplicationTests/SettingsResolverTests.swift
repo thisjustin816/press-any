@@ -117,7 +117,7 @@ final class SettingsResolverTests: XCTestCase {
         let paletteKey = SettingKey.dmgPalette.rawValue
         let scopes: [SettingsScope] = [.app, .system(.gameBoy), .game(gameID), .build(buildID)]
         let corrections: [ColorCorrection] = [.off, .accurate, .boostContrast, .lowContrast]
-        let palettes: [DMGPalette] = [.grey, .dmgGreen, .pocket, .light]
+        let palettes: [DMGPalette] = [.cgbUpA, .cgbDownB, .cgbLeftA, .cgbRightB]
         for index in scopes.indices {
             try store.set(corrections[index], key: correctionKey, scope: scopes[index])
             try store.set(palettes[index], key: paletteKey, scope: scopes[index])

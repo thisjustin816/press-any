@@ -9,7 +9,21 @@ final class ColorDisplaySettingsTests: XCTestCase {
         XCTAssertEqual(ColorCorrection.allCases.map(\.rawValue), [
             "balanced", "accurate", "boostContrast", "reduceContrast", "lowContrast", "off",
         ])
-        XCTAssertEqual(DMGPalette.allCases.map(\.rawValue), ["dmgGreen", "pocket", "light", "grey"])
+        XCTAssertEqual(DMGPalette.allCases.map(\.rawValue), [
+            "dmgGreen", "pocket", "light", "grey",
+            "cgbUp",
+            "cgbUpA",
+            "cgbUpB",
+            "cgbDown",
+            "cgbDownA",
+            "cgbDownB",
+            "cgbLeft",
+            "cgbLeftA",
+            "cgbLeftB",
+            "cgbRight",
+            "cgbRightA",
+            "cgbRightB",
+        ])
         XCTAssertEqual(String(data: try JSONEncoder().encode(ColorCorrection.accurate), encoding: .utf8), "\"accurate\"")
         XCTAssertEqual(String(data: try JSONEncoder().encode(DMGPalette.dmgGreen), encoding: .utf8), "\"dmgGreen\"")
     }

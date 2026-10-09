@@ -13,6 +13,7 @@ final class TestROMDetectionTests: XCTestCase {
         "gbdk450-dmg.gb": ["toolchain:GBDK:2020.4.3.0+"],
         "gbdk406-dmg.gb": ["toolchain:GBDK:2020.4.0.5 - 2020.4.0.6"],
         "rgbds-dmg.gb": [],
+        "palette-dmg.gb": [],
         "gbstudio-dmg.gb": gbStudio,
         "hugedriver-dmg.gb": ["musicDriver:hUGETracker:SuperDisk"],
         "zgb-dmg.gb": ["toolchain:GBDK:2020.4.1.0 - 2020.4.1.1", "engine:ZGB:2022.0+", "musicDriver:hUGETracker:SuperDisk"],

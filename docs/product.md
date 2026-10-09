@@ -881,14 +881,22 @@ picture. A connected controller still hides the touch controls.
   one for the system at hand shows: in Game Boy or Game Boy Color settings, and in the Settings
   of a Game, a Build or the open game. App Settings doesn't show it, and a choice made there in
   an earlier version became that system's setting.
-  - Game Boy games choose their four shades, each named for the Game Boy screen it looks like:
-    Green (Game Boy, the default), Olive (Pocket), Teal (Light) or Black & White.
+  - Original Game Boy games choose Green (Game Boy, the default), Olive (Pocket), Teal (Light)
+    or Black & White, plus 12 free boot palettes: Up, Down, Left and Right, each alone, with A,
+    or with B. These keep separate background, OBJ0 and OBJ1 colors. Select the button name in
+    Settings; no buttons need to be held. They work with Skip Boot Logo on or off, and use the
+    resolved color correction setting. Game Boy Color games keep their own colors and correction
+    choices.
   - Game Boy Color games choose how their colors are adjusted for a modern screen: Balanced (the
     default, SameBoy's Modern Balanced), Accurate (Modern Accurate), Boost Contrast, Reduce
     Contrast, Low Contrast, or Original, which shows the colors as the game stores them.
 
   Both change the open picture at once, including behind a paused Settings sheet, and stay
-  applied through reset and state loads.
+  applied through reset and state loads. A boot palette changes only the displayed colors;
+  loading a state made with another palette restores the game with the current Screen Colors
+  choice. It does not change the emulated hardware, battery save or state format. Palette and
+  correction values inherit App -> System -> Game -> Build, including stored App values; the
+  Screen Colors picker stays in System, Game and Build settings.
 - **LCD filter** (Plus): LCD 1× and LCD 3×, the first of the display effects. Without Plus both
   stay listed with a Plus badge wherever the filter is chosen, and choosing one opens the Plus
   screen. A stored filter plays as Off and comes back with Plus, changing an open game at once.
@@ -976,7 +984,7 @@ explicit overrides, the UI shows where an inherited value comes from, and Reset 
 clears an override. The System level covers Game Boy and Game Boy Color. Save Profiles get only
 the narrow playthrough overrides above. Sound is app-wide.
 
-Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (from System
+Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (picker from System
 down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games, Timed States and
 Skip Boot Logo.
 App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics, Hide Touch Controls with a

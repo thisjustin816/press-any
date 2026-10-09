@@ -29,6 +29,18 @@ typedef enum {
     SB_DMG_PALETTE_DMG,
     SB_DMG_PALETTE_MGB,
     SB_DMG_PALETTE_GBL,
+    SB_DMG_PALETTE_CGB_UP,
+    SB_DMG_PALETTE_CGB_UP_A,
+    SB_DMG_PALETTE_CGB_UP_B,
+    SB_DMG_PALETTE_CGB_DOWN,
+    SB_DMG_PALETTE_CGB_DOWN_A,
+    SB_DMG_PALETTE_CGB_DOWN_B,
+    SB_DMG_PALETTE_CGB_LEFT,
+    SB_DMG_PALETTE_CGB_LEFT_A,
+    SB_DMG_PALETTE_CGB_LEFT_B,
+    SB_DMG_PALETTE_CGB_RIGHT,
+    SB_DMG_PALETTE_CGB_RIGHT_A,
+    SB_DMG_PALETTE_CGB_RIGHT_B,
 } SBDMGPalette;
 
 typedef struct {
@@ -74,6 +86,8 @@ bool SBSkipBootROM(SBInstance *instance, const uint8_t *fast_boot_rom, size_t fa
 void SBSetInput(SBInstance *instance, SBInputState input);
 SBFrameView SBRunFrame(SBInstance *instance);
 void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode);
+/// Changes only DMG render colors, including separate BG/OBJ0/OBJ1 boot palettes.
+/// CGB hardware ignores this setting. Emulated palette RAM and state bytes are unchanged.
 void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette);
 /// Renders a temporary frame, restoring gameplay state and suppressing audio and rumble.
 bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame);

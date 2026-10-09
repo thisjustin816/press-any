@@ -113,16 +113,16 @@ final class GameplayLifecycleTests: XCTestCase {
         let frames = runtime.frames
         gameplay.applyDisplaySettings(
             controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
-            colorCorrection: .accurate, dmgPalette: .light, frameBlending: .off
+            colorCorrection: .accurate, dmgPalette: .cgbUpA, frameBlending: .off
         )
         XCTAssertEqual(runtime.displaySettings?.correction, .accurate)
-        XCTAssertEqual(runtime.displaySettings?.palette, .light)
+        XCTAssertEqual(runtime.displaySettings?.palette, .cgbUpA)
         gameplay.applyDisplaySettings(
             controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
-            colorCorrection: .off, dmgPalette: .pocket, frameBlending: .off
+            colorCorrection: .off, dmgPalette: .cgbLeftB, frameBlending: .off
         )
         XCTAssertEqual(runtime.displaySettings?.correction, .off)
-        XCTAssertEqual(runtime.displaySettings?.palette, .pocket)
+        XCTAssertEqual(runtime.displaySettings?.palette, .cgbLeftB)
         XCTAssertFalse(gameplay.isRunningFrames)
         XCTAssertEqual(runtime.frames, frames)
     }

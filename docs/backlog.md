@@ -359,6 +359,7 @@ Done: Pause / Resume from menu with paused overlay.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
+| done | Twelve free boot palettes for original Game Boy games | v1 | Separate background/OBJ0/OBJ1 colors; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors |
 | done | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check is still to run |
 | partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1.1 | original built-in LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented; remaining effects and catalog missing |
 | partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1.1 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
@@ -369,9 +370,10 @@ Done: Pause / Resume from menu with paused overlay.
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
 Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable; Frame
 Blending Off (default) / Blend / LCD Ghosting, inheritable; Screen Colors per system: Game Boy
-Green (default) / Olive / Teal / Black & White, Game Boy Color Balanced (default) / Accurate /
-Boost Contrast / Reduce Contrast / Low Contrast / Original. Both inherit System → Game → Build,
-update the open picture from Settings, and survive reset and state loads.
+Green (default) / Olive / Teal / Black & White plus twelve free button-combo boot palettes,
+Game Boy Color Balanced (default) / Accurate / Boost Contrast / Reduce Contrast / Low Contrast /
+Original. Both inherit App -> System -> Game -> Build, with the picker from System down, update
+the open picture from Settings, and survive reset and state loads.
 
 ### Layouts, skins, touch
 

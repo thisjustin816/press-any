@@ -28,7 +28,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
         let paletteKey = SettingKey.dmgPalette.rawValue
         let scopes: [SettingsScope] = [.app, .system(.gameBoy), .game(context.gameID), .build(context.buildID)]
         let corrections: [ColorCorrection] = [.off, .accurate, .boostContrast, .lowContrast]
-        let palettes: [DMGPalette] = [.grey, .dmgGreen, .pocket, .light]
+        let palettes: [DMGPalette] = [.cgbUpA, .cgbDownB, .cgbLeftA, .cgbRightB]
         for index in scopes.indices {
             try store.set(corrections[index], key: correctionKey, scope: scopes[index])
             try store.set(palettes[index], key: paletteKey, scope: scopes[index])
@@ -39,12 +39,12 @@ final class ColorDisplaySettingsTests: XCTestCase {
             XCTAssertEqual(display.dmgPalette, palettes[index])
         }
         XCTAssertEqual(container.colorCorrection(system: .gameBoy), .accurate)
-        XCTAssertEqual(container.dmgPalette(system: .gameBoy), .dmgGreen)
+        XCTAssertEqual(container.dmgPalette(system: .gameBoy), .cgbDownB)
         XCTAssertEqual(container.colorCorrection(system: .gameBoyColor), .off)
-        XCTAssertEqual(container.dmgPalette(system: .gameBoyColor), .grey)
+        XCTAssertEqual(container.dmgPalette(system: .gameBoyColor), .cgbUpA)
         let reopened = try AppContainer(rootURL: root)
         XCTAssertEqual(reopened.colorCorrection(for: context), .lowContrast)
-        XCTAssertEqual(reopened.dmgPalette(for: context), .light)
+        XCTAssertEqual(reopened.dmgPalette(for: context), .cgbRightB)
         for scope in scopes.reversed() {
             try store.removeValue(key: correctionKey, scope: scope)
             try store.removeValue(key: paletteKey, scope: scope)
@@ -55,5 +55,27 @@ final class ColorDisplaySettingsTests: XCTestCase {
         try store.setValueJSON("\"unknown\"", key: paletteKey, scope: .build(context.buildID))
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
         XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
+    }
+
+    func testScreenColorsPickerOffersBootPalettesOnlyForOriginalGamesWithoutPlus() throws {
+        let store = InMemorySettingsStore()
+        for system in [GameSystem.gameBoy, .gameBoyColor] {
+            let view = ScopedSettingsView(
+                title: "Settings", scope: .system(system), system: system,
+                gameID: nil, buildID: nil, store: store, plus: .fixed(ownsPlus: false)
+            )
+            switch view.screenColorChoices {
+            case .dmg(let choices):
+                XCTAssertEqual(system, .gameBoy)
+                XCTAssertEqual(Array(choices.prefix(4)), [.dmgGreen, .pocket, .light, .grey])
+                XCTAssertEqual(choices.dropFirst(4).map(\.displayName), [
+                    "Up", "Up + A", "Up + B", "Down", "Down + A", "Down + B",
+                    "Left", "Left + A", "Left + B", "Right", "Right + A", "Right + B",
+                ])
+            case .correction(let choices):
+                XCTAssertEqual(system, .gameBoyColor)
+                XCTAssertEqual(choices, [.balanced, .accurate, .boostContrast, .reduceContrast, .lowContrast, .off])
+            }
+        }
     }
 }

@@ -1,7 +1,7 @@
 # test-roms-v1
 
-Small original Game Boy / Game Boy Color test ROMs for screenshot-testing an emulator app. Each ROM
-shows its name, the SDK and its exact version, and "GB" or "GBC", plus a bouncing sprite and a
+Small original Game Boy / Game Boy Color test ROMs for screenshot-testing an emulator app.
+Each gameplay ROM shows its name, the SDK and its exact version, and "GB" or "GBC", plus a bouncing sprite and a
 pressed-button indicator, so gameplay screenshots look alive and input is visible. Everything is built
 from the source in `src/`. No commercial ROMs, boot ROMs, fetched games, toolchain installs or build
 caches are included.
@@ -27,6 +27,7 @@ everything in `roms/` and `patches/` (`sha256sum -c SHA256SUMS` from this direct
 | --- | --- | --- | --- | --- |
 | `gbdk450-dmg.gb` | GB | GBDK-2020 4.5.0 | ROM ONLY | hero |
 | `gbdk406-dmg.gb` | GB | GBDK-2020 4.0.6 | ROM ONLY | older 4.0.x |
+| `palette-dmg.gb` | GB | RGBDS 1.0.4 | ROM ONLY | four BG shades and OBP0/OBP1 sprite rows; A maps sprite color 1 to shade 0 |
 | `rgbds-dmg.gb` | GB | RGBDS 1.0.4 | ROM ONLY | pure assembly, hero |
 | `gbstudio-dmg.gb` | GB | GB Studio 4.3.2 | MBC5+RUMBLE+RAM+BATTERY | mono mode, hero |
 | `hugedriver-dmg.gb` | GB | hUGEDriver a3cbd0c, RGBDS 1.0.4 | ROM ONLY | plays hUGEDriver's sample song |
@@ -81,10 +82,15 @@ Reproducibility: two clean runs gave identical bytes for every ROM except the tw
 bytes differ between builds (not investigated). The shipped GB Studio hashes are the ones in
 `manifest.json`; a rebuild changes them and the manifest with them.
 
+The palette fixture draws background shade 0..3 at x=0,8,16,24 on y=0. Sprite rows at y=32
+and y=48 use OBJ0 and OBJ1 respectively, with raw colors 1..3 at x=0,8,16. Holding A maps
+sprite color 1 to shade 0, covering all four entries despite transparent raw color 0. The
+SameBoy package tests check its pixels headless with the boot logo shown and skipped.
+
 ## What was checked
 
-All ROMs were run headless in PyBoy 2.7.0 and screenshotted: text legible, the sprite moves between
-frames, and holding buttons changes the indicator. The dual-mode ROM was run with `cgb=True` and
+The gameplay ROMs were run headless in PyBoy 2.7.0 and screenshotted: text legible, the sprite moves
+between frames, and holding buttons changes the indicator. The dual-mode ROM was run with `cgb=True` and
 `cgb=False`. The battery ROM was power-cycled three times with `pb.stop(save=True)`: the counter reached
 1, then 5 after three A presses, then 6, and the save file is the 8192-byte `.ram`. hUGEDriver output
 was confirmed non-silent in PyBoy's sound buffer. The IPS and BPS patches were verified only with the
