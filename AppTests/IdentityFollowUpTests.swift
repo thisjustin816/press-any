@@ -37,6 +37,11 @@ final class IdentityFollowUpTests: XCTestCase {
         let usa = try usaReview.commit()
         let edited = try fixture.container.buildOperations.promoteBuild(buildID: usa.build.id, title: "Edited Regional", mode: .copy)
         let skipped = try fixture.container.buildOperations.promoteBuild(buildID: usa.build.id, title: "Skipped Regional", mode: .copy)
+        // Suggest Names skips titles recorded as the player's, so give these three the source of a
+        // title that predates provenance and each one is offered.
+        for (id, title) in [(japan.game.id, japan.game.primaryTitle), (edited.id, edited.primaryTitle), (skipped.id, skipped.primaryTitle)] {
+            try fixture.container.buildOperations.renameGame(gameID: id, title: title, hasPlayerTitle: false)
+        }
         let before = try fixture.container.repositories.games.fetchGames()
         let model = NameReviewViewModel(games: fixture.container.repositories.games, builds: fixture.container.repositories.builds,
             assets: fixture.container.repositories.assets, index: fixture.index, preference: ReleasePreference(),
