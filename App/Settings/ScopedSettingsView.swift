@@ -85,8 +85,6 @@ struct ScopedSettingsView: View {
             )
         } header: {
             Text("Display")
-        } footer: {
-            Text(system == .gameBoy ? DMGPalette.explanation : ColorCorrection.explanation)
         }
     }
 
@@ -161,6 +159,12 @@ struct ScopedSettingsView: View {
                 defaultValue: DMGPalette.defaultValue,
                 options: palettes.map { ($0, $0.displayName) },
                 optionImage: { DMGPalettePreview.image(for: $0) },
+                optionTitle: { $0.colorName },
+                optionSubtitle: { "(\($0.originDescription))" },
+                listSections: DMGPaletteGroup.allCases.map { group in
+                    SettingOptionSection(title: group.rawValue, values: palettes.filter { group.contains($0) })
+                },
+                explanation: DMGPalette.explanation,
                 normalizeValue: { $0.selectionValue },
                 context: context
             )
@@ -170,6 +174,8 @@ struct ScopedSettingsView: View {
                 key: .colorCorrection,
                 defaultValue: ColorCorrection.defaultValue,
                 options: corrections.map { ($0, $0.displayName) },
+                listSections: [SettingOptionSection(title: "Color Correction", values: corrections)],
+                explanation: ColorCorrection.explanation,
                 context: context
             )
         }
@@ -222,6 +228,11 @@ struct InheritableSettingContext {
     }
 }
 
+private struct SettingOptionSection<Value> {
+    let title: String
+    let values: [Value]
+}
+
 private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     private enum Choice: Hashable {
         case inherit
@@ -233,6 +244,10 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     let defaultValue: Value
     let options: [(Value, String)]
     var optionImage: ((Value) -> Image)?
+    var optionTitle: ((Value) -> String)?
+    var optionSubtitle: ((Value) -> String)?
+    var listSections: [SettingOptionSection<Value>]?
+    var explanation: String?
     var normalizeValue: (Value) -> Value = { $0 }
     /// Values that need Plus. Without it they're marked Plus, and choosing one opens the Plus screen.
     var needsPlus: (Value) -> Bool = { _ in false }
@@ -241,52 +256,126 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     @State private var choice: Choice = .inherit
     @State private var inherited: ResolvedSetting?
     @State private var errorMessage: String?
+    @ScaledMetric(relativeTo: .body) private var checkmarkWidth: CGFloat = 20
 
-    /// The value in effect stays on the right whatever the note says. A menu-style Picker moves its
-    /// value under the title once the title and note need the width, so the row is the label of a
-    /// menu that holds the Picker, and a tap anywhere on it opens the menu as before.
     var body: some View {
-        Menu {
-            Picker(title, selection: Binding(get: { choice }, set: { choose($0) })) {
-                optionLabel("\(inheritNote) (\(label(for: inheritedValue)))", value: inheritedValue)
-                    .tag(Choice.inherit)
-                ForEach(options.indices, id: \.self) { index in
-                    optionLabel(context.plus.label(options[index].1, needsPlus: needsPlus(options[index].0)),
-                                value: options[index].0)
-                        .tag(Choice.value(options[index].0))
+        Group {
+            if let listSections {
+                NavigationLink {
+                    selectionList(sections: listSections)
+                } label: {
+                    rowLabel
                 }
-            }
-        } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(title)
-                            .foregroundStyle(Color.primary)
-                        if options.contains(where: { context.plus.isLocked(needsPlus($0.0)) }) {
-                            PlusBadge()
+            } else {
+                Menu {
+                    Picker(title, selection: Binding(get: { choice }, set: { choose($0) })) {
+                        Text("\(inheritNote) (\(label(for: inheritedValue)))")
+                            .tag(Choice.inherit)
+                        ForEach(options.indices, id: \.self) { index in
+                            Text(context.plus.label(options[index].1, needsPlus: needsPlus(options[index].0)))
+                                .tag(Choice.value(options[index].0))
                         }
                     }
-                    Text(errorMessage ?? note)
-                        .font(.subheadline)
-                        .foregroundStyle(errorMessage == nil ? Color.secondary : Color.red)
+                } label: {
+                    rowLabel
                 }
-                .multilineTextAlignment(.leading)
-                Spacer(minLength: 12)
-                HStack(spacing: 4) {
-                    Text(context.plus.label(label(for: effectiveValue), needsPlus: needsPlus(effectiveValue)))
-                    Image(systemName: "chevron.up.chevron.down")
-                        .imageScale(.small)
-                }
-                .foregroundStyle(Color.secondary)
-                .multilineTextAlignment(.trailing)
-                .fixedSize(horizontal: optionImage == nil, vertical: true)
             }
-            .contentShape(Rectangle())
         }
         .accessibilityLabel(title)
         .accessibilityValue("\(label(for: effectiveValue)), \(errorMessage ?? note)")
         .onAppear(perform: load)
-        .onChange(of: choice) { _, newValue in save(newValue) }
+    }
+
+    private var rowLabel: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .foregroundStyle(Color.primary)
+                    if options.contains(where: { context.plus.isLocked(needsPlus($0.0)) }) {
+                        PlusBadge()
+                    }
+                }
+                Text(errorMessage ?? note)
+                    .font(.subheadline)
+                    .foregroundStyle(errorMessage == nil ? Color.secondary : Color.red)
+            }
+            .multilineTextAlignment(.leading)
+            Spacer(minLength: 12)
+            HStack(spacing: 4) {
+                Text(context.plus.label(label(for: effectiveValue), needsPlus: needsPlus(effectiveValue)))
+                if listSections == nil {
+                    Image(systemName: "chevron.up.chevron.down")
+                        .imageScale(.small)
+                }
+            }
+            .foregroundStyle(Color.secondary)
+            .multilineTextAlignment(.trailing)
+            .fixedSize(horizontal: listSections == nil, vertical: true)
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func selectionList(sections: [SettingOptionSection<Value>]) -> some View {
+        Form {
+            Section {
+                selectionButton(.inherit, title: inheritNote, subtitle: label(for: inheritedValue), value: inheritedValue)
+            }
+            ForEach(sections.indices, id: \.self) { index in
+                Section {
+                    ForEach(sections[index].values, id: \.self) { value in
+                        selectionButton(.value(value), title: optionTitle?(value) ?? label(for: value),
+                                        subtitle: optionSubtitle?(value), value: value)
+                    }
+                } header: {
+                    Text(sections[index].title)
+                } footer: {
+                    if index == sections.indices.last, let explanation {
+                        Text(explanation)
+                    }
+                }
+            }
+            if let errorMessage {
+                Section { Text(errorMessage).foregroundStyle(.red) }
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func selectionButton(_ selection: Choice, title: String, subtitle: String?, value: Value) -> some View {
+        Button {
+            choose(selection)
+        } label: {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).foregroundStyle(Color.primary)
+                    if let subtitle {
+                        Text(subtitle).font(.subheadline).foregroundStyle(Color.secondary)
+                    }
+                }
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 12)
+                if let optionImage {
+                    optionImage(value)
+                        .resizable()
+                        .interpolation(.none)
+                        .frame(width: 48, height: 30)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.secondary.opacity(0.3)))
+                        .accessibilityHidden(true)
+                }
+                Image(systemName: "checkmark")
+                    .foregroundStyle(Color.accentColor)
+                    .opacity(choice == selection ? 1 : 0)
+                    .frame(width: checkmarkWidth)
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: 32)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(choice == selection ? .isSelected : [])
     }
 
     private var inheritedValue: Value {
@@ -315,7 +404,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         if case .value(let value) = newChoice, context.plus.isLocked(needsPlus(value)) {
             context.openPlus()
         } else {
-            choice = newChoice
+            save(newChoice)
         }
     }
 
@@ -327,18 +416,6 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
 
     private func label(for value: Value) -> String {
         options.first { $0.0 == value }?.1 ?? String(describing: value)
-    }
-
-    @ViewBuilder private func optionLabel(_ text: String, value: Value) -> some View {
-        if let optionImage {
-            Label {
-                Text(text)
-            } icon: {
-                optionImage(value).accessibilityHidden(true)
-            }
-        } else {
-            Text(text)
-        }
     }
 
     private func sourceName(_ source: SettingsScope?) -> String {
@@ -370,6 +447,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
             case .value(let value):
                 try context.store.set(value, key: key.rawValue, scope: context.scope)
             }
+            choice = newChoice
             errorMessage = nil
             context.onChange?()
         } catch {

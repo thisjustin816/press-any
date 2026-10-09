@@ -360,7 +360,7 @@ press resumes the exposed overlay and is consumed until released. Directional in
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| done | Free built-in palettes for original Game Boy games | v1 | Twelve button-combo palettes and Olive & Orange (Mole Mania, combination 17), alongside DMG/Pocket/Light; color names with combos, BG/OBJ0/OBJ1 thumbnails, one Black & White choice; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors |
+| done | Free built-in palettes for original Game Boy games | v1 | Twelve button-combo palettes and Olive & Orange (Mole Mania, combination 17), alongside DMG/Pocket/Light; grouped palette list with color names, combo subtitles and BG/OBJ0/OBJ1 previews, one Black & White choice; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors lists, including in-game Settings |
 | missing | Custom Game Boy palettes and GBC game-palette selection | v1.1 | Specify separate background/OBJ0/OBJ1 colors, enter a GBC boot-ROM palette combination number (such as 17), or select a recognized game (such as Mole Mania) to use its built-in colors; include color previews |
 | done | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check is still to run |
 | partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1.1 | LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented as Press Any's own code, modelled on the libretro LCD shaders and credited to them; remaining effects and catalog missing; each shader that ships is credited by author in Acknowledgements and `THIRD_PARTY_NOTICES.md` |
@@ -371,11 +371,11 @@ press resumes the exposed overlay and is consumed until released. Directional in
 
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
 Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable; Frame
-Blending Off (default) / Blend / LCD Ghosting, inheritable; Screen Colors per system: Game Boy
-Green (DMG, default) / Olive (Pocket) / Teal (Light), twelve free button-combo boot palettes (including Black & White),
-and Olive & Orange (Mole Mania); color names and background/sprite thumbnails,
+Blending Off (default) / Blend / LCD Ghosting, inheritable; Screen Colors lists per system, also
+accessible from in-game Settings: Game Boy Green (DMG, default) / Olive (Pocket) / Teal (Light),
+twelve free button-combo boot palettes (including Black & White), and Olive & Orange (Mole Mania); color names and background/sprite thumbnails,
 Game Boy Color Balanced (default) / Accurate / Boost Contrast / Reduce Contrast / Low Contrast /
-Original. Both inherit App -> System -> Game -> Build, with the picker from System down, update
+Original. Both inherit App -> System -> Game -> Build, with the lists from System down, update
 the open picture from Settings, and survive reset and state loads.
 
 ### Layouts, skins, touch

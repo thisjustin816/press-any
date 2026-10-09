@@ -2,6 +2,21 @@ import EmulatorDomain
 import SwiftUI
 import UIKit
 
+enum DMGPaletteGroup: String, CaseIterable {
+    case console = "Console Palettes"
+    case button = "Button Palettes"
+    case game = "Game Palettes"
+
+    func contains(_ palette: DMGPalette) -> Bool {
+        let group: Self = switch palette {
+        case .dmgGreen, .pocket, .light: .console
+        case .cgbOlive: .game
+        default: .button
+        }
+        return group == self
+    }
+}
+
 enum DMGPalettePreview {
     static func image(for palette: DMGPalette) -> Image {
         Image(uiImage: thumbnail(for: palette))
