@@ -335,6 +335,23 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertNil(try harness.games.fetchGame(id: harness.game.id))
     }
 
+    func testAnImportedSaveIsPreferredOnlyWhenAskedOrWhenTheGameHasNone() throws {
+        let harness = try Harness.make()
+        func preferredID() throws -> UUID? { try harness.games.fetchGame(id: harness.game.id)?.preferredSaveProfileID }
+
+        let first = try harness.createProfile(name: "First", battery: Data([1]))
+        XCTAssertEqual(try preferredID(), first.id, "a Game with no preferred save takes the first one")
+
+        let second = try harness.createProfile(name: "Second", battery: Data([2]))
+        XCTAssertEqual(try preferredID(), first.id, "an import leaves an existing preferred save alone by default")
+
+        let third = try harness.createProfile(name: "Third", battery: Data([3]), makePreferred: true)
+        XCTAssertEqual(try preferredID(), third.id, "an import asked to be preferred replaces it")
+        XCTAssertEqual(Set(try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).map(\.id)),
+                       [first.id, second.id, third.id], "no profile is removed or changed")
+        XCTAssertEqual(try harness.persistentSaveBytes(profileID: first.id), Data([1]))
+    }
+
     func testAnOversizedSaveIsNotImported() throws {
         let harness = try Harness.make()
         let huge = try ImportTestFiles.sparse(
@@ -568,7 +585,7 @@ private struct Harness {
         try buildOperations().setPreferredBuild(gameID: game.id, buildID: id)
     }
 
-    func createProfile(name: String, battery: Data, gameID: UUID? = nil) throws -> SaveProfile {
+    func createProfile(name: String, battery: Data, gameID: UUID? = nil, makePreferred: Bool = false) throws -> SaveProfile {
         let source = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).sav")
         try battery.write(to: source)
         return try ImportBatterySave(
@@ -577,7 +594,7 @@ private struct Harness {
             assets: assets,
             assetStore: store,
             now: { now }
-        ).execute(gameID: gameID ?? game.id, sourceURL: source, name: name)
+        ).execute(gameID: gameID ?? game.id, sourceURL: source, name: name, makePreferred: makePreferred)
     }
 
     func setArtwork(_ bytes: Data, gameID: UUID) throws -> Game {

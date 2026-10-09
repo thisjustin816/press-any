@@ -169,7 +169,9 @@ public struct ImportBatterySave: Sendable {
         self.makeID = makeID
     }
 
-    public func execute(gameID: UUID, sourceURL: URL, name: String) throws -> SaveProfile {
+    /// The imported save becomes the Game's preferred save when `makePreferred` is set, and
+    /// otherwise only when the Game has none. Existing profiles and saves are never changed.
+    public func execute(gameID: UUID, sourceURL: URL, name: String, makePreferred: Bool = false) throws -> SaveProfile {
         guard var game = try games.fetchGame(id: gameID) else {
             throw SaveProfileOperationError.gameNotFound(gameID)
         }
@@ -205,7 +207,7 @@ public struct ImportBatterySave: Sendable {
             )
             try profiles.insertSaveProfile(profile)
             insertedProfileID = profile.id
-            if game.preferredSaveProfileID == nil {
+            if makePreferred || game.preferredSaveProfileID == nil {
                 game.preferredSaveProfileID = profile.id
                 game.modifiedAt = timestamp
                 try games.updateGame(game)

@@ -12,6 +12,7 @@ struct SharedSaveView: View {
     @State private var games: [Game] = []
     @State private var gameID: UUID?
     @State private var profileName = ""
+    @State private var usesAsPreferred = true
     @State private var errorMessage: String?
     @State private var importedProfile: SaveProfile?
 
@@ -32,10 +33,10 @@ struct SharedSaveView: View {
                             .accessibilityLabel("New profile name")
                             .multilineTextAlignment(.trailing)
                     }
+                    Toggle("Use as preferred save", isOn: $usesAsPreferred)
+                        .accessibilityIdentifier("sharedSave.preferredToggle")
                 } footer: {
-                    Text(games.isEmpty
-                         ? "Import the game's ROM into your library first, then open this save again."
-                         : "The save becomes a new Save Profile in this Game. Existing saves aren't changed.")
+                    Text(footerText)
                 }
                 if let errorMessage {
                     Section { Text(errorMessage).foregroundStyle(.red) }
@@ -63,6 +64,12 @@ struct SharedSaveView: View {
             }
         }
         .interactiveDismissDisabled()
+    }
+
+    private var footerText: String {
+        if games.isEmpty { return "Import the game's ROM into your library first, then open this save again." }
+        let base = "The save becomes a new Save Profile in this Game. Existing saves aren't changed."
+        return usesAsPreferred ? base + " Play uses it." : base + " Play keeps using the preferred save."
     }
 
     private func load() {
@@ -95,7 +102,8 @@ struct SharedSaveView: View {
             importedProfile = try container.importBatterySave.execute(
                 gameID: gameID,
                 sourceURL: file.url,
-                name: profileName.trimmingCharacters(in: .whitespacesAndNewlines)
+                name: profileName.trimmingCharacters(in: .whitespacesAndNewlines),
+                makePreferred: usesAsPreferred
             )
             errorMessage = nil
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
