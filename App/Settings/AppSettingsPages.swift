@@ -104,15 +104,18 @@ struct ControlsSettingsPage: View {
 /// How the game picture looks. Screen Colors depends on the system, so it lives under Systems.
 struct DisplaySettingsPage: View {
     private let storage: AppSettingsStorage
+    @ObservedObject private var plus: PlusStore
 
+    @State private var showsPlus = false
     @State private var orientation: ScreenOrientation
     @State private var screenScaling: ScreenScaling
     @State private var lcdFilter: LCDFilter
     @State private var frameBlending: FrameBlending
     @State private var errorMessage: String?
 
-    init(storage: AppSettingsStorage) {
+    init(storage: AppSettingsStorage, plus: PlusStore) {
         self.storage = storage
+        _plus = ObservedObject(wrappedValue: plus)
         _orientation = State(initialValue: storage.value(ScreenOrientation.self, .orientation) ?? .automatic)
         _screenScaling = State(initialValue: storage.value(ScreenScaling.self, .screenScaling) ?? .integer)
         _lcdFilter = State(initialValue: storage.value(LCDFilter.self, .lcdFilter) ?? .off)
@@ -141,9 +144,14 @@ struct DisplaySettingsPage: View {
             }
 
             Section {
-                Picker("LCD Filter", selection: $lcdFilter) {
+                Picker(selection: Binding(get: { lcdFilter }, set: { chooseLCDFilter($0) })) {
                     ForEach(LCDFilter.allCases, id: \.self) { filter in
-                        Text(filter.displayName).tag(filter)
+                        Text(plus.gate.label(filter.displayName, needsPlus: filter.needsPlus)).tag(filter)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("LCD Filter")
+                        if !plus.isUnlocked { PlusBadge() }
                     }
                 }
                 Picker("Frame Blending", selection: $frameBlending) {
@@ -154,7 +162,7 @@ struct DisplaySettingsPage: View {
             } header: {
                 Text("Effects")
             } footer: {
-                Text("LCD 1× adds a subtle pixel grid and LCD 3× red, green and blue subpixels, at the same screen size. Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things.")
+                Text(Self.effectsFooter(plus.gate))
             }
 
             if let errorMessage {
@@ -163,10 +171,26 @@ struct DisplaySettingsPage: View {
         }
         .navigationTitle("Display")
         .navigationBarTitleDisplayMode(.inline)
+        .plusSheet(isPresented: $showsPlus, store: plus)
         .onChange(of: orientation) { _, newValue in save(newValue, .orientation) }
         .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
         .onChange(of: lcdFilter) { _, newValue in save(newValue, .lcdFilter) }
         .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
+    }
+
+    static func effectsFooter(_ gate: PlusGate) -> String {
+        let effects = "LCD 1× adds a subtle pixel grid and LCD 3× red, green and blue subpixels, at the same screen size. Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things."
+        guard gate.isLocked(true) else { return effects }
+        return effects + " LCD filters come with \(PlusProduct.name). Without it a game shows Off, and a filter you already chose is kept."
+    }
+
+    /// A Plus filter without Plus opens the Plus screen and leaves the choice as it was.
+    private func chooseLCDFilter(_ filter: LCDFilter) {
+        if plus.gate.isLocked(filter.needsPlus) {
+            showsPlus = true
+        } else {
+            lcdFilter = filter
+        }
     }
 
     private func save(_ value: some Encodable, _ key: SettingKey) {
@@ -177,6 +201,9 @@ struct DisplaySettingsPage: View {
 /// Sound, speed and how games start and pick up again.
 struct PlayingSettingsPage: View {
     private let storage: AppSettingsStorage
+    @ObservedObject private var plus: PlusStore
+
+    @State private var showsPlus = false
 
     @State private var soundMode: SoundMode
     @State private var fastForwardSpeed: FastForwardSpeed
@@ -189,8 +216,9 @@ struct PlayingSettingsPage: View {
     @State private var keepAutoStates: KeepAutoStates
     @State private var errorMessage: String?
 
-    init(storage: AppSettingsStorage) {
+    init(storage: AppSettingsStorage, plus: PlusStore) {
         self.storage = storage
+        _plus = ObservedObject(wrappedValue: plus)
         _saveStateSlots = State(initialValue: storage.value(SaveStateSlots.self, .saveStateSlots) ?? .off)
         _nameNewStates = State(initialValue: storage.value(Bool.self, .nameNewStates) ?? false)
         _keepSaveStates = State(initialValue: storage.value(KeepSaveStates.self, .keepSaveStates) ?? .all)
@@ -250,13 +278,11 @@ struct PlayingSettingsPage: View {
                 Picker("Keep Save States", selection: $keepSaveStates) {
                     ForEach(KeepSaveStates.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
-                Picker("Keep Auto States", selection: $keepAutoStates) {
-                    ForEach(KeepAutoStates.allCases, id: \.self) { Text($0.displayName).tag($0) }
-                }
+                keepAutoStatesControl
             } header: {
                 Text("Save States")
             } footer: {
-                Text("Pinned states are never cleaned up. Cleaned-up save states go to Recently Deleted. Auto States are removed permanently. Changes apply after the next save of that kind.")
+                Text(Self.saveStatesFooter(plus.gate))
             }
 
             if let errorMessage {
@@ -265,6 +291,7 @@ struct PlayingSettingsPage: View {
         }
         .navigationTitle("Playing")
         .navigationBarTitleDisplayMode(.inline)
+        .plusSheet(isPresented: $showsPlus, store: plus)
         .onChange(of: saveStateSlots) { _, newValue in save(newValue, .saveStateSlots) }
         .onChange(of: nameNewStates) { _, newValue in save(newValue, .nameNewStates) }
         .onChange(of: keepSaveStates) { _, newValue in save(newValue, .keepSaveStates) }
@@ -274,6 +301,39 @@ struct PlayingSettingsPage: View {
         .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
         .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
         .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
+    }
+
+    /// Without Plus the newest Auto State is kept, so the row shows 1 and each number opens the
+    /// Plus screen. The stored choice is left alone for when Plus returns.
+    @ViewBuilder private var keepAutoStatesControl: some View {
+        if plus.gate.isLocked(keepAutoStates.needsPlus) {
+            Menu {
+                ForEach(KeepAutoStates.allCases, id: \.self) { keep in
+                    Button(plus.gate.label(keep.displayName, needsPlus: keep.needsPlus)) { showsPlus = true }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Keep Auto States")
+                        .foregroundStyle(Color.primary)
+                    PlusBadge()
+                    Spacer()
+                    Text(String(plus.gate.keptAutoStates(keepAutoStates)))
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+            .accessibilityLabel("Keep Auto States")
+            .accessibilityValue("\(plus.gate.keptAutoStates(keepAutoStates)), Plus feature")
+        } else {
+            Picker("Keep Auto States", selection: $keepAutoStates) {
+                ForEach(KeepAutoStates.allCases, id: \.self) { Text($0.displayName).tag($0) }
+            }
+        }
+    }
+
+    static func saveStatesFooter(_ gate: PlusGate) -> String {
+        let cleanup = "Pinned states are never cleaned up. Cleaned-up save states go to Recently Deleted. Auto States are removed permanently. Changes apply after the next save of that kind."
+        guard gate.isLocked(KeepAutoStates.five.needsPlus) else { return cleanup }
+        return "Without Plus, \(AppBrand.displayName) keeps your latest Auto State. " + cleanup
     }
 
     private func save(_ value: some Encodable, _ key: SettingKey) {

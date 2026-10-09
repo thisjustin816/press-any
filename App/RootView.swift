@@ -93,6 +93,7 @@ struct RootView: View {
                     onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) },
                     onImportFiles: { urls in urls.forEach { receiveSharedFile($0, opensImportReview: true) } }
                 )
+                .onPlusChange(container.plus) { refreshGameplayLCDFilter(container) }
                 .environment(\.libraryStorageContext, LibraryStorageContext(container: container) { session in
                     Task { @MainActor in
                         // Settings must finish dismissing before gameplay can present its cover.
@@ -333,6 +334,7 @@ struct RootView: View {
                 gameID: target.gameID,
                 buildID: target.buildID,
                 store: container.repositories.settings,
+                plus: container.plus,
                 onChange: {
                     // The cover's item keeps its identity, so the game updates in place.
                     gameplay?.display = container.gameplayDisplay(for: target)
@@ -340,6 +342,13 @@ struct RootView: View {
             )
             .presentationDetents([.medium, .large])
         }
+    }
+
+    /// Plus decides whether an open game's LCD filter shows, so a purchase or refund changes it in
+    /// place, even behind the settings sheet.
+    private func refreshGameplayLCDFilter(_ container: AppContainer) {
+        guard let target = gameplay?.settings else { return }
+        gameplay?.display.lcdFilter = container.gameplayDisplay(for: target).lcdFilter
     }
 
     /// The open game's cheats, at half height over the paused game. Each change reaches the game

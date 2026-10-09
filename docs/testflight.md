@@ -3,7 +3,8 @@
 No Mac is needed. GitHub's `macos-26` runner builds the app with Xcode. The
 **TestFlight** workflow, automatic for `main` and manual for other branches, signs a
 Release archive and uploads it to App Store Connect; the separate **Screenshots**
-workflow captures simulator PNGs for download.
+workflow captures simulator PNGs for download. Section 9 sets up the Press Any Plus in-app
+purchase.
 
 ## 1. Create the Apple app record
 
@@ -293,6 +294,52 @@ belong to the App Store version page; they are not required for internal
 TestFlight testing. The project currently targets iPhone only, so it does not
 need an iPad screenshot set. Capturing screenshots does not upload them to Apple.
 
+## 9. Set up Press Any Plus
+
+Press Any Plus is the app's one in-app purchase; the Pricing section of `docs/product.md` says
+what it includes. Set it up in App Store Connect before the first build that uses it goes to
+review. Until then, Settings > Press Any Plus says the App Store isn't available.
+
+1. **Agreements, tax and banking.** Under **Business** (Agreements, Tax, and Banking), accept the
+   **Paid Apps** agreement, add a bank account and fill in the tax forms. No in-app purchase loads,
+   in TestFlight or the App Store, until the agreement is active.
+2. **Small Business Program.** Enroll at
+   [developer.apple.com/app-store/small-business-program](https://developer.apple.com/app-store/small-business-program/)
+   for the reduced commission. It applies once Apple approves the enrollment.
+3. **Create the purchase.** In **Apps → Press Any → Monetization → In-App Purchases**, choose **+**:
+
+   | Field | Value |
+   |---|---|
+   | Type | Non-Consumable |
+   | Reference Name | Press Any Plus |
+   | Product ID | `com.thisjustin816.PressAny.plus` |
+
+   The product ID must match `PlusProduct.id` in the app, and Apple never lets it be reused or
+   changed. Then fill in the purchase's page:
+
+   - **Availability**: every country or region the app is in.
+   - **Price Schedule**: $0.99 in the United States; Apple sets the other storefronts.
+   - **Family Sharing**: Turn On. It can't be turned off again.
+   - **App Store Localization** (English (U.S.)): Display Name `Press Any Plus`, Description
+     `LCD filters, app icons, Auto State history and more.`
+   - **Review Information**: a screenshot of Settings > Press Any Plus from an iPhone, and these
+     notes: "Settings > Press Any Plus shows what Plus includes, the price, Buy and Restore
+     Purchases. Plus turns on LCD 1× and LCD 3× (Settings > Display), app icon colors (Settings >
+     App Icon) and Auto State history (Settings > Playing > Keep Auto States). Everything else is
+     free and works without it."
+4. **Submit it with the first build that uses it.** A first in-app purchase goes to review with an
+   app version: on the version page, under **In-App Purchases and Subscriptions**, select Press Any
+   Plus before **Add for Review**. Later changes to it can go on their own.
+5. **Raise the price for v1.1.** When v1.1 is ready, add a price change to $2.99 in the purchase's
+   Price Schedule, starting the day v1.1 is released. The app reads the price from the App Store,
+   so no build changes.
+
+TestFlight builds buy Plus in Apple's sandbox with the tester's own Apple Account. These
+purchases are free, and they don't carry over to the App Store: a tester who installs the App
+Store release buys Plus there. The purchase shows in TestFlight once it reaches **Ready to Submit**
+and the Paid Apps agreement is active; it doesn't need review first. Runs from Xcode use
+`Config/PressAnyPlus.storekit` instead of App Store Connect.
+
 ## Troubleshooting
 
 | Symptom | What to check |
@@ -306,6 +353,7 @@ need an iPad screenshot set. Capturing screenshots does not upload them to Apple
 | API authentication fails | Team key's Key ID, Issuer ID and full `.p8` text belong together; role allows build uploads |
 | Duplicate build number | Retry the workflow; avoid uploading through a second numbering scheme |
 | Upload succeeds but the build is absent | Wait for processing and check App Store Connect and Apple's processing email |
+| Settings > Press Any Plus says the App Store isn't available | The Paid Apps agreement is active, and the purchase exists with the product ID above and is at least Ready to Submit |
 | Screenshot run fails | Download its artifact anyway and inspect `screenshots.log` and app/simulator logs; PNGs may be partial |
 
 Distribution success does not verify gameplay on an iPhone. Use

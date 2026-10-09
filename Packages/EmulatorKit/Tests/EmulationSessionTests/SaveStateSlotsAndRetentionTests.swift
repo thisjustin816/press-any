@@ -250,6 +250,34 @@ struct SaveStateSlotsAndRetentionTests {
         #expect(!f.store.fileExists(at: f.store.stateURL(stateID: expired.id)))
     }
 
+    @Test("without Auto State history only the newest unpinned Auto State is kept, and pinned ones stay")
+    func autoCleanupWithoutHistory() throws {
+        let f = try StateFixture()
+        defer { f.removeFiles() }
+        try f.settings.set(KeepAutoStates.ten, key: SettingKey.keepAutoStates.rawValue, scope: .app)
+        var pinned = try f.save(.auto, time: 1)
+        pinned.isPinned = true
+        try f.states.updateSaveState(pinned)
+        let older = try (2...5).map { try f.save(.auto, time: Double($0)) }
+        #expect(try f.all().filter { $0.kind == .auto && !$0.isPinned }.count == 4)
+
+        f.history.set(false)
+        #expect(try f.all().filter { $0.kind == .auto && !$0.isPinned }.count == 4, "losing history deletes nothing by itself")
+        let newest = try f.save(.auto, time: 6)
+        #expect(try f.all().filter { $0.kind == .auto && !$0.isPinned }.map(\.id) == [newest.id])
+        #expect(try f.states.fetchSaveState(id: pinned.id) == pinned)
+        for state in older {
+            #expect(try f.assets.fetchAsset(id: state.stateAssetID) == nil)
+            #expect(!f.store.fileExists(at: f.store.stateURL(stateID: state.id)))
+        }
+        #expect(try SettingsResolver(store: f.settings).appValue(KeepAutoStates.self, key: .keepAutoStates) == .ten,
+            "the stored choice is kept")
+
+        f.history.set(true)
+        for time in 7...16 { _ = try f.save(.auto, time: Double(time)) }
+        #expect(try f.all().filter { $0.kind == .auto && !$0.isPinned }.count == 10)
+    }
+
     @Test("manual cleanup protects the triggering save when timestamps tie or move backward")
     func newSaveSurvivesClockChanges() throws {
         let f = try StateFixture()
@@ -297,6 +325,15 @@ private struct RefusingCleanupTransaction: LibraryTransactionRunner {
     func run<T: Sendable>(_ operation: @Sendable () throws -> T) throws -> T { throw Failure() }
 }
 
+/// Whether Auto State history is kept, changed between saves as an entitlement would be.
+private final class HistorySwitch: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = true
+
+    var isOn: Bool { lock.withLock { value } }
+    func set(_ isOn: Bool) { lock.withLock { value = isOn } }
+}
+
 private struct StateThumbnailEncoder: FrameImageEncoding {
     let fileExtension = "png"
     func encode(_ frame: EmulatorVideoFrame) throws -> Data { frame.bgra8888 }
@@ -318,6 +355,7 @@ private struct StateFixture {
     let build: Build
     let date = Date(timeIntervalSince1970: 1_700_000_000)
     let worker = SessionWorker(core: FakeEmulatorCore())
+    let history = HistorySwitch()
 
     init(sql: Bool = false) throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -356,7 +394,8 @@ private struct StateFixture {
     func service(time: Double, deletion: LibraryDeletionOperations? = nil) -> SaveStateService {
         let timestamp = date.addingTimeInterval(time)
         return SaveStateService(states: states, assets: assets, assetStore: store, settings: SettingsResolver(store: settings),
-            deletion: deletion ?? operations, transactions: transactions, thumbnails: StateThumbnailEncoder(), now: { timestamp })
+            deletion: deletion ?? operations, transactions: transactions, thumbnails: StateThumbnailEncoder(),
+            keepsAutoStateHistory: { [history] in history.isOn }, now: { timestamp })
     }
     func save(_ kind: SaveStateKind, time: Double, slot: Int? = nil, context: LaunchContext? = nil) throws -> SaveState {
         try service(time: time).save(worker: worker, context: context ?? self.context, kind: kind, slot: slot,

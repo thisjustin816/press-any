@@ -9,6 +9,7 @@ import SwiftUI
 /// Build override still wins for that launch.
 struct AppSettingsView: View {
     private let store: any SettingsStore
+    @ObservedObject private var plus: PlusStore
     private let integrityChecker: ManagedAssetIntegrityChecker?
     private let libraryDeletion: LibraryDeletionOperations?
     private let games: (any GameRepository)?
@@ -25,11 +26,13 @@ struct AppSettingsView: View {
 
     init(
         store: any SettingsStore,
+        plus: PlusStore,
         integrityChecker: ManagedAssetIntegrityChecker? = nil,
         libraryDeletion: LibraryDeletionOperations? = nil,
         games: (any GameRepository)? = nil
     ) {
         self.store = store
+        _plus = ObservedObject(wrappedValue: plus)
         self.integrityChecker = integrityChecker
         self.libraryDeletion = libraryDeletion
         self.games = games
@@ -41,7 +44,7 @@ struct AppSettingsView: View {
                 // The same order as a system's, Game's or Build's settings.
                 Section {
                     NavigationLink {
-                        DisplaySettingsPage(storage: storage)
+                        DisplaySettingsPage(storage: storage, plus: plus)
                     } label: {
                         Label("Display", systemImage: "display")
                     }
@@ -51,9 +54,17 @@ struct AppSettingsView: View {
                         Label("Controls", systemImage: "gamecontroller")
                     }
                     NavigationLink {
-                        PlayingSettingsPage(storage: storage)
+                        PlayingSettingsPage(storage: storage, plus: plus)
                     } label: {
                         Label("Playing", systemImage: "play.circle")
+                    }
+                    NavigationLink {
+                        AppIconSettingsPage(plus: plus)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Label("App Icon", systemImage: "paintpalette")
+                            if !plus.isUnlocked { PlusBadge() }
+                        }
                     }
                 }
 
@@ -67,6 +78,7 @@ struct AppSettingsView: View {
                                 gameID: nil,
                                 buildID: nil,
                                 store: store,
+                                plus: plus,
                                 inSheet: false
                             )
                         }
@@ -108,6 +120,14 @@ struct AppSettingsView: View {
                             Button("Suggest Names") { showNameReview = true }
                             Button("Suggest Game Merges") { showFamilyMergeReview = true }
                         }
+                    }
+                }
+
+                Section {
+                    NavigationLink {
+                        PlusView(store: plus)
+                    } label: {
+                        Label(PlusProduct.name, systemImage: "plus.circle")
                     }
                 }
 

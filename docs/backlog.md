@@ -53,7 +53,9 @@ Open items in each area are in the table, finished ones on the line under it.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | TestFlight upload on every main build; a GitHub pre-release adds its build to the public group and submits it for Beta App Review, with notes since the previous release (docs/testflight.md); App Store submission, listing, review and rights gate not started |
-| missing | Paid/IAP seam `FeatureEntitlementProvider` (StoreKit kept out of Domain) | v1.1 | none |
+| partial | Press Any Plus: one non-consumable through `FeatureEntitlementProvider` (StoreKit 2 in the app target only), Plus screen with roadmap, price, Buy, Restore Purchases and retry | v1 | Built, with app tests for buying, restore, refund and a failed product load against an App Store stand-in. The StoreKit provider itself waits on the App Store Connect setup in docs/testflight.md and the Plus device checks in docs/mvp-verification.md |
+| partial | Plus features: LCD filters, app icon colorways, Auto State history | v1 | Built and gated in every settings scope; stored choices are kept without Plus. Device checks pending |
+| missing | Timed Auto States (one every few minutes of play), a Plus feature | later | on the Plus roadmap |
 | done | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; the first game shows "Tap Press Any for the menu" once. v1 has nothing to opt into: crash reports and usage counts (v1.1) bring their own opt-in screens, and Developer Mode its introductions |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |
 | done | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Rotation lock, cutout and controller checks passed on device |
@@ -276,7 +278,7 @@ states.
 | done | Quick Save (one tap) | v1 | One replaceable Quick State per Build + Save Profile; Quick Load uses the existing load checks; rename, delete and restore in Save States |
 | done | Configurable fixed slots | v1 | App-only Off/3/5/10; replacement preserves name and pin; restore/reassign collisions become manual |
 | done | Unlimited named states | v1 | Optional Name New States prompt; rename and delete in Save States |
-| done | Configurable automatic cleanup; pinned/favorited exempt | v1 | Manual All/10/25/50 to Recently Deleted; Auto 3/5/10 pruned permanently; pins exempt and restored manual states pinned under a limit |
+| done | Configurable automatic cleanup; pinned/favorited exempt | v1 | Manual All/10/25/50 to Recently Deleted; Auto 3/5/10 with Plus, or the latest one without, pruned permanently at each Auto State write; pins exempt and restored manual states pinned under a limit |
 | missing | State records cheat config; offer Restore Cheat Configuration | v1.1 |  |
 | missing | Per-Save-Profile autoresume override | v1.1 |  |
 | done | Separate crash-recovery checkpoint + Recover Session / Start Normally | v1 | One hidden state per Build and Save Profile, refreshed each minute of play; clean close or Auto State removes it. An open-session marker offers recovery without automatic launch; Start Normally keeps the checkpoint until that Build launches |

@@ -32,7 +32,7 @@ Every job that builds the package checks out submodules, because SameBoy is one.
 `ios-build.yml` builds the app and runs the app and package tests on the iPhone 17 Pro
 simulator. The hosted `PressAnyTests` launch the app and check its display name and bundled
 licenses, toolchain labels, controller disconnect and touch-to-reveal behavior, frame pacing,
-gameplay pause/lifecycle transitions (including frozen frame counts and explicit menu Resume), and import review edits through database reopen. Controller
+gameplay pause/lifecycle transitions (including frozen frame counts and explicit menu Resume), import review edits through database reopen, and Press Any Plus. The Plus store tests run buying, restoring, refunds and a failed product load against a stand-in for the App Store. StoreKit's own test session can't save its configuration on the CI simulator, and its restore call then waits for a sign-in that never comes, so the StoreKit provider is checked on a device. Controller
 and gameplay tests use simulated input or fake runtimes; they do not prove real hardware behavior.
 The manual screenshot workflow also launches seeded gameplay and taps menus through UI tests.
 

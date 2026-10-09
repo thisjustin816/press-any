@@ -92,6 +92,7 @@ public final class EmulationSession: @unchecked Sendable {
         deletion: LibraryDeletionOperations? = nil,
         inFlight: InFlightFiles? = nil,
         cheats: (any BuildCheatRepository)? = nil,
+        keepsAutoStateHistory: @escaping @Sendable () -> Bool = { true },
         batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -112,6 +113,7 @@ public final class EmulationSession: @unchecked Sendable {
             deletion: deletion,
             transactions: transactions,
             thumbnails: thumbnails,
+            keepsAutoStateHistory: keepsAutoStateHistory,
             now: now
         )
         self.settings = settings

@@ -14,12 +14,15 @@ struct ScopedSettingsView: View {
     let gameID: UUID?
     let buildID: UUID?
     let store: any SettingsStore
+    /// Plus options stay listed without it, and choosing one opens the Plus screen.
+    @ObservedObject var plus: PlusStore
     /// Called after each saved change, so an open game can apply it.
     var onChange: (() -> Void)?
     /// False when App Settings pushes it as a page, which has its own navigation and Done.
     var inSheet = true
 
     @Environment(\.dismiss) private var dismiss
+    @State private var showsPlus = false
 
     var body: some View {
         if inSheet {
@@ -44,6 +47,7 @@ struct ScopedSettingsView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .plusSheet(isPresented: $showsPlus, store: plus)
     }
 
     // Separate properties keep each section small enough for the compiler to type-check quickly.
@@ -69,6 +73,7 @@ struct ScopedSettingsView: View {
                 key: .lcdFilter,
                 defaultValue: LCDFilter.off,
                 options: LCDFilter.allCases.map { ($0, $0.displayName) },
+                needsPlus: \.needsPlus,
                 context: context
             )
             InheritableSettingRow(
@@ -165,7 +170,9 @@ struct ScopedSettingsView: View {
             gameID: gameID,
             buildID: buildID,
             store: store,
-            onChange: onChange
+            onChange: onChange,
+            plus: plus.gate,
+            openPlus: { showsPlus = true }
         )
     }
 }
@@ -177,6 +184,8 @@ struct InheritableSettingContext {
     let buildID: UUID?
     let store: any SettingsStore
     var onChange: (() -> Void)?
+    var plus = PlusGate(isUnlocked: true)
+    var openPlus: () -> Void = {}
 
     func edit(_ key: SettingKey) -> ScopedSetting? {
         try? SettingsResolver(store: store).edit(
@@ -199,6 +208,8 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     let key: SettingKey
     let defaultValue: Value
     let options: [(Value, String)]
+    /// Values that need Plus. Without it they're marked Plus, and choosing one opens the Plus screen.
+    var needsPlus: (Value) -> Bool = { _ in false }
     let context: InheritableSettingContext
 
     @State private var choice: Choice = .inherit
@@ -210,17 +221,23 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     /// menu that holds the Picker, and a tap anywhere on it opens the menu as before.
     var body: some View {
         Menu {
-            Picker(title, selection: $choice) {
+            Picker(title, selection: Binding(get: { choice }, set: { choose($0) })) {
                 Text("\(inheritNote) (\(label(for: inheritedValue)))").tag(Choice.inherit)
                 ForEach(options.indices, id: \.self) { index in
-                    Text(options[index].1).tag(Choice.value(options[index].0))
+                    Text(context.plus.label(options[index].1, needsPlus: needsPlus(options[index].0)))
+                        .tag(Choice.value(options[index].0))
                 }
             }
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .foregroundStyle(Color.primary)
+                    HStack(spacing: 6) {
+                        Text(title)
+                            .foregroundStyle(Color.primary)
+                        if options.contains(where: { context.plus.isLocked(needsPlus($0.0)) }) {
+                            PlusBadge()
+                        }
+                    }
                     Text(errorMessage ?? note)
                         .font(.subheadline)
                         .foregroundStyle(errorMessage == nil ? Color.secondary : Color.red)
@@ -228,7 +245,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                 .multilineTextAlignment(.leading)
                 Spacer(minLength: 12)
                 HStack(spacing: 4) {
-                    Text(label(for: effectiveValue))
+                    Text(context.plus.label(label(for: effectiveValue), needsPlus: needsPlus(effectiveValue)))
                     Image(systemName: "chevron.up.chevron.down")
                         .imageScale(.small)
                 }
@@ -255,11 +272,21 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     }
 
     /// Where the value comes from, under the setting's title. What it overrides shows in the menu,
-    /// beside the same words.
+    /// beside the same words. A Plus value without Plus is kept, and says what plays instead.
     private var note: String {
-        switch choice {
+        let source = switch choice {
         case .inherit: inheritNote
         case .value: "Set here"
+        }
+        return context.plus.isLocked(needsPlus(effectiveValue)) ? "\(source). \(label(for: defaultValue)) without Plus" : source
+    }
+
+    /// A Plus value without Plus opens the Plus screen and leaves the choice as it was.
+    private func choose(_ newChoice: Choice) {
+        if case .value(let value) = newChoice, context.plus.isLocked(needsPlus(value)) {
+            context.openPlus()
+        } else {
+            choice = newChoice
         }
     }
 

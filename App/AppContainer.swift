@@ -52,6 +52,8 @@ final class AppContainer {
     let coreRegistry: CoreRegistry
     let settingsResolver: SettingsResolver
     let launchHistory: SessionLaunchHistory
+    /// Plus ownership. LCD filters and Auto State history follow it; nothing else here does.
+    let plus: PlusStore
     /// Files an import or the running game is using, which cache trimming and Check Library Files
     /// leave alone.
     let inFlightFiles = InFlightFiles()
@@ -95,10 +97,12 @@ final class AppContainer {
         }
         #endif
         removeEmptyInbox()
-        return try AppContainer(rootURL: root)
+        return try AppContainer(rootURL: root, plus: .live())
     }
 
-    init(rootURL: URL) throws {
+    /// Without `plus`, Plus isn't owned and StoreKit isn't used.
+    init(rootURL: URL, plus: PlusStore? = nil) throws {
+        self.plus = plus ?? .fixed(ownsPlus: false)
         fileStore = try ManagedFileStore(rootURL: rootURL)
         sharedFileInbox = SharedFileInbox(store: fileStore)
         database = try AppDatabase(url: rootURL.appendingPathComponent("Library.sqlite"))
@@ -331,7 +335,8 @@ final class AppContainer {
     }
 
     func makeEmulationSession() -> EmulationSession {
-        EmulationSession(
+        let ownership = plus.ownership
+        return EmulationSession(
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
@@ -345,7 +350,8 @@ final class AppContainer {
             thumbnails: PNGFrameEncoder(),
             deletion: libraryDeletion,
             inFlight: inFlightFiles,
-            cheats: repositories.cheats
+            cheats: repositories.cheats,
+            keepsAutoStateHistory: { ownership.keepsAutoStateHistory }
         )
     }
 
@@ -423,14 +429,14 @@ final class AppContainer {
         launchSetting(ScreenScaling.self, .screenScaling, for: context) ?? .integer
     }
 
+    /// Off without Plus, whatever is stored.
     func lcdFilter(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> LCDFilter {
         ScreenshotScene.lcdFilterOverride
-            ?? launchSetting(LCDFilter.self, .lcdFilter, system: system, gameID: gameID, buildID: buildID)
-            ?? .off
+            ?? plus.effective(launchSetting(LCDFilter.self, .lcdFilter, system: system, gameID: gameID, buildID: buildID) ?? .off)
     }
 
     func lcdFilter(for context: LaunchContext) -> LCDFilter {
-        ScreenshotScene.lcdFilterOverride ?? launchSetting(LCDFilter.self, .lcdFilter, for: context) ?? .off
+        ScreenshotScene.lcdFilterOverride ?? plus.effective(launchSetting(LCDFilter.self, .lcdFilter, for: context) ?? .off)
     }
 
     func colorCorrection(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ColorCorrection {
