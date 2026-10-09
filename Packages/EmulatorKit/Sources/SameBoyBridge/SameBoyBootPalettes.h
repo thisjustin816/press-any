@@ -36,7 +36,9 @@ static const uint16_t sb_boot_palette_colors[][4] = {
     [4]  = {0x7fff, 0x421f, 0x1cf2, 0x0000},
     [5]  = {0x7fff, 0x5294, 0x294a, 0x0000},
     [6]  = {0x7fff, 0x03ff, 0x012f, 0x0000},
+    [8]  = {0x7fff, 0x42b5, 0x3dc8, 0x0000},
     [12] = {0x53ff, 0x4a5f, 0x7e52, 0x0000},
+    [16] = {0x7fff, 0x01df, 0x0112, 0x0000},
     [18] = {0x7fff, 0x03ea, 0x011f, 0x0000},
     [24] = {0x7fff, 0x03ff, 0x001f, 0x0000},
     [27] = {0x0000, 0x4200, 0x037f, 0x7fff},
@@ -44,7 +46,7 @@ static const uint16_t sb_boot_palette_colors[][4] = {
     [29] = {0x7fff, 0x1bef, 0x6180, 0x0000},
 };
 
-// BG, OBJ0, OBJ1. Table order matches the bridge's twelve boot palette enum cases.
+// BG, OBJ0, OBJ1. Table order matches the bridge's boot palette enum cases.
 static const uint8_t sb_boot_palette_combinations[][3] = {
     {0, 0, 0},    // Up
     {4, 3, 28},   // Up + A
@@ -58,4 +60,5 @@ static const uint8_t sb_boot_palette_combinations[][3] = {
     {18, 18, 18}, // Right
     {29, 4, 4},   // Right + A
     {27, 27, 27}, // Right + B
+    {8, 16, 16},  // Mole Mania (combination 17)
 };

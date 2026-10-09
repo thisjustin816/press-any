@@ -52,6 +52,7 @@ final class GameplayViewController: UIViewController {
     /// The wordmark button and optional clear picture target share the same game menu.
     private var menuButtons: [GameMenuButton] = []
     private var controllerMenuButton = GamepadMenuButton()
+    private var controllerResumeInput = GamepadResumeInput()
     /// Set once a screenshot scene's button script has played.
     private var screenshotInputPlayed = false
 
@@ -551,9 +552,15 @@ final class GameplayViewController: UIViewController {
         controllerMonitor.onMenuChanged = { [weak self] pressed in
             self?.controllerMenuChanged(pressed)
         }
+        controllerMonitor.onAuxiliaryButtonPressed = { [weak self] in
+            guard let self, self.canResumeFromController else { return }
+            self.resumeTapped()
+        }
         controllerMonitor.onInputChanged = { [weak self] controllerInput in
             guard let self else { return }
-            self.input.setController(controllerInput)
+            let resume = self.controllerResumeInput.update(controllerInput, canResume: self.canResumeFromController)
+            self.input.setController(resume.input)
+            if resume.shouldResume { self.resumeTapped() }
             if self.touchControlsRevealed, controllerInput != EmulatorInputState() {
                 self.touchControlsRevealed = false
                 self.updateTouchControls(controllerConnected: true)
@@ -586,6 +593,10 @@ final class GameplayViewController: UIViewController {
         guard let action, !stopped, !halted, !coveredBySheet else { return }
         touchControlsRevealed = false
         updateTouchControls(controllerConnected: controllerMonitor.isConnected)
+        if action == .open, canResumeFromController {
+            resumeTapped()
+            return
+        }
         switch action {
         case .open:
             guard presentedViewController == nil, let button = menuButtons.first else { return }
@@ -596,6 +607,12 @@ final class GameplayViewController: UIViewController {
             }
             resumeTapped()
         }
+    }
+
+    private var canResumeFromController: Bool {
+        pauseReasons.showsPausedOverlay && !pauseReasons.inactive && pauseReasons.holds == 0
+            && !coveredBySheet && !isGameMenuOpen && presentedViewController == nil
+            && !stopped && !halted
     }
 
     private func updateControlStyle() {

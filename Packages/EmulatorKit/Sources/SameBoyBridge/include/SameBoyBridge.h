@@ -41,6 +41,7 @@ typedef enum {
     SB_DMG_PALETTE_CGB_RIGHT,
     SB_DMG_PALETTE_CGB_RIGHT_A,
     SB_DMG_PALETTE_CGB_RIGHT_B,
+    SB_DMG_PALETTE_CGB_OLIVE,
 } SBDMGPalette;
 
 typedef struct {

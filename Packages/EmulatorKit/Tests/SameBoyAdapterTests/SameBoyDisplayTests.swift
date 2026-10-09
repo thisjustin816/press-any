@@ -20,6 +20,7 @@ final class SameBoyDisplayTests: XCTestCase {
         let original = pixels(grey)
         XCTAssertGreaterThan(Set(original).count, 1)
         for (palette, colors) in palettes {
+            XCTAssertEqual(palette.previewColors, Array(repeating: colors.reversed().map { $0 & 0xffffff }, count: 3))
             try core.deserializeState(state)
             let frame = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: palette))
             let expected = try original.map { pixel in

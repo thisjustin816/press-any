@@ -7,6 +7,7 @@ import UIKit
 @MainActor
 final class PhysicalControllerMonitor: ObservableObject {
     var onMenuChanged: ((Bool) -> Void)?
+    var onAuxiliaryButtonPressed: (() -> Void)?
     var onInputChanged: ((EmulatorInputState) -> Void)?
     var onConnectionChanged: ((Bool) -> Void)?
     var onUnexpectedDisconnect: (() -> Void)?
@@ -88,6 +89,18 @@ final class PhysicalControllerMonitor: ObservableObject {
 
     private func installHandlers(on controller: GCController) {
         guard let pad = controller.extendedGamepad else { return }
+        let mappedButtons = Set([pad.buttonA, pad.buttonB, pad.buttonX, pad.buttonY, pad.buttonMenu]
+            + [pad.buttonOptions].compactMap { $0 })
+        let directionalButtons = Set(pad.allDpads.flatMap { [$0.up, $0.down, $0.left, $0.right] })
+        for button in pad.allButtons.subtracting(mappedButtons).subtracting(directionalButtons) {
+            button.pressedChangedHandler = { [weak self, weak controller] _, _, pressed in
+                guard pressed else { return }
+                Task { @MainActor in
+                    guard let self, let controller, self.activeController === controller else { return }
+                    self.onAuxiliaryButtonPressed?()
+                }
+            }
+        }
         pad.buttonMenu.pressedChangedHandler = { [weak self, weak controller] _, _, pressed in
             Task { @MainActor in
                 guard let self, let controller, self.activeController === controller else { return }

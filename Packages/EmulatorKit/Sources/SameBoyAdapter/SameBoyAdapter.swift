@@ -183,6 +183,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         case .cgbRight: SB_DMG_PALETTE_CGB_RIGHT
         case .cgbRightA: SB_DMG_PALETTE_CGB_RIGHT_A
         case .cgbRightB: SB_DMG_PALETTE_CGB_RIGHT_B
+        case .cgbOlive: SB_DMG_PALETTE_CGB_OLIVE
         }
         SBSetColorCorrection(instance, correction)
         SBSetDMGPalette(instance, palette)

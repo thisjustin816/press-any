@@ -85,6 +85,47 @@ final class PhysicalControllerMonitorTests: XCTestCase {
         XCTAssertEqual(publications, releasedPublications)
     }
 
+    func testAuxiliaryButtonsPublishPressesWithoutMappingThemToGameBoyInput() throws {
+        let controller = GCController.withExtendedGamepad()
+        let pad = try XCTUnwrap(controller.extendedGamepad)
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
+        var presses = 0
+        var input = EmulatorInputState()
+        monitor.onAuxiliaryButtonPressed = { presses += 1 }
+        monitor.onInputChanged = { input = $0 }
+        monitor.selectPlayerOne(controller)
+        let buttons = [pad.leftShoulder, pad.rightShoulder, pad.leftTrigger, pad.rightTrigger]
+        for button in buttons {
+            let handler = try XCTUnwrap(button.pressedChangedHandler)
+            handler(button, 1, true)
+            handler(button, 0, false)
+        }
+        let deadline = Date().addingTimeInterval(2)
+        while presses < buttons.count, Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        }
+        XCTAssertEqual(presses, buttons.count)
+        XCTAssertEqual(input, .init())
+        for button in [pad.dpad.up, pad.dpad.down, pad.dpad.left, pad.dpad.right,
+                       pad.leftThumbstick.up, pad.leftThumbstick.down,
+                       pad.rightThumbstick.left, pad.rightThumbstick.right] {
+            XCTAssertNil(button.pressedChangedHandler, "directional input must not resume")
+        }
+    }
+
+    func testQueuedAuxiliaryPressFromADisconnectedControllerCannotResume() throws {
+        let controller = GCController.withExtendedGamepad()
+        let pad = try XCTUnwrap(controller.extendedGamepad)
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
+        var presses = 0
+        monitor.onAuxiliaryButtonPressed = { presses += 1 }
+        monitor.selectPlayerOne(controller)
+        try XCTUnwrap(pad.leftShoulder.pressedChangedHandler)(pad.leftShoulder, 1, true)
+        NotificationCenter.default.post(name: .GCControllerDidDisconnect, object: controller)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+        XCTAssertEqual(presses, 0)
+    }
+
     func testDisconnectDoesNotReattachTheControllerStillInTheDiscoveryList() {
         let controller = GCController.withExtendedGamepad()
         let monitor = PhysicalControllerMonitor(connectedControllers: { [controller] })

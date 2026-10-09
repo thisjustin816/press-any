@@ -23,6 +23,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
             "cgbRight",
             "cgbRightA",
             "cgbRightB",
+            "cgbOlive",
         ])
         XCTAssertEqual(String(data: try JSONEncoder().encode(ColorCorrection.accurate), encoding: .utf8), "\"accurate\"")
         XCTAssertEqual(String(data: try JSONEncoder().encode(DMGPalette.dmgGreen), encoding: .utf8), "\"dmgGreen\"")
@@ -31,5 +32,14 @@ final class ColorDisplaySettingsTests: XCTestCase {
     func testDisplayDefaults() {
         XCTAssertEqual(ColorCorrection.defaultValue, .balanced)
         XCTAssertEqual(DMGPalette.defaultValue, .dmgGreen)
+    }
+
+    func testLegacyGrayscaleIsDecodableButHasOnlyOneMenuChoice() throws {
+        let legacy = try JSONDecoder().decode(DMGPalette.self, from: Data("\"grey\"".utf8))
+        XCTAssertEqual(legacy.selectionValue, .cgbLeftB)
+        XCTAssertFalse(DMGPalette.selectableCases.contains(.grey))
+        XCTAssertEqual(DMGPalette.selectableCases.filter { $0.displayName.hasPrefix("Black & White") }, [.cgbLeftB])
+        XCTAssertEqual(DMGPalette.cgbLeftB.displayName, "Black & White (Left + B)")
+        XCTAssertEqual(DMGPalette.cgbOlive.displayName, "Olive & Orange (Mole Mania)")
     }
 }
