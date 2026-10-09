@@ -209,7 +209,7 @@ Open **Actions → Screenshots → Run workflow**. The defaults take the App Sto
 
 | Input | Default |
 |---|---|
-| device | iPhone 17 Pro Max (6.9-inch) |
+| device | iPhone 17 Pro (6.3-inch) |
 | roms | hero |
 | shots | listing |
 | appearance | both (or light for one set) |
@@ -274,12 +274,16 @@ moments. For example:
 To work out a script, play the game in an emulator, note when each press happens, and keep the
 script ending somewhere the game stays playable for the longest wait.
 
-After the run, download `screenshots-light-6.9-inch` and/or `screenshots-dark-6.9-inch` from its
-**Artifacts** section and unzip them. Upload the numbered PNGs, not the included logs.
+After the run, download `screenshots-light-6.3-inch` and/or `screenshots-dark-6.3-inch` from its
+**Artifacts** section and unzip them on a computer. Upload the numbered PNGs, not the included
+logs, and don't pass them through Photos or a chat, which can resize them.
 
-The iPhone 17 Pro Max captures are 1320 × 2868 pixels, Apple's 6.9-inch size, which App Store
-Connect scales down for smaller iPhones. The landscape shots are saved upright at 2868 × 1320.
-Choose iPhone 14 Plus for the 6.5-inch slot: 1284 × 2778 pixels, in artifacts ending `-6.5-inch`.
+App Store Connect's iPhone slot is labeled "iPhone with Dynamic Island (medium display)" and takes
+only the 6.1-inch and 6.3-inch sizes. The iPhone 17 Pro captures are 1206 × 2622 pixels, one of
+them; the landscape shots are saved upright at 2622 × 1206. The slot refuses larger images with
+"File dimensions are invalid", and its tab row has no 6.9-inch tab to put them in. Choose iPhone 17
+Pro Max for a 6.9-inch set (1320 × 2868, artifacts ending `-6.9-inch`) or iPhone 14 Plus for the
+6.5-inch slot (1284 × 2778, `-6.5-inch`), if Apple's page offers one.
 The workflow checks every PNG's dimensions, and each set fits only its own slot. Check that each
 image shows a loaded app, readable content, and features present in the Release build;
 screenshot seeding runs in Debug.

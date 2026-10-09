@@ -1,17 +1,17 @@
 name: Screenshots
 
 # Manual only: captures the app on an iPhone simulator, seeded from TestROMs/, and uploads
-# the PNGs as an artifact. By default it takes the App Store listing set on the 6.9-inch
-# iPhone 17 Pro Max; the 6.5-inch and 6.9-inch presets check dimensions before upload.
+# the PNGs as an artifact. By default it takes the App Store listing set on the 6.3-inch
+# iPhone 17 Pro; each device checks its dimensions against its App Store Connect slot.
 
 on:
   workflow_dispatch:
     inputs:
       device:
-        description: Pro Max for Apple's 6.9-inch slot, which smaller iPhones scale from; 14 Plus for the 6.5-inch slot
+        description: iPhone 17 Pro for the 6.1" and 6.3" slot App Store Connect asks for now; Pro Max for 6.9-inch, 14 Plus for 6.5-inch
         type: choice
-        options: [iPhone 17 Pro Max, iPhone 14 Plus, iPhone 17 Pro]
-        default: iPhone 17 Pro Max
+        options: [iPhone 17 Pro, iPhone 17 Pro Max, iPhone 14 Plus]
+        default: iPhone 17 Pro
       roms:
         description: "hero, all, or comma-separated manifest tags and filenames"
         default: hero
@@ -114,7 +114,6 @@ jobs:
           set -o pipefail
           ./Scripts/take-screenshots.sh "$ROMS" screenshots 2>&1 | tee screenshots.log
       - name: Verify App Store screenshot dimensions
-        if: inputs.device != 'iPhone 17 Pro'
         env:
           DEVICE: ${{ inputs.device }}
         run: |
@@ -123,9 +122,14 @@ jobs:
           import os
           import struct
 
-          # Apple's 6.5-inch slot takes the 14 Plus's size and the 6.9-inch slot the Pro Max's.
-          expected = (1284, 2778) if os.environ["DEVICE"] == "iPhone 14 Plus" else (1320, 2868)
-          slot = "6.5-inch" if expected == (1284, 2778) else "6.9-inch"
+          # The size each device's slot in App Store Connect takes. The 6.1-inch and 6.3-inch slot
+          # takes 1206 x 2622 (and 1179 x 2556), and it refuses the larger sizes.
+          slots = {
+              "iPhone 17 Pro": ((1206, 2622), "6.3-inch"),
+              "iPhone 17 Pro Max": ((1320, 2868), "6.9-inch"),
+              "iPhone 14 Plus": ((1284, 2778), "6.5-inch"),
+          }
+          expected, slot = slots[os.environ["DEVICE"]]
 
           images = sorted(Path("screenshots").rglob("*.png"))
           if not images:
@@ -144,7 +148,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: screenshots-${{ matrix.appearance }}${{ inputs.device == 'iPhone 14 Plus' && '-6.5-inch' || inputs.device == 'iPhone 17 Pro Max' && '-6.9-inch' || '' }}${{ inputs.text_size == 'largest' && '-largest-text' || '' }}
+          name: screenshots-${{ matrix.appearance }}${{ inputs.device == 'iPhone 14 Plus' && '-6.5-inch' || inputs.device == 'iPhone 17 Pro Max' && '-6.9-inch' || '-6.3-inch' }}${{ inputs.text_size == 'largest' && '-largest-text' || '' }}
           path: |
             screenshots/
             screenshots.log
