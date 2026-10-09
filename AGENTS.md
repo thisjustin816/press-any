@@ -53,6 +53,7 @@ Do not permanently vendor third-party source snapshots into normal Git history.
 - GRDB must be an SPM dependency pinned to the approved release.
 - SameBoy is a Git submodule at `Packages/EmulatorKit/Dependencies/SameBoy`, pinned to the commit `THIRD_PARTY_NOTICES.md` records. Press Any compiles only its `Core/`, never SameBoy's iOS frontend. Changing the pin is an explicit core update; see "Updating a dependency" in `THIRD_PARTY_NOTICES.md`.
 - Preserve upstream licenses and update `THIRD_PARTY_NOTICES.md` when dependencies change.
+- Credit the author of every shader, skin, artwork or other third-party asset that ships in the app. The change that adds it also names the author, source and license in `THIRD_PARTY_NOTICES.md` and in Settings > Acknowledgements (`App/Settings/AcknowledgementsView.swift`), and bundles the license text. Credit is given even when the license asks for none.
 
 ## Testing rules
 

@@ -26,6 +26,7 @@ vertex VertexOut gameplayFullscreenVertex(uint vertexID [[vertex_id]]) {
     return out;
 }
 
+// Modelled on the libretro LCD shaders; credited in THIRD_PARTY_NOTICES.md and Acknowledgements.
 // Fade fine detail when the output has too few pixels to resolve it. The mask follows source
 // pixels, so both scaling modes and both GB/GBC framebuffers keep the same LCD cell pattern.
 float4 lcdColor(float4 color, float2 texel, uint mode) {

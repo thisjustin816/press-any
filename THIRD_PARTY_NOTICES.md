@@ -81,11 +81,23 @@ copying source snapshots into this repository. Adapted code and data carry their
 - Usage: `Scripts/test-accuracy-roms.sh` fetches and builds them at run time to check the core's
   results. None of them is committed here or ships in the app.
 
+## LCD display filters
+
+- Code: `App/Gameplay/Shaders.metal`, the LCD 1x and LCD 3x filters. Press Any's own shader code,
+  written for this project. No code is copied from the shaders below; their formulas differ.
+- Inspiration: the LCD shaders in libretro's slang-shaders collection
+  (https://github.com/libretro/slang-shaders), RetroArch's shader set. `lcd3x`, by Gigaherz, is
+  the closest. Its header says "License: Public domain". The collection's other LCD shaders, such
+  as `lcd-grid-v2`, carry no author or license header, and Press Any does not use them.
+- Credit: the app credits the libretro shaders in Acknowledgements even though nothing is copied
+  and `lcd3x` asks for none. The author of any shader that ships later is credited the same way
+  (see AGENTS.md).
+
 ## In the app
 
 Settings > Acknowledgements lists each project whose code ships in the app. SameBoy's and
 GRDB.swift's licenses are bundled verbatim from `App/Acknowledgements/`; gbtoolsid, which is in
-the public domain, and No-Intro get a credit.
+the public domain, No-Intro and the libretro LCD shaders get a credit.
 
 ## Updating a dependency
 

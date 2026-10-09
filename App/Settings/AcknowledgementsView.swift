@@ -35,6 +35,16 @@ struct AcknowledgementsView: View {
             """)
         ),
         Component(
+            name: "libretro LCD shaders",
+            use: "The idea behind the LCD 1× and LCD 3× display filters",
+            license: .publicDomain(credit: """
+            \(AppBrand.displayName)’s LCD 1× and LCD 3× filters are its own shader code, modelled \
+            on the LCD shaders in libretro’s slang-shaders collection for RetroArch \
+            (https://github.com/libretro/slang-shaders), among them lcd3x by Gigaherz, which is in \
+            the public domain. No shader code was copied from them. They are credited here anyway.
+            """)
+        ),
+        Component(
             name: "No-Intro",
             use: "Recognizing known Game Boy and Game Boy Color releases",
             license: .freeData(credit: AcknowledgementsView.noIntroCredit)

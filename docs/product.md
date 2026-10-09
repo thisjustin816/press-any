@@ -925,7 +925,10 @@ picture. A connected controller still hides the touch controls.
   candidate to audit), downloaded from pinned, license-checked sources with hashes and preserved
   licenses; independent inheritance of pipeline components and parameters; named presets; live
   switching from Quick Actions; a system-authentic default with raw pixels a tap away. Arbitrary
-  `.slang` import is later.
+  `.slang` import is later. Every shader that ships is credited by its author in Settings >
+  Acknowledgements and `THIRD_PARTY_NOTICES.md`, with its license text, whether or not the
+  license asks for it. Pixel-AA is a candidate to stack with the LCD filters, on a
+  recommendation from fishku, who asked to be credited for it if it ships.
 
 ### Sound
 
