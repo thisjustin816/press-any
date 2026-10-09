@@ -102,13 +102,14 @@ public enum TouchHaptics: String, Codable, Sendable, CaseIterable {
     case medium
 }
 
-/// Whether game sound plays. Raw values are stored in settings.
+/// Whether game sound plays. Every mode plays alongside other apps' audio. Raw values are stored
+/// in settings.
 public enum SoundMode: String, Codable, Sendable, CaseIterable {
     /// Silent when the ring/silent switch is set to silent.
     case followSilentSwitch
     /// Plays even when the phone is set to silent.
     case alwaysOn
-    /// Never plays, and leaves other apps' audio playing.
+    /// Never plays.
     case alwaysOff
 
     public var displayName: String {

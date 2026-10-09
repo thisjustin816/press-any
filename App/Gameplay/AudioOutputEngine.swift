@@ -19,23 +19,24 @@ final class AudioOutputEngine: @unchecked Sendable {
     /// and this decides whether to start it again. Touched only on the main queue.
     private var wantsRunning = false
     private var observers: [NSObjectProtocol] = []
-    /// Called on the main queue when sound is cut off in a way the player should notice: another
-    /// app's audio interrupted the game, or the output device went away, as when headphones come
-    /// out. The owner pauses the game, and pausing keeps the engine from starting itself again.
+    /// Called on the main queue when sound is cut off in a way the player should notice: a call,
+    /// an alarm or Siri interrupted the game, or the output device went away, as when headphones
+    /// come out. The owner pauses the game, and pausing keeps the engine from starting itself again.
     /// Set and called on the main queue.
     var onDisturbance: (@MainActor () -> Void)?
 
     /// Sets how game sound relates to the silent switch and other apps' audio. Call before start.
     func apply(_ mode: SoundMode) {
         let session = AVAudioSession.sharedInstance()
+        // Every mode mixes with other apps' audio. An exclusive category is interrupted whenever
+        // the system plays sound of its own, and each interruption pauses the game.
         switch mode {
         case .followSilentSwitch:
-            // Silenced by the switch, and stops other apps' audio while a game plays.
-            try? session.setCategory(.soloAmbient)
+            // Ambient is silenced by the switch.
+            try? session.setCategory(.ambient)
         case .alwaysOn:
-            try? session.setCategory(.playback)
+            try? session.setCategory(.playback, mode: .default, options: .mixWithOthers)
         case .alwaysOff:
-            // Ambient mixes with other apps, so their audio keeps playing; the game is muted.
             try? session.setCategory(.ambient)
         }
         // Ask for short hardware buffers, about 10 ms, to keep latency low.

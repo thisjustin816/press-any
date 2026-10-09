@@ -241,7 +241,7 @@ struct PlayingSettingsPage: View {
                     }
                 }
             } footer: {
-                Text("Always Off leaves music from other apps playing. The game menu changes this too.")
+                Text("Game sound plays alongside music from other apps. The game menu changes this too.")
             }
 
             Section {

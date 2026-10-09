@@ -857,9 +857,9 @@ final class GameplayViewController: UIViewController {
         }
     }
 
-    /// Another app's audio took over, or the headphones came out. The game pauses as for the menu
-    /// and stays paused, so the player decides when to go on, and sound isn't restarted under them.
-    /// Already in the background, the save and Resume Games own the game.
+    /// A call, an alarm or Siri took the audio, or the headphones came out. The game pauses as for
+    /// the menu and stays paused, so the player decides when to go on, and sound isn't restarted
+    /// under them. Already in the background, the save and Resume Games own the game.
     private func audioWasDisturbed() {
         guard !stopped, !halted, !backgrounded else { return }
         pauseGameplay()

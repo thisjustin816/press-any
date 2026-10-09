@@ -718,7 +718,7 @@ claims reliability from just an old ROM, old save and new ROM.
   After only an overlay (Control Center, Notification Center, a call banner) it resumes on its own
   unless the player had paused it; after the background, Resume Games decides. Backgrounding
   clears the open-session marker only after the Auto State is written; returning to play marks
-  it open again. An audio interruption from another app, or the output device going away
+  it open again. An audio interruption (a call, an alarm, Siri), or the output device going away
   (headphones unplugged, a Bluetooth speaker lost), pauses the game as the game menu does, even
   while the scene stays active. It stays paused until the player chooses Resume, so sound never
   restarts on its own when the interruption ends. In the background, Resume Games decides.
@@ -935,8 +935,9 @@ picture. A connected controller still hides the touch controls.
   0.5% fast or slow to track clock drift. The game's speed never changes for the sound. Sound more
   than three times the target behind is skipped. The app asks for 10 ms hardware buffers.
 - **Sound** (app-wide): Follow Silent Switch by default, Always On, or Always Off, which mutes the
-  game but leaves other apps' audio alone. It's in App Settings and in the game menu, where a
-  change applies to the open game at once and becomes the app-wide setting.
+  game. Every choice plays alongside other apps' audio, so music keeps playing under a game and a
+  system sound such as Background Sounds doesn't interrupt it. It's in App Settings and in the
+  game menu, where a change applies to the open game at once and becomes the app-wide setting.
 - Genuine audio interruptions pause; route changes are handled without restarting. A started
   interruption, or an output device that goes away, pauses the game and leaves it paused for
   Resume. Other route changes, such as a device arriving, don't interrupt play.
