@@ -94,7 +94,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         var rejected = false
         let worker: SessionWorker
         if resumeAutoState, FileManager.default.fileExists(atPath: autoStateURL.path),
-           !session.batteryIsNewerThanAutoState(files: files) {
+           !session.autoStateIsUnsafeToRestore(files: files) {
             let candidate = try bootedWorker()
             do {
                 let state = try Data(contentsOf: autoStateURL, options: .mappedIfSafe)
@@ -217,10 +217,16 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             core: try worker.perform { $0.descriptor },
             stateSerializationVersion: try worker.perform { $0.stateSerializationVersion },
             batterySHA256: session.batteryHash(files: files),
-            playtimeSeconds: playtimeSeconds
+            playtimeSeconds: playtimeSeconds,
+            stateSHA256: files.hashData(data)
         )
+        let encoded = try JSONEncoder().encode(record)
+        // The record goes first under its own name, so a state that lands without its record
+        // written beside it is still matched to it when the app stops between the two writes.
+        try files.writeDataAtomically(encoded, to: session.pendingAutoStateRecordURL)
         try files.writeDataAtomically(data, to: session.autoStateURL)
-        try files.writeDataAtomically(try JSONEncoder().encode(record), to: session.autoStateRecordURL)
+        try files.writeDataAtomically(encoded, to: session.autoStateRecordURL)
+        try? files.removeIfExists(session.pendingAutoStateRecordURL)
     }
 
     public func background() throws {

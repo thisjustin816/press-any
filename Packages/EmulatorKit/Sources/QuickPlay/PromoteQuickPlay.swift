@@ -214,7 +214,7 @@ public struct PromoteQuickPlay: Sendable {
     private func adoptAutoState(of session: QuickPlaySession, buildID: UUID, profileID: UUID) throws {
         guard assetStore.fileExists(at: session.autoStateURL),
               let record = session.autoStateRecord(files: assetStore),
-              !session.batteryIsNewerThanAutoState(files: assetStore)
+              !session.autoStateIsUnsafeToRestore(files: assetStore)
         else { return }
         let payload = try assetStore.readData(at: session.autoStateURL)
         let stateID = makeID()
