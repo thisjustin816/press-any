@@ -25,6 +25,8 @@ public struct GameTitleSuggester: Sendable {
 
     public func suggestions() throws -> [GameTitleSuggestion] {
         try games.fetchGames().compactMap { game in
+            let title = try games.fetchMetadataProvenance(ownerID: game.id).first { $0.field == .title }
+            guard title?.source != .player else { return nil }
             let releases = try builds.fetchBuilds(gameID: game.id)
                 .sorted { ($0.createdAt, $0.id.uuidString) < ($1.createdAt, $1.id.uuidString) }
                 .compactMap { build -> ReleaseTitle? in
