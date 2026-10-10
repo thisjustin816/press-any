@@ -69,12 +69,18 @@ final class ColorDisplaySettingsTests: XCTestCase {
             case .dmg(let choices):
                 XCTAssertEqual(system, .gameBoy)
                 XCTAssertEqual(Array(choices.prefix(3)), [.dmgGreen, .pocket, .light])
+                XCTAssertEqual(choices.filter(DMGPaletteGroup.game.contains), [
+                    .cgbOlive, .cgbZelda, .cgbMarioLand, .cgbMarioLand2, .cgbDonkeyKongLand, .cgbCamera,
+                ])
                 XCTAssertEqual(choices.dropFirst(3).map(\.displayName), [
                     "Brown (Up)", "Red (Up + A)", "Dark Brown (Up + B)",
                     "Pastel (Down)", "Orange (Down + A)", "Yellow (Down + B)",
                     "Blue (Left)", "Dark Blue (Left + A)", "Black & White (Left + B)",
                     "Green (Right)", "Dark Green (Right + A)", "Inverted (Right + B)",
                     "Olive & Orange (Mole Mania)",
+                    "Red & Green (Link's Awakening)", "Tan & Red (Super Mario Land)",
+                    "Pastel & Orange (Super Mario Land 2)", "Blue & Orange (Donkey Kong Land)",
+                    "Amber (Game Boy Camera)",
                 ])
             case .correction(let choices):
                 XCTAssertEqual(system, .gameBoyColor)

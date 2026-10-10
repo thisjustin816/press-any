@@ -6,6 +6,7 @@ copying source snapshots into this repository. Adapted code and data carry their
 ## SameBoy
 
 - Project: SameBoy
+- Author: Lior Halphon
 - Upstream: https://github.com/LIJI32/SameBoy
 - Location: git submodule at `Packages/EmulatorKit/Dependencies/SameBoy`
 - Pinned commit: `213a12ce93d66b105a113debd9396306066a7cfc` (`v1.0.3-5-g213a12c`)
@@ -17,10 +18,9 @@ copying source snapshots into this repository. Adapted code and data carry their
 - Usage: only `Core/` is compiled, behind Press Any's `SameBoyBridge`. The boot ROMs are built
   from the submodule's `BootROMs/` sources. Nothing from SameBoy's iOS frontend (`iOS/`), whose
   license needs the author's written permission for App Store distribution, is compiled,
-  bundled or adapted. The thirteen boot palette choices (the twelve button combinations and
-  Mole Mania, combination 17) copy RGB555 values and combination
-  mappings from `BootROMs/cgb_boot.asm` into `SameBoyBridge/SameBoyBootPalettes.h`, which carries
-  the Expat notice. Their background/OBJ0/OBJ1 use is checked against Pan Docs:
+  bundled or adapted. The eighteen boot palette choices (twelve button combinations and six
+  game palettes) copy RGB555 values and combination mappings from `BootROMs/cgb_boot.asm`
+  into `SameBoyBridge/SameBoyBootPalettes.h`, which carries the Expat notice. Their background/OBJ0/OBJ1 use is checked against Pan Docs:
   https://gbdev.io/pandocs/Power_Up_Sequence.html#compatibility-palettes.
   Press Any's controller layouts and artwork are its own.
 - License: Expat (MIT-style); see the submodule's `LICENSE`.

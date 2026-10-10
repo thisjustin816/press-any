@@ -37,13 +37,21 @@ static const uint16_t sb_boot_palette_colors[][4] = {
     [5]  = {0x7fff, 0x5294, 0x294a, 0x0000},
     [6]  = {0x7fff, 0x03ff, 0x012f, 0x0000},
     [8]  = {0x7fff, 0x42b5, 0x3dc8, 0x0000},
+    [10] = {0x67ff, 0x77ac, 0x1a13, 0x2d6b},
+    [11] = {0x7ed6, 0x4bff, 0x2175, 0x0000},
     [12] = {0x53ff, 0x4a5f, 0x7e52, 0x0000},
     [16] = {0x7fff, 0x01df, 0x0112, 0x0000},
+    [17] = {0x231f, 0x035f, 0x00f2, 0x0009},
     [18] = {0x7fff, 0x03ea, 0x011f, 0x0000},
+    [21] = {0x7fff, 0x03e0, 0x0206, 0x0120},
+    [22] = {0x7fff, 0x7eeb, 0x001f, 0x7c00},
     [24] = {0x7fff, 0x03ff, 0x001f, 0x0000},
+    [26] = {0x7fff, 0x033f, 0x0193, 0x0000},
     [27] = {0x0000, 0x4200, 0x037f, 0x7fff},
     [28] = {0x7fff, 0x7e8c, 0x7c00, 0x0000},
     [29] = {0x7fff, 0x1bef, 0x6180, 0x0000},
+    // Combination 22 starts its sprite row one color before palette 4.
+    [32] = {0x0000, 0x7fff, 0x421f, 0x1cf2},
 };
 
 // BG, OBJ0, OBJ1. Table order matches the bridge's boot palette enum cases.
@@ -61,4 +69,9 @@ static const uint8_t sb_boot_palette_combinations[][3] = {
     {29, 4, 4},   // Right + A
     {27, 27, 27}, // Right + B
     {8, 16, 16},  // Mole Mania (combination 17)
+    {4, 21, 28},  // Link's Awakening (combination 44)
+    {11, 32, 32}, // Super Mario Land (combination 22)
+    {10, 16, 28}, // Super Mario Land 2 (combination 37)
+    {2, 17, 22},  // Donkey Kong Land (combination 39)
+    {26, 26, 26}, // Game Boy Camera (combination 9)
 };

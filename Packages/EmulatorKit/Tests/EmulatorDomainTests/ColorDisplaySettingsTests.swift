@@ -24,6 +24,11 @@ final class ColorDisplaySettingsTests: XCTestCase {
             "cgbRightA",
             "cgbRightB",
             "cgbOlive",
+            "cgbZelda",
+            "cgbMarioLand",
+            "cgbMarioLand2",
+            "cgbDonkeyKongLand",
+            "cgbCamera",
         ])
         XCTAssertEqual(String(data: try JSONEncoder().encode(ColorCorrection.accurate), encoding: .utf8), "\"accurate\"")
         XCTAssertEqual(String(data: try JSONEncoder().encode(DMGPalette.dmgGreen), encoding: .utf8), "\"dmgGreen\"")
