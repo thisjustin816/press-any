@@ -25,6 +25,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     var onOpenSettings: (() -> Void)?
     var onOpenCheats: (() -> Void)?
     var onSoundModeChange: ((SoundMode) throws -> Void)?
+    var artworkTarget: GameplayArtworkTarget?
 
     func makeUIViewController(context: Context) -> GameplayViewController {
         let controller = GameplayViewController(
@@ -55,6 +56,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
         controller.onOpenSettings = onOpenSettings
         controller.onOpenCheats = onOpenCheats
         controller.onSoundModeChange = onSoundModeChange
+        controller.artworkTarget = artworkTarget
         return controller
     }
 

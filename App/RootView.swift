@@ -165,7 +165,8 @@ struct RootView: View {
                     : nil,
                 onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true },
                 onOpenCheats: presentation.cheatsBuildID == nil ? nil : { showsGameplayCheats = true },
-                onSoundModeChange: { try bootstrap.container?.setSoundMode($0) }
+                onSoundModeChange: { try bootstrap.container?.setSoundMode($0) },
+                artworkTarget: gameplayArtworkTarget(presentation)
             )
             .ignoresSafeArea()
             // The status bar sits on the controller's body: dark text on Classic, light on Dark.
@@ -208,6 +209,12 @@ struct RootView: View {
                 .interactiveDismissDisabled()
             }
         }
+    }
+
+    private func gameplayArtworkTarget(_ presentation: GameplayPresentation) -> GameplayArtworkTarget? {
+        guard !presentation.isQuickPlay, let gameID = presentation.settings?.gameID,
+              let container = bootstrap.container else { return nil }
+        return GameplayArtworkTarget(gameID: gameID, games: container.repositories.games, artwork: container.gameArtwork)
     }
 
     /// The choices a library launch can stop for: recovery, resume, a risky or a damaged save.

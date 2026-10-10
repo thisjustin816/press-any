@@ -79,6 +79,8 @@ jobs:
         run: shellcheck -x --severity=error Scripts/*.sh Scripts/lib/*.sh
       - name: Test the No-Intro data generator
         run: python3 Scripts/tests/test_generate_known_dumps.py
+      - name: Test shared-file UI path selection
+        run: python3 Scripts/tests/test_share_ui_paths.py
       - name: Remind when the No-Intro data is due for a refresh
         run: python3 Scripts/check-known-dumps-age.py
       - name: Check the third-party notices name every pinned dependency

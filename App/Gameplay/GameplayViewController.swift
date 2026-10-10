@@ -73,6 +73,7 @@ final class GameplayViewController: UIViewController {
     var onOpenCheats: (() -> Void)?
     /// Saves a Sound choice made from the game menu, which applies it to the game at once.
     var onSoundModeChange: ((SoundMode) throws -> Void)?
+    var artworkTarget: GameplayArtworkTarget?
 
     init(
         runtime: any GameplayRuntime,
@@ -307,6 +308,7 @@ final class GameplayViewController: UIViewController {
                 attributes: .disabled
             ) { _ in })
         }
+        elements.append(makeCaptureMenu())
         elements.append(UIMenu(
             title: "Sound",
             subtitle: soundMode.displayName,
@@ -341,6 +343,73 @@ final class GameplayViewController: UIViewController {
         #endif
         elements.append(UIMenu(options: .displayInline, children: [restart, close]))
         return elements
+    }
+
+    private func makeCaptureMenu() -> UIMenu {
+        let hasFrame = runtime.currentFrame != nil
+        let share = UIAction(
+            title: "Share Screenshot", image: UIImage(systemName: "square.and.arrow.up"),
+            attributes: hasFrame ? [] : .disabled
+        ) { [weak self] _ in self?.shareScreenshot() }
+        let artwork = UIAction(
+            title: "Use Current Frame as Artwork",
+            subtitle: artworkTarget == nil ? "Add to Library to use artwork" : nil,
+            image: UIImage(systemName: "photo"),
+            attributes: hasFrame && artworkTarget != nil ? [] : .disabled
+        ) { [weak self] _ in self?.useCurrentFrameAsArtwork() }
+        return UIMenu(title: "Capture", image: UIImage(systemName: "camera"), children: [share, artwork])
+    }
+
+    private func currentFramePNG() throws -> Data {
+        pauseGameplay()
+        guard let frame = runtime.currentFrame else { throw PNGFrameEncoder.EncodingError.unreadableFrame }
+        return try PNGFrameEncoder().encode(frame)
+    }
+
+    func shareScreenshot() {
+        guard presentedViewController == nil else { return }
+        do {
+            let screenshot = try SharedGameplayScreenshot(png: currentFramePNG())
+            let sheet = UIActivityViewController(activityItems: [screenshot.url], applicationActivities: nil)
+            sheet.completionWithItemsHandler = { _, _, _, _ in screenshot.discard() }
+            sheet.popoverPresentationController?.sourceView = view
+            sheet.popoverPresentationController?.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
+            present(sheet, animated: true)
+        } catch {
+            showTransientMessage("Could not capture the screenshot.")
+        }
+    }
+
+    func useCurrentFrameAsArtwork() {
+        guard presentedViewController == nil, let target = artworkTarget else { return }
+        do {
+            let png = try currentFramePNG()
+            if try target.hasArtwork() {
+                let alert = UIAlertController(
+                    title: "Replace Artwork?",
+                    message: "Use the current frame as this Game's artwork? Its existing artwork will be removed.",
+                    preferredStyle: .alert
+                )
+                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                alert.addAction(UIAlertAction(title: "Replace", style: .destructive) { [weak self] _ in
+                    self?.setArtwork(png, target: target)
+                })
+                present(alert, animated: true)
+            } else {
+                setArtwork(png, target: target)
+            }
+        } catch {
+            showTransientMessage("Could not capture the artwork.")
+        }
+    }
+
+    private func setArtwork(_ png: Data, target: GameplayArtworkTarget) {
+        do {
+            try target.set(png)
+            showTransientMessage("Artwork updated.")
+        } catch {
+            showTransientMessage("Could not update the artwork.")
+        }
     }
 
     /// The row of icons at the top of the game menu: pause or resume, fast forward, Quick Save and
