@@ -866,7 +866,7 @@ picture. A connected controller still hides the touch controls.
 - Opening the menu stops frames and audio and releases held input. A row of icons at the top
   holds Resume, Fast Forward (highlighted while on), Quick Save and Quick Load. Below it, States
   opens Save New State, Slots when enabled, and the remaining states, newest first, with their
-  pictures and dates; then Cheats, Sound, Settings, and Restart beside Close Game, in red, in
+  pictures and dates; then Cheats, Capture, Sound, Settings, and Restart beside Close Game, in red, in
   their own section. The game stays paused after the menu closes, after changing Fast Forward
   and after returning from another app, until the player chooses Resume. A paused game's Resume
   button sits centered on the game picture. With that overlay exposed, any fresh non-directional
@@ -877,9 +877,9 @@ picture. A connected controller still hides the touch controls.
 - **Settings** opens over the paused game at half height. A library game edits its Game's
   settings; Quick Play edits its system's. Layout, scaling, LCD filter and frame blending apply
   at once; the rest at the next launch.
-- No controller button opens the menu by default, since Menu is START. v1 adds a fixed button
-  combination that opens it; there's no button mapping in the app. The Home button is never
-  taken, since Apple reserves it for the system.
+- The controller's Menu button opens the menu; pressing it again closes the menu and resumes.
+  The Home button is reserved for the system. Button customization uses iOS Settings (see
+  Controllers, haptics and rumble).
 
 ### Picture
 
