@@ -4,10 +4,11 @@ import Foundation
 
 public enum BuildNaming {
     /// Returns `name`, or a name that tells this Build apart when another Build in the Game already
-    /// has it. The parser's "Original" for a file without tags is never used: Base already marks
-    /// the primary Build, so an untagged Build is named for the day it was added, "2026-10-06", as
-    /// date-stamped files are. Any other repeated name gains the day, "v1.0 · Oct 6". Either then
-    /// adds the time for Builds added the same day, then a number.
+    /// has it. The parser's "Original" for a file without tags stays "Original" while no other Build
+    /// in the Game has that name, so a release with nothing to tell it apart isn't labelled with the
+    /// day it was imported. Once "Original" is taken, an untagged Build is named for the day it was
+    /// added, "2026-10-06", as date-stamped files are. Any other repeated name gains the day,
+    /// "v1.0 · Oct 6". Either then adds the time for Builds added the same day, then a number.
     public static func distinctName(
         _ name: String,
         existing: [String],
@@ -17,8 +18,8 @@ public enum BuildNaming {
     ) -> String {
         let taken = Set(existing.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
         func isFree(_ candidate: String) -> Bool { !taken.contains(candidate.lowercased()) }
+        guard !isFree(name) else { return name }
         let untagged = name == "Original"
-        guard untagged || !isFree(name) else { return name }
 
         let time = date.formatted(Date.FormatStyle(locale: locale, timeZone: timeZone).hour().minute())
         let candidates: [String]
@@ -119,8 +120,8 @@ public struct BuildNameSuggestion: Identifiable, Equatable, Sendable {
 
 /// Applies the import naming rules to Builds already in the library. It suggests a name only where
 /// the current one looks generated: one still carrying URL escapes, one that is just the source
-/// filename, "Original" or the parser's generic "Hack" with or without a date added, or one an
-/// earlier Build in the same Game already has. Every "Original" gains the day its Build was added.
+/// filename, "Original" or the parser's generic "Hack" with a date added, or one an earlier Build
+/// in the same Game already has. A lone "Original" or "Hack" is already the right name.
 public struct BuildNameSuggester: Sendable {
     private let games: any GameRepository
     private let builds: any BuildRepository
@@ -158,8 +159,9 @@ public struct BuildNameSuggester: Sendable {
                 }
                 let base = filename.map { FilenameMetadataParser.parse(filename: $0).suggestedBuildName }
                     ?? (current.removingPercentEncoding ?? current)
-                // "Hack" with nothing better in the filename stays, unless an earlier Build has it.
-                guard base != current || repeatsEarlier || current == "Original" else {
+                // "Original" and "Hack" with nothing better in the filename stay, unless an earlier
+                // Build has them.
+                guard base != current || repeatsEarlier else {
                     settled.append(current)
                     continue
                 }

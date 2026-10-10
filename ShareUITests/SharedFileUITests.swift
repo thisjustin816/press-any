@@ -7,7 +7,6 @@ final class SharedFileUITests: XCTestCase {
     private let baseROM = "gbdk450-rev-v1.0.gb"
     private let colorROM = "gbdk450-dual.gbc"
     private let gameTitle = "Shared Test Game"
-    /// An untagged file's Build is named for the day it's added.
     // Import Review reads the version from the filename.
     private let baseBuildName = "v1.0"
 

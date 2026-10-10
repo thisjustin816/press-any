@@ -93,6 +93,7 @@ Verify with a user-supplied legal ROM:
 - [x] Make Separate Game shows a review with the Build's own Save Profiles and the artwork selected; the new Game gets copies, shows Split From, and the original Game is unchanged.
 - [x] In Import Review for a new Game, choose artwork from Photos, then replace it from Files: the preview changes, and after Import the library tile and the Game show it. Choose a file that isn't an image: review refuses it and the import still works. Add a Build to a Game that has artwork without choosing any: its artwork stays.
 - [x] Import a homebrew ROM (GB Studio, GBDK or RGBDS); Import Review and the Build's Technical Info show what it was made with.
+- [ ] Import a ROM that is not in the No-Intro data and has no version tag in its filename, into a new Game: the Build is named "Original", not a date. Import a second untagged file into the same Game: its Build is named for the day it was added.
 - [x] Import a second build of a homebrew game whose filename differs from the first, such as "Game-v5-Stability.gbc"; Import Review suggests adding it to the first Game and reads version 5, status Stability.
 - [x] Play Build A of a homebrew Game, then launch Build B, made with different tools, with the same save; the warning appears, and Play with a Copy leaves the original save unchanged.
 - [x] Replace from File on a profile with a save asks first and keeps "<name> before import"; on a blank profile it doesn't ask.
