@@ -190,12 +190,24 @@ final class SharedFileUITests: XCTestCase {
 
     private func replace(_ field: XCUIElement, with value: String) {
         expect(field)
-        // The edit menu doesn't appear for trailing-aligned fields inside LabeledContent, so clear
-        // with the keyboard. Tapping the trailing edge puts the caret after the text in either alignment.
-        field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
-        let existing = field.value as? String ?? ""
-        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count) + value + "\n")
+        field.tap()
+        expect(app.keyboards.firstMatch, message: "the text field opens the keyboard")
+        let existing = enteredText(in: field)
+        if !existing.isEmpty {
+            // The edit menu doesn't appear for trailing-aligned fields inside LabeledContent, so clear
+            // with the keyboard. Opening the keyboard can reposition the form before the caret tap.
+            field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
+        XCTAssertEqual(enteredText(in: field), "", "the previous name is fully cleared")
+        field.typeText(value)
+        field.typeText("\n")
         XCTAssertEqual(field.value as? String, value, "the edited name replaces the whole previous value")
+    }
+
+    private func enteredText(in field: XCUIElement) -> String {
+        let value = field.value as? String ?? ""
+        return value == field.placeholderValue ? "" : value
     }
 
     private func expect(_ element: XCUIElement, message: String = "", timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
