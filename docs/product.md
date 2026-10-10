@@ -491,8 +491,10 @@ isn't stored.
   and left out of the title: "[!]", "[a1]", "[b1]", "[o1]", "[p1]", "[x]", GoodGBx's "[C]" and
   "[S]", "(M3)" and "(PD)" describe the copy, and "[h1]", "[h1C]", "[hI]", "[t1]" and "[f1]" mark
   a modified one, which imports as a hack. Verification still comes from hashing, not the tags.
-- A file with no version tags is named for the day it's added, "2026-10-06", then the time for a
-  second one the same day. A hack with nothing else to name it is "Hack".
+- A file with no version tags is named "Original" while no other Build in the Game has that name,
+  so a release that is not in the No-Intro data isn't labelled with the day it was imported. A
+  second untagged Build is named for the day it's added, "2026-10-06", then the time for another
+  the same day. A hack with nothing else to name it is "Hack".
 - A patch's Build is named by its title, followed by any version or other tag: "Mole Mania DX
   v1.3". When the patch's title is the Game's own, only the tag remains, so "Example (Rev 1)"
   applied to Example is "Rev 1". A tag joined to the Game's title by a hyphen, a colon
@@ -515,7 +517,8 @@ isn't stored.
   can offer regional title proposals again. An edited title is the player's and stays protected;
   skipping leaves the Game unchanged. Preferred Builds are untouched.
   Build names still use the import naming rules for names that look generated: URL escapes, the
-  bare source filename, repeats, or the generic "Original" and "Hack". Both kinds can be accepted,
+  bare source filename, repeats, or "Original" and "Hack" with a date added. A lone "Original" or
+  "Hack" looks right. Both kinds can be accepted,
   edited or skipped; nothing changes until Rename. With neither kind to suggest, review says
   Game titles and Build names look right.
 
