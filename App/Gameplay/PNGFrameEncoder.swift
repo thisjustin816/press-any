@@ -5,7 +5,7 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// Encodes a game frame as a PNG at its own size, for save-state thumbnails.
+/// Encodes a game frame as a PNG at its own size.
 struct PNGFrameEncoder: FrameImageEncoding {
     enum EncodingError: Error {
         case unreadableFrame
@@ -17,7 +17,8 @@ struct PNGFrameEncoder: FrameImageEncoding {
     func encode(_ frame: EmulatorVideoFrame) throws -> Data {
         // The core's BGRA is little-endian ARGB with alpha first; the picture is opaque.
         let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue
-        guard frame.bgra8888.count >= frame.width * frame.height * 4,
+        guard frame.width > 0, frame.height > 0,
+              frame.bgra8888.count >= frame.width * frame.height * 4,
               let provider = CGDataProvider(data: frame.bgra8888 as CFData),
               let image = CGImage(
                   width: frame.width,

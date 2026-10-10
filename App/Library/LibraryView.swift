@@ -579,12 +579,11 @@ private struct GameArtworkView: View {
 
     var body: some View {
         if let url {
-            // The shape takes the frame the parent offers, and the image fills and is clipped to it.
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(.quaternary)
                 .overlay {
                     AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
+                        image.resizable().interpolation(.none).scaledToFit()
                     } placeholder: {
                         ProgressView()
                     }

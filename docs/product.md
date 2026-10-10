@@ -36,10 +36,10 @@ change. There is no separate decision log.
 
 v1 is a good core experience: the library model with search, sorting and favorites, saves and
 states with Library Backup, patching, cheats, Quick Play, Fast Forward, rumble, Bluetooth controllers,
-landscape and the built-in layouts. Everything else waits for v1.1: iCloud sync, the Community
-Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
+landscape, the built-in layouts, clean screenshot sharing and artwork from a chosen game frame.
+Everything else waits for v1.1: iCloud sync, the Community Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
 artwork and documents, rewind, slow motion, frame advance and Quick Actions, the model override,
-curated shaders, the layout editor and skin import, screenshots and gameplay notes, external displays,
+curated shaders, the layout editor and skin import, a capture gallery and gameplay notes, external displays,
 crash reporting and usage counts, and Developer Mode. The Plus screen's roadmap lists these
 features, so change it with this paragraph (see Pricing).
 
@@ -767,7 +767,7 @@ fresh build.
   a session with only a resume point can keep it in a new profile. Keeping the existing profile
   brings no state, since the state holds the discarded save. If the resume point can't move, the
   Build and save are still added and the session is kept.
-- v1.1: screenshots, notes and debug captures in a session, moved over transactionally on
+- v1.1: a screenshot gallery, notes and debug captures in a session, moved over transactionally on
   promotion.
 
 ## Gameplay
@@ -866,7 +866,7 @@ picture. A connected controller still hides the touch controls.
 - Opening the menu stops frames and audio and releases held input. A row of icons at the top
   holds Resume, Fast Forward (highlighted while on), Quick Save and Quick Load. Below it, States
   opens Save New State, Slots when enabled, and the remaining states, newest first, with their
-  pictures and dates; then Cheats, Sound, Settings, and Restart beside Close Game, in red, in
+  pictures and dates; then Cheats, Capture, Sound, Settings, and Restart beside Close Game, in red, in
   their own section. The game stays paused after the menu closes, after changing Fast Forward
   and after returning from another app, until the player chooses Resume. A paused game's Resume
   button sits centered on the game picture. With that overlay exposed, any fresh non-directional
@@ -877,9 +877,9 @@ picture. A connected controller still hides the touch controls.
 - **Settings** opens over the paused game at half height. A library game edits its Game's
   settings; Quick Play edits its system's. Layout, scaling, LCD filter and frame blending apply
   at once; the rest at the next launch.
-- No controller button opens the menu by default, since Menu is START. v1 adds a fixed button
-  combination that opens it; there's no button mapping in the app. The Home button is never
-  taken, since Apple reserves it for the system.
+- The controller's Menu button opens the menu; pressing it again closes the menu and resumes.
+  The Home button is reserved for the system. Button customization uses iOS Settings (see
+  Controllers, haptics and rumble).
 
 ### Picture
 
@@ -1222,10 +1222,16 @@ with an optional Developer HUD and short in-memory history. Developer Mode write
 once, with Undo Last Write and a clear frozen marker. A full debugger, disassembler and VRAM
 viewer are later.
 
-### Screenshots, notes and debug context (v1.1)
+### Screenshots, notes and debug context
 
-An in-app gallery where every capture belongs to its exact Build, exported clean, with metadata,
-or with a rendered Build Info or Bug Report strip. An optional capture context records selected
+The game menu's Capture submenu offers Share Screenshot: a PNG at the core frame's native size,
+with its current screen colors and no touch controls, menu, LCD filter or frame blending. Sharing
+works in library games and Quick Play, requires a frame, and leaves the game paused until Resume.
+The temporary PNG remains available until the system share sheet closes, then is removed. Sharing
+and setting artwork are free.
+
+v1.1 adds an in-app gallery where every capture belongs to its exact Build, exported clean,
+with metadata, or with a rendered Build Info or Bug Report strip. An optional capture context records selected
 watches, named variables when maps exist, memory ranges, registers, frame and time, Build, hash
 and patches, RTC, cheats, profile, core and settings; a full RAM snapshot is opt-in in Developer
 Mode. Bug-report exports preview a checklist, and memory, saves and notes need explicit inclusion.
@@ -1238,10 +1244,16 @@ sets, TXT, Markdown), belonging to a Game, a Build or both. A reader opens over 
 remembers the last position, and restores the running or paused state on close. Search in text
 formats only if it's easy; no OCR. Side-by-side reading on iPad is later.
 
-### Artwork (v1.1)
+### Artwork
 
-Automatic artwork on import, which a setting can turn off, through pluggable providers: included
-or imported files, the Community Catalog, Libretro thumbnails, OpenVGDB pending its license,
+The game menu's Capture submenu offers Use Current Frame as Artwork for library games. The
+paused frame becomes the Game's manually assigned artwork through the same storage as Photos
+and Files. Replacing existing artwork asks first; Cancel leaves it intact. Quick Play must be
+added to the library before it can assign artwork. Library tiles and list thumbnails fit the
+whole image, with sharp pixels, so a 10:9 game frame is not cropped. The game stays paused.
+
+v1.1 adds automatic artwork on import, which a setting can turn off, through pluggable providers:
+included or imported files, the Community Catalog, Libretro thumbnails, OpenVGDB pending its license,
 optional SteamGridDB with the player's own key, and a fallback generated from the game's title
 screen, recorded as generated so anything chosen or more specific wins. Priority: the player's
 choice, then hack-specific, then inherited from the base game, then generated. Several typed
@@ -1360,7 +1372,7 @@ Narrated gameplay isn't planned.
 
 ### Performance
 
-Correct timing comes first. Under thermal pressure (v1.1, once shaders and rewind exist), optional shaders, rewind
+Correct timing comes first. Under thermal pressure (v1.1, with the wider shader set and rewind), optional shaders, rewind
 length and background work give way before gameplay, audio or input do; emulation speed and save behavior never change
 silently. The default shader must hold full speed on the slowest supported device.
 

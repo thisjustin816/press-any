@@ -29,7 +29,7 @@ enum PlusRoadmap {
         Item(title: "Model Override", detail: "Run a game as a Game Boy, Game Boy Color or Super Game Boy, with Super Game Boy palettes and borders."),
         Item(title: "Shaders", detail: "A small, tested set of screen effects, chosen with the community."),
         Item(title: "Layout Editor and Skins", detail: "Move and resize the screen and controls, and import Delta and Manic skins."),
-        Item(title: "Screenshots and Notes", detail: "Captures and timestamped notes kept with each Build."),
+        Item(title: "Capture Gallery and Notes", detail: "Screenshots kept with each Build, and timestamped gameplay notes."),
         Item(title: "External Displays", detail: "Play on an AirPlay or wired display, with the phone as the controller."),
         Item(title: "Developer Mode", detail: "Memory search and editing, watches and other tools for making and testing games."),
     ]

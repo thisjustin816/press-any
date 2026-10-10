@@ -95,6 +95,64 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(disabled.subtitle, "Add to Library to use cheats")
     }
 
+    func testCaptureMenuNeedsAFrameAndArtworkNeedsALibraryGame() throws {
+        let (gameplay, runtime, _) = makeGameplay()
+        let unavailable = gameplay.prepareGameMenu().allActions.filter {
+            ["Share Screenshot", "Use Current Frame as Artwork"].contains($0.title)
+        }
+        XCTAssertEqual(unavailable.count, 2)
+        XCTAssertTrue(unavailable.allSatisfy { $0.attributes.contains(.disabled) })
+        runtime.captureFrame = EmulatorVideoFrame(width: 160, height: 144, bgra8888: Data(count: 160 * 144 * 4), emulatedNanoseconds: 1)
+        let items = gameplay.prepareGameMenu()
+        let share = try XCTUnwrap(items.allActions.first { $0.title == "Share Screenshot" })
+        XCTAssertFalse(share.attributes.contains(.disabled), "Quick Play can share a screenshot")
+        let artwork = try XCTUnwrap(items.allActions.first { $0.title == "Use Current Frame as Artwork" })
+        XCTAssertTrue(artwork.attributes.contains(.disabled))
+        XCTAssertEqual(artwork.subtitle, "Add to Library to use artwork")
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertTrue(gameplay.isShowingPaused)
+    }
+
+    func testArtworkCaptureStoresAPausedFrameAndAsksBeforeReplacingIt() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let now = Date()
+        let game = Game(id: UUID(), primaryTitle: "Frame", systemFamily: "gameboy", createdAt: now, modifiedAt: now)
+        try container.repositories.games.insertGame(game)
+        let (gameplay, runtime, _) = makeGameplay()
+        runtime.captureFrame = EmulatorVideoFrame(width: 160, height: 144, bgra8888: Data(count: 160 * 144 * 4), emulatedNanoseconds: 1)
+        gameplay.artworkTarget = GameplayArtworkTarget(gameID: game.id, games: container.repositories.games, artwork: container.gameArtwork)
+        let action = try XCTUnwrap(gameplay.prepareGameMenu().allActions.first { $0.title == "Use Current Frame as Artwork" })
+        XCTAssertFalse(action.attributes.contains(.disabled))
+        let button = UIButton(type: .system)
+        button.addAction(action, for: .touchUpInside)
+        button.sendActions(for: .touchUpInside)
+        let saved = try XCTUnwrap(container.repositories.games.fetchGame(id: game.id)?.artworkAssetID)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertTrue(gameplay.isShowingPaused)
+
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.rootViewController = gameplay
+        window.makeKeyAndVisible()
+        defer {
+            gameplay.sceneWillDeactivate()
+            window.isHidden = true
+        }
+        gameplay.useCurrentFrameAsArtwork()
+        let alert = try XCTUnwrap(gameplay.presentedViewController as? UIAlertController)
+        XCTAssertEqual(alert.title, "Replace Artwork?")
+        XCTAssertEqual(alert.actions.map(\.title), ["Cancel", "Replace"])
+        XCTAssertEqual(try container.repositories.games.fetchGame(id: game.id)?.artworkAssetID, saved)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        let frames = runtime.frames
+        gameplay.dismiss(animated: false)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.06))
+        XCTAssertEqual(runtime.frames, frames)
+        XCTAssertEqual(try container.repositories.games.fetchGame(id: game.id)?.artworkAssetID, saved)
+    }
+
     private func makeGameplay(
         policy: AutoResumePolicy = .always
     ) -> (GameplayViewController, LifecycleRuntime, PhysicalControllerMonitor) {
@@ -709,7 +767,8 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     var foregrounds: Int { lock.withLock { foregroundCount } }
     var failedFrame: Bool { lock.withLock { failed } }
     var frames: Int { lock.withLock { frameCount } }
-    var currentFrame: EmulatorVideoFrame? { nil }
+    var captureFrame: EmulatorVideoFrame?
+    var currentFrame: EmulatorVideoFrame? { captureFrame }
     var playtimeSeconds: Double { 0 }
 
     func stepFrame(input: EmulatorInputState) throws -> EmulatorVideoFrame {

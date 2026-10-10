@@ -16,6 +16,8 @@ on:
         description: Also run the share-sheet regression controls, which rebuild the app for each
         type: boolean
         default: false
+  schedule:
+    - cron: '23 7 * * *'
 
 permissions:
   contents: read
@@ -24,14 +26,42 @@ permissions:
 # because the TestFlight workflow uploads only a build that succeeded; cancelling one for the next
 # merge left nothing to upload. A newer main push waits its turn instead.
 concurrency:
-  group: ios-build-${{ github.workflow }}-${{ github.ref }}
+  group: ios-build-${{ github.workflow }}-${{ github.event_name == 'schedule' && 'nightly' || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Main's build skips this job: the pull request ran it, and TestFlight waits on this workflow.
+  share-ui-changes:
+    name: Select shared-file UI coverage
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      required: ${{ steps.paths.outputs.required }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check changed paths
+        id: paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # Both sides of a rename are checked, including a file moved out of a covered path.
+          required="$(git diff --name-only --no-renames -z "$BASE_SHA...$HEAD_SHA" -- |
+            python3 Scripts/share-ui-paths.py)"
+          echo "required=$required" >>"$GITHUB_OUTPUT"
+
+  # Main's push skips the suite; affected pull requests, manual runs and the nightly run cover it.
   shared-file-ui:
     name: Shared ROM and patch UI flows
-    if: github.event_name != 'push'
+    needs: share-ui-changes
+    if: >-
+      !cancelled() && (
+        github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+        needs.share-ui-changes.outputs.required == 'true')
     runs-on: macos-26
     timeout-minutes: 45
     steps:
@@ -72,6 +102,7 @@ jobs:
   # tests failed, so one push reports each kind of failure.
   build-and-test:
     name: Xcode build, tests and Release archive
+    if: github.event_name != 'schedule'
     # The Makefile targets the iPhone 17 Pro simulator, which needs the Xcode 26 runner image.
     runs-on: macos-26
     timeout-minutes: 60

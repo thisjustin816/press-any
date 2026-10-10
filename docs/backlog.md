@@ -14,7 +14,7 @@ Library backend first: everything that decides how the library is stored, identi
 safe lands before more play features, so a library built while testing never needs regrouping or
 migrating later.
 
-1. Identity: the ROM-hack naming work that remains. Bundled No-Intro data,
+1. Identity and ROM-hack naming are built. Bundled No-Intro data,
    hash matching, family grouping, regional proposals, reviewed family merges and Match Game
    with absent-base lineage are built. "No-Intro data" in `docs/product.md` describes the behavior.
 2. Multi-signal development-build matching is built. Metadata provenance,
@@ -32,10 +32,11 @@ The rest of the v1 core is built: save state slots, naming and cleanup, crash re
 the last game, Restart and Start Over, the controller's Menu button, and per-Build Game Genie and
 GameShark cheats.
 
-v1 is a good core experience; everything else waits for v1.1: 7z and multi-asset import,
-artwork and documents with the manual reader, rewind, slow motion, frame advance and Quick
-Actions, the DMG/GBC/SGB model override, shaders and the layout editor with skin import,
-screenshots and gameplay notes, external displays, tags and collections, iCloud sync once the schema has
+v1 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
+The rest waits for v1.1: 7z and multi-asset import, automatic artwork and documents with the
+manual reader, rewind, slow motion, frame advance and Quick Actions, the DMG/GBC/SGB model
+override, shaders and the layout editor with skin import,
+a screenshot gallery and gameplay notes, external displays, tags and collections, iCloud sync once the schema has
 settled, the Community Catalog and metadata providers, crash reporting and usage counts, Developer
 Mode, editable patch stacks, the Build timeline and comparison screen, in-game Build switching,
 RTC offsets, rumble routing, Undo, core updates, and the internal registries and descriptors.
@@ -52,17 +53,18 @@ Open items in each area are in the table, finished ones on the line under it.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | TestFlight upload on every main build; a GitHub pre-release adds its build to the public group and submits it for Beta App Review, with notes since the previous release (docs/testflight.md); App Store submission, listing, review and rights gate not started |
-| partial | Press Any Plus: one non-consumable through `FeatureEntitlementProvider` (StoreKit 2 in the app target only), Plus screen with roadmap, price, Buy, Restore Purchases and retry | v1 | Built, with app tests for buying, restore, refund and a failed product load against an App Store stand-in. The StoreKit provider itself waits on the App Store Connect setup in docs/testflight.md and the Plus device checks in docs/mvp-verification.md |
-| partial | Plus features: LCD filters, app icon colorways, Auto State history | v1 | Built and gated in every settings scope; stored choices are kept without Plus. Device checks pending |
+| partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1 | TestFlight upload on every main build; a GitHub pre-release adds its build to the public group and submits it for Beta App Review, with notes since the previous release (docs/testflight.md); the initial app and Plus purchase are submitted for App Store review; approval and final release remain manual |
 | done | Timed States, a Plus feature | v1 | Off or every 1/2/5/10 minutes of running wall time, inherited at App/System/Game/Build; shares Auto State history and pinned retention, stops without Plus, and excludes Quick Play. Clock, persistence, backup and app tests cover it; device check in docs/mvp-verification.md |
 | done | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; the first game shows "Tap Press Any for the menu" once. v1 has nothing to opt into: crash reports and usage counts (v1.1) bring their own opt-in screens, and Developer Mode its introductions |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |
 | done | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Rotation lock, cutout and controller checks passed on device |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1.1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
-| partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | the Screenshots workflow seeds from `TestROMs/` and by default takes the nine-image listing set in App Store order on the 6.9-inch iPhone 17 Pro Max, checking its dimensions (6.5-inch on the 14 Plus too; docs/testflight.md); uploading the set and any app preview remain with the App Store listing |
+| partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | Screenshots are uploaded for the initial submission. The manual workflow defaults to the 6.3-inch iPhone 17 Pro and verifies its App Store Connect dimensions; 6.9-inch and 6.5-inch sets are also available (docs/testflight.md). An app preview is optional |
 
-Done: A Press Any folder in Files holding Exports, with the library kept in Application Support and
+Done: Press Any Plus through StoreKit 2 with price, Buy, Restore Purchases and retry, configured
+in App Store Connect, with stand-in app tests and completed physical-device checks; LCD filters,
+app icon colorways and Auto State history gated at every scope, retaining stored choices without
+Plus; A Press Any folder in Files holding Exports, with the library kept in Application Support and
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
 Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (heavy
 italic, magenta "A") in library toolbar and controller body; App icon (A button; light/dark/tinted);
@@ -301,7 +303,7 @@ loading state"; A separated Build's states follow it to the profile copies it pl
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | missing | Configurable retention Immediately / 24 h / 7 d | v1.1 |  |
-| partial | Session artifacts | v1.1 | battery + autosave kept; manual states ("Save states aren't kept in Quick Play"), screenshots, notes, debug captures and their transfer on promotion missing |
+| partial | Session artifacts | v1.1 | battery + autosave kept; manual states ("Save states aren't kept in Quick Play"), a screenshot gallery, notes, debug captures and their transfer on promotion missing |
 | missing | Background hash/identify/toolchain detection for Quick Play | v1.1 | not run |
 
 Done: Temporary sandbox, no library mutation until promotion; Time-to-first-frame path: read once,
@@ -335,6 +337,9 @@ file format isn't imported.
 
 ### Screenshots, notes, debug context
 
+Done: Share Screenshot in the game menu's Capture submenu exports a clean native-size PNG from
+library games and Quick Play through the system share sheet, leaves gameplay paused and removes
+the temporary file after sharing. Free, with no gallery or capture metadata.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
@@ -362,7 +367,7 @@ press resumes the exposed overlay and is consumed until released. Directional in
 |---|---|---|---|
 | done | Free built-in palettes for original Game Boy games | v1 | Twelve button-combo palettes and six game palettes (Mole Mania, Link's Awakening, Super Mario Land, Super Mario Land 2, Donkey Kong Land and Game Boy Camera), alongside DMG/Pocket/Light; grouped palette list with color names, combo subtitles and BG/OBJ0/OBJ1 previews, one Black & White choice; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors lists, including in-game Settings |
 | missing | Custom Game Boy palettes and GBC game-palette selection | v1.1 | Specify separate background/OBJ0/OBJ1 colors, enter a GBC boot-ROM palette combination number (such as 17), or select a recognized game (such as Mole Mania) to use its built-in colors; include color previews |
-| done | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check is still to run |
+| done | Adaptive presentation on high-refresh displays | v1 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check passed |
 | partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v1.1 | LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented as Press Any's own code, modelled on the libretro LCD shaders and credited to them; remaining effects and catalog missing; each shader that ships is credited by author in Acknowledgements and `THIRD_PARTY_NOTICES.md` |
 | partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v1.1 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v1.1 |  |
@@ -421,7 +426,7 @@ Boy and follow Orientation even with Playtiles chosen; Disconnect releases input
 chosen layout, pauses and shows a notice without restarting; A controller hides the touch
 controls, a touch brings them back until its next button press, and Settings can keep them;
 Cartridge rumble routed controller-first, phone fallback. Physical-device customization checks
-remain in mvp-verification.md.
+passed and remain as regression coverage in mvp-verification.md.
 
 ### Quick Actions
 
@@ -452,7 +457,7 @@ Save State, Load State and Close; Quick Play offers Add to Library and explains 
 | missing | Automatic fetch on import + setting to disable | v1.1 |  |
 | missing | Provider chain: local/imported, Community Catalog, OpenVGDB (experimental), Libretro thumbnails, SteamGridDB (user key), title-screen fallback | v1.1 |  |
 | missing | Priority manual -> hack-specific -> inherited base (recorded as inherited) -> generated | v1.1 |  |
-| missing | Artwork generated from the Game's title screen | v1.1 | open: capturing after import by running the game unseen (detecting the title screen past the boot logo, for example once the picture settles) or from the current frame chosen in the game menu, or both; framing the 10:9 picture in a square tile (whole-pixel scale on a border color sampled from the frame, or on the placeholder cartridge's label) |
+| missing | Automatic artwork generated from the Game's title screen | v1.1 | Detect the title screen while running the game after import; manual selection from the current frame is built |
 | missing | Build-level artwork override | v1.1 |  |
 | missing | Regional artwork: lookups use the Build's region, and a Game's primary artwork follows the preferred region | v1.1 | box art differs by region |
 | missing | Multiple typed assets (box front/back, cart, title, screenshots, logo, fan) | v1.1 |  |
@@ -460,7 +465,9 @@ Save State, Load State and Close; Quick Play offers Add to Library and explains 
 | missing | Manual "Check for New Artwork"; cache only selected primary | v1.1 |  |
 | missing | Artwork provenance (provider, URL, fetch time, rights) | v1.1 |  |
 
-Done: Manual artwork from Photos/Files, remove, stored as user data, downscaled to 1024 pixels;
+Done: Use Current Frame as Artwork in the game menu's Capture submenu for library games,
+confirming before replacing existing artwork; whole-image library tiles with sharp pixels;
+Manual artwork from Photos/Files, remove, stored as user data, downscaled to 1024 pixels;
 title placeholder fallback; Artwork follows Builds when a Game is emptied by promote/merge.
 
 ### External display / AirPlay
@@ -540,9 +547,9 @@ Save Profile and save state rows and to discard a Quick Play session, asking fir
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| done | Audio interruptions pause safely; route changes don't restart the game | v1 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio interruption that leaves the scene active, and an output device going away, pause it too and leave it paused until Resume; the device check is still to run |
+| done | Audio interruptions pause safely; route changes don't restart the game | v1 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio interruption that leaves the scene active, and an output device going away, pause it too and leave it paused until Resume; the physical-device checks passed |
 | missing | Thermal-aware degradation | v1.1 |  |
-| missing | Default shader sustains full speed on minimum QA device | v1.1 | no shader yet; device gate not recorded |
+| missing | Default shader sustains full speed on minimum QA device | v1.1 | LCD 1x and LCD 3x are built and their device checks passed; the wider curated shader set is not built |
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
@@ -565,14 +572,15 @@ Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filename
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | VoiceOver labels for management UI and emulator controls | v1.1 | the logo is the "Game Menu" button, with Close Game inside the menu; the preferred save's star reads "Preferred Save"; controls not playable by VoiceOver (accepted) |
-| partial | Dynamic Type in normal UI | v1.1 | SwiftUI defaults; controller drawing fixed size |
+| missing | Expanded VoiceOver pass | v1.1 | Baseline library and game-menu labels are built and device-checked; narrated gameplay is not planned |
+| missing | Dynamic Type for on-screen controls | v1.1 | Normal management UI supports Dynamic Type and passed device checks; controller drawing remains fixed size |
 | missing | Reduce Motion support | v1.1 | none |
 | partial | Large/configurable touch targets | v1.1 | hit areas extend 10-12 pt beyond drawn controls; not configurable |
 | missing | One-handed layouts | v1.1 | none |
 | missing | Controller navigation | v1.1 | none; button remapping is iOS's Game Controller settings |
 
-Done: Good contrast / color-independent states; haptics never sole feedback.
+Done: VoiceOver labels for library and game-menu management, Dynamic Type in the normal UI,
+with completed device checks; Good contrast / color-independent states; haptics never sole feedback.
 
 ### Settings inheritance
 
