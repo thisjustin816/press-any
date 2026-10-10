@@ -151,7 +151,7 @@ group with **automatic distribution** turned on receives each processed build; o
 groups get a build once it is added to them in App Store Connect.
 
 The marketing version comes from `MARKETING_VERSION` in `project.yml` (currently
-`0.1`), and TestFlight shows it with the build number beside it, as `0.1 (57)`.
+`1.0`), and TestFlight shows it with the build number beside it, as `1.0 (57)`.
 The version changes only when that value is edited. The build number is the
 workflow's run number; a retried run adds its attempt, as `57.2`, because Apple
 refuses a second binary with the same build number. Builds uploaded before this
@@ -185,7 +185,7 @@ Set up once:
 
 Then open **Actions → Release → Run workflow** on `main` and choose **beta**. The run tags
 `main`'s newest TestFlight upload with the next beta tag for the version in `project.yml`, such as
-`v0.1.0-beta.1` and then `v0.1.0-beta.2`, publishes the pre-release, adds the build to the group
+`v1.0.0-beta.1` and then `v1.0.0-beta.2`, publishes the pre-release, adds the build to the group
 and submits it for Beta App Review. It refuses a build that's already released. Testers get it once
 Apple approves it: the first build of a version can take a day, and later ones are often quicker.
 
@@ -198,10 +198,11 @@ and mark it **Set as a pre-release**. Its build is the nearest `testflight/<buil
 before its commit, and an empty description gets one written for it. A release whose commit isn't
 on `main` is refused, since it would run that commit's scripts with the API key.
 
-Choosing **stable** tags the newest upload `v<version>`, such as `v0.1.0`, with the changes since
+Choosing **stable** tags the newest upload `v<version>`, such as `v1.0.0`, with the changes since
 the previous stable release as its description, and names the build to submit. A version is
 released as stable once; raise `MARKETING_VERSION` for the next. Submitting it to the App Store is
-still done by hand in App Store Connect.
+still done by hand in App Store Connect. The earlier `v0.1.0-beta.N` tags stay; beta numbering
+starts again at 1 for each version.
 
 ## 8. Download screenshots for App Store Connect
 
