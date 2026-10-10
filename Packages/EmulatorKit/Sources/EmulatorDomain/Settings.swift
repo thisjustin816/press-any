@@ -183,6 +183,11 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
     case cgbRightA = "cgbRightA"
     case cgbRightB = "cgbRightB"
     case cgbOlive = "cgbOlive"
+    case cgbZelda = "cgbZelda"
+    case cgbMarioLand = "cgbMarioLand"
+    case cgbMarioLand2 = "cgbMarioLand2"
+    case cgbDonkeyKongLand = "cgbDonkeyKongLand"
+    case cgbCamera = "cgbCamera"
 
     public static let defaultValue: Self = .dmgGreen
     public static let explanation = "Previews show background colors above the two sprite palettes. Button combos identify Game Boy Color boot palettes; no buttons need to be held."
@@ -216,6 +221,11 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
         case .cgbRightA: ("Dark Green", "Right + A")
         case .cgbRightB: ("Inverted", "Right + B")
         case .cgbOlive: ("Olive & Orange", "Mole Mania")
+        case .cgbZelda: ("Red & Green", "Link's Awakening")
+        case .cgbMarioLand: ("Tan & Red", "Super Mario Land")
+        case .cgbMarioLand2: ("Pastel & Orange", "Super Mario Land 2")
+        case .cgbDonkeyKongLand: ("Blue & Orange", "Donkey Kong Land")
+        case .cgbCamera: ("Amber", "Game Boy Camera")
         }
     }
 
@@ -252,6 +262,20 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
             colors = [[0x7fff, 0x42b5, 0x3dc8, 0x0000],
                       [0x7fff, 0x01df, 0x0112, 0x0000],
                       [0x7fff, 0x01df, 0x0112, 0x0000]]
+        case .cgbZelda:
+            colors = [red, [0x7fff, 0x03e0, 0x0206, 0x0120], blue]
+        case .cgbMarioLand:
+            colors = [[0x7ed6, 0x4bff, 0x2175, 0x0000],
+                      [0x0000, 0x7fff, 0x421f, 0x1cf2],
+                      [0x0000, 0x7fff, 0x421f, 0x1cf2]]
+        case .cgbMarioLand2:
+            colors = [[0x67ff, 0x77ac, 0x1a13, 0x2d6b], [0x7fff, 0x01df, 0x0112, 0x0000], blue]
+        case .cgbDonkeyKongLand:
+            colors = [[0x7fff, 0x6e31, 0x454a, 0x0000],
+                      [0x231f, 0x035f, 0x00f2, 0x0009],
+                      [0x7fff, 0x7eeb, 0x001f, 0x7c00]]
+        case .cgbCamera:
+            colors = Array(repeating: [0x7fff, 0x033f, 0x0193, 0x0000], count: 3)
         }
         return colors.map { $0.map { color in
             func channel(_ shift: UInt16) -> UInt32 {

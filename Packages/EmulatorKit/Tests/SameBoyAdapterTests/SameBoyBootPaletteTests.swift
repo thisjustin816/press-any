@@ -13,6 +13,18 @@ final class SameBoyBootPaletteTests: XCTestCase {
         let obj0: [UInt16]
         let obj1: [UInt16]
 
+        var bootTitle: String? {
+            switch rawValue {
+            case "cgbOlive": "MOGURANYA"
+            case "cgbZelda": "ZELDA"
+            case "cgbMarioLand": "SUPER MARIOLAND"
+            case "cgbMarioLand2": "MARIOLAND2"
+            case "cgbDonkeyKongLand": "DONKEYKONGLAND"
+            case "cgbCamera": "POCKETCAMERA"
+            default: nil
+            }
+        }
+
         var input: EmulatorInputState {
             .init(up: rawValue.hasPrefix("cgbUp"), down: rawValue.hasPrefix("cgbDown"),
                   left: rawValue.hasPrefix("cgbLeft"), right: rawValue.hasPrefix("cgbRight"),
@@ -78,6 +90,26 @@ final class SameBoyBootPaletteTests: XCTestCase {
               background: [0x7fff, 0x42b5, 0x3dc8, 0x0000],
               obj0: [0x7fff, 0x01df, 0x0112, 0x0000],
               obj1: [0x7fff, 0x01df, 0x0112, 0x0000]),
+        .init(rawValue: "cgbZelda",
+              background: [0x7fff, 0x421f, 0x1cf2, 0x0000],
+              obj0: [0x7fff, 0x03e0, 0x0206, 0x0120],
+              obj1: [0x7fff, 0x7e8c, 0x7c00, 0x0000]),
+        .init(rawValue: "cgbMarioLand",
+              background: [0x7ed6, 0x4bff, 0x2175, 0x0000],
+              obj0: [0x0000, 0x7fff, 0x421f, 0x1cf2],
+              obj1: [0x0000, 0x7fff, 0x421f, 0x1cf2]),
+        .init(rawValue: "cgbMarioLand2",
+              background: [0x67ff, 0x77ac, 0x1a13, 0x2d6b],
+              obj0: [0x7fff, 0x01df, 0x0112, 0x0000],
+              obj1: [0x7fff, 0x7e8c, 0x7c00, 0x0000]),
+        .init(rawValue: "cgbDonkeyKongLand",
+              background: [0x7fff, 0x6e31, 0x454a, 0x0000],
+              obj0: [0x231f, 0x035f, 0x00f2, 0x0009],
+              obj1: [0x7fff, 0x7eeb, 0x001f, 0x7c00]),
+        .init(rawValue: "cgbCamera",
+              background: [0x7fff, 0x033f, 0x0193, 0x0000],
+              obj0: [0x7fff, 0x033f, 0x0193, 0x0000],
+              obj1: [0x7fff, 0x033f, 0x0193, 0x0000]),
     ]
 
     func testEveryPaletteRendersBackgroundAndBothSpritePalettesWithAndWithoutBootSkip() throws {
@@ -187,8 +219,8 @@ final class SameBoyBootPaletteTests: XCTestCase {
         for palette in palettes {
             let reference = SameBoyAdapter()
             var rom = try TestROMFixtures.rom("palette-dmg.gb")
-            if palette.rawValue == "cgbOlive" {
-                rom.replaceSubrange(0x134..<0x144, with: Array("MOGURANYA".utf8) + [UInt8](repeating: 0, count: 7))
+            if let title = palette.bootTitle {
+                rom.replaceSubrange(0x134..<0x144, with: Array(title.utf8) + [UInt8](repeating: 0, count: 16 - title.utf8.count))
                 rom[0x14b] = 1
                 rom[0x14d] = rom[0x134...0x14c].reduce(UInt8(0)) { $0 &- $1 &- 1 }
             }

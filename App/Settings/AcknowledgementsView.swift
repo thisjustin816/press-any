@@ -21,7 +21,10 @@ struct AcknowledgementsView: View {
     private let components: [Component] = [
         Component(
             name: "SameBoy",
-            use: "Game Boy and Game Boy Color emulation, and the boot ROMs",
+            use: """
+            Game Boy and Game Boy Color emulation, boot ROMs and boot palettes by Lior Halphon.
+            Source: https://github.com/LIJI32/SameBoy
+            """,
             license: .bundled(file: "SameBoy-LICENSE")
         ),
         Component(name: "GRDB.swift", use: "The game library’s database", license: .bundled(file: "GRDB-LICENSE")),

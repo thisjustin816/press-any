@@ -10,7 +10,7 @@ enum DMGPaletteGroup: String, CaseIterable {
     func contains(_ palette: DMGPalette) -> Bool {
         let group: Self = switch palette {
         case .dmgGreen, .pocket, .light: .console
-        case .cgbOlive: .game
+        case .cgbOlive, .cgbZelda, .cgbMarioLand, .cgbMarioLand2, .cgbDonkeyKongLand, .cgbCamera: .game
         default: .button
         }
         return group == self
