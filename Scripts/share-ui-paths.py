@@ -8,7 +8,7 @@ def requires_share_ui(paths):
         "Packages/EmulatorKit/", "Config/", "TestROMs/", "ShareTestSender/", "ShareUITests/", "Scripts/lib/",
     )
     files = {
-        "project.yml", "Makefile", ".github/workflows/ios-build.yml",
+        "project.yml", "Makefile", ".gitmodules", ".github/workflows/ios-build.yml",
         "Scripts/bootstrap.sh", "Scripts/generate-sameboy-bootroms.sh", "Scripts/test-share-ui.sh",
         "Scripts/share-ui-paths.py", "Scripts/tests/test_share_ui_paths.py",
     }

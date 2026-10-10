@@ -24,7 +24,7 @@ class ShareUIPathsTests(unittest.TestCase):
             "ShareUITests/SharedFileUITests.swift", "Scripts/test-share-ui.sh",
             "Scripts/share-ui-paths.py", "Scripts/tests/test_share_ui_paths.py",
             ".github/workflows/ios-build.yml", "Config/PressAny-Info.plist",
-            "project.yml", "Makefile",
+            "project.yml", "Makefile", ".gitmodules",
         ]:
             with self.subTest(path=path):
                 self.assertTrue(module.requires_share_ui(["docs/product.md", path]))
