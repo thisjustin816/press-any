@@ -151,6 +151,7 @@ final class GameplayViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
+        view.tintColor = AppBrand.Colors.accent
         installViews()
         configureRuntimeLoop()
         configureInput()

@@ -67,7 +67,9 @@ app icon colorways and Auto State history gated at every scope, retaining stored
 Plus; A Press Any folder in Files holding Exports, with the library kept in Application Support and
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
 Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (heavy
-italic, magenta "A") in library toolbar and controller body; App icon (A button; light/dark/tinted);
+italic, pink "A" and navy lettering) in library toolbar and controller body; Shared pink/navy/gray
+app colors; App icon (smooth front-facing A button with lettering below; six colorways,
+light/dark/tinted and matching previews);
 Acknowledgements screen listing SameBoy + GRDB with full licenses.
 
 ### Architecture seams

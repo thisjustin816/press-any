@@ -120,7 +120,7 @@ struct PlusBadge: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Capsule().fill(Color(uiColor: AppBrand.Wordmark.accent)))
+            .background(Capsule().fill(Color(uiColor: AppBrand.Colors.button)))
             .accessibilityLabel("Plus feature")
     }
 }

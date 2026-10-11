@@ -104,7 +104,7 @@ struct CheatListView: View {
         .swipeActions(edge: .trailing) {
             SwipeDeleteButton { model.requestDeletion(of: cheat) }
             Button("Edit") { model.startEditing(cheat) }
-                .tint(.blue)
+                .tint(Color(uiColor: AppBrand.Colors.secondaryButton))
         }
         .contextMenu {
             Button("Edit Cheat…", systemImage: "pencil") { model.startEditing(cheat) }

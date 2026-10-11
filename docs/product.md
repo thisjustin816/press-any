@@ -28,7 +28,9 @@ change. There is no separate decision log.
 - GBA comes through an mGBA adapter in 1.2 or 2.0, once GB/GBC is feature complete through v1
   and v1.1. Other systems aren't planned, but the library, storage, input and core abstractions
   mustn't rule them out.
-- Light and Dark appearance.
+- Light and Dark appearance. Pink actions, navy brand lettering and warm gray controller and
+  icon bodies share the named colors described in `docs/NAMING.md`; native text, surfaces and
+  status colors follow iOS.
 - TestFlight first, then the App Store. The app is free, with one optional in-app purchase,
   Press Any Plus (see Pricing); the project's own source stays Apache-2.0 (`LICENSE`).
 - The library, Game Details, Settings and every sheet are portrait. Gameplay also turns to
@@ -54,7 +56,9 @@ In v1, Plus includes:
 
 - **LCD filters**: LCD 1× and LCD 3× (see Picture).
 - **App icons**: Berry, Grape, Teal, Kiwi and Dandelion colorways of the home-screen icon, in
-  Settings > App Icon. The default icon is always available.
+  Settings > App Icon. All six use a smooth, nearly front-facing button with an A printed below
+  it, with Light, Dark and Tinted variants and matching settings previews. The default icon is
+  always available.
 - **Auto State history**: Keep Auto States at 3, 5 or 10 (see Save states and lifecycle). Without
   Plus a game keeps its latest Auto State.
 - **Timed States**: an Auto State every 1, 2, 5 or 10 minutes of library play, with Off as the
@@ -840,7 +844,7 @@ buttons along their tilt and "SELECT" and "START" level below their pills; Playt
 unlabeled buttons and labeled pills.
 
 **Controller Theme** (app-wide, Match System by default): Classic uses an original Game Boy's
-colors sampled from the same photograph (warm gray body, gray lens, maroon-magenta A and B, dark
+form with the app's colors (warm gray body, gray lens, pink A and B, dark
 D-pad, gray pills, navy lettering); Dark is the same design on a near-black body with a charcoal
 bezel and a lighter channel behind A and B. Match System picks Classic in Light Mode and Dark in
 Dark Mode.

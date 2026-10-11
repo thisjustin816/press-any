@@ -1,46 +1,114 @@
-<!doctype html><html><body>
-<!-- The app icon: a Game Boy A button with an engraved A, seen from below and to the right, in the Classic controller colors. Scripts/render-app-icon.sh renders it; #light, #dark and #tinted pick the variant, and ?azimuth= sets how far round from bottom center it's seen, in degrees (25 by default; negative is from the left). --><canvas id=c width=1024 height=1024></canvas><script>
-const params=new URLSearchParams(location.search);
-const variant=location.hash.slice(1)||'light';
-// How far round from bottom center the camera sits, in degrees: positive toward the bottom-right
-// corner (45 is the corner itself), negative toward the bottom-left.
-const azimuth=Number(params.get('azimuth')??25)*Math.PI/180;
-const c=document.getElementById('c'),g=c.getContext('2d'),S=1024;
-// The button seen from below and to the right, 45 degrees above the body: a short cylinder whose
-// top face is an ellipse 0.71 as tall as it is wide, and whose side wall shows at 0.71 of its height.
-const tiltY=Math.SQRT1_2;
-const cx=512, rx=320, ry=rx*tiltY, h=86*tiltY, face=440, base=face+h;
-function ellipse(x,y,ex,ey){g.beginPath();g.ellipse(x,y,ex,ey,0,0,Math.PI*2);}
-if(variant==='light'){const gr=g.createLinearGradient(0,0,0,S);gr.addColorStop(0,'rgb(203,202,199)');gr.addColorStop(1,'rgb(178,176,173)');g.fillStyle=gr;g.fillRect(0,0,S,S);}
-if(variant==='dark'){const gr=g.createLinearGradient(0,0,0,S);gr.addColorStop(0,'rgb(42,43,46)');gr.addColorStop(1,'rgb(18,18,20)');g.fillStyle=gr;g.fillRect(0,0,S,S);}
-// The recess in the body: its far wall in shadow, its near rim catching light.
-{const gr=g.createLinearGradient(0,base-ry-24,0,base+ry+24);
- if(variant==='dark'){gr.addColorStop(0,'rgb(8,8,10)');gr.addColorStop(1,'rgb(62,62,67)');}
- else{gr.addColorStop(0,'rgb(118,116,113)');gr.addColorStop(1,'rgb(222,220,217)');}
- g.fillStyle=gr;ellipse(cx,base,rx+24,ry+20);g.fill();}
-// Shadow the button casts toward the viewer.
-g.save();g.shadowColor='rgba(0,0,0,0.38)';g.shadowBlur=36;g.shadowOffsetY=18;g.fillStyle='rgb(90,24,58)';ellipse(cx,base,rx,ry);g.fill();g.restore();
-// The side wall: the band between the base and top ellipses, darker toward its edges.
-{g.beginPath();g.ellipse(cx,base,rx,ry,0,0,Math.PI);g.lineTo(cx-rx,face);g.ellipse(cx,face,rx,ry,0,Math.PI,0,true);g.closePath();
- const gr=g.createLinearGradient(cx-rx,0,cx+rx,0);gr.addColorStop(0,'rgb(78,20,50)');gr.addColorStop(0.35,'rgb(120,34,80)');gr.addColorStop(0.65,'rgb(110,30,74)');gr.addColorStop(1,'rgb(64,16,42)');
- g.fillStyle=gr;g.fill();}
-// The top face, lit from above and behind, with a soft highlight on the far half.
-g.save();ellipse(cx,face,rx,ry);g.clip();
-{const gr=g.createLinearGradient(0,face-ry,0,face+ry);gr.addColorStop(0,'rgb(184,64,128)');gr.addColorStop(1,'rgb(138,40,92)');g.fillStyle=gr;g.fillRect(cx-rx,face-ry,2*rx,2*ry);}
-{g.save();g.translate(cx-60,face-55);g.scale(1,tiltY);const gr=g.createRadialGradient(0,0,10,0,0,250);gr.addColorStop(0,'rgba(255,255,255,0.28)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(-400,-400,800,800);g.restore();}
-// An A cut into the face, upright on the button as on the body. Seen from off center, its
-// baseline runs at a slant across the face: the face's right and down directions project to
-// (cos, sin x 0.71) and (-sin, cos x 0.71) of the azimuth on screen. The cut's lower edge catches
-// the light.
-{const cos=Math.cos(azimuth), sin=Math.sin(azimuth);
- function letter(dy){g.setTransform(cos,sin*tiltY,-sin,cos*tiltY,cx,face+dy);
-   g.font='900 300px Helvetica, Arial, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('A',0,0);}
- g.save();
- g.fillStyle='rgba(255,255,255,0.22)';letter(7);
- g.fillStyle='rgb(92,22,58)';letter(0);
- g.restore();}
-g.restore();
-// A thin lip where the top face meets the wall.
-g.strokeStyle='rgba(255,255,255,0.18)';g.lineWidth=4;g.beginPath();g.ellipse(cx,face,rx-2,ry-2,0,Math.PI*0.05,Math.PI*0.95);g.stroke();
-document.body.setAttribute('data-png',c.toDataURL('image/png'));
-</script></body></html>
+<!doctype html>
+<html><body>
+<canvas id="c" width="1024" height="1024"></canvas>
+<script>
+const params = new URLSearchParams(location.search);
+const variant = location.hash.slice(1) || 'light';
+const colorway = params.get('colorway') || 'Default';
+const alternateColors = {
+    Berry: '#D64B63',
+    Grape: '#8152C5',
+    Teal: '#168A8A',
+    Kiwi: '#78A63F',
+    Dandelion: '#E9B735',
+};
+const canvas = document.getElementById('c');
+const context = canvas.getContext('2d');
+
+async function assetColor(name, dark) {
+    const response = await fetch(`../../App/Assets.xcassets/${name}.colorset/Contents.json`);
+    if (!response.ok) throw new Error(`Cannot read ${name}`);
+    const asset = await response.json();
+    const entry = asset.colors.find(color => dark
+        ? color.appearances?.some(appearance => appearance.value === 'dark')
+        : !color.appearances);
+    const components = entry.color.components;
+    return '#' + ['red', 'green', 'blue'].map(channel =>
+        Number(components[channel]).toString(16).padStart(2, '0')).join('');
+}
+
+function shade(hex, amount) {
+    const rgb = hex.slice(1).match(/../g).map(channel => parseInt(channel, 16));
+    return '#' + rgb.map(channel => Math.round(amount < 0
+        ? channel * (1 + amount)
+        : channel + (255 - channel) * amount).toString(16).padStart(2, '0')).join('');
+}
+
+function ellipse(y, radiusX, radiusY) {
+    context.beginPath();
+    context.ellipse(512, y, radiusX, radiusY, 0, 0, Math.PI * 2);
+}
+
+async function draw() {
+    const dark = variant === 'dark';
+    const tinted = variant === 'tinted';
+    const [body, ink, pink] = await Promise.all([
+        assetColor('BrandBody', dark),
+        assetColor('BrandInk', dark),
+        assetColor('BrandButton', dark),
+    ]);
+    if (colorway !== 'Default' && !(colorway in alternateColors)) {
+        throw new Error(`Unknown colorway ${colorway}`);
+    }
+    const faceColor = tinted ? '#D0D0D0' : alternateColors[colorway] || pink;
+    if (!tinted) {
+        context.fillStyle = body;
+        context.fillRect(0, 0, 1024, 1024);
+    }
+
+    // Near-front view preserves the circular face while showing the short lower sidewall.
+    const faceY = 418, radiusX = 260, radiusY = 248, depth = 30;
+    context.save();
+    context.shadowColor = 'rgba(0,0,0,0.24)';
+    context.shadowBlur = 20;
+    context.shadowOffsetY = 12;
+    context.fillStyle = shade(faceColor, -0.5);
+    ellipse(faceY + depth, radiusX + 5, radiusY + 4);
+    context.fill();
+    context.restore();
+
+    context.fillStyle = shade(faceColor, -0.36);
+    ellipse(faceY + depth, radiusX, radiusY);
+    context.fill();
+    const bevel = context.createLinearGradient(0, faceY - radiusY, 0, faceY + radiusY);
+    bevel.addColorStop(0, shade(faceColor, 0.15));
+    bevel.addColorStop(1, shade(faceColor, -0.16));
+    context.fillStyle = bevel;
+    ellipse(faceY, radiusX, radiusY);
+    context.fill();
+    context.fillStyle = faceColor;
+    ellipse(faceY, radiusX - 12, radiusY - 12);
+    context.fill();
+
+    // A separate path keeps the printed letter's openings clear in the Tinted icon too.
+    context.save();
+    context.translate(512, 812);
+    context.scale(0.9, 0.9);
+    context.fillStyle = tinted ? '#FFFFFF' : ink;
+    const letter = new Path2D();
+    letter.moveTo(-80, 62);
+    letter.lineTo(-80, -22);
+    letter.quadraticCurveTo(-80, -64, -36, -64);
+    letter.lineTo(36, -64);
+    letter.quadraticCurveTo(80, -64, 80, -22);
+    letter.lineTo(80, 62);
+    letter.quadraticCurveTo(80, 68, 74, 68);
+    letter.lineTo(44, 68);
+    letter.quadraticCurveTo(38, 68, 38, 62);
+    letter.lineTo(38, 34);
+    letter.quadraticCurveTo(38, 28, 32, 28);
+    letter.lineTo(-32, 28);
+    letter.quadraticCurveTo(-38, 28, -38, 34);
+    letter.lineTo(-38, 62);
+    letter.quadraticCurveTo(-38, 68, -44, 68);
+    letter.lineTo(-74, 68);
+    letter.quadraticCurveTo(-80, 68, -80, 62);
+    letter.closePath();
+    letter.roundRect(-34, -34, 68, 30, 8);
+    context.fill(letter, 'evenodd');
+    context.restore();
+    document.body.setAttribute('data-png', canvas.toDataURL('image/png'));
+}
+draw().catch(error => document.body.setAttribute('data-error', error.message));
+</script>
+</body></html>

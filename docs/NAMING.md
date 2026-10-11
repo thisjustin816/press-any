@@ -16,40 +16,41 @@ technical identifiers, and which values must never carry a brand.
 | Repository | `thisjustin816/press-any` | GitHub |
 | Swift package and modules | `EmulatorKit`, `EmulatorDomain`, `AssetStorage`, ... | `Packages/EmulatorKit/Package.swift`; deliberately brand-free |
 
-## Wordmark
+## Colors and wordmark
 
-The wordmark is the product name in heavy italic system type with slight tracking, the first
-letter of its last word (the "A" in "Any") in the magenta of a Game Boy A button. The rest is
-charcoal on light backgrounds and gray on dark ones:
+The app uses pink, navy and warm gray. Named colors in `App/Assets.xcassets` supply SwiftUI,
+UIKit, the controller palettes and the icon renderer:
 
-| | Light | Dark |
+| Color | Light | Dark |
 |---|---|---|
-| Letters | `#323235` | `#808086` |
-| Accent letter | `#962C64` | `#A43E74` |
+| Action accent (`AccentColor`) | `#C52B79` | `#E66CA6` |
+| Brand lettering (`BrandInk`) | `#24345A` | `#B5C4E3` |
+| Controller and icon body (`BrandBody`) | `#D7D5D2` | `#24272F` |
+| Filled buttons (`BrandButton`) | `#C52B79` | `#C52B79` |
 
-In the library's title and on the welcome screen, the letters shade from lighter at the top to
-darker at the bottom, like the face of the controller's menu button, around those colors:
+Filled buttons and navy swipe actions keep white labels in both appearances. Text actions use
+the brighter pink in Dark Mode. Native interface surfaces, primary and secondary text,
+destructive actions and status colors follow iOS. Controller themes resolve their fixed
+appearance independently of the library.
 
-| | Light | Dark |
-|---|---|---|
-| Letters | `#55555A` to `#202022` | `#9C9CA2` to `#6C6C72` |
-| Accent letter | `#B34680` to `#7C1E50` | `#BC568C` to `#8C2E60` |
-
-`AppBrand.Wordmark` in `App/AppBrand.swift` is its one definition, built from the display name:
-`WordmarkView` shows it in SwiftUI (the library's title, shrinking to fit beside toolbar buttons
-that grow with larger text rather than cutting off letters), and the on-screen controller presses it
-into the menu button at the bottom, in the controller theme's colors with a darker shade under
-each letter's top edge and a light line along its bottom edge. Placeholder cartridges in the
-library press the name, in capitals, into their plaque the same way.
+The wordmark is the product name in heavy italic system type with slight tracking. The first
+letter of its last word (the "A" in "Any") is pink; the other letters use the brand ink.
+`AppBrand.Wordmark` in `App/AppBrand.swift` defines it from the display name. `WordmarkView`
+shows it in the library toolbar and welcome screen. The toolbar wordmark shrinks beside larger
+buttons at accessibility text sizes. The controller presses it into its menu button, and
+placeholder cartridges press the capitalized name into their plaque.
 
 ## App icon
 
-The app icon is a Game Boy A button seen from 45 degrees above the body, 25 degrees round from
-bottom center to the right: a magenta button standing in a recess in the Classic controller's
-gray body, its top face and side wall both showing, with an A engraved upright in the face, so it
-slants across it. A Dark variant sits on the Dark body, and a grayscale Tinted variant serves
-iOS 18. `Scripts/app-icon/icon.html` draws it and `Scripts/render-app-icon.sh` renders it into
-`App/Assets.xcassets/AppIcon.appiconset`. It carries no name, so a rename leaves it unchanged.
+The app icon is a smooth, flat-faced pink Game Boy-style button viewed nearly straight on,
+with a thin bevel and short dark sidewall. A navy A is printed on the warm gray surface below
+it. The Dark icon uses the dark body and lighter lettering; the Tinted icon has grayscale
+artwork on a transparent background for iOS 18.
+
+Berry, Grape, Teal, Kiwi and Dandelion use the same drawing with different button colors.
+`Scripts/app-icon/icon.html` draws every variant; `Scripts/render-app-icon.sh` renders all six
+icon sets and their Light/Dark settings previews. It requires Chromium and ImageMagick.
+The icon carries no product name.
 
 ## Values that never carry a brand
 

@@ -9,6 +9,7 @@ struct PressAnyApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(bootstrap: bootstrap)
+                .tint(Color.accentColor)
         }
     }
 }

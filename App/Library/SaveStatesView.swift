@@ -102,7 +102,7 @@ struct SaveStatesView: View {
                 model.togglePin(state)
             }.tint(.orange)
             Button("Rename") { startRenaming(state) }
-                .tint(.blue)
+                .tint(Color(uiColor: AppBrand.Colors.secondaryButton))
         }
         .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: state) } }
         .contextMenu {

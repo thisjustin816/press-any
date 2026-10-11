@@ -100,6 +100,7 @@ struct LibraryView: View {
                                 showROMImporter = true
                             }
                                 .buttonStyle(.borderedProminent)
+                                .tint(Color(uiColor: AppBrand.Colors.button))
                             VStack(spacing: 8) {
                                 Text("Need something to play?")
                                     .font(.footnote)

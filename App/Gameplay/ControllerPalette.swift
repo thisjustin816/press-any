@@ -1,8 +1,7 @@
 import GameplayInput
 import UIKit
 
-/// Colors for the on-screen controller. Classic's are sampled from a photograph of an original
-/// Game Boy; Dark is Press Any's own.
+/// Controller colors use the app's pink, navy and gray, with fixed Light and Dark themes.
 struct ControllerPalette {
     let bodyTop: UIColor
     let bodyBottom: UIColor
@@ -46,9 +45,9 @@ struct ControllerPalette {
 
     static var classic: ControllerPalette {
         ControllerPalette(
-            // The warm gray case, its gray screen lens, and the maroon-magenta A and B.
-            bodyTop: rgb(199, 198, 195),
-            bodyBottom: rgb(183, 181, 178),
+            // Fixed appearances keep a chosen controller theme independent of the library.
+            bodyTop: AppBrand.Colors.body.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)),
+            bodyBottom: rgb(201, 199, 196),
             bezelTop: rgb(128, 126, 132),
             bezelBottom: rgb(112, 110, 116),
             dpad: rgb(48, 48, 50),
@@ -61,25 +60,25 @@ struct ControllerPalette {
             guide: rgb(208, 207, 204),
             guideShadow: rgb(146, 144, 141),
             guideHighlight: rgb(236, 235, 232),
-            buttonTop: rgb(150, 44, 100),
-            buttonBottom: rgb(124, 32, 80),
-            buttonPressed: rgb(100, 24, 64),
+            buttonTop: AppBrand.Colors.button.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)),
+            buttonBottom: rgb(163, 30, 95),
+            buttonPressed: rgb(138, 24, 80),
             pill: rgb(124, 120, 124),
             pillPressed: rgb(100, 96, 100),
             pillText: rgb(236, 234, 232),
-            lettering: rgb(52, 52, 136),
+            lettering: AppBrand.Wordmark.lightInk,
             logo: AppBrand.Wordmark.lightInk,
             logoAccent: AppBrand.Wordmark.lightAccent,
             logoRecess: rgb(20, 20, 22),
-            logoAccentRecess: rgb(92, 22, 60),
+            logoAccentRecess: rgb(138, 24, 80),
             logoHighlight: rgb(236, 235, 232)
         )
     }
 
     static var dark: ControllerPalette {
         ControllerPalette(
-            bodyTop: rgb(36, 37, 40),
-            bodyBottom: rgb(22, 22, 24),
+            bodyTop: AppBrand.Colors.body.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)),
+            bodyBottom: rgb(23, 25, 31),
             bezelTop: rgb(56, 56, 60),
             bezelBottom: rgb(48, 48, 52),
             dpad: rgb(70, 70, 75),
@@ -93,13 +92,13 @@ struct ControllerPalette {
             guide: rgb(52, 52, 57),
             guideShadow: rgb(6, 6, 7),
             guideHighlight: rgb(88, 88, 95),
-            buttonTop: rgb(166, 58, 112),
-            buttonBottom: rgb(136, 44, 90),
-            buttonPressed: rgb(112, 36, 74),
+            buttonTop: AppBrand.Colors.button.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)),
+            buttonBottom: rgb(163, 30, 95),
+            buttonPressed: rgb(138, 24, 80),
             pill: rgb(78, 78, 83),
             pillPressed: rgb(104, 104, 110),
             pillText: rgb(210, 212, 218),
-            lettering: rgb(132, 160, 205),
+            lettering: AppBrand.Wordmark.darkInk,
             logo: AppBrand.Wordmark.darkInk,
             logoAccent: AppBrand.Wordmark.darkAccent,
             logoRecess: rgb(64, 64, 68),
