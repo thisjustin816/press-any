@@ -317,6 +317,11 @@ changes the library; review shows what will happen; commit is all or nothing.
   `CFBundleTypeRole = Viewer`: opening stages a copy for play or import, so it needs no Editor
   role. The extension mappings stay in `UTImportedTypeDeclarations`; Press Any does not own
   these formats and does not export their types.
+- An empty library says the app comes with no games and offers Import Files, and under "Need
+  something to play?" two links that open the browser: Homebrew Hub (hh.gbdev.io) and itch.io's
+  Game Boy ROM tag. The app downloads nothing from them. They show only when the library is
+  empty, not for a search or Favorites Only with no match. The in-app browse and download
+  described under v1.1 is separate, and takes on Guideline 4.7's index, filtering and age rules.
 - Every picked or shared file is untrusted. Its size is checked before it's read, against a limit
   for its kind: 8 MB for a ROM (the most a header can declare), 16 MB for a patch, 4 MB for a
   battery save (TPP1 cartridges can declare 2 MB of RAM), 20 MB for artwork and 4 MB for a

@@ -91,7 +91,7 @@ struct LibraryView: View {
                         Text(model.favoritesOnly
                              ? "No favorite games match this view."
                              : model.searchText.isEmpty
-                             ? "Import a Game Boy or Game Boy Color ROM to get started."
+                             ? "\(AppBrand.displayName) comes with no games. Import a Game Boy or Game Boy Color ROM to get started."
                              : "No games match your search.")
                     } actions: {
                         if model.searchText.isEmpty && !model.favoritesOnly {
@@ -100,6 +100,18 @@ struct LibraryView: View {
                                 showROMImporter = true
                             }
                                 .buttonStyle(.borderedProminent)
+                            VStack(spacing: 8) {
+                                Text("Need something to play?")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                Link("Free Games on Homebrew Hub", destination: HomebrewSources.homebrewHub)
+                                    .accessibilityHint("Opens in your browser")
+                                Link("Game Boy Games on itch.io", destination: HomebrewSources.itch)
+                                    .accessibilityHint("Opens in your browser")
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .padding(.top, 12)
                         }
                     }
                 } else if displayMode == .grid {
