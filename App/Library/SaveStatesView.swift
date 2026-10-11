@@ -114,7 +114,6 @@ struct SaveStatesView: View {
                 Button(role: .destructive) { model.requestDeletion(of: state) } label: { Label("Delete", systemImage: "trash") }
             }
         }
-        .menuOrder(.fixed)
     }
 
     /// The Game Boy screen's shape, 160 by 144, with its pixels kept sharp.
