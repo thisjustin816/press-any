@@ -302,6 +302,12 @@ for sharing. A summary shows counts and approximate size before export, and prog
 while the archive is written. Exports add a numbered copy when a filename already exists.
 Later captures (recordings, bug reports) land in the same folder.
 
+The Exports folder is the app's own Documents folder, which Files shows under Press Any, so
+deleting the app deletes it with the library. When a backup finishes, its result sits at the top
+of the screen, scrolled into view, with its filename, a share button, and a note that the copy
+goes with the app and should be shared to iCloud Drive or another place to keep it. The welcome
+screen's Exports topic says the same.
+
 ## Importing
 
 The pipeline is Analyze → Import Plan → Import Review → transactional commit. Analysis never
@@ -317,6 +323,11 @@ changes the library; review shows what will happen; commit is all or nothing.
   `CFBundleTypeRole = Viewer`: opening stages a copy for play or import, so it needs no Editor
   role. The extension mappings stay in `UTImportedTypeDeclarations`; Press Any does not own
   these formats and does not export their types.
+- An empty library says the app comes with no games and offers Import Files, and under "Need
+  something to play?" two links that open the browser: Homebrew Hub (hh.gbdev.io) and itch.io's
+  Game Boy ROM tag. The app downloads nothing from them. They show only when the library is
+  empty, not for a search or Favorites Only with no match. The in-app browse and download
+  described under v1.1 is separate, and takes on Guideline 4.7's index, filtering and age rules.
 - Every picked or shared file is untrusted. Its size is checked before it's read, against a limit
   for its kind: 8 MB for a ROM (the most a header can declare), 16 MB for a patch, 4 MB for a
   battery save (TPP1 cartridges can declare 2 MB of RAM), 20 MB for artwork and 4 MB for a

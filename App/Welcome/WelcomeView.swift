@@ -100,7 +100,7 @@ struct WelcomeView: View {
         Topic(
             symbol: "folder",
             title: "Exports",
-            text: "Export ROM and Export Save on a game’s page put a copy in Files, in the \(AppBrand.displayName) folder."
+            text: "Export ROM and Export Save on a game’s page put a copy in Files, in the \(AppBrand.displayName) folder. That folder belongs to the app, so deleting \(AppBrand.displayName) deletes it. To keep a backup, share it to iCloud Drive or another place."
         ),
         Topic(
             symbol: "hand.raised",
