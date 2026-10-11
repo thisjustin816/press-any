@@ -110,6 +110,7 @@ struct CheatListView: View {
             Button("Edit Cheat…", systemImage: "pencil") { model.startEditing(cheat) }
             Button(role: .destructive) { model.requestDeletion(of: cheat) } label: { Label("Delete", systemImage: "trash") }
         }
+        .menuOrder(.fixed)
     }
 
     private var editor: some View {

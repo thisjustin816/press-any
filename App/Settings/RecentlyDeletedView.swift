@@ -116,6 +116,7 @@ struct RecentlyDeletedView: View {
                 Button("Delete Now", role: .destructive) { purgeTarget = deletion }
             }
         }
+        .menuOrder(.fixed)
     }
 
     private func subtitle(_ deletion: LibraryDeletion) -> String {

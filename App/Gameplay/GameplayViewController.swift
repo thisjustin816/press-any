@@ -1134,7 +1134,7 @@ final class GameplayViewController: UIViewController {
 
 /// The logo has a raised face with the wordmark pressed into it; an optional game-picture target
 /// remains clear.
-private final class GameMenuButton: UIButton {
+final class GameMenuButton: UIButton {
     private(set) var isMenuPresented = false
 
     override func contextMenuInteraction(
@@ -1168,6 +1168,9 @@ private final class GameMenuButton: UIButton {
         super.init(frame: .zero)
         self.menu = menu
         showsMenuAsPrimaryAction = true
+        // The menu opens upward from a button at the bottom of the screen. Left to the system,
+        // it reverses the list there, which moved Close Game from the bottom to the top.
+        preferredMenuElementOrder = .fixed
         accessibilityLabel = "Game Menu"
         accessibilityHint = "Pauses the game and opens the menu"
         layer.insertSublayer(face, at: 0)

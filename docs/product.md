@@ -736,6 +736,11 @@ claims reliability from just an old ROM, old save and new ROM.
 - **Resume Games** (Always by default; Ask or Never; App, System, Game or Build) decides whether a
   restorable Auto State is used, offered or ignored, at launch, on a background-session reopen,
   and when returning to the app. Crash recovery is a separate, explicit choice.
+- **Menu order.** The game menu keeps one order however it opens: the icon row, States, Cheats,
+  Capture, Sound, Settings, then Restart and Close Game last. iOS reverses a menu that opens upward
+  unless told otherwise, so the menu's button asks for a fixed order. Every menu in the app does
+  the same, the toolbar and row menus and the long-press menus, so a Delete or Close item that sits
+  last stays last wherever the menu opens.
 - **Restart and Start Over.** Restart, beside Close Game in the game menu, asks first, then starts
   the game again from its boot and plays. The cartridge keeps its save through a reset. A library
   game first keeps where the player was as an Auto State, so States can go back to it; Quick
