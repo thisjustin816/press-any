@@ -391,7 +391,7 @@ final class FilenameMetadataParserTests: XCTestCase {
             ("Match-Land-GBC-Beta.gbc", "Beta"),
         ] {
             let parsed = FilenameMetadataParser.parse(filename: filename)
-            XCTAssertEqual(parsed.suggestedTitle, "Match Land GBC", filename)
+            XCTAssertEqual(parsed.suggestedTitle, "Match Land", filename)
             XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(status: status), filename)
             XCTAssertEqual(parsed.suggestedBuildName, status, filename)
             XCTAssertEqual(parsed.releaseKind, .development, filename)
@@ -408,7 +408,47 @@ final class FilenameMetadataParserTests: XCTestCase {
         // A version already names the Build, and the words after it stay the variant.
         let versioned = FilenameMetadataParser.parse(filename: "Match-Land-GBC-0.4.0-alpha.21.gbc")
         XCTAssertEqual(versioned.buildMetadata.versionString, "0.4.0")
-        XCTAssertEqual(versioned.suggestedBuildName, "v0.4.0 · alpha.21")
+        XCTAssertEqual(versioned.suggestedBuildName, "v0.4.0 · Alpha 21")
+    }
+
+    func testASystemRegionAndLanguageEndingAJoinedNameAreTagsNotTitle() {
+        let name = FilenameMetadataParser.parse(filename: "Match_Land_GBC_World_En_Rev_0.4.0-alpha.19.gbc")
+        XCTAssertEqual(name.suggestedTitle, "Match Land")
+        XCTAssertEqual(name.buildMetadata.region, "World")
+        XCTAssertEqual(name.buildMetadata.language, "En")
+        XCTAssertEqual(name.buildMetadata.versionString, "0.4.0")
+        XCTAssertEqual(name.buildMetadata.status, "Alpha 19")
+        XCTAssertEqual(name.suggestedBuildName, "v0.4.0 · Alpha 19")
+
+        let hyphenated = FilenameMetadataParser.parse(filename: "match-land-gbc-world-en.gbc")
+        XCTAssertEqual(hyphenated.suggestedTitle, "Match Land")
+        XCTAssertEqual(hyphenated.buildMetadata.region, "World")
+        XCTAssertEqual(hyphenated.buildMetadata.language, "En")
+
+        let system = FilenameMetadataParser.parse(filename: "Tetris_DX_GBC.gbc")
+        XCTAssertEqual(system.suggestedTitle, "Tetris DX")
+        XCTAssertNil(system.buildMetadata.region)
+    }
+
+    func testRegionAndLanguageWordsThatCouldBeATitleAreLeftAlone() {
+        // Without a system word, a region alone, or a language alone, could be part of a title.
+        for filename in ["Super_Mario_World.gb", "Super-Mario-Land-World.gb", "Hit_It.gb", "Game_USA.gb", "Game_Do_No.gb", "World_En.gb"] {
+            let parsed = FilenameMetadataParser.parse(filename: filename)
+            XCTAssertNil(parsed.buildMetadata.region, filename)
+            XCTAssertNil(parsed.buildMetadata.language, filename)
+        }
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Super_Mario_World.gb").suggestedTitle, "Super Mario World")
+        // A region with a language is read, as No-Intro writes them, but never as the whole title.
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Game_World_En.gb").suggestedTitle, "Game")
+    }
+
+    func testAStatusNumberJoinedToItsWordReadsLikeOneInParentheses() {
+        for spelling in ["alpha.21", "alpha21", "Alpha 21", "ALPHA.21"] {
+            let parsed = FilenameMetadataParser.parse(filename: "Example (\(spelling)).gb")
+            XCTAssertEqual(parsed.buildMetadata.status, "Alpha 21", spelling)
+        }
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Example (rc1).gb").buildMetadata.status, "RC 1")
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "Example_v1.2_beta.2.gb").suggestedBuildName, "v1.2 · Beta 2")
     }
 
     func testANameWithoutSpacesIsSpacedOut() {

@@ -500,7 +500,12 @@ isn't stored.
 - A status ending a name with no version, as in "Match-Land-GBC-alpha.21", "game_beta2" or
   "game-rc1", becomes the status: "Alpha 21", "Beta 2", "RC 1". "alpha" and "beta" count on their
   own; "demo", "preview", "proto" and "rc" need a number, since they could end a title. A name
-  with a version keeps the words after it as written: "…-0.4.0-alpha.21" is "v0.4.0 · alpha.21".
+  with a version reads the status the same way: "…-0.4.0-alpha.21" is "v0.4.0 · Alpha 21".
+- A system, region and language ending a joined name are tags, not title: "Match_Land_GBC_World_
+  En_Rev_0.4.0-alpha.19" is "Match Land", region World, language En, version 0.4.0, status Alpha
+  19. A "Rev" or "Version" word before a version belongs to it. The run is only read when it names a
+  system ("GB", "GBC", "DMG", "CGB") or holds both a region and a language, so "Super_Mario_World"
+  keeps its title.
 - A hack or translation is recognized in the bracket it's released with: "[Night patch by Jane
   v0.3]" or "[Hack by Jane]" for a hack, GoodTools' "[T+Eng1.03_Jane]" or "[T-En by Jane v1.0]"
   for a translation. The words before "by" are the hack's title unless they only say "Hack".
