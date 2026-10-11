@@ -10,7 +10,13 @@ struct LibraryRestoreView: View {
         self.onFinished = onFinished
         _model = StateObject(wrappedValue: LibraryRestoreViewModel(service: container.libraryBackup,
             url: url, directory: container.exportsDirectory,
-            isSessionActive: { gameIsRunning || container.activeSession != nil }))
+            isSessionActive: { gameIsRunning || container.activeSession != nil },
+            afterRestore: Self.backfill(container.imageFingerprintFiller)))
+    }
+
+    /// A backup leaves out image fingerprints, so the restored Builds have none until this runs.
+    static func backfill(_ filler: FillImageFingerprints) -> @Sendable () -> Void {
+        { _ = try? filler.execute() }
     }
 
     var body: some View {

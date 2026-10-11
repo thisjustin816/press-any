@@ -92,7 +92,8 @@ its ROM.
 
 Generated patched ROM files, image fingerprints, crash recovery checkpoints, Quick Play,
 staged files and Recently Deleted are excluded. A generated image's asset row and recipe
-remain, so launch can rebuild it.
+remain, so launch can rebuild it. A restore rebuilds the fingerprints of the Builds whose ROM
+files it placed as soon as it finishes; Builds restored without a ROM have none.
 
 Export reads the library once, copying each included file to a staging folder inside that one
 database read. It then checks the copies against their recorded hashes and streams the zip to
