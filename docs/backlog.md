@@ -327,6 +327,7 @@ the Build's Auto State; 24 h default retention, expired sessions purged.
 | missing | Developer Mode performance overlay: frame time, dropped frames and audio underruns, recorded on the slowest supported iPhone as the device performance check | v1.1 |  |
 | missing | Immediate Developer Mode memory writes with Undo Last Write, frozen indication | v1.1 |  |
 | missing | Frame advance + frame counter (bindable) | v1.1 |  |
+| missing | Developer Mode audio channel mute and solo: Pulse 1, Pulse 2, Wave and Noise toggles on the game menu's Sound page, for checking a hUGETracker or GB Studio track | v1.1 | SameBoy has `GB_set_channel_muted` and `GB_is_channel_muted`, so the audio side is a few calls; session-only, reset when the game closes so a game never comes back silent; could be offered outside Developer Mode for a player a harsh channel bothers |
 | missing | Full debugger/disassembler/VRAM viewer | later |  |
 
 Done: Cheat management add/remove/enable/disable/persist in Game Genie and GameShark formats, v1:
