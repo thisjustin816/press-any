@@ -483,6 +483,10 @@ isn't stored.
 - A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version,
   shown as "2026-10-06" and sorted by date; the words after it become the status. Only a valid
   eight-digit or hyphenated date counts, and never as the whole title.
+- A status ending a name with no version, as in "Match-Land-GBC-alpha.21", "game_beta2" or
+  "game-rc1", becomes the status: "Alpha 21", "Beta 2", "RC 1". "alpha" and "beta" count on their
+  own; "demo", "preview", "proto" and "rc" need a number, since they could end a title. A name
+  with a version keeps the words after it as written: "…-0.4.0-alpha.21" is "v0.4.0 · alpha.21".
 - A hack or translation is recognized in the bracket it's released with: "[Night patch by Jane
   v0.3]" or "[Hack by Jane]" for a hack, GoodTools' "[T+Eng1.03_Jane]" or "[T-En by Jane v1.0]"
   for a translation. The words before "by" are the hack's title unless they only say "Hack".
