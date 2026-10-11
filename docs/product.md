@@ -874,8 +874,8 @@ picture. A connected controller still hides the touch controls.
   and after returning from another app, until the player chooses Resume. A paused game's Resume
   button sits centered on the game picture. With that overlay exposed, any fresh non-directional
   controller button press resumes too: face buttons, Start/Menu, Select/Options, shoulders,
-  triggers and stick clicks. Directional input leaves it paused. The resume press is consumed
-  until released.
+  triggers and stick clicks, and so does a press of A, B, START or SELECT on the on-screen controls.
+  Directional input leaves it paused. The resume press is consumed until released.
 - **Cheats** opens the Build's cheats over the paused game at half height (see Cheats and memory tools).
 - **Settings** opens over the paused game at half height. A library game edits its Game's
   settings; Quick Play edits its system's. Layout, scaling, LCD filter and frame blending apply
@@ -983,8 +983,9 @@ picture. A connected controller still hides the touch controls.
   lettered buttons, so Circle is A and Cross is B, where a Game Boy has them, Triangle is START
   and Square is SELECT. Menu opens the game menu; pressing Menu again while it is open closes it
   and resumes, as Resume does. This works with touch controls hidden and uses no combo. The
-  exposed Resume overlay accepts any fresh non-directional button press. A menu, sheet, alert,
-  inactive scene or state operation blocks that shortcut, and its press is consumed until released.
+  exposed Resume overlay accepts any fresh non-directional button press, and so does the
+  on-screen A, B, START and SELECT. A menu, sheet, alert, inactive scene or state operation blocks
+  that shortcut, and its press is consumed until released.
   Every Game Boy button keeps a controller button. The shoulders and triggers are left for Rewind and
   Fast Forward.
 - Button mapping belongs to iOS: Settings > General > Game Controller customizations apply,

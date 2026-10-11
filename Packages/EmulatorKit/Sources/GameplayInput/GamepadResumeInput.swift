@@ -1,5 +1,7 @@
 import EmulationCore
 
+/// Turns a fresh press of A, B, START or SELECT into a resume, whether it comes from a controller or
+/// the on-screen buttons, and keeps that press from reaching the game until it is released.
 public struct GamepadResumeInput: Sendable {
     private var previous = EmulatorInputState()
     private var consumesA = false
