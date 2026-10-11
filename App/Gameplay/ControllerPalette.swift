@@ -47,7 +47,7 @@ struct ControllerPalette {
         ControllerPalette(
             // Fixed appearances keep a chosen controller theme independent of the library.
             bodyTop: AppBrand.Colors.body.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)),
-            bodyBottom: rgb(201, 199, 196),
+            bodyBottom: rgb(189, 187, 181),
             bezelTop: rgb(128, 126, 132),
             bezelBottom: rgb(112, 110, 116),
             dpad: rgb(48, 48, 50),
@@ -61,8 +61,8 @@ struct ControllerPalette {
             guideShadow: rgb(146, 144, 141),
             guideHighlight: rgb(250, 248, 245),
             buttonTop: AppBrand.Colors.button.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)),
-            buttonBottom: rgb(150, 30, 79),
-            buttonPressed: rgb(127, 25, 67),
+            buttonBottom: rgb(145, 27, 84),
+            buttonPressed: rgb(123, 23, 71),
             pill: rgb(124, 120, 124),
             pillPressed: rgb(100, 96, 100),
             pillText: rgb(236, 234, 232),
@@ -70,7 +70,7 @@ struct ControllerPalette {
             logo: AppBrand.Wordmark.lightInk,
             logoAccent: AppBrand.Wordmark.lightAccent,
             logoRecess: rgb(20, 20, 22),
-            logoAccentRecess: rgb(127, 25, 67),
+            logoAccentRecess: rgb(123, 23, 71),
             logoHighlight: rgb(236, 235, 232)
         )
     }
@@ -93,8 +93,8 @@ struct ControllerPalette {
             guideShadow: rgb(6, 6, 7),
             guideHighlight: rgb(88, 88, 95),
             buttonTop: AppBrand.Colors.button.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)),
-            buttonBottom: rgb(150, 30, 79),
-            buttonPressed: rgb(127, 25, 67),
+            buttonBottom: rgb(145, 27, 84),
+            buttonPressed: rgb(123, 23, 71),
             pill: rgb(78, 78, 83),
             pillPressed: rgb(104, 104, 110),
             pillText: rgb(210, 212, 218),

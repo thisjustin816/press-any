@@ -23,10 +23,10 @@ UIKit, the controller palettes and the icon renderer:
 
 | Color | Light | Dark |
 |---|---|---|
-| Action accent (`AccentColor`) | `#B5245F` | `#E36B9B` |
-| Brand lettering (`BrandInk`) | `#24345A` | `#B5C4E3` |
-| Controller and icon body (`BrandBody`) | `#D7D5D2` | `#24272F` |
-| Filled buttons (`BrandButton`) | `#B5245F` | `#B5245F` |
+| Action accent (`AccentColor`) | `#B02165` | `#E26D9E` |
+| Brand lettering (`BrandInk`) | `#282A63` | `#BCC0E8` |
+| Controller and icon body (`BrandBody`) | `#D0CEC8` | `#24272F` |
+| Filled buttons (`BrandButton`) | `#B02165` | `#B02165` |
 
 Filled buttons and navy swipe actions keep white labels in both appearances. Text actions use
 the brighter pink in Dark Mode. Native interface surfaces, primary and secondary text,
@@ -42,8 +42,8 @@ placeholder cartridges press the capitalized name into their plaque.
 
 ## App icon
 
-The app icon is a smooth, flat-faced pink Game Boy-style button viewed nearly straight on,
-with a thin bevel and short dark sidewall. A navy A is printed on the warm gray surface below
+The app icon is a smooth pink Game Boy-style button viewed nearly straight on, with a shallow
+crown, lit rounded bevel and dark sidewall. A navy A is printed on the warm gray surface below
 it. The Dark icon uses the dark body and lighter lettering; the Tinted icon has grayscale
 artwork on a transparent background for iOS 18.
 
