@@ -53,8 +53,10 @@ For information about these services, see
 Library data stays in the app's storage until you remove it or delete the app.
 Temporary and cached files may be removed during normal app maintenance.
 Deleting Press Any using iOS's Delete App option removes its local app data from
-the device. Copies outside the app, including backups and your original imported
-files, must be managed separately through iOS or the relevant file provider.
+the device. That includes the Press Any folder in Files, where exports and backups
+are written: it belongs to the app. Copies you share or save elsewhere, and your
+original imported files, stay where they are and must be managed separately through
+iOS or the relevant file provider.
 
 ## Support and contact
 

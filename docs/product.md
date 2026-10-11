@@ -302,6 +302,12 @@ for sharing. A summary shows counts and approximate size before export, and prog
 while the archive is written. Exports add a numbered copy when a filename already exists.
 Later captures (recordings, bug reports) land in the same folder.
 
+The Exports folder is the app's own Documents folder, which Files shows under Press Any, so
+deleting the app deletes it with the library. When a backup finishes, its result sits at the top
+of the screen, scrolled into view, with its filename, a share button, and a note that the copy
+goes with the app and should be shared to iCloud Drive or another place to keep it. The welcome
+screen's Exports topic says the same.
+
 ## Importing
 
 The pipeline is Analyze → Import Plan → Import Review → transactional commit. Analysis never
