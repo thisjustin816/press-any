@@ -227,6 +227,11 @@ public enum FilenameMetadataParser {
             status = status ?? stamp.variant
             cleanTitle = stamp.title
         }
+        // A status ends a joined name with no version, as in "Match-Land-GBC-alpha.21".
+        if version == nil, status == nil, let stamp = statusStamp(in: cleanTitle) {
+            status = stamp.status
+            cleanTitle = stamp.title
+        }
         if !cleanTitle.contains(" ") {
             cleanTitle = spacedTitle(cleanTitle)
         }
@@ -393,6 +398,34 @@ public enum FilenameMetadataParser {
             return (words[..<index].joined(separator: " "), version, variant.isEmpty ? nil : variant)
         }
         return nil
+    }
+
+    /// A status word with its number, "alpha.21", "alpha-21", "alpha21" or "rc1", after at least one
+    /// title word, separated by spaces or underscores, or by hyphens in a name that has no spaces.
+    /// "alpha" and "beta" count without a number; the other words could end a title, so they need one.
+    private static func statusStamp(in title: String) -> (title: String, status: String)? {
+        let splitsHyphens = !title.contains(" ")
+        let words = title.split(whereSeparator: { $0 == " " || $0 == "_" || (splitsHyphens && $0 == "-") })
+            .map(String.init)
+        guard words.count >= 2 else { return nil }
+        let statusWords = "alpha|beta|rc|proto|prototype|preview|demo"
+        var parts = optionalMatchGroups(in: words[words.count - 1], pattern: #"(?i)^("# + statusWords + #")\.?([0-9]+)?$"#)
+        var titleCount = words.count - 1
+        if parts == nil, words.count >= 3, words[words.count - 1].allSatisfy(\.isNumber),
+           let word = captures(in: words[words.count - 2], pattern: #"(?i)^("# + statusWords + #")$"#).first {
+            parts = [word, words[words.count - 1]]
+            titleCount = words.count - 2
+        }
+        guard let parts, let word = parts[0] else { return nil }
+        let number = parts[1]
+        guard number != nil || ["alpha", "beta"].contains(word.lowercased()),
+              let status = canonicalStatus(number.map { "\(word) \($0)" } ?? word)
+        else { return nil }
+        var titleWords = Array(words[..<titleCount])
+        if title.allSatisfy({ !$0.isUppercase }) {
+            titleWords = titleWords.map(capitalized)
+        }
+        return (titleWords.joined(separator: " "), status)
     }
 
     static func canonicalStatus(_ value: String) -> String? {
