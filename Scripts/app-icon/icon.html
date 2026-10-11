@@ -57,7 +57,7 @@ async function draw() {
     }
 
     // Near-front view preserves the circular face while showing the short lower sidewall.
-    const faceY = 418, radiusX = 260, radiusY = 248, depth = 30;
+    const faceY = 402, radiusX = 230, radiusY = 225, depth = 25;
     context.save();
     context.shadowColor = 'rgba(0,0,0,0.24)';
     context.shadowBlur = 20;
@@ -82,8 +82,8 @@ async function draw() {
 
     // A separate path keeps the printed letter's openings clear in the Tinted icon too.
     context.save();
-    context.translate(512, 812);
-    context.scale(0.9, 0.9);
+    context.translate(512, 790);
+    context.scale(0.8, 0.8);
     context.fillStyle = tinted ? '#FFFFFF' : ink;
     const letter = new Path2D();
     letter.moveTo(-80, 62);
