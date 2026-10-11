@@ -164,6 +164,27 @@ final class LibraryBackupFlowTests: XCTestCase {
         roms.forEach(container.sharedFileInbox.discard)
     }
 
+    func testReplacingTheLibraryRebuildsTheImageFingerprintsRightAfterward() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let build = try importROM(container, root: root)
+        XCTAssertNotNil(try container.repositories.fingerprints.fetchFingerprints(imageSHA256s: [build.imageSHA256])[build.imageSHA256])
+        let archive = try container.libraryBackup.export(to: root, displayName: "Test", appVersion: "1", appBuild: "1", includeROMs: true)
+        let filled = expectation(description: "fingerprints rebuilt")
+        let backfill = LibraryRestoreView.backfill(container.imageFingerprintFiller)
+        let model = LibraryRestoreViewModel(service: container.libraryBackup, url: archive, directory: root,
+            isSessionActive: { false }, afterRestore: { backfill(); filled.fulfill() })
+        await model.load()
+        await model.prepareReplacement()
+        model.isReplacementConfirmationPresented = false
+        await model.confirmReplacement()
+        XCTAssertNil(model.errorMessage)
+        // The restore leaves the table empty, so the matching evidence has to be rebuilt.
+        await fulfillment(of: [filled], timeout: 10)
+        XCTAssertNotNil(try container.repositories.fingerprints.fetchFingerprints(imageSHA256s: [build.imageSHA256])[build.imageSHA256])
+    }
+
     private func importROM(_ container: AppContainer, root: URL) throws -> Build {
         let url = root.appendingPathComponent("Example.gb")
         try TestROM.make(title: "BACKUP").write(to: url)
