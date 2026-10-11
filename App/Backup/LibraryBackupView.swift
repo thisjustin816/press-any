@@ -5,7 +5,6 @@ import SwiftUI
 struct LibraryBackupView: View {
     @StateObject private var model: LibraryBackupViewModel
     @Environment(\.dismiss) private var dismiss
-    private static let resultID = "backupResult"
 
     init(container: AppContainer, gameID: UUID? = nil) {
         _model = StateObject(wrappedValue: LibraryBackupViewModel(service: container.libraryBackup,
@@ -14,47 +13,32 @@ struct LibraryBackupView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
-                Form {
-                    // The result sits above the contents list, so it isn't left below the fold.
-                    if let url = model.exportedURL {
-                        Section {
-                            Label(model.gameID == nil ? "Backup saved" : "Game exported", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                                .id(Self.resultID)
-                            Text(url.lastPathComponent)
-                            ShareLink("Share or Save a Copy", item: url)
-                        } footer: {
-                            Text("This copy is in the \(AppBrand.displayName) folder in Files, which belongs to the app. Deleting \(AppBrand.displayName) deletes it too. To keep it, share it to iCloud Drive or another place.")
-                        }
-                    }
+            Form {
+                Section {
+                    Toggle("Include ROMs", isOn: $model.includeROMs)
+                        .disabled(model.isExporting)
+                } footer: {
+                    Text(model.includeROMs
+                         ? "This backup includes ROMs. It is personal and should not be shared."
+                         : "ROM files stay out of the backup. Saves, states, patches, artwork, metadata, and settings are included.")
+                }
+                if let summary = model.summary {
+                    BackupCountsSection(counts: summary.recordCounts)
                     Section {
-                        Toggle("Include ROMs", isOn: $model.includeROMs)
-                            .disabled(model.isExporting)
+                        LabeledContent("Approximate Size", value: ByteCountFormatter.string(fromByteCount: summary.approximateByteLength, countStyle: .file))
                     } footer: {
-                        Text(model.includeROMs
-                             ? "This backup includes ROMs. It is personal and should not be shared."
-                             : "ROM files stay out of the backup. Saves, states, patches, artwork, metadata, and settings are included.")
-                    }
-                    if let summary = model.summary {
-                        BackupCountsSection(counts: summary.recordCounts)
-                        Section {
-                            LabeledContent("Approximate Size", value: ByteCountFormatter.string(fromByteCount: summary.approximateByteLength, countStyle: .file))
-                        } footer: {
-                            if summary.isTooLarge {
-                                Text("A backup can hold up to \(ByteCountFormatter.string(fromByteCount: LibraryBackupService.maximumArchiveBytes, countStyle: .file)). Turn off Include ROMs, or export Games one at a time.")
-                                    .foregroundStyle(.red)
-                            }
+                        if summary.isTooLarge {
+                            Text("A backup can hold up to \(ByteCountFormatter.string(fromByteCount: LibraryBackupService.maximumArchiveBytes, countStyle: .file)). Turn off Include ROMs, or export Games one at a time.")
+                                .foregroundStyle(.red)
                         }
                     }
-                    if model.isLoading { ProgressView("Reading library...") }
-                    if model.isExporting { ProgressView("Writing backup...", value: model.progress) }
-                    if let message = model.errorMessage { Section { Text(message).foregroundStyle(.red) } }
                 }
-                .onChange(of: model.exportedURL) { _, url in
-                    if url != nil { withAnimation { proxy.scrollTo(Self.resultID, anchor: .top) } }
-                }
+                if model.isLoading { ProgressView("Reading library...") }
             }
+            // The outcome sits outside the list, so it is on screen however far the list is scrolled.
+            .safeAreaInset(edge: .bottom) { statusCard }
+            .sensoryFeedback(.success, trigger: model.exportedURL) { _, new in new != nil }
+            .sensoryFeedback(.error, trigger: model.errorMessage) { _, new in new != nil }
             .navigationTitle(model.gameID == nil ? "Back Up Library" : "Export Game")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -70,6 +54,45 @@ struct LibraryBackupView: View {
             .onChange(of: model.includeROMs) { _, _ in Task { await model.loadSummary() } }
             .interactiveDismissDisabled(model.isExporting)
         }
+    }
+}
+
+extension LibraryBackupView {
+    /// What the last Back Up did: its progress, the saved file, or why it failed.
+    @ViewBuilder fileprivate var statusCard: some View {
+        if model.isExporting {
+            card { ProgressView(model.gameID == nil ? "Writing backup..." : "Writing export...", value: model.progress) }
+        } else if let url = model.exportedURL {
+            card {
+                Label(model.gameID == nil ? "Backup saved" : "Game exported", systemImage: "checkmark.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(.green)
+                Text(url.lastPathComponent)
+                    .font(.subheadline)
+                Text("This copy is in the \(AppBrand.displayName) folder in Files, which belongs to the app. Deleting \(AppBrand.displayName) deletes it too. To keep it, share it to iCloud Drive or another place.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                ShareLink("Share or Save a Copy", item: url)
+                    .buttonStyle(.borderedProminent)
+            }
+        } else if let message = model.errorMessage {
+            card {
+                Label(model.gameID == nil ? "Backup failed" : "Export failed", systemImage: "exclamationmark.triangle.fill")
+                    .font(.headline)
+                    .foregroundStyle(.red)
+                Text(message)
+                    .font(.subheadline)
+            }
+        }
+    }
+
+    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8, content: content)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal)
+            .padding(.bottom, 8)
     }
 }
 

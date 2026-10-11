@@ -305,9 +305,11 @@ while the archive is written. Exports add a numbered copy when a filename alread
 Later captures (recordings, bug reports) land in the same folder.
 
 The Exports folder is the app's own Documents folder, which Files shows under Press Any, so
-deleting the app deletes it with the library. When a backup finishes, its result sits at the top
-of the screen, scrolled into view, with its filename, a share button, and a note that the copy
-goes with the app and should be shared to iCloud Drive or another place to keep it. The welcome
+deleting the app deletes it with the library. The outcome of Back Up sits in a card pinned to the
+bottom of the screen, outside the list, so it shows however far the list is scrolled: progress
+while the archive is written, then either "Backup saved" with its filename, a share button and a
+note that the copy goes with the app and should be shared to iCloud Drive or another place to keep
+it, or "Backup failed" with the reason. A success or failure also taps the haptic. The welcome
 screen's Exports topic says the same.
 
 ## Importing
