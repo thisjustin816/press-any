@@ -29,6 +29,7 @@ struct SHA256Row: View {
                 Label("Copy", systemImage: "doc.on.doc")
             }
         }
+        .menuOrder(.fixed)
     }
 
     static func lines(_ hash: String, groupsPerLine: Int) -> [String] {
