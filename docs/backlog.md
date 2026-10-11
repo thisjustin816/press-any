@@ -359,7 +359,8 @@ the temporary file after sharing. Free, with no gallery or capture metadata.
 | missing | Slow motion 0.25x/0.5x/0.75x | v1.1 |  |
 
 Done: Pause / Resume from menu with paused overlay; any fresh non-directional controller button
-press resumes the exposed overlay and is consumed until released. Directional input leaves it paused.
+or on-screen A, B, START or SELECT press resumes the exposed overlay and is consumed until
+released. Directional input leaves it paused.
 
 ### Rendering, shaders, display
 
