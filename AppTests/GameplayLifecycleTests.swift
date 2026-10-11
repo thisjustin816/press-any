@@ -11,6 +11,13 @@ import XCTest
 /// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
+    func testTheGameMenuButtonAsksForAFixedOrderSoCloseGameNeverMoves() {
+        // The menu opens upward from the bottom of the screen; left to the system it is reversed there.
+        let button = GameMenuButton(menu: UIMenu(children: []))
+        XCTAssertEqual(button.preferredMenuElementOrder, .fixed)
+        XCTAssertTrue(button.showsMenuAsPrimaryAction)
+    }
+
     func testStatesListCallsTimedStatesAutoStatesAndKeepsTheirNote() throws {
         let gameplay = GameplayViewController(runtime: StateMenuRuntime(), autoResumePolicy: .always)
         let timed = try XCTUnwrap(gameplay.prepareGameMenu().allActions.first { $0.title == "Auto State" })
