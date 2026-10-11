@@ -376,6 +376,41 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(FilenameMetadataParser.parse(filename: "Pac-Man.gb").suggestedTitle, "Pac-Man")
     }
 
+    func testAStatusEndingAJoinedNameBecomesTheStatus() {
+        for (filename, status) in [
+            ("Match-Land-GBC-alpha.21.gbc", "Alpha 21"),
+            ("Match-Land-GBC-alpha-21.gbc", "Alpha 21"),
+            ("Match_Land_GBC_alpha21.gbc", "Alpha 21"),
+            ("match-land-gbc-alpha.21.gbc", "Alpha 21"),
+            ("Match Land GBC alpha.21.gbc", "Alpha 21"),
+            ("Match-Land-GBC-beta.2.gbc", "Beta 2"),
+            ("Match-Land-GBC-rc1.gbc", "RC 1"),
+            ("Match-Land-GBC-demo.2.gbc", "Demo 2"),
+            ("Match-Land-GBC-proto-3.gbc", "Prototype 3"),
+            ("Match-Land-GBC-alpha.gbc", "Alpha"),
+            ("Match-Land-GBC-Beta.gbc", "Beta"),
+        ] {
+            let parsed = FilenameMetadataParser.parse(filename: filename)
+            XCTAssertEqual(parsed.suggestedTitle, "Match Land GBC", filename)
+            XCTAssertEqual(parsed.buildMetadata, BuildImportMetadata(status: status), filename)
+            XCTAssertEqual(parsed.suggestedBuildName, status, filename)
+            XCTAssertEqual(parsed.releaseKind, .development, filename)
+            XCTAssertEqual(parsed.confidence, .high, filename)
+        }
+    }
+
+    func testAStatusWordThatCouldBelongToATitleNeedsANumber() {
+        for filename in ["Match-Land-Demo.gbc", "Match-Land-Preview.gbc", "Match-Land-RC.gbc", "Alpha.gbc", "Alpha-Wave.gbc", "Beta-Test-Land.gbc"] {
+            let parsed = FilenameMetadataParser.parse(filename: filename)
+            XCTAssertNil(parsed.buildMetadata.status, filename)
+            XCTAssertEqual(parsed.suggestedBuildName, "Original", filename)
+        }
+        // A version already names the Build, and the words after it stay the variant.
+        let versioned = FilenameMetadataParser.parse(filename: "Match-Land-GBC-0.4.0-alpha.21.gbc")
+        XCTAssertEqual(versioned.buildMetadata.versionString, "0.4.0")
+        XCTAssertEqual(versioned.suggestedBuildName, "v0.4.0 · alpha.21")
+    }
+
     func testANameWithoutSpacesIsSpacedOut() {
         let expected = [
             "MoonGarden.gb": "Moon Garden",
