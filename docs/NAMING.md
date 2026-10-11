@@ -23,10 +23,10 @@ UIKit, the controller palettes and the icon renderer:
 
 | Color | Light | Dark |
 |---|---|---|
-| Action accent (`AccentColor`) | `#C52B79` | `#E66CA6` |
+| Action accent (`AccentColor`) | `#B5245F` | `#E36B9B` |
 | Brand lettering (`BrandInk`) | `#24345A` | `#B5C4E3` |
 | Controller and icon body (`BrandBody`) | `#D7D5D2` | `#24272F` |
-| Filled buttons (`BrandButton`) | `#C52B79` | `#C52B79` |
+| Filled buttons (`BrandButton`) | `#B5245F` | `#B5245F` |
 
 Filled buttons and navy swipe actions keep white labels in both appearances. Text actions use
 the brighter pink in Dark Mode. Native interface surfaces, primary and secondary text,

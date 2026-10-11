@@ -201,7 +201,8 @@ These checks cover the Capture submenu and remain pending until run on a physica
   and Dark appearance, including the largest Dynamic Type size. Pink actions and navy lettering
   remain readable; filled buttons have white labels, and destructive actions stay red.
 - [ ] Check Classic, Dark and Match System on both touch-controller layouts. The body, A/B
-  buttons and printed lettering match the app colors; pressed states remain distinct.
+  buttons and printed lettering match the app colors; pressed states remain distinct. The
+  Playtiles guide stands out from the gray body with a lit top edge and shadow below.
 - [ ] In Settings > App Icon, check all six previews and choose each icon. Compare the home-screen
   icon with its preview in Light and Dark, then check Tinted appearance. Each uses the same
   front-facing button and separate A; the Default icon remains available without Plus.
