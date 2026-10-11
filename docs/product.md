@@ -1230,8 +1230,9 @@ viewer are later.
 The game menu's Capture submenu offers Share Screenshot: a PNG at the core frame's native size,
 with its current screen colors and no touch controls, menu, LCD filter or frame blending. Sharing
 works in library games and Quick Play, requires a frame, and leaves the game paused until Resume.
-The temporary PNG remains available until the system share sheet closes, then is removed. Sharing
-and setting artwork are free.
+The temporary PNG remains available until the system share sheet closes, then is removed. The
+share sheet's Save Image adds the screenshot to Photos; the app declares add-only access and never
+reads the photo library. Sharing and setting artwork are free.
 
 v1.1 adds an in-app gallery where every capture belongs to its exact Build, exported clean,
 with metadata, or with a rendered Build Info or Bug Report strip. An optional capture context records selected

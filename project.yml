@@ -46,6 +46,9 @@ targets:
         PRODUCT_NAME: PressAny
         INFOPLIST_KEY_CFBundleDisplayName: Press Any
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
+        # Save Image in the share sheet, which Share Screenshot opens, needs this key. The app only
+        # adds to Photos and never reads the library.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Press Any adds a screenshot to your Photos when you choose Save Image in the share sheet."
         # Document types and exempt encryption declaration, merged into the generated Info.plist.
         INFOPLIST_FILE: Config/PressAny-Info.plist
         # Without a launch screen, iOS runs the app letterboxed at an old iPhone's size.
