@@ -53,6 +53,7 @@ final class GameplayViewController: UIViewController {
     private var menuButtons: [GameMenuButton] = []
     private var controllerMenuButton = GamepadMenuButton()
     private var controllerResumeInput = GamepadResumeInput()
+    private var touchResumeInput = GamepadResumeInput()
     /// Set once a screenshot scene's button script has played.
     private var screenshotInputPlayed = false
 
@@ -218,6 +219,8 @@ final class GameplayViewController: UIViewController {
     var isRunningFrames: Bool { driver.isRunning }
     /// The buttons the game sees held, for tests.
     var heldInput: EmulatorInputState { input.current() }
+    /// Delivers touch input as the on-screen controls report it, for tests.
+    func sendTouchInput(_ input: EmulatorInputState) { touchControls.onInputChanged?(input) }
     /// The controller layout drawn, for tests.
     var touchControlStyle: TouchControlStyle { touchControls.style }
 
@@ -616,18 +619,25 @@ final class GameplayViewController: UIViewController {
         touchControls.scaling = screenScaling
         touchControls.theme = controllerTheme
         touchControls.pictureOpensMenu = tapGameForMenu
-        touchControls.onInputChanged = { [weak self] input in self?.input.setTouch(input) }
+        touchControls.onInputChanged = { [weak self] touchInput in
+            guard let self else { return }
+            // A fresh press of A, B, START or SELECT on the exposed Resume overlay resumes, as a
+            // controller's does, and never reaches the game as the press that resumed it.
+            let resume = self.touchResumeInput.update(touchInput, canResume: self.canResumeFromButtons)
+            self.input.setTouch(resume.input)
+            if resume.shouldResume { self.resumeTapped() }
+        }
         touchControls.onLayoutChanged = { [weak self] layout in self?.applyLayout(layout) }
         controllerMonitor.onMenuChanged = { [weak self] pressed in
             self?.controllerMenuChanged(pressed)
         }
         controllerMonitor.onAuxiliaryButtonPressed = { [weak self] in
-            guard let self, self.canResumeFromController else { return }
+            guard let self, self.canResumeFromButtons else { return }
             self.resumeTapped()
         }
         controllerMonitor.onInputChanged = { [weak self] controllerInput in
             guard let self else { return }
-            let resume = self.controllerResumeInput.update(controllerInput, canResume: self.canResumeFromController)
+            let resume = self.controllerResumeInput.update(controllerInput, canResume: self.canResumeFromButtons)
             self.input.setController(resume.input)
             if resume.shouldResume { self.resumeTapped() }
             if self.touchControlsRevealed, controllerInput != EmulatorInputState() {
@@ -662,7 +672,7 @@ final class GameplayViewController: UIViewController {
         guard let action, !stopped, !halted, !coveredBySheet else { return }
         touchControlsRevealed = false
         updateTouchControls(controllerConnected: controllerMonitor.isConnected)
-        if action == .open, canResumeFromController {
+        if action == .open, canResumeFromButtons {
             resumeTapped()
             return
         }
@@ -678,7 +688,8 @@ final class GameplayViewController: UIViewController {
         }
     }
 
-    private var canResumeFromController: Bool {
+    /// Whether a button press, from a controller or the on-screen controls, may resume the game.
+    private var canResumeFromButtons: Bool {
         pauseReasons.showsPausedOverlay && !pauseReasons.inactive && pauseReasons.holds == 0
             && !coveredBySheet && !isGameMenuOpen && presentedViewController == nil
             && !stopped && !halted

@@ -681,6 +681,44 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertTrue(gameplay.isRunningFrames)
     }
 
+    func testTouchButtonsResumeTheOverlayAndConsumeThePress() {
+        for press in [EmulatorInputState(a: true), .init(b: true), .init(start: true), .init(select: true)] {
+            let (gameplay, runtime, _) = makeGameplay()
+            _ = gameplay.prepareGameMenu()
+            gameplay.sendTouchInput(press)
+            XCTAssertTrue(gameplay.isRunningFrames)
+            XCTAssertFalse(gameplay.isShowingPaused)
+            XCTAssertEqual(gameplay.heldInput, .init())
+            gameplay.sendTouchInput(press)
+            XCTAssertEqual(gameplay.heldInput, .init())
+            gameplay.sendTouchInput(.init())
+            gameplay.sendTouchInput(press)
+            XCTAssertEqual(gameplay.heldInput, press)
+            XCTAssertFalse(runtime.failedFrame)
+        }
+    }
+
+    func testTouchDirectionsLeaveTheResumeOverlayPaused() {
+        let (gameplay, _, _) = makeGameplay()
+        _ = gameplay.prepareGameMenu()
+        gameplay.sendTouchInput(.init(up: true, right: true))
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertTrue(gameplay.isShowingPaused)
+    }
+
+    func testTouchResumeWaitsForSettingsToCloseAndAFreshPress() {
+        let (gameplay, _, _) = makeGameplay()
+        gameplay.setCoveredBySheet(true)
+        gameplay.sendTouchInput(.init(a: true))
+        XCTAssertFalse(gameplay.isRunningFrames)
+        gameplay.setCoveredBySheet(false)
+        gameplay.sendTouchInput(.init(right: true, a: true))
+        XCTAssertFalse(gameplay.isRunningFrames)
+        gameplay.sendTouchInput(.init())
+        gameplay.sendTouchInput(.init(a: true))
+        XCTAssertTrue(gameplay.isRunningFrames)
+    }
+
     func testResumeSitsOnTheGamePictureOnBothLayouts() {
         for style in [TouchControlStyle.gameBoy, .playtiles] {
             let (gameplay, _, _) = makeGameplay(policy: .never)
