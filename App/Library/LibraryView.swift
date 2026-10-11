@@ -177,7 +177,6 @@ struct LibraryView: View {
                     } label: {
                         Label("More", systemImage: "ellipsis")
                     }
-                    .menuOrder(.fixed)
                     .accessibilityIdentifier("library.viewMenu")
 
                     Menu {
@@ -208,7 +207,6 @@ struct LibraryView: View {
                     } label: {
                         Label("Add", systemImage: "plus")
                     }
-                    .menuOrder(.fixed)
                     .accessibilityIdentifier("library.addMenu")
                 }
             }
@@ -348,7 +346,6 @@ struct LibraryView: View {
                         } label: { gameTile(game) }
                         .buttonStyle(.plain)
                         .contextMenu { gameActions(game) }
-                        .menuOrder(.fixed)
                     }
                 }
             }
@@ -375,7 +372,6 @@ struct LibraryView: View {
                         }
                         .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: game) } }
                         .contextMenu { gameActions(game) }
-                        .menuOrder(.fixed)
                     }
                 }
                 .tag(game.id)

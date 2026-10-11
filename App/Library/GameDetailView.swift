@@ -171,7 +171,6 @@ struct GameDetailView: View {
                     launch(build: model.preferredBuild, start: .startOver)
                 }
             }
-            .menuOrder(.fixed)
         }
     }
 
@@ -274,7 +273,6 @@ struct GameDetailView: View {
                 } label: {
                     Label("More", systemImage: "ellipsis")
                 }
-                .menuOrder(.fixed)
                 .accessibilityIdentifier("game.moreMenu")
             }
         }
@@ -302,7 +300,6 @@ struct GameDetailView: View {
         } label: {
             Label("Artwork", systemImage: "photo.on.rectangle")
         }
-        .menuOrder(.fixed)
     }
 
     private func withPresentations(_ content: some View) -> some View {
@@ -466,7 +463,6 @@ struct GameDetailView: View {
                 .onTapGesture { launch(build: build) }
                 .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: build) } }
                 .contextMenu { buildMenu(build) }
-                .menuOrder(.fixed)
         }
     }
 
@@ -525,7 +521,6 @@ struct GameDetailView: View {
             } label: {
                 Label("Play with Save", systemImage: "play.circle")
             }
-            .menuOrder(.fixed)
         }
         Section {
             Button("Set as Preferred Build", systemImage: "star") { model.setPreferredBuild(build) }
@@ -564,7 +559,6 @@ struct GameDetailView: View {
             } label: {
                 Label("ROM and Patches", systemImage: "doc.badge.gearshape")
             }
-            .menuOrder(.fixed)
         }
         Section {
             Button("Make Separate Game…", systemImage: "rectangle.portrait.and.arrow.right") { promotion = build }
@@ -599,7 +593,6 @@ struct GameDetailView: View {
         } label: {
             Label("Preferred Save", systemImage: "externaldrive")
         }
-        .menuOrder(.fixed)
     }
 
     private func profileRow(_ profile: SaveProfile) -> some View {
@@ -650,7 +643,6 @@ struct GameDetailView: View {
                 Button(role: .destructive) { model.requestDeletion(of: profile) } label: { Label("Delete Save Profile", systemImage: "trash") }
             }
         }
-        .menuOrder(.fixed)
     }
 
     private func request(_ request: FileRequest) {

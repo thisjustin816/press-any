@@ -325,7 +325,6 @@ struct PlayingSettingsPage: View {
                         .foregroundStyle(Color.secondary)
                 }
             }
-            .menuOrder(.fixed)
             .accessibilityLabel("Keep Auto States")
             .accessibilityValue("\(plus.gate.keptAutoStates(keepAutoStates)), Plus feature")
         } else {

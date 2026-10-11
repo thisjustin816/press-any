@@ -279,7 +279,6 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                 } label: {
                     rowLabel
                 }
-                .menuOrder(.fixed)
             }
         }
         .accessibilityLabel(title)
