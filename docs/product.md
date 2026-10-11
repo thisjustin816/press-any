@@ -212,10 +212,9 @@ status. Source assets are irreplaceable; generated patched ROMs are rebuildable 
 The `image_fingerprints` table stores each source image's SHA-256, bank size, 64-bit bank hashes
 in one blob, header title, cartridge type, RAM size code and CGB flag. Import records this evidence;
 launch fills missing rows from existing source files and retries unreadable images next launch.
-A restore fills them the same way as soon as it finishes, since a backup leaves them out: Import
-Review matches a new Build to its Game with them, and without them it can't offer the Game.
-A backup written without ROMs leaves nothing to read them from, so those Builds have none until
-their ROM is imported again. Purging a source image removes its fingerprint. Patched Builds use their imported base's evidence;
+A backup carries them, so a restore without ROMs can still match a new Build to its Game in
+Import Review, which matches on them. An older backup without them has them rebuilt from the ROMs
+it placed, as soon as the restore finishes. Purging a source image removes its fingerprint. Patched Builds use their imported base's evidence;
 generated images receive no fingerprint. These records are metadata, so Check Library Files does
 not treat them as files.
 
@@ -1324,7 +1323,7 @@ Library Backup uses an ordinary zip with a root manifest, domain-model JSON and 
 files. [The backup format](backup-format.md) documents its versions, inventory, checksums and
 limits. It carries all live library records, provenance, notes, playtime, profiles, saves,
 states, thumbnails, recipes, patches, maps, artwork, reports, declarations, settings and
-region/language ordering. ROM files are optional. Generated patched ROMs, fingerprints, crash
+region/language ordering and image fingerprints. ROM files are optional. Generated patched ROMs, crash
 checkpoints, Quick Play, staging, Recently Deleted and device view preferences stay out.
 
 A backup can be up to 2 GB, enough for a library with its ROMs; a zip of game files opened for

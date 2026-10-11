@@ -92,6 +92,10 @@ struct BackupMerge {
             date: { _ in .distantPast }, choices: choices)
         result.settings = try records(archive.settings, library.settings, kind: "Setting", key: { $0.identity },
             name: names.setting, date: { _ in .distantPast }, choices: choices)
+        // Evidence comes from the ROM and never differs for one image, so the library's own is kept
+        // and the archive adds what the library lacks, with no conflict to ask about.
+        let knownImages = Set(library.fingerprints.map(\.identity))
+        result.fingerprints = library.fingerprints + archive.fingerprints.filter { !knownImages.contains($0.identity) }
         result.gameProvenance = ownerProvenance(archive.gameProvenance, library.gameProvenance, kind: "Game", choices: choices)
         result.buildProvenance = ownerProvenance(archive.buildProvenance, library.buildProvenance, kind: "Build", choices: choices)
         return result
