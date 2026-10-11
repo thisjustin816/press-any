@@ -67,18 +67,41 @@ async function draw() {
     context.fill();
     context.restore();
 
-    context.fillStyle = shade(faceColor, -0.36);
+    const sidewall = context.createLinearGradient(0, faceY, 0, faceY + radiusY + depth);
+    sidewall.addColorStop(0, shade(faceColor, -0.18));
+    sidewall.addColorStop(0.76, shade(faceColor, -0.34));
+    sidewall.addColorStop(1, shade(faceColor, -0.75));
+    context.fillStyle = sidewall;
     ellipse(faceY + depth, radiusX, radiusY);
     context.fill();
-    const bevel = context.createLinearGradient(0, faceY - radiusY, 0, faceY + radiusY);
-    bevel.addColorStop(0, shade(faceColor, 0.15));
-    bevel.addColorStop(1, shade(faceColor, -0.16));
+    const bevel = context.createLinearGradient(340, faceY + radiusY, 684, faceY - radiusY);
+    bevel.addColorStop(0, shade(faceColor, -0.22));
+    bevel.addColorStop(0.5, shade(faceColor, 0.06));
+    bevel.addColorStop(1, shade(faceColor, 0.32));
     context.fillStyle = bevel;
     ellipse(faceY, radiusX, radiusY);
     context.fill();
-    context.fillStyle = faceColor;
+    // Broad lighting preserves a flat plastic face without adding surface grain.
+    const face = context.createLinearGradient(350, faceY - radiusY, 674, faceY + radiusY);
+    face.addColorStop(0, shade(faceColor, -0.08));
+    face.addColorStop(0.48, faceColor);
+    face.addColorStop(1, shade(faceColor, 0.12));
+    context.fillStyle = face;
     ellipse(faceY, radiusX - 12, radiusY - 12);
     context.fill();
+
+    context.save();
+    const highlight = context.createLinearGradient(512, faceY - radiusY, 742, faceY + 80);
+    highlight.addColorStop(0, 'rgba(255,255,255,0)');
+    highlight.addColorStop(0.45, 'rgba(255,255,255,0.6)');
+    highlight.addColorStop(1, 'rgba(255,255,255,0)');
+    context.strokeStyle = highlight;
+    context.lineWidth = 3;
+    context.lineCap = 'round';
+    context.beginPath();
+    context.ellipse(512, faceY, radiusX - 5, radiusY - 5, 0, -Math.PI / 2, Math.PI / 6);
+    context.stroke();
+    context.restore();
 
     // A separate path keeps the printed letter's openings clear in the Tinted icon too.
     context.save();
