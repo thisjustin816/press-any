@@ -25,6 +25,7 @@ enum BackupSnapshotCodec {
             "build-provenance.json": try encoder.encode(snapshot.buildProvenance),
             "toolchain-reports.json": try encoder.encode(snapshot.reports),
             "save-declarations.json": try encoder.encode(snapshot.declarations),
+            "fingerprints.json": try encoder.encode(snapshot.fingerprints),
             "settings.json": try encoder.encode(snapshot.settings),
         ]
     }
@@ -32,7 +33,7 @@ enum BackupSnapshotCodec {
     static let recordFilenames: Set<String> = [
         "games.json", "manual-positions.json", "builds.json", "profiles.json", "states.json", "recipes.json",
         "variable-maps.json", "cheats.json", "managed-assets.json", "game-provenance.json", "build-provenance.json",
-        "toolchain-reports.json", "save-declarations.json", "settings.json",
+        "toolchain-reports.json", "save-declarations.json", "fingerprints.json", "settings.json",
     ]
 
     static func decode(_ files: [String: Data], migrationID: String) throws -> LibraryBackupSnapshot {
@@ -55,6 +56,8 @@ enum BackupSnapshotCodec {
         snapshot.buildProvenance = try values([BackupProvenance].self, "build-provenance.json")
         snapshot.reports = try values([BackupToolchainReport].self, "toolchain-reports.json")
         snapshot.declarations = try values([BuildSaveDeclaration].self, "save-declarations.json")
+        // An archive written before fingerprints were carried has none; they rebuild from its ROMs.
+        snapshot.fingerprints = try values([BackupImageFingerprint].self, "fingerprints.json")
         snapshot.settings = try values([BackupSetting].self, "settings.json")
         return snapshot
     }
@@ -83,6 +86,7 @@ enum BackupSnapshotCodec {
         snapshot.buildProvenance.sort { $0.ownerID.uuidString < $1.ownerID.uuidString }
         snapshot.reports.sort { $0.identity < $1.identity }
         snapshot.declarations.sort { declarationID($0) < declarationID($1) }
+        snapshot.fingerprints.sort { $0.identity < $1.identity }
         snapshot.settings.sort { $0.identity < $1.identity }
         return try records(snapshot)
     }
@@ -121,6 +125,11 @@ enum BackupSnapshotCodec {
         try unique(snapshot.gameProvenance) { $0.ownerID.uuidString }
         try unique(snapshot.buildProvenance) { $0.ownerID.uuidString }
         try unique(snapshot.reports) { $0.identity }
+        try unique(snapshot.fingerprints) { $0.identity }
+        // The library's table refuses these, which would fail a restore partway through.
+        guard snapshot.fingerprints.allSatisfy({ $0.fingerprint.bankSize > 0 }) else {
+            throw LibraryBackupError.invalidArchive("a ROM fingerprint has no bank size")
+        }
         try unique(snapshot.settings) { $0.identity }
         try unique(snapshot.declarations, declarationID)
         let games = Set(snapshot.games.map(\.id))

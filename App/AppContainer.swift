@@ -291,8 +291,7 @@ final class AppContainer {
         // the main thread. Unreadable files are retried next launch; import suggestions use only
         // the records already filled.
         let fillSHA1 = FillImageSHA1(builds: repositories.builds, assetStore: fileStore)
-        let fillFingerprints = FillImageFingerprints(assets: repositories.assets,
-            fingerprints: repositories.fingerprints, assetStore: fileStore)
+        let fillFingerprints = imageFingerprintFiller
         let metadataRefresh = knownDumps.map {
             RefreshKnownDumpMetadata(builds: repositories.builds, settings: repositories.settings,
                 index: $0, transactions: repositories.transactions)
@@ -304,6 +303,12 @@ final class AppContainer {
             try metadataRefresh?.execute()
         }
         try? fileStore.removeStagedFiles()
+    }
+
+    /// Rebuilds the fingerprints Import Review matches a new Build to its Game with. A backup leaves
+    /// them out, so a restore runs this too instead of waiting for the next launch.
+    var imageFingerprintFiller: FillImageFingerprints {
+        FillImageFingerprints(assets: repositories.assets, fingerprints: repositories.fingerprints, assetStore: fileStore)
     }
 
     /// iOS leaves Documents/Inbox behind after handing over a shared file, and Files would show it

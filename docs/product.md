@@ -212,7 +212,9 @@ status. Source assets are irreplaceable; generated patched ROMs are rebuildable 
 The `image_fingerprints` table stores each source image's SHA-256, bank size, 64-bit bank hashes
 in one blob, header title, cartridge type, RAM size code and CGB flag. Import records this evidence;
 launch fills missing rows from existing source files and retries unreadable images next launch.
-Purging a source image removes its fingerprint. Patched Builds use their imported base's evidence;
+A backup carries them, so a restore without ROMs can still match a new Build to its Game in
+Import Review, which matches on them. An older backup without them has them rebuilt from the ROMs
+it placed, as soon as the restore finishes. Purging a source image removes its fingerprint. Patched Builds use their imported base's evidence;
 generated images receive no fingerprint. These records are metadata, so Check Library Files does
 not treat them as files.
 
@@ -497,7 +499,12 @@ isn't stored.
 - A status ending a name with no version, as in "Match-Land-GBC-alpha.21", "game_beta2" or
   "game-rc1", becomes the status: "Alpha 21", "Beta 2", "RC 1". "alpha" and "beta" count on their
   own; "demo", "preview", "proto" and "rc" need a number, since they could end a title. A name
-  with a version keeps the words after it as written: "…-0.4.0-alpha.21" is "v0.4.0 · alpha.21".
+  with a version reads the status the same way: "…-0.4.0-alpha.21" is "v0.4.0 · Alpha 21".
+- A system, region and language ending a joined name are tags, not title: "Match_Land_GBC_World_
+  En_Rev_0.4.0-alpha.19" is "Match Land", region World, language En, version 0.4.0, status Alpha
+  19. A "Rev" or "Version" word before a version belongs to it. The run is only read when it names a
+  system ("GB", "GBC", "DMG", "CGB") or holds both a region and a language, so "Super_Mario_World"
+  keeps its title.
 - A hack or translation is recognized in the bracket it's released with: "[Night patch by Jane
   v0.3]" or "[Hack by Jane]" for a hack, GoodTools' "[T+Eng1.03_Jane]" or "[T-En by Jane v1.0]"
   for a translation. The words before "by" are the hack's title unless they only say "Hack".
@@ -506,10 +513,11 @@ isn't stored.
   and left out of the title: "[!]", "[a1]", "[b1]", "[o1]", "[p1]", "[x]", GoodGBx's "[C]" and
   "[S]", "(M3)" and "(PD)" describe the copy, and "[h1]", "[h1C]", "[hI]", "[t1]" and "[f1]" mark
   a modified one, which imports as a hack. Verification still comes from hashing, not the tags.
-- A file with no version tags is named "Original" while no other Build in the Game has that name,
-  so a release that is not in the No-Intro data isn't labelled with the day it was imported. A
-  second untagged Build is named for the day it's added, "2026-10-06", then the time for another
-  the same day. A hack with nothing else to name it is "Hack".
+- A file with no version tags is named "Original" when it is the Game's first Build, so a release
+  that is not in the No-Intro data isn't labelled with the day it was imported. An untagged Build
+  joining a Game that already has Builds, such as another revision of a dev build, is named for the
+  day it's added, "2026-10-06", then the time for another the same day. A hack with nothing else
+  to name it is "Hack".
 - A patch's Build is named by its title, followed by any version or other tag: "Mole Mania DX
   v1.3". When the patch's title is the Game's own, only the tag remains, so "Example (Rev 1)"
   applied to Example is "Rev 1". A tag joined to the Game's title by a hyphen, a colon
@@ -532,8 +540,8 @@ isn't stored.
   can offer regional title proposals again. An edited title is the player's and stays protected;
   skipping leaves the Game unchanged. Preferred Builds are untouched.
   Build names still use the import naming rules for names that look generated: URL escapes, the
-  bare source filename, repeats, or "Original" and "Hack" with a date added. A lone "Original" or
-  "Hack" looks right. Both kinds can be accepted,
+  bare source filename, repeats, "Original" and "Hack" with a date added, or an "Original" that
+  follows another Build. A Game's first "Original" and a lone "Hack" look right. Both kinds can be accepted,
   edited or skipped; nothing changes until Rename. With neither kind to suggest, review says
   Game titles and Build names look right.
 
@@ -1315,7 +1323,7 @@ Library Backup uses an ordinary zip with a root manifest, domain-model JSON and 
 files. [The backup format](backup-format.md) documents its versions, inventory, checksums and
 limits. It carries all live library records, provenance, notes, playtime, profiles, saves,
 states, thumbnails, recipes, patches, maps, artwork, reports, declarations, settings and
-region/language ordering. ROM files are optional. Generated patched ROMs, fingerprints, crash
+region/language ordering and image fingerprints. ROM files are optional. Generated patched ROMs, crash
 checkpoints, Quick Play, staging, Recently Deleted and device view preferences stay out.
 
 A backup can be up to 2 GB, enough for a library with its ROMs; a zip of game files opened for

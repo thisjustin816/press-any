@@ -24,6 +24,7 @@ final class LibraryRestoreViewModel: ObservableObject {
     private let directory: URL
     private let appInfo: LibraryBackupAppInfo
     private let isSessionActive: @MainActor () -> Bool
+    private let afterRestore: @Sendable () -> Void
     private var restoreID = UUID()
     /// Set once the safety backup exists and the player is asked to confirm. SwiftUI resets the
     /// dialog's presentation flag before the confirm button's task runs, so the flag can't gate it.
@@ -31,7 +32,9 @@ final class LibraryRestoreViewModel: ObservableObject {
 
     init(service: LibraryBackupService, url: URL, directory: URL,
          appInfo: LibraryBackupAppInfo = .current,
-         isSessionActive: @escaping @MainActor () -> Bool) {
+         isSessionActive: @escaping @MainActor () -> Bool,
+         afterRestore: @escaping @Sendable () -> Void = {}) {
+        self.afterRestore = afterRestore
         self.service = service
         self.url = url
         self.directory = directory
@@ -156,6 +159,9 @@ final class LibraryRestoreViewModel: ObservableObject {
             }.value
             progress = 1
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+            // The report is already showing; what the restore couldn't carry fills in behind it.
+            let afterRestore = afterRestore
+            Task.detached(priority: .utility) { afterRestore() }
         } catch { show(error) }
     }
 

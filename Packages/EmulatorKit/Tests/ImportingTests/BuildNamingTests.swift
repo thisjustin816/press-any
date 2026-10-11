@@ -18,9 +18,14 @@ final class BuildNamingTests: XCTestCase {
         XCTAssertEqual(name("v1.0", existing: ["V1.0"]), "v1.0 · Oct 6")
     }
 
-    func testAnUntaggedBuildKeepsOriginalWhileNothingElseHasThatName() {
+    func testTheFirstUntaggedBuildOfAGameIsOriginal() {
         XCTAssertEqual(name("Original", existing: []), "Original")
-        XCTAssertEqual(name("Original", existing: ["Rev 1", "v1.0 · Oct 6"]), "Original")
+    }
+
+    func testAnUntaggedBuildJoiningOtherBuildsIsNamedForTheDayItWasAdded() {
+        // A dev build imported again and again: each revision is told apart by its day.
+        XCTAssertEqual(name("Original", existing: ["v0.4.0 · alpha.18"]), "2026-10-06")
+        XCTAssertEqual(name("Original", existing: ["Rev 1", "v1.0 · Oct 6"]), "2026-10-06")
     }
 
     func testASecondUntaggedBuildIsNamedForTheDayItWasAdded() {
@@ -38,7 +43,7 @@ final class BuildNamingTests: XCTestCase {
         XCTAssertEqual(name("v1.0", existing: ["v1.0", "v1.0 · Oct 6", timed]), "\(timed) (2)")
     }
 
-    func testSuggestionsCoverEscapedAndRepeatedNamesButNotALoneOriginal() throws {
+    func testSuggestionsCoverEscapedNamesAndAnOriginalThatIsNotTheFirstBuild() throws {
         let games = InMemoryGameRepository()
         let builds = InMemoryBuildRepository()
         let assets = InMemoryAssetRepository()
@@ -72,12 +77,31 @@ final class BuildNamingTests: XCTestCase {
         let suggestions = try BuildNameSuggester(games: games, builds: builds, assets: assets)
             .suggestions(locale: locale, timeZone: utc)
 
-        // The first "Original" is already the right name; only the repeat of it gains a day.
-        XCTAssertEqual(suggestions.map(\.buildID), [escaped.id, duplicate.id])
-        XCTAssertFalse(suggestions.map(\.buildID).contains(untagged.id))
+        // "Original" after another Build is a later revision, so it gains the day it was added.
+        XCTAssertEqual(suggestions.map(\.buildID), [escaped.id, untagged.id, duplicate.id])
         // A dotted "Rev" is the homebrew version.
-        XCTAssertEqual(suggestions.map(\.suggestedName), ["v0.2.0", "2026-10-08"])
+        XCTAssertEqual(suggestions.map(\.suggestedName), ["v0.2.0", "2026-10-07", "2026-10-08"])
         XCTAssertEqual(suggestions.first?.currentName, escaped.displayName)
+    }
+
+    func testALoneOriginalIsAlreadyTheRightName() throws {
+        let games = InMemoryGameRepository()
+        let builds = InMemoryBuildRepository()
+        let assets = InMemoryAssetRepository()
+        let game = Game(id: UUID(), primaryTitle: "Match Land", systemFamily: "gb", createdAt: october6, modifiedAt: october6)
+        try games.insertGame(game)
+        let asset = ManagedAsset(
+            id: UUID(), kind: .sourceImage, storageClass: .source, contentSHA256: UUID().uuidString,
+            byteLength: 1, relativePath: UUID().uuidString, originalFilename: "match-land.gb", createdAt: october6
+        )
+        try assets.insertAsset(asset)
+        try builds.insertBuild(Build(
+            id: UUID(), gameID: game.id, system: .gameBoy, displayName: "Original", imageAssetID: asset.id,
+            imageSHA256: asset.contentSHA256, sourceKind: .importedImage, createdAt: october6, modifiedAt: october6
+        ))
+
+        XCTAssertTrue(try BuildNameSuggester(games: games, builds: builds, assets: assets)
+            .suggestions(locale: locale, timeZone: utc).isEmpty)
     }
 
     func testGenericNamesAreRenamedFromDateStampedFilenames() throws {

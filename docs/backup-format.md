@@ -60,6 +60,7 @@ persistent enum values come from the Codable models in `EmulatorDomain`.
 | `build-provenance.json` | `buildProvenance` | `ownerID` and domain provenance `values` for Builds |
 | `toolchain-reports.json` | `reports` | `buildID`, domain `report`, and its stored `detectedAt` |
 | `save-declarations.json` | `declarations` | Symmetric Build pairs and their compatibility declarations |
+| `fingerprints.json` | none | Each live Build's source image evidence: `imageSHA256`, `bankSize`, `bankHashes` as 16-digit hex strings, `headerTitle`, `cartridgeType`, `ramSizeCode` and `cgbFlag` |
 | `settings.json` | `settings` | `scopeType`, `scopeID`, `key`, and `valueJSON` for stored overrides |
 
 Settings include App, System, Game and Build scopes, plus region and language ordering.
@@ -90,9 +91,16 @@ so it leaves a missing or damaged file out instead, lists it in `notCarriedOver`
 its path in `missingFiles`. Restore keeps such a record without its file, like a Build without
 its ROM.
 
-Generated patched ROM files, image fingerprints, crash recovery checkpoints, Quick Play,
-staged files and Recently Deleted are excluded. A generated image's asset row and recipe
-remain, so launch can rebuild it.
+Generated patched ROM files, crash recovery checkpoints, Quick Play, staged files and Recently
+Deleted are excluded. A generated image's asset row and recipe remain, so launch can rebuild it.
+
+Image fingerprints are derived from a ROM, but a backup without ROMs has nothing to derive them
+from, and Import Review needs them to match a new Build to its Game. They travel in
+`fingerprints.json`, are not counted in `recordCounts`, and are the one record file an older
+archive may lack, since they rebuild from its ROMs. Restore keeps the evidence for an image a
+restored Build uses and never replaces evidence the library already has; replacing the library
+clears the rest. An archive that has none, such as one written before this file existed, has its
+fingerprints rebuilt from the ROMs it placed as soon as the restore finishes.
 
 Export reads the library once, copying each included file to a staging folder inside that one
 database read. It then checks the copies against their recorded hashes and streams the zip to

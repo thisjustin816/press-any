@@ -92,6 +92,8 @@ extension LibraryBackupSnapshot {
         result.gameProvenance = gameProvenance.filter { gameIDs.contains($0.ownerID) }
         result.buildProvenance = buildProvenance.filter { buildIDs.contains($0.ownerID) }
         result.reports = reports.filter { buildIDs.contains($0.buildID) }
+        let imageHashes = Set(result.builds.map(\.imageSHA256))
+        result.fingerprints = fingerprints.filter { imageHashes.contains($0.fingerprint.imageSHA256) }
         result.declarations = declarations.filter { buildIDs.contains($0.firstBuildID) && buildIDs.contains($0.secondBuildID) }
         result.settings = settings.filter { setting in
             switch setting.scopeType {

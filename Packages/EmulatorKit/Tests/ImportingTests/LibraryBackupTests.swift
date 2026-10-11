@@ -27,6 +27,30 @@ import Testing
         #expect(prepared.manifest.migrationID == fixture.snapshot.migrationID)
     }
 
+    @Test func fingerprintsRoundTripExactlyAndAnOlderArchiveWithoutThemStillDecodes() throws {
+        let fingerprint = ImageFingerprint(imageSHA256: String(repeating: "a", count: 64), bankSize: 0x4000,
+            bankHashes: [0, 1, UInt64.max, 0xfedc_ba98_7654_3210], headerTitle: "EXAMPLE",
+            cartridgeType: 0x1b, ramSizeCode: 3, cgbFlag: 0xc0)
+        var snapshot = LibraryBackupSnapshot(migrationID: "test")
+        snapshot.fingerprints = [BackupImageFingerprint(fingerprint)]
+        var files = try BackupSnapshotCodec.canonical(snapshot)
+        #expect(try BackupSnapshotCodec.decode(files, migrationID: "test").fingerprints.map(\.fingerprint) == [fingerprint])
+
+        files["fingerprints.json"] = nil
+        #expect(try BackupSnapshotCodec.decode(files, migrationID: "test").fingerprints.isEmpty)
+
+        // A damaged hash or a bank size the table refuses is an invalid archive, not a failed restore.
+        files["fingerprints.json"] = Data(#"[{"imageSHA256":"x","bankSize":1,"bankHashes":["12"],"headerTitle":"T","cartridgeType":0,"ramSizeCode":0,"cgbFlag":0}]"#.utf8)
+        #expect(throws: (any Error).self) { try BackupSnapshotCodec.decode(files, migrationID: "test") }
+        var invalid = snapshot
+        invalid.fingerprints[0].fingerprint = ImageFingerprint(imageSHA256: "x", bankSize: 0, bankHashes: [],
+            headerTitle: "T", cartridgeType: 0, ramSizeCode: 0, cgbFlag: 0)
+        #expect(throws: LibraryBackupError.self) { try BackupSnapshotCodec.validate(invalid) }
+        var duplicated = snapshot
+        duplicated.fingerprints.append(duplicated.fingerprints[0])
+        #expect(throws: LibraryBackupError.self) { try BackupSnapshotCodec.validate(duplicated) }
+    }
+
     @Test func identicalMergeSkipsAndNewGameIsAdded() throws {
         let fixture = try BackupFixture()
         defer { fixture.remove() }

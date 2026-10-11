@@ -232,6 +232,12 @@ public enum FilenameMetadataParser {
             status = stamp.status
             cleanTitle = stamp.title
         }
+        // Region, language and system words end a joined name, as in "Match_Land_GBC_World_En".
+        if let tail = tagTail(in: cleanTitle, regions: regions, languages: languages) {
+            region = region ?? tail.region
+            language = language ?? tail.language
+            cleanTitle = tail.title
+        }
         if !cleanTitle.contains(" ") {
             cleanTitle = spacedTitle(cleanTitle)
         }
@@ -362,6 +368,10 @@ public enum FilenameMetadataParser {
                 ?? captures(in: words[index], pattern: bareVersion).first
             else { continue }
             var titleWords = Array(words[..<index])
+            // "Rev" or "Version" naming the version isn't part of the title: "Match_Land_Rev_0.4.0".
+            if titleWords.count >= 2, ["rev", "revision", "version", "ver"].contains(titleWords[titleWords.count - 1].lowercased()) {
+                titleWords.removeLast()
+            }
             // An all-lowercase joined name, as in "match-land-live-0.3.0", reads better capitalized.
             if title.allSatisfy({ !$0.isUppercase }) {
                 titleWords = titleWords.map(capitalized)
@@ -400,6 +410,47 @@ public enum FilenameMetadataParser {
         return nil
     }
 
+    /// The words that end a joined name with a system, region or language, as in
+    /// "Match_Land_GBC_World_En", which are tags and not part of the title. They are only read when
+    /// the run names a system, or both a region and a language: a lone "World", "It" or "No" could be
+    /// part of a title, as in "Super Mario World".
+    private static func tagTail(
+        in title: String, regions: Set<String>, languages: Set<String>
+    ) -> (title: String, region: String?, language: String?)? {
+        let splitsHyphens = !title.contains(" ")
+        let words = title.split(whereSeparator: { $0 == " " || $0 == "_" || (splitsHyphens && $0 == "-") })
+            .map(String.init)
+        guard words.count >= 2 else { return nil }
+        let systems: Set<String> = ["gb", "gbc", "dmg", "cgb"]
+        var end = words.count
+        var foundRegions: [String] = []
+        var foundLanguages: [String] = []
+        var sawSystem = false
+        while end > 1 {
+            let word = words[end - 1]
+            if systems.contains(word.lowercased()) {
+                sawSystem = true
+            } else if let region = regions.first(where: { $0.caseInsensitiveCompare(word) == .orderedSame }) {
+                foundRegions.insert(region, at: 0)
+            } else if let language = languages.first(where: { $0.caseInsensitiveCompare(word) == .orderedSame }) {
+                foundLanguages.insert(language, at: 0)
+            } else {
+                break
+            }
+            end -= 1
+        }
+        guard end < words.count, sawSystem || (!foundRegions.isEmpty && !foundLanguages.isEmpty) else { return nil }
+        var titleWords = Array(words[..<end])
+        if title.allSatisfy({ !$0.isUppercase }) {
+            titleWords = titleWords.map(capitalized)
+        }
+        return (
+            titleWords.joined(separator: " "),
+            foundRegions.isEmpty ? nil : foundRegions.joined(separator: ", "),
+            foundLanguages.isEmpty ? nil : foundLanguages.joined(separator: ", ")
+        )
+    }
+
     /// A status word with its number, "alpha.21", "alpha-21", "alpha21" or "rc1", after at least one
     /// title word, separated by spaces or underscores, or by hyphens in a name that has no spaces.
     /// "alpha" and "beta" count without a number; the other words could end a title, so they need one.
@@ -431,7 +482,7 @@ public enum FilenameMetadataParser {
     static func canonicalStatus(_ value: String) -> String? {
         if let parts = firstMatchGroups(
             in: value,
-            pattern: #"(?i)^\s*(alpha|beta|demo|prototype|proto|preview|release candidate|rc|final)\s+([0-9]+)\s*$"#
+            pattern: #"(?i)^\s*(alpha|beta|demo|prototype|proto|preview|release candidate|rc|final)(?:\s+|\s*\.\s*)?([0-9]+)\s*$"#
         ), let status = canonicalStatus(parts[0]) {
             return "\(status) \(parts[1])"
         }

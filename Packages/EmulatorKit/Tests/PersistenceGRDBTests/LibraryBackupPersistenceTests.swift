@@ -94,6 +94,81 @@ import Testing
         #expect(try destinationStore.readData(at: destinationStore.managedURL(relativePath: asset.relativePath)) == rom)
     }
 
+    @Test func aRestoreWithoutROMsKeepsTheEvidenceThatMatchesANewBuildToItsGame() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sourceStore = try ManagedFileStore(rootURL: root.appendingPathComponent("SourceLibrary"))
+        let sourceDB = try database(), sourceRepos = sourceDB.makeRepositories()
+        let picked = root.appendingPathComponent("Example.gb")
+        try TestROM.make(title: "BACKUP").write(to: picked)
+        let original = try imported(url: picked, repositories: sourceRepos, store: sourceStore)
+        let sourcePrint = try #require(try sourceRepos.fingerprints.fetchFingerprints(imageSHA256s: [original.build.imageSHA256])[original.build.imageSHA256])
+        // ROMs are left out, which is the default.
+        let archive = try LibraryBackupService(repository: sourceRepos.backup, assetStore: sourceStore)
+            .export(to: root, displayName: "Test", appVersion: "1", appBuild: "1")
+
+        let destinationStore = try ManagedFileStore(rootURL: root.appendingPathComponent("Destination"))
+        let destinationDB = try database(), destinationRepos = destinationDB.makeRepositories()
+        let service = LibraryBackupService(repository: destinationRepos.backup, assetStore: destinationStore)
+        let prepared = try service.prepare(from: archive)
+        #expect(prepared.snapshot.fingerprints.map(\.fingerprint) == [sourcePrint])
+        _ = try service.restore(prepared, review: service.review(prepared), choices: [:])
+
+        #expect(try destinationRepos.fingerprints.fetchFingerprints(imageSHA256s: [original.build.imageSHA256])[original.build.imageSHA256] == sourcePrint)
+        // A new build of the same project arrives; its header title and the Game's title both match.
+        let rebuilt = root.appendingPathComponent("Example-v2.gb")
+        try TestROM.make(title: "BACKUP", payloadByte: 1).write(to: rebuilt)
+        let analyzer = ROMImportAnalyzer(builds: destinationRepos.builds, games: destinationRepos.games,
+            fingerprints: destinationRepos.fingerprints, toolchainReports: destinationRepos.toolchainReports, assetStore: destinationStore)
+        let candidate = try #require(try analyzer.analyzeROM(at: rebuilt, targetGameID: nil).developmentCandidates.first)
+        #expect(candidate.gameID == original.game.id)
+        #expect(candidate.confidence == .high)
+    }
+
+    @Test func replacingTheLibraryKeepsOnlyEvidenceForImagesARestoredBuildUses() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sourceStore = try ManagedFileStore(rootURL: root.appendingPathComponent("SourceLibrary"))
+        let sourceDB = try database(), sourceRepos = sourceDB.makeRepositories()
+        let picked = root.appendingPathComponent("Example.gb")
+        try TestROM.make(title: "BACKUP").write(to: picked)
+        let original = try imported(url: picked, repositories: sourceRepos, store: sourceStore)
+        let archive = try LibraryBackupService(repository: sourceRepos.backup, assetStore: sourceStore)
+            .export(to: root, displayName: "Test", appVersion: "1", appBuild: "1")
+
+        // The destination holds a different game, which the replacement removes with its evidence.
+        let destinationStore = try ManagedFileStore(rootURL: root.appendingPathComponent("Destination"))
+        let destinationDB = try database(), destinationRepos = destinationDB.makeRepositories()
+        let other = root.appendingPathComponent("Other.gb")
+        try TestROM.make(title: "OTHERGAME", payloadByte: 5).write(to: other)
+        let stale = try imported(url: other, repositories: destinationRepos, store: destinationStore)
+        let service = LibraryBackupService(repository: destinationRepos.backup, assetStore: destinationStore)
+        let safety = try service.export(to: root, displayName: "Safety", appVersion: "1", appBuild: "1", includeROMs: true)
+        let prepared = try service.prepare(from: archive)
+        _ = try service.restore(prepared, review: service.review(prepared), choices: [:], replaceEntireLibrary: true, safetyBackupURL: safety)
+
+        let found = try destinationRepos.fingerprints.fetchFingerprints(imageSHA256s: [original.build.imageSHA256, stale.build.imageSHA256])
+        #expect(Set(found.keys) == [original.build.imageSHA256])
+    }
+
+    @Test func aGamePackageCarriesOnlyItsOwnBuildsEvidence() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = try ManagedFileStore(rootURL: root.appendingPathComponent("Library"))
+        let db = try database(), repos = db.makeRepositories()
+        let first = root.appendingPathComponent("First.gb"), second = root.appendingPathComponent("Second.gb")
+        try TestROM.make(title: "FIRSTGAME").write(to: first)
+        try TestROM.make(title: "SECONDGAME", payloadByte: 3).write(to: second)
+        let one = try imported(url: first, repositories: repos, store: store)
+        _ = try imported(url: second, repositories: repos, store: store)
+        let service = LibraryBackupService(repository: repos.backup, assetStore: store)
+
+        let package = try service.prepare(from: service.export(to: root, displayName: "Test", appVersion: "1", appBuild: "1", gameID: one.game.id))
+        #expect(package.snapshot.fingerprints.map(\.fingerprint.imageSHA256) == [one.build.imageSHA256])
+        let whole = try service.prepare(from: service.export(to: root, displayName: "Test", appVersion: "1", appBuild: "1"))
+        #expect(whole.snapshot.fingerprints.count == 2)
+    }
+
     @Test func failedRestoreRemovesPlacedFilesAndPreservesDatabase() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

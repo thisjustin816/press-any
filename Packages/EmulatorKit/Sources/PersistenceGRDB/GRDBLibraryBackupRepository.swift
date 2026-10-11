@@ -107,6 +107,8 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
             ($0.firstBuildID.uuidString, $0.secondBuildID.uuidString)
                 < ($1.firstBuildID.uuidString, $1.secondBuildID.uuidString)
         }
+        value.fingerprints = try repositories.fingerprints.fetchFingerprints(imageSHA256s: value.builds.map(\.imageSHA256))
+            .values.map(BackupImageFingerprint.init).sorted { $0.identity < $1.identity }
         value.cheats = try BuildCheatRecord.fetchAll(db, sql: """
             SELECT cheat.* FROM build_cheats cheat JOIN builds build ON build.id = cheat.build_id
             WHERE build.deletion_id IS NULL ORDER BY cheat.build_id, \(GRDBBuildCheatRepository.order)
@@ -266,6 +268,12 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
             try db.execute(sql: "UPDATE builds SET rom_sha1 = ? WHERE id = ?",
                 arguments: [build.imageSHA1, PersistenceCodec.uuid(build.id)])
         }
+        // Only evidence for an image a Build now uses, and only for a source image the library holds
+        // a row for, which the table requires. A ROM-less restore keeps those rows.
+        let imageHashes = Set(value.builds.map(\.imageSHA256))
+        for item in value.fingerprints where imageHashes.contains(item.fingerprint.imageSHA256) {
+            try repositories.fingerprints.saveFingerprint(item.fingerprint)
+        }
         for profile in value.profiles { try SaveProfileRecord(profile).save(db) }
         for state in value.states { try SaveStateRecord(state).save(db) }
         for recipe in value.recipes {
@@ -349,7 +357,7 @@ enum BackupCoverage {
         "settings_overrides": "App, System, and live Game/Build settings, including release preferences and manual sorting; excludes launch markers, the last restore report, and No-Intro backfill markers.",
         "library_deletions": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
         "tombstones": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
-        "image_fingerprints": "Excluded derived matching cache; cleared by replacement.",
+        "image_fingerprints": "Evidence of live Builds' source images, kept for an image a restored Build uses. Derived from the ROM, but a backup without ROMs has nothing to derive it from. Replacement clears the rest.",
         "build_cheats": "Cheats of live Builds, with their codes, switches and order.",
     ]
 
@@ -422,7 +430,7 @@ enum BackupCoverage {
         "ToolchainReportRepository": "Live reports with persisted detection timestamps.",
         "SettingsStore": "Portable settings with explicit operational exclusions.",
         "LibraryDeletionRepository": "Excluded deletion history; merge preserves it.",
-        "ImageFingerprintRepository": "Excluded derived matching cache.",
+        "ImageFingerprintRepository": "Evidence of live Builds' source images, carried so a restore without ROMs can still match new Builds to their Games.",
         "LibraryBackupRepository": "Snapshot orchestration; restore reports excluded from snapshots.",
         "LibraryTransactionRunner": "Transaction orchestration; no stored records.",
         "AssetStore": "Files belong to the archive caller, outside SQLite.",
