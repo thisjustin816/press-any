@@ -70,7 +70,9 @@ Fast Forward, Frame Blending, Screen Colors and the layouts.
 
 Plus also includes everything on its roadmap and anything added later, at no extra cost. Some of
 it will be free for everyone, too. The roadmap on the Plus screen is the v1.1 list above, without
-crash reporting and usage counts. GBA isn't on it. `App/Plus/PlusRoadmap.swift` holds the list.
+crash reporting and usage counts. GBA isn't on it. The Plus screen lists it separately under Also
+Planned, as planned for a later version, with no promise that it's free or part of Plus.
+`App/Plus/PlusRoadmap.swift` holds the lists.
 
 Plus follows these rules:
 

@@ -33,4 +33,9 @@ enum PlusRoadmap {
         Item(title: "External Displays", detail: "Play on an AirPlay or wired display, with the phone as the controller."),
         Item(title: "Developer Mode", detail: "Memory search and editing, watches and other tools for making and testing games."),
     ]
+
+    /// Planned, but not part of what Plus promises: whether it's free or Plus isn't decided.
+    static let alsoPlanned = [
+        Item(title: "Game Boy Advance", detail: "Game Boy Advance emulation is planned for a later version, with no date yet."),
+    ]
 }
