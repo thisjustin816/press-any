@@ -44,8 +44,8 @@ placeholder cartridges press the capitalized name into their plaque.
 
 The app icon is a smooth pink Game Boy-style button viewed nearly straight on, with a shallow
 crown, lit rounded bevel and dark sidewall. A navy A is printed on the warm gray surface below
-it. The Dark icon uses the dark body and lighter lettering; the Tinted icon has grayscale
-artwork on a transparent background for iOS 18.
+and slightly right of the button's center. The Dark icon uses the dark body and lighter
+lettering; the Tinted icon has grayscale artwork on a transparent background for iOS 18.
 
 Berry, Grape, Teal, Kiwi and Dandelion use the same drawing with different button colors.
 `Scripts/app-icon/icon.html` draws every variant; `Scripts/render-app-icon.sh` renders all six

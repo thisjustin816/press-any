@@ -73,7 +73,8 @@ function drawCap(color, y, radiusX, radiusY) {
             ]);
             const diffuse = 0.59 + 0.75 * Math.max(0, dot(normal, light));
             // The satin face keeps its color; the polished bevel catches the edge reflection.
-            const edgeGloss = Math.min(1, edge * 8);
+            const edgePolish = Math.min(1, edge * 8);
+            const edgeGloss = edgePolish * edgePolish * (3 - 2 * edgePolish);
             const shine = 0.9 * edgeGloss * Math.max(0, dot(normal, halfway)) ** 64;
             const offset = (row * cap.width + column) * 4;
             linear.forEach((channel, index) => {
@@ -106,38 +107,54 @@ async function draw() {
     }
 
     // Near-front view preserves the circular face while showing the short lower sidewall.
-    const faceY = 394, radiusX = 230, radiusY = 214, depth = 50;
+    const faceY = 394, radiusX = 230, radiusY = 214, depth = 32;
+    // The down-left penumbra grows softer with distance from the button's base.
+    for (const shadow of [
+        { blur: 22, x: -15, y: 18, opacity: 0.1 },
+        { blur: 7, x: -5, y: 6, opacity: 0.2 },
+    ]) {
+        context.save();
+        context.shadowColor = `rgba(0,0,0,${shadow.opacity})`;
+        context.shadowBlur = shadow.blur;
+        context.shadowOffsetX = shadow.x;
+        context.shadowOffsetY = shadow.y;
+        context.fillStyle = '#000000';
+        ellipse(faceY + depth, radiusX, radiusY);
+        context.fill();
+        context.restore();
+    }
+
+    // Contact occlusion is confined to the base seam.
     context.save();
-    context.shadowColor = 'rgba(0,0,0,0.21)';
-    context.shadowBlur = 20;
-    context.shadowOffsetX = -15;
-    context.shadowOffsetY = 18;
-    context.fillStyle = shade(faceColor, -0.5);
-    ellipse(faceY + depth, radiusX + 5, radiusY + 4);
-    context.fill();
+    context.strokeStyle = 'rgba(0,0,0,0.7)';
+    context.lineWidth = 2;
+    context.shadowColor = 'rgba(0,0,0,0.5)';
+    context.shadowBlur = 3;
+    ellipse(faceY + depth, radiusX, radiusY);
+    context.stroke();
     context.restore();
 
     // The upper-right light leaves the left wall dark and the right wall more visible.
     const sidewall = context.createLinearGradient(512 - radiusX, 0, 512 + radiusX, 0);
-    sidewall.addColorStop(0, shade(faceColor, -0.68));
-    sidewall.addColorStop(0.5, shade(faceColor, -0.46));
-    sidewall.addColorStop(1, shade(faceColor, -0.22));
+    sidewall.addColorStop(0, shade(faceColor, -0.46));
+    sidewall.addColorStop(0.5, shade(faceColor, -0.28));
+    sidewall.addColorStop(1, shade(faceColor, -0.14));
     context.fillStyle = sidewall;
     ellipse(faceY + depth, radiusX, radiusY);
     context.fill();
     context.save();
     context.clip();
-    const contactShade = context.createLinearGradient(0, faceY + depth, 0, faceY + radiusY + depth);
-    contactShade.addColorStop(0, 'rgba(0,0,0,0)');
-    contactShade.addColorStop(1, 'rgba(0,0,0,0.6)');
-    context.fillStyle = contactShade;
+    const baseShade = context.createLinearGradient(0, faceY + depth, 0, faceY + radiusY + depth);
+    baseShade.addColorStop(0, 'rgba(0,0,0,0)');
+    baseShade.addColorStop(1, 'rgba(0,0,0,0.24)');
+    context.fillStyle = baseShade;
     context.fillRect(0, 0, 1024, 1024);
     context.restore();
     drawCap(faceColor, faceY, radiusX, radiusY);
 
     // A separate path keeps the printed letter's openings clear in the Tinted icon too.
     context.save();
-    context.translate(512, 790);
+    context.translate(536, 748);
     context.scale(0.8, 0.8);
     context.fillStyle = tinted ? '#FFFFFF' : ink;
     const letter = new Path2D();

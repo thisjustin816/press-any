@@ -205,4 +205,6 @@ These checks cover the Capture submenu and remain pending until run on a physica
   Playtiles guide stands out from the gray body with a lit top edge and shadow below.
 - [ ] In Settings > App Icon, check all six previews and choose each icon. Compare the home-screen
   icon with its preview in Light and Dark, then check Tinted appearance. Each uses the same
-  front-facing button and separate A; the Default icon remains available without Plus.
+  front-facing button and separate A. At home-screen size, the sidewall and contact shadow read
+  as one raised button, and the closer A sits slightly right of center. The Default icon remains
+  available without Plus.
