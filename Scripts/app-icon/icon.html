@@ -41,6 +41,7 @@ function ellipse(y, radiusX, radiusY) {
 
 function drawWell(color, y) {
     const radiusX = 330, radiusY = 292;
+    const floorSize = 250;
     const well = document.createElement('canvas');
     well.width = 1024;
     well.height = radiusY * 2 + 2;
@@ -49,6 +50,10 @@ function drawWell(color, y) {
     const rgb = color.slice(1).match(/../g).map(channel => parseInt(channel, 16));
     const length = Math.hypot(0.55, -0.65, 0.55);
     const light = [0.55 / length, -0.65 / length, 0.55 / length];
+    const leftRun = column => {
+        const blend = Math.max(0, Math.min(1, (column - 448) / 64));
+        return 1 - blend * blend * (3 - 2 * blend);
+    };
     for (let row = 0; row < well.height; row++) {
         for (let column = 0; column < well.width; column++) {
             // The horizontal trough continues off the left edge and closes in a right-hand arch.
@@ -56,22 +61,49 @@ function drawWell(color, y) {
             const ny = (row + 0.5 - well.height / 2) / radiusY;
             const radius = Math.hypot(nx, ny);
             if (radius >= 1) continue;
-            const edge = Math.max(0, (radius - 0.62) / 0.38);
-            // A concave wall faces the light along its lower-left edge.
-            const slope = 32 * 6 * edge * (1 - edge) / 0.38;
-            const normal = [
-                -slope * nx / (Math.max(radius, 0.001) * radiusX),
-                -slope * ny / (Math.max(radius, 0.001) * radiusY),
-                1,
-            ];
+            // The flat floor clears both projected button faces; ramps begin outside it.
+            const floorX = Math.max(0, (column + 0.5 - 512) / floorSize);
+            const floorY = (row + 0.5 - well.height / 2) / floorSize;
+            const floorRadius = Math.hypot(floorX, floorY);
+            let normal = [0, 0, 1];
+            if (floorRadius > 1) {
+                const inner = floorRadius - 1, outer = 1 - radius;
+                const span = inner + outer;
+                const edge = inner / span;
+                const slope = 9 * 6 * edge * (1 - edge) / (span * span);
+                // A concave wall faces the light along its lower-left edge.
+                normal = [
+                    -slope * (outer * floorX / (floorRadius * floorSize) + inner * nx / (radius * radiusX)),
+                    -slope * (outer * floorY / (floorRadius * floorSize) + inner * ny / (radius * radiusY)),
+                    1,
+                ];
+            }
             const normalLength = Math.hypot(...normal);
             const illumination = normal.reduce((sum, component, index) => sum + component / normalLength * light[index], 0);
-            const diffuse = (0.7 + 0.63 * illumination) / (0.7 + 0.63 * light[2]);
+            let diffuse = (0.7 + 0.63 * illumination) / (0.7 + 0.63 * light[2]);
+            const horizontal = leftRun(column);
+            diffuse = 1 + (diffuse - 1) * (1 - (diffuse > 1 ? 0.1 : 0.06) * horizontal);
             const offset = (row * well.width + column) * 4;
             rgb.forEach((channel, index) => {
                 pixels.data[offset + index] = Math.round(Math.min(255, channel * diffuse));
             });
             pixels.data[offset + 3] = Math.round(Math.min(1, (1 - radius) * 30) * 255);
+        }
+    }
+    // Soften only the horizontal upper shadow; alpha and the right-hand curve stay fixed.
+    const shaded = new Uint8ClampedArray(pixels.data);
+    const weights = [1, 4, 6, 4, 1];
+    for (let row = 2; row < well.height / 2; row++) {
+        for (let column = 0; column < 512; column++) {
+            const horizontal = leftRun(column);
+            const offset = (row * well.width + column) * 4;
+            rgb.forEach((channel, index) => {
+                const soft = weights.reduce((sum, weight, sample) => {
+                    const neighbor = ((row + sample - 2) * well.width + column) * 4;
+                    return sum + weight * (shaded[neighbor + 3] ? shaded[neighbor + index] : channel);
+                }, 0) / 16;
+                pixels.data[offset + index] = Math.round(shaded[offset + index] * (1 - horizontal) + soft * horizontal);
+            });
         }
     }
     wellContext.putImageData(pixels, 0, 0);
