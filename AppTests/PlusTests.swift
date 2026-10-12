@@ -12,7 +12,8 @@ final class PlusTests: XCTestCase {
         XCTAssertFalse(PlusRoadmap.upcoming.isEmpty)
         XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History", "Timed States"])
         XCTAssertFalse(PlusRoadmap.upcoming.contains { $0.title.contains("Timed") })
-        let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming
+        XCTAssertEqual(PlusRoadmap.alsoPlanned.map(\.title), ["Game Boy Advance"])
+        let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming + PlusRoadmap.alsoPlanned
         XCTAssertEqual(Set(items.map(\.id)).count, items.count, "titles are unique")
         for item in items {
             XCTAssertFalse(item.detail.isEmpty, "\(item.title) has a description")

@@ -51,6 +51,14 @@ struct PlusView: View {
             } footer: {
                 Text("Plus includes everything on this list and anything added later, at no extra cost. Some of it will be free for everyone, too.")
             }
+
+            Section {
+                ForEach(PlusRoadmap.alsoPlanned) { PlusItemRow(item: $0) }
+            } header: {
+                Text("Also Planned")
+            } footer: {
+                Text("This isn’t part of the Plus list above. Whether it’s free or part of Plus isn’t decided.")
+            }
         }
         .navigationTitle(PlusProduct.name)
         .navigationBarTitleDisplayMode(.inline)
