@@ -100,6 +100,7 @@ struct LibraryView: View {
                                 showROMImporter = true
                             }
                                 .buttonStyle(.borderedProminent)
+                                .tint(Color(uiColor: AppBrand.Colors.button))
                             VStack(spacing: 8) {
                                 Text("Need something to play?")
                                     .font(.footnote)
@@ -709,11 +710,11 @@ private struct PlaqueLettering: View {
     }
 
     private var letters: some View {
-        Text(AppBrand.displayName.uppercased())
-            .font(Font(AppBrand.Wordmark.font(size: 5 * mm)))
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(width: 34 * mm)
+        Image("WordmarkPlaque")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 34 * mm, height: 5 * mm)
     }
 
     /// `shape` minus `removed`, as a mask.

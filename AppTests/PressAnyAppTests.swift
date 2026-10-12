@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import PressAny
 
 final class PressAnyAppTests: XCTestCase {
@@ -7,17 +8,28 @@ final class PressAnyAppTests: XCTestCase {
         XCTAssertEqual(AppBrand.displayName, "Press Any")
     }
 
-    /// SameBoy's and GRDB's licenses ask for their notices to ship with the app.
     func testThirdPartyLicensesShipWithTheApp() throws {
-        for (file, holder) in [("SameBoy-LICENSE", "Lior Halphon"), ("GRDB-LICENSE", "Gwendal Rou")] {
+        for (file, holder) in [
+            ("SameBoy-LICENSE", "Lior Halphon"),
+            ("GRDB-LICENSE", "Gwendal Rou"),
+            ("Corporatus-LICENSE", "Alex Rosario"),
+        ] {
             let url = try XCTUnwrap(Bundle.main.url(forResource: file, withExtension: "txt"), file)
             XCTAssertTrue(try String(contentsOf: url, encoding: .utf8).contains(holder), file)
         }
     }
 
-    func testWordmarkAccentsTheFirstLetterOfTheLastWord() {
-        XCTAssertTrue(AppBrand.Wordmark.parts == ("Press ", "A", "ny"))
-        XCTAssertTrue(AppBrand.Wordmark.split("Pocket") == ("", "P", "ocket"))
-        XCTAssertTrue(AppBrand.Wordmark.split("") == ("", "", ""))
+    func testWordmarkArtworkShipsInBothAppearances() throws {
+        for appearance in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: appearance)
+            for name in ["Wordmark", "WordmarkRecess", "WordmarkPlaque"] {
+                let image = try XCTUnwrap(UIImage(named: name, in: .main, compatibleWith: traits), name)
+                XCTAssertGreaterThan(image.size.width, 0, name)
+                XCTAssertGreaterThan(image.size.height, 0, name)
+            }
+            let artwork = AppBrand.Wordmark.artwork(size: 28, appearance: appearance)
+            XCTAssertEqual(artwork.size.height, 28)
+            XCTAssertGreaterThan(artwork.size.width, artwork.size.height)
+        }
     }
 }

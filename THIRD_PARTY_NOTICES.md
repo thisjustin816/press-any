@@ -1,7 +1,7 @@
 # Third-Party Notices
 
-Press Any depends on these third-party open-source projects. Dependencies are pinned without
-copying source snapshots into this repository. Adapted code and data carry their source notices.
+Press Any uses these third-party projects, artwork and data. Dependencies are pinned without
+copying source snapshots into this repository. Adapted code, artwork and data carry their source notices.
 
 ## SameBoy
 
@@ -32,6 +32,21 @@ copying source snapshots into this repository. Adapted code and data carry their
 - Pinned version: 7.11.1
 - Usage: SQLite persistence through Swift Package Manager.
 - License: MIT; see the pinned upstream package for the authoritative license text.
+
+## Corporatus wordmark
+
+- Authors: Alex Rosario and Roc Mitchell.
+- Source: https://asr.me/font/corp.html
+- Typeface version: Corporatus Regular 1.002, copyright (c) 2017 Alex Rosario.
+- Usage: fixed wordmark artwork in the library, welcome screen, controller menu button and
+  placeholder cartridge plaques.
+- Location: outlined PDFs in the `Wordmark`, `WordmarkRecess` and `WordmarkPlaque` image sets
+  in `App/Assets.xcassets`. The font software is not included in the repository or app.
+- License: purchased Desktop license for static artwork. The supplied copyright notice and
+  published Desktop terms are bundled in `App/Acknowledgements/Corporatus-LICENSE.txt`.
+- Export: `Scripts/render-wordmark.py` takes a separately licensed font outside the checkout,
+  reads the display name from `project.yml` and colors from the named assets, and exports
+  fixed outlines. The controller recess tones are defined in the export script.
 
 ## gbtoolsid
 
@@ -96,8 +111,8 @@ copying source snapshots into this repository. Adapted code and data carry their
 
 ## In the app
 
-Settings > Acknowledgements lists each project whose code ships in the app. SameBoy's and
-GRDB.swift's licenses are bundled verbatim from `App/Acknowledgements/`; gbtoolsid, which is in
+Settings > Acknowledgements lists the code, artwork and data used in the app. SameBoy's,
+GRDB.swift's and Corporatus's notices are bundled in `App/Acknowledgements/`; gbtoolsid, which is in
 the public domain, No-Intro and the libretro LCD shaders get a credit.
 
 ## Updating a dependency

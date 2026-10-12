@@ -107,7 +107,7 @@ struct RecentlyDeletedView: View {
         }
         .swipeActions(edge: .leading) {
             Button("Restore") { restore(deletion) }
-                .tint(.blue)
+                .tint(Color(uiColor: AppBrand.Colors.secondaryButton))
         }
         .swipeActions(edge: .trailing) { SwipeDeleteButton(title: "Delete Now") { purgeTarget = deletion } }
         .contextMenu {

@@ -16,40 +16,51 @@ technical identifiers, and which values must never carry a brand.
 | Repository | `thisjustin816/press-any` | GitHub |
 | Swift package and modules | `EmulatorKit`, `EmulatorDomain`, `AssetStorage`, ... | `Packages/EmulatorKit/Package.swift`; deliberately brand-free |
 
-## Wordmark
+## Colors and wordmark
 
-The wordmark is the product name in heavy italic system type with slight tracking, the first
-letter of its last word (the "A" in "Any") in the magenta of a Game Boy A button. The rest is
-charcoal on light backgrounds and gray on dark ones:
+The app uses pink, navy and warm gray. Named colors in `App/Assets.xcassets` supply SwiftUI,
+UIKit, the controller palettes and the icon renderer:
 
-| | Light | Dark |
+| Color | Light | Dark |
 |---|---|---|
-| Letters | `#323235` | `#808086` |
-| Accent letter | `#962C64` | `#A43E74` |
+| Action accent (`AccentColor`) | `#B02165` | `#E26D9E` |
+| Brand lettering (`BrandInk`) | `#282A63` | `#BCC0E8` |
+| Controller and icon body (`BrandBody`) | `#D0CEC8` | `#24272F` |
+| Filled buttons (`BrandButton`) | `#B02165` | `#B02165` |
 
-In the library's title and on the welcome screen, the letters shade from lighter at the top to
-darker at the bottom, like the face of the controller's menu button, around those colors:
+Filled buttons and navy swipe actions keep white labels in both appearances. Text actions use
+the brighter pink in Dark Mode. Native interface surfaces, primary and secondary text,
+destructive actions and status colors follow iOS. Controller themes resolve their fixed
+appearance independently of the library.
 
-| | Light | Dark |
-|---|---|---|
-| Letters | `#55555A` to `#202022` | `#9C9CA2` to `#6C6C72` |
-| Accent letter | `#B34680` to `#7C1E50` | `#BC568C` to `#8C2E60` |
+The wordmark is the product name in rounded Corporatus lettering with slight tracking. The first
+letter of its last word (the "A" in "Any") is pink; the other letters use the brand ink.
+`Scripts/render-wordmark.py` exports fixed outlined artwork from the display name, a separately
+licensed font and the named colors. It requires Python with fonttools, reportlab and PyYAML:
 
-`AppBrand.Wordmark` in `App/AppBrand.swift` is its one definition, built from the display name:
-`WordmarkView` shows it in SwiftUI (the library's title, shrinking to fit beside toolbar buttons
-that grow with larger text rather than cutting off letters), and the on-screen controller presses it
-into the menu button at the bottom, in the controller theme's colors with a darker shade under
-each letter's top edge and a light line along its bottom edge. Placeholder cartridges in the
-library press the name, in capitals, into their plaque the same way.
+```sh
+python Scripts/render-wordmark.py /path/outside/the/checkout/corporatus_regular.otf
+```
+
+The font stays outside the repository and app. Settings > Acknowledgements and
+`THIRD_PARTY_NOTICES.md` credit its authors and license. Regenerate the artwork when the display
+name or brand colors change. `AppBrand.Wordmark` in `App/AppBrand.swift` sizes the artwork. `WordmarkView`
+shows it in the library toolbar and welcome screen. The toolbar wordmark shrinks beside larger
+buttons at accessibility text sizes. The controller presses it into its menu button, and
+placeholder cartridges press the capitalized name into their plaque.
 
 ## App icon
 
-The app icon is a Game Boy A button seen from 45 degrees above the body, 25 degrees round from
-bottom center to the right: a magenta button standing in a recess in the Classic controller's
-gray body, its top face and side wall both showing, with an A engraved upright in the face, so it
-slants across it. A Dark variant sits on the Dark body, and a grayscale Tinted variant serves
-iOS 18. `Scripts/app-icon/icon.html` draws it and `Scripts/render-app-icon.sh` renders it into
-`App/Assets.xcassets/AppIcon.appiconset`. It carries no name, so a rename leaves it unchanged.
+The app icon is a smooth pink Game Boy-style button viewed nearly straight on, with a shallow
+crown, lit rounded bevel and dark sidewall. A recessed well extends off the left edge and closes
+with a rounded arch on the right. A navy A is centered below the button on the warm gray surface.
+The Dark icon uses the dark body and lighter
+lettering; the Tinted icon has grayscale artwork on a transparent background for iOS 18.
+
+Berry, Grape, Teal, Kiwi and Dandelion use the same drawing with different button colors.
+`Scripts/app-icon/icon.html` draws every variant; `Scripts/render-app-icon.sh` renders all six
+icon sets and their Light/Dark settings previews. It requires Chromium and ImageMagick.
+The icon carries no product name.
 
 ## Values that never carry a brand
 
@@ -85,7 +96,8 @@ registered with Apple.
 A future rename changes:
 
 1. `INFOPLIST_KEY_CFBundleDisplayName` in `project.yml` (the only user-facing string). The
-   wordmark follows it, accenting the first letter of the new name's last word.
+   wordmark export reads it, accenting the first letter of the new name's last word. Regenerate
+   its artwork with `Scripts/render-wordmark.py`.
 2. If the technical name also changes: the project `name`, target, scheme and `PRODUCT_NAME`
    in `project.yml`, `PROJECT_NAME` in the `Makefile`, and the `App/` entry point and
    `AppTests/` file names.

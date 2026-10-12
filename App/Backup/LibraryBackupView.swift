@@ -74,6 +74,7 @@ extension LibraryBackupView {
                     .foregroundStyle(.secondary)
                 ShareLink("Share or Save a Copy", item: url)
                     .buttonStyle(.borderedProminent)
+                    .tint(Color(uiColor: AppBrand.Colors.button))
             }
         } else if let message = model.errorMessage {
             card {

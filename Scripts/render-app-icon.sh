@@ -1,33 +1,54 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Renders the app icon (a Game Boy A button) from Scripts/app-icon/icon.html into the asset
-# catalog: the default icon, plus the Dark and Tinted variants iOS 18 uses. Needs a Chromium
-# build (set CHROME to its path) and ImageMagick.
-
+# Renders every icon colorway and its settings previews. Requires Chromium and ImageMagick.
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 page="$repo_root/Scripts/app-icon/icon.html"
-out="$repo_root/App/Assets.xcassets/AppIcon.appiconset"
+assets="$repo_root/App/Assets.xcassets"
 chrome="${CHROME:-$(command -v chromium || command -v google-chrome || echo /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome)}"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
+if command -v magick >/dev/null; then
+  image_tool=magick
+else
+  image_tool=convert
+fi
+
 render() {
-  "$chrome" --headless --no-sandbox --disable-gpu --virtual-time-budget=1000 --dump-dom "file://$page#$1" 2>/dev/null \
-    | grep -o 'data-png="data:image/png;base64,[^"]*' | sed 's/.*base64,//' | base64 --decode > "$work/$1.png" || true
-  if [[ ! -s "$work/$1.png" ]]; then
-    echo "The $1 icon didn't render; open $page#$1 in a browser to see the script error." >&2
+  local colorway="$1" variant="$2" dom="$work/render.html"
+  if ! "$chrome" --headless --no-sandbox --disable-gpu --user-data-dir="$work/chromium" --allow-file-access-from-files \
+    --virtual-time-budget=1000 --dump-dom "file://$page?colorway=$colorway#$variant" > "$dom" 2>/dev/null; then
+    echo "Chromium could not render the $colorway $variant icon." >&2
     exit 1
   fi
+  local data
+  data="$(sed -n 's/.*data-png="data:image\/png;base64,\([^"]*\)".*/\1/p' "$dom")"
+  if [[ -z "$data" ]]; then
+    echo "The $colorway $variant icon did not render; inspect $page in a browser." >&2
+    exit 1
+  fi
+  printf '%s' "$data" | base64 --decode > "$work/$variant.png"
 }
 
-render light
-render dark
-render tinted
-# The App Store rejects an icon with an alpha channel. The Tinted variant keeps its transparent
-# background and is brightened, since iOS tints it by brightness.
-magick "$work/light.png" -alpha off "$out/AppIcon.png" 2>/dev/null || convert "$work/light.png" -alpha off "$out/AppIcon.png"
-magick "$work/dark.png" -alpha off "$out/AppIcon-Dark.png" 2>/dev/null || convert "$work/dark.png" -alpha off "$out/AppIcon-Dark.png"
-magick "$work/tinted.png" -colorspace Gray -level 0%,70% "$out/AppIcon-Tinted.png" 2>/dev/null \
-  || convert "$work/tinted.png" -colorspace Gray -level 0%,70% "$out/AppIcon-Tinted.png"
-echo "Rendered the app icon into $out."
+for colorway in Default Berry Grape Teal Kiwi Dandelion; do
+  icon_name="AppIcon"
+  if [[ "$colorway" != Default ]]; then icon_name="AppIcon-$colorway"; fi
+  out="$assets/$icon_name.appiconset"
+  preview_name="AppIconPreview-$colorway"
+  preview="$assets/$preview_name.imageset"
+  for variant in light dark tinted; do
+    render "$colorway" "$variant"
+    suffix=""
+    if [[ "$variant" == dark ]]; then suffix="-Dark"; fi
+    if [[ "$variant" == tinted ]]; then suffix="-Tinted"; fi
+    # App Store icons are opaque. The Tinted artwork keeps a transparent background for iOS.
+    if [[ "$variant" == tinted ]]; then
+      "$image_tool" "$work/$variant.png" -colorspace Gray "$out/$icon_name$suffix.png"
+    else
+      "$image_tool" "$work/$variant.png" -alpha off "$out/$icon_name$suffix.png"
+      "$image_tool" "$out/$icon_name$suffix.png" -resize 180x180 "$preview/$preview_name$suffix.png"
+    fi
+  done
+  echo "Rendered $colorway icons and previews."
+done

@@ -1,46 +1,258 @@
-<!doctype html><html><body>
-<!-- The app icon: a Game Boy A button with an engraved A, seen from below and to the right, in the Classic controller colors. Scripts/render-app-icon.sh renders it; #light, #dark and #tinted pick the variant, and ?azimuth= sets how far round from bottom center it's seen, in degrees (25 by default; negative is from the left). --><canvas id=c width=1024 height=1024></canvas><script>
-const params=new URLSearchParams(location.search);
-const variant=location.hash.slice(1)||'light';
-// How far round from bottom center the camera sits, in degrees: positive toward the bottom-right
-// corner (45 is the corner itself), negative toward the bottom-left.
-const azimuth=Number(params.get('azimuth')??25)*Math.PI/180;
-const c=document.getElementById('c'),g=c.getContext('2d'),S=1024;
-// The button seen from below and to the right, 45 degrees above the body: a short cylinder whose
-// top face is an ellipse 0.71 as tall as it is wide, and whose side wall shows at 0.71 of its height.
-const tiltY=Math.SQRT1_2;
-const cx=512, rx=320, ry=rx*tiltY, h=86*tiltY, face=440, base=face+h;
-function ellipse(x,y,ex,ey){g.beginPath();g.ellipse(x,y,ex,ey,0,0,Math.PI*2);}
-if(variant==='light'){const gr=g.createLinearGradient(0,0,0,S);gr.addColorStop(0,'rgb(203,202,199)');gr.addColorStop(1,'rgb(178,176,173)');g.fillStyle=gr;g.fillRect(0,0,S,S);}
-if(variant==='dark'){const gr=g.createLinearGradient(0,0,0,S);gr.addColorStop(0,'rgb(42,43,46)');gr.addColorStop(1,'rgb(18,18,20)');g.fillStyle=gr;g.fillRect(0,0,S,S);}
-// The recess in the body: its far wall in shadow, its near rim catching light.
-{const gr=g.createLinearGradient(0,base-ry-24,0,base+ry+24);
- if(variant==='dark'){gr.addColorStop(0,'rgb(8,8,10)');gr.addColorStop(1,'rgb(62,62,67)');}
- else{gr.addColorStop(0,'rgb(118,116,113)');gr.addColorStop(1,'rgb(222,220,217)');}
- g.fillStyle=gr;ellipse(cx,base,rx+24,ry+20);g.fill();}
-// Shadow the button casts toward the viewer.
-g.save();g.shadowColor='rgba(0,0,0,0.38)';g.shadowBlur=36;g.shadowOffsetY=18;g.fillStyle='rgb(90,24,58)';ellipse(cx,base,rx,ry);g.fill();g.restore();
-// The side wall: the band between the base and top ellipses, darker toward its edges.
-{g.beginPath();g.ellipse(cx,base,rx,ry,0,0,Math.PI);g.lineTo(cx-rx,face);g.ellipse(cx,face,rx,ry,0,Math.PI,0,true);g.closePath();
- const gr=g.createLinearGradient(cx-rx,0,cx+rx,0);gr.addColorStop(0,'rgb(78,20,50)');gr.addColorStop(0.35,'rgb(120,34,80)');gr.addColorStop(0.65,'rgb(110,30,74)');gr.addColorStop(1,'rgb(64,16,42)');
- g.fillStyle=gr;g.fill();}
-// The top face, lit from above and behind, with a soft highlight on the far half.
-g.save();ellipse(cx,face,rx,ry);g.clip();
-{const gr=g.createLinearGradient(0,face-ry,0,face+ry);gr.addColorStop(0,'rgb(184,64,128)');gr.addColorStop(1,'rgb(138,40,92)');g.fillStyle=gr;g.fillRect(cx-rx,face-ry,2*rx,2*ry);}
-{g.save();g.translate(cx-60,face-55);g.scale(1,tiltY);const gr=g.createRadialGradient(0,0,10,0,0,250);gr.addColorStop(0,'rgba(255,255,255,0.28)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(-400,-400,800,800);g.restore();}
-// An A cut into the face, upright on the button as on the body. Seen from off center, its
-// baseline runs at a slant across the face: the face's right and down directions project to
-// (cos, sin x 0.71) and (-sin, cos x 0.71) of the azimuth on screen. The cut's lower edge catches
-// the light.
-{const cos=Math.cos(azimuth), sin=Math.sin(azimuth);
- function letter(dy){g.setTransform(cos,sin*tiltY,-sin,cos*tiltY,cx,face+dy);
-   g.font='900 300px Helvetica, Arial, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('A',0,0);}
- g.save();
- g.fillStyle='rgba(255,255,255,0.22)';letter(7);
- g.fillStyle='rgb(92,22,58)';letter(0);
- g.restore();}
-g.restore();
-// A thin lip where the top face meets the wall.
-g.strokeStyle='rgba(255,255,255,0.18)';g.lineWidth=4;g.beginPath();g.ellipse(cx,face,rx-2,ry-2,0,Math.PI*0.05,Math.PI*0.95);g.stroke();
-document.body.setAttribute('data-png',c.toDataURL('image/png'));
-</script></body></html>
+<!doctype html>
+<html><body>
+<canvas id="c" width="1024" height="1024"></canvas>
+<script>
+const params = new URLSearchParams(location.search);
+const variant = location.hash.slice(1) || 'light';
+const colorway = params.get('colorway') || 'Default';
+const alternateColors = {
+    Berry: '#D64B63',
+    Grape: '#8152C5',
+    Teal: '#168A8A',
+    Kiwi: '#78A63F',
+    Dandelion: '#E9B735',
+};
+const canvas = document.getElementById('c');
+const context = canvas.getContext('2d');
+
+async function assetColor(name, dark) {
+    const response = await fetch(`../../App/Assets.xcassets/${name}.colorset/Contents.json`);
+    if (!response.ok) throw new Error(`Cannot read ${name}`);
+    const asset = await response.json();
+    const entry = asset.colors.find(color => dark
+        ? color.appearances?.some(appearance => appearance.value === 'dark')
+        : !color.appearances);
+    const components = entry.color.components;
+    return '#' + ['red', 'green', 'blue'].map(channel =>
+        Number(components[channel]).toString(16).padStart(2, '0')).join('');
+}
+
+function shade(hex, amount) {
+    const rgb = hex.slice(1).match(/../g).map(channel => parseInt(channel, 16));
+    return '#' + rgb.map(channel => Math.round(amount < 0
+        ? channel * (1 + amount)
+        : channel + (255 - channel) * amount).toString(16).padStart(2, '0')).join('');
+}
+
+function ellipse(y, radiusX, radiusY) {
+    context.beginPath();
+    context.ellipse(512, y, radiusX, radiusY, 0, 0, Math.PI * 2);
+}
+
+function drawWell(color, y) {
+    const radiusX = 330, radiusY = 292;
+    const floorSize = 250;
+    const well = document.createElement('canvas');
+    well.width = 1024;
+    well.height = radiusY * 2 + 2;
+    const wellContext = well.getContext('2d');
+    const pixels = wellContext.createImageData(well.width, well.height);
+    const rgb = color.slice(1).match(/../g).map(channel => parseInt(channel, 16));
+    const length = Math.hypot(0.55, -0.65, 0.55);
+    const light = [0.55 / length, -0.65 / length, 0.55 / length];
+    const leftRun = column => {
+        const blend = Math.max(0, Math.min(1, (column - 448) / 64));
+        return 1 - blend * blend * (3 - 2 * blend);
+    };
+    for (let row = 0; row < well.height; row++) {
+        for (let column = 0; column < well.width; column++) {
+            // The horizontal trough continues off the left edge and closes in a right-hand arch.
+            const nx = Math.max(0, (column + 0.5 - 512) / radiusX);
+            const ny = (row + 0.5 - well.height / 2) / radiusY;
+            const radius = Math.hypot(nx, ny);
+            if (radius >= 1) continue;
+            // The flat floor clears both projected button faces; ramps begin outside it.
+            const floorX = Math.max(0, (column + 0.5 - 512) / floorSize);
+            const floorY = (row + 0.5 - well.height / 2) / floorSize;
+            const floorRadius = Math.hypot(floorX, floorY);
+            let normal = [0, 0, 1];
+            if (floorRadius > 1) {
+                const inner = floorRadius - 1, outer = 1 - radius;
+                const span = inner + outer;
+                const edge = inner / span;
+                const slope = 9 * 6 * edge * (1 - edge) / (span * span);
+                // A concave wall faces the light along its lower-left edge.
+                normal = [
+                    -slope * (outer * floorX / (floorRadius * floorSize) + inner * nx / (radius * radiusX)),
+                    -slope * (outer * floorY / (floorRadius * floorSize) + inner * ny / (radius * radiusY)),
+                    1,
+                ];
+            }
+            const normalLength = Math.hypot(...normal);
+            const illumination = normal.reduce((sum, component, index) => sum + component / normalLength * light[index], 0);
+            let diffuse = (0.7 + 0.63 * illumination) / (0.7 + 0.63 * light[2]);
+            const horizontal = leftRun(column);
+            diffuse = 1 + (diffuse - 1) * (1 - (diffuse > 1 ? 0.1 : 0.06) * horizontal);
+            const offset = (row * well.width + column) * 4;
+            rgb.forEach((channel, index) => {
+                pixels.data[offset + index] = Math.round(Math.min(255, channel * diffuse));
+            });
+            pixels.data[offset + 3] = Math.round(Math.min(1, (1 - radius) * 30) * 255);
+        }
+    }
+    // Soften only the horizontal upper shadow; alpha and the right-hand curve stay fixed.
+    const shaded = new Uint8ClampedArray(pixels.data);
+    const weights = [1, 4, 6, 4, 1];
+    for (let row = 2; row < well.height / 2; row++) {
+        for (let column = 0; column < 512; column++) {
+            const horizontal = leftRun(column);
+            const offset = (row * well.width + column) * 4;
+            rgb.forEach((channel, index) => {
+                const soft = weights.reduce((sum, weight, sample) => {
+                    const neighbor = ((row + sample - 2) * well.width + column) * 4;
+                    return sum + weight * (shaded[neighbor + 3] ? shaded[neighbor + index] : channel);
+                }, 0) / 16;
+                pixels.data[offset + index] = Math.round(shaded[offset + index] * (1 - horizontal) + soft * horizontal);
+            });
+        }
+    }
+    wellContext.putImageData(pixels, 0, 0);
+    context.drawImage(well, 0, y - well.height / 2);
+}
+
+function drawCap(color, y, radiusX, radiusY) {
+    const cap = document.createElement('canvas');
+    cap.width = radiusX * 2 + 2;
+    cap.height = radiusY * 2 + 2;
+    const capContext = cap.getContext('2d');
+    const pixels = capContext.createImageData(cap.width, cap.height);
+    const linear = color.slice(1).match(/../g).map(channel => {
+        const value = parseInt(channel, 16) / 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    const normalize = vector => {
+        const length = Math.hypot(...vector);
+        return vector.map(component => component / length);
+    };
+    const dot = (a, b) => a.reduce((sum, component, index) => sum + component * b[index], 0);
+    const light = normalize([0.55, -0.65, 0.55]);
+    const halfway = normalize([light[0], light[1], light[2] + 1]);
+    const bevelWidth = 12 / radiusX;
+    for (let row = 0; row < cap.height; row++) {
+        for (let column = 0; column < cap.width; column++) {
+            const nx = (column + 0.5 - cap.width / 2) / radiusX;
+            const ny = (row + 0.5 - cap.height / 2) / radiusY;
+            const radius = Math.hypot(nx, ny);
+            if (radius >= 1) continue;
+            // A rounded crown joins the edge; its slope determines every light hit.
+            const edge = Math.max(0, (radius - 1 + bevelWidth) / bevelWidth);
+            const slope = -100 * radius - 12 * edge / (bevelWidth * Math.sqrt(1 - edge * edge));
+            const normal = normalize([
+                -slope * nx / (Math.max(radius, 0.001) * radiusX),
+                -slope * ny / (Math.max(radius, 0.001) * radiusY),
+                1,
+            ]);
+            const diffuse = 0.59 + 0.75 * Math.max(0, dot(normal, light));
+            // The satin face keeps its color; the polished bevel catches the edge reflection.
+            const edgePolish = Math.min(1, edge * 8);
+            const edgeGloss = edgePolish * edgePolish * (3 - 2 * edgePolish);
+            const shine = 0.9 * edgeGloss * Math.max(0, dot(normal, halfway)) ** 64;
+            const offset = (row * cap.width + column) * 4;
+            linear.forEach((channel, index) => {
+                const value = Math.min(1, channel * diffuse + shine);
+                const encoded = value <= 0.0031308 ? value * 12.92 : 1.055 * value ** (1 / 2.4) - 0.055;
+                pixels.data[offset + index] = Math.round(encoded * 255);
+            });
+            pixels.data[offset + 3] = Math.round(Math.min(1, (1 - radius) * Math.min(radiusX, radiusY)) * 255);
+        }
+    }
+    capContext.putImageData(pixels, 0, 0);
+    context.drawImage(cap, 512 - cap.width / 2, y - cap.height / 2);
+}
+
+async function draw() {
+    const dark = variant === 'dark';
+    const tinted = variant === 'tinted';
+    const [body, ink, pink] = await Promise.all([
+        assetColor('BrandBody', dark),
+        assetColor('BrandInk', dark),
+        assetColor('BrandButton', dark),
+    ]);
+    if (colorway !== 'Default' && !(colorway in alternateColors)) {
+        throw new Error(`Unknown colorway ${colorway}`);
+    }
+    const faceColor = tinted ? '#D0D0D0' : alternateColors[colorway] || pink;
+    if (!tinted) {
+        context.fillStyle = body;
+        context.fillRect(0, 0, 1024, 1024);
+    }
+
+    // Near-front view preserves the circular face while showing the short lower sidewall.
+    const faceY = 394, radiusX = 230, radiusY = 214, depth = 32;
+    drawWell(tinted ? '#989898' : body, faceY + depth / 2);
+    // The down-left penumbra grows softer with distance from the button's base.
+    for (const shadow of [
+        { blur: 22, x: -15, y: 18, opacity: 0.1 },
+        { blur: 7, x: -5, y: 6, opacity: 0.2 },
+    ]) {
+        context.save();
+        context.shadowColor = `rgba(0,0,0,${shadow.opacity})`;
+        context.shadowBlur = shadow.blur;
+        context.shadowOffsetX = shadow.x;
+        context.shadowOffsetY = shadow.y;
+        context.fillStyle = '#000000';
+        ellipse(faceY + depth, radiusX, radiusY);
+        context.fill();
+        context.restore();
+    }
+
+    // Contact occlusion is confined to the base seam.
+    context.save();
+    context.strokeStyle = 'rgba(0,0,0,0.7)';
+    context.lineWidth = 2;
+    context.shadowColor = 'rgba(0,0,0,0.5)';
+    context.shadowBlur = 3;
+    ellipse(faceY + depth, radiusX, radiusY);
+    context.stroke();
+    context.restore();
+
+    // The upper-right light leaves the left wall dark and the right wall more visible.
+    const sidewall = context.createLinearGradient(512 - radiusX, 0, 512 + radiusX, 0);
+    sidewall.addColorStop(0, shade(faceColor, -0.46));
+    sidewall.addColorStop(0.5, shade(faceColor, -0.28));
+    sidewall.addColorStop(1, shade(faceColor, -0.14));
+    context.fillStyle = sidewall;
+    ellipse(faceY + depth, radiusX, radiusY);
+    context.fill();
+    context.save();
+    context.clip();
+    const baseShade = context.createLinearGradient(0, faceY + depth, 0, faceY + radiusY + depth);
+    baseShade.addColorStop(0, 'rgba(0,0,0,0)');
+    baseShade.addColorStop(1, 'rgba(0,0,0,0.24)');
+    context.fillStyle = baseShade;
+    context.fillRect(0, 0, 1024, 1024);
+    context.restore();
+    drawCap(faceColor, faceY, radiusX, radiusY);
+
+    // A separate path keeps the printed letter's openings clear in the Tinted icon too.
+    context.save();
+    context.translate(512, 786);
+    context.scale(0.8, 0.8);
+    context.fillStyle = tinted ? '#FFFFFF' : ink;
+    const letter = new Path2D();
+    letter.moveTo(-80, 62);
+    letter.lineTo(-80, -22);
+    letter.quadraticCurveTo(-80, -64, -36, -64);
+    letter.lineTo(36, -64);
+    letter.quadraticCurveTo(80, -64, 80, -22);
+    letter.lineTo(80, 62);
+    letter.quadraticCurveTo(80, 68, 74, 68);
+    letter.lineTo(44, 68);
+    letter.quadraticCurveTo(38, 68, 38, 62);
+    letter.lineTo(38, 34);
+    letter.quadraticCurveTo(38, 28, 32, 28);
+    letter.lineTo(-32, 28);
+    letter.quadraticCurveTo(-38, 28, -38, 34);
+    letter.lineTo(-38, 62);
+    letter.quadraticCurveTo(-38, 68, -44, 68);
+    letter.lineTo(-74, 68);
+    letter.quadraticCurveTo(-80, 68, -80, 62);
+    letter.closePath();
+    letter.roundRect(-34, -34, 68, 30, 8);
+    context.fill(letter, 'evenodd');
+    context.restore();
+    document.body.setAttribute('data-png', canvas.toDataURL('image/png'));
+}
+draw().catch(error => document.body.setAttribute('data-error', error.message));
+</script>
+</body></html>

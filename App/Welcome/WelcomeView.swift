@@ -53,6 +53,7 @@ struct WelcomeView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Color(uiColor: AppBrand.Colors.button))
                 .controlSize(.large)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)

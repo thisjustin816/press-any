@@ -194,3 +194,21 @@ These checks cover the Capture submenu and remain pending until run on a physica
 - [ ] Share Screenshot from a GB game and a GBC game in portrait and landscape. Save to Files and verify a 160 x 144 PNG with the current screen colors and no controls, menu, LCD grid or frame blending. Cancel sharing once, then share again. The game remains paused until Resume; a controller cannot resume under the share sheet.
 - [ ] Use Current Frame as Artwork on a library game with no artwork. Close the game and confirm the library tile, list row and Game Details show the whole frame with sharp pixels; relaunch and check it remains. Capture a different frame: Replace asks first, Cancel keeps the old artwork and Replace updates it. Back up and restore the Game to confirm the artwork survives.
 - [ ] Quick Play offers Share Screenshot and disables Use Current Frame as Artwork with Add to Library to use artwork. Without Plus, both capture actions work for library games. VoiceOver reads their names and the submenu stays readable at the largest text size.
+
+## Icon and app color regression checks
+
+- [ ] Check the Corporatus wordmark in the library toolbar, welcome screen, controller menu
+  button and cartridge plaques. Light and Dark colors stay distinct, the controller keeps its
+  chosen theme, and the toolbar artwork fits at the largest Dynamic Type size. VoiceOver still
+  reads the app name and Game Menu button. The wordmark's pressed effect remains visible.
+- [ ] Check the library toolbar, welcome screen, Settings, Plus badge and filled buttons in Light
+  and Dark appearance, including the largest Dynamic Type size. Pink actions and navy lettering
+  remain readable; filled buttons have white labels, and destructive actions stay red.
+- [ ] Check Classic, Dark and Match System on both touch-controller layouts. The body, A/B
+  buttons and printed lettering match the app colors; pressed states remain distinct. The
+  Playtiles guide stands out from the gray body with a lit top edge and shadow below.
+- [ ] In Settings > App Icon, check all six previews and choose each icon. Compare the home-screen
+  icon with its preview in Light and Dark, then check Tinted appearance. Each uses the same
+  front-facing button, sideways arch well and centered A. At home-screen size, the sidewall and
+  contact shadow read as one raised button; the well continues off the left edge. The Default icon remains
+  available without Plus.

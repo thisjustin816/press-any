@@ -151,6 +151,7 @@ final class GameplayViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
+        view.tintColor = AppBrand.Colors.accent
         installViews()
         configureRuntimeLoop()
         configureInput()
@@ -1238,12 +1239,12 @@ final class GameMenuButton: UIButton {
     /// from above, each letter's top edge shades the floor of its recess, which shows as a band
     /// in the recess colors, and its bottom edge catches the light, which shows as a line below.
     private static func debossedWordmark(fitting width: CGFloat, palette: ControllerPalette) -> UIImage {
-        let natural = AppBrand.Wordmark.attributedString(size: 28, ink: palette.logo, accent: palette.logoAccent).size()
+        let natural = AppBrand.Wordmark.artwork(size: 28, appearance: palette.wordmarkAppearance).size
         let size = 28 * min(1, max(0.8, width / max(natural.width, 1)))
-        let fill = AppBrand.Wordmark.attributedString(size: size, ink: palette.logo, accent: palette.logoAccent)
-        let recess = AppBrand.Wordmark.attributedString(size: size, ink: palette.logoRecess, accent: palette.logoAccentRecess)
-        let highlight = AppBrand.Wordmark.attributedString(size: size, ink: palette.logoHighlight, accent: palette.logoHighlight)
-        let textSize = fill.size()
+        let fill = AppBrand.Wordmark.artwork(size: size, appearance: palette.wordmarkAppearance)
+        let recess = AppBrand.Wordmark.artwork(size: size, appearance: palette.wordmarkAppearance, recessed: true)
+        let highlight = fill.withTintColor(palette.logoHighlight, renderingMode: .alwaysOriginal)
+        let textSize = fill.size
         let canvas = CGSize(width: ceil(textSize.width) + 2, height: ceil(textSize.height) + 2)
         let origin = CGPoint(x: 1, y: 0)
         // One point deep, so the edges land on whole pixels.
