@@ -72,7 +72,9 @@ function drawCap(color, y, radiusX, radiusY) {
                 1,
             ]);
             const diffuse = 0.59 + 0.75 * Math.max(0, dot(normal, light));
-            const shine = 0.9 * Math.max(0, dot(normal, halfway)) ** 64;
+            // The satin face keeps its color; the polished bevel catches the edge reflection.
+            const edgeGloss = Math.min(1, edge * 8);
+            const shine = 0.9 * edgeGloss * Math.max(0, dot(normal, halfway)) ** 64;
             const offset = (row * cap.width + column) * 4;
             linear.forEach((channel, index) => {
                 const value = Math.min(1, channel * diffuse + shine);
