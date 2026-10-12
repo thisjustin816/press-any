@@ -34,13 +34,11 @@ struct ControllerPalette {
     let pillText: UIColor
     /// Lettering printed on the body, such as A, B, SELECT and START.
     let lettering: UIColor
-    /// The app's wordmark (`AppBrand.Wordmark`) in this theme's colors.
+    /// Wordmark artwork follows the controller theme independently of the library.
+    let wordmarkAppearance: UIUserInterfaceStyle
+    /// Ink around the wordmark button's rim.
     let logo: UIColor
-    let logoAccent: UIColor
-    /// The wordmark is pressed into the menu button: the shade under each letter's top edge, in
-    /// the ink and accent's darker tones, and the light along each letter's bottom edge.
-    let logoRecess: UIColor
-    let logoAccentRecess: UIColor
+    /// Light along the bottom edges of the pressed wordmark.
     let logoHighlight: UIColor
 
     static var classic: ControllerPalette {
@@ -67,10 +65,8 @@ struct ControllerPalette {
             pillPressed: rgb(100, 96, 100),
             pillText: rgb(236, 234, 232),
             lettering: AppBrand.Wordmark.lightInk,
+            wordmarkAppearance: .light,
             logo: AppBrand.Wordmark.lightInk,
-            logoAccent: AppBrand.Wordmark.lightAccent,
-            logoRecess: rgb(20, 20, 22),
-            logoAccentRecess: rgb(123, 23, 71),
             logoHighlight: rgb(236, 235, 232)
         )
     }
@@ -99,10 +95,8 @@ struct ControllerPalette {
             pillPressed: rgb(104, 104, 110),
             pillText: rgb(210, 212, 218),
             lettering: AppBrand.Wordmark.darkInk,
+            wordmarkAppearance: .dark,
             logo: AppBrand.Wordmark.darkInk,
-            logoAccent: AppBrand.Wordmark.darkAccent,
-            logoRecess: rgb(64, 64, 68),
-            logoAccentRecess: rgb(96, 30, 66),
             logoHighlight: rgb(58, 58, 64)
         )
     }

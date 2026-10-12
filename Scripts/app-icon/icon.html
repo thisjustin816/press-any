@@ -39,6 +39,45 @@ function ellipse(y, radiusX, radiusY) {
     context.ellipse(512, y, radiusX, radiusY, 0, 0, Math.PI * 2);
 }
 
+function drawWell(color, y) {
+    const radiusX = 330, radiusY = 292;
+    const well = document.createElement('canvas');
+    well.width = 1024;
+    well.height = radiusY * 2 + 2;
+    const wellContext = well.getContext('2d');
+    const pixels = wellContext.createImageData(well.width, well.height);
+    const rgb = color.slice(1).match(/../g).map(channel => parseInt(channel, 16));
+    const length = Math.hypot(0.55, -0.65, 0.55);
+    const light = [0.55 / length, -0.65 / length, 0.55 / length];
+    for (let row = 0; row < well.height; row++) {
+        for (let column = 0; column < well.width; column++) {
+            // The horizontal trough continues off the left edge and closes in a right-hand arch.
+            const nx = Math.max(0, (column + 0.5 - 512) / radiusX);
+            const ny = (row + 0.5 - well.height / 2) / radiusY;
+            const radius = Math.hypot(nx, ny);
+            if (radius >= 1) continue;
+            const edge = Math.max(0, (radius - 0.72) / 0.28);
+            // A concave wall faces the light along its lower-left edge.
+            const slope = 24 * 6 * edge * (1 - edge) / 0.28;
+            const normal = [
+                -slope * nx / (Math.max(radius, 0.001) * radiusX),
+                -slope * ny / (Math.max(radius, 0.001) * radiusY),
+                1,
+            ];
+            const normalLength = Math.hypot(...normal);
+            const illumination = normal.reduce((sum, component, index) => sum + component / normalLength * light[index], 0);
+            const diffuse = (0.6 + 0.73 * illumination) / (0.6 + 0.73 * light[2]);
+            const offset = (row * well.width + column) * 4;
+            rgb.forEach((channel, index) => {
+                pixels.data[offset + index] = Math.round(Math.min(255, channel * diffuse));
+            });
+            pixels.data[offset + 3] = Math.round(Math.min(1, (1 - radius) * 30) * 255);
+        }
+    }
+    wellContext.putImageData(pixels, 0, 0);
+    context.drawImage(well, 0, y - well.height / 2);
+}
+
 function drawCap(color, y, radiusX, radiusY) {
     const cap = document.createElement('canvas');
     cap.width = radiusX * 2 + 2;
@@ -108,6 +147,7 @@ async function draw() {
 
     // Near-front view preserves the circular face while showing the short lower sidewall.
     const faceY = 394, radiusX = 230, radiusY = 214, depth = 32;
+    drawWell(tinted ? '#989898' : body, faceY + depth / 2);
     // The down-left penumbra grows softer with distance from the button's base.
     for (const shadow of [
         { blur: 22, x: -15, y: 18, opacity: 0.1 },
@@ -154,7 +194,7 @@ async function draw() {
 
     // A separate path keeps the printed letter's openings clear in the Tinted icon too.
     context.save();
-    context.translate(554, 748);
+    context.translate(512, 786);
     context.scale(0.8, 0.8);
     context.fillStyle = tinted ? '#FFFFFF' : ink;
     const letter = new Path2D();

@@ -197,6 +197,10 @@ These checks cover the Capture submenu and remain pending until run on a physica
 
 ## Icon and app color regression checks
 
+- [ ] Check the Corporatus wordmark in the library toolbar, welcome screen, controller menu
+  button and cartridge plaques. Light and Dark colors stay distinct, the controller keeps its
+  chosen theme, and the toolbar artwork fits at the largest Dynamic Type size. VoiceOver still
+  reads the app name and Game Menu button. The wordmark's pressed effect remains visible.
 - [ ] Check the library toolbar, welcome screen, Settings, Plus badge and filled buttons in Light
   and Dark appearance, including the largest Dynamic Type size. Pink actions and navy lettering
   remain readable; filled buttons have white labels, and destructive actions stay red.
@@ -205,6 +209,6 @@ These checks cover the Capture submenu and remain pending until run on a physica
   Playtiles guide stands out from the gray body with a lit top edge and shadow below.
 - [ ] In Settings > App Icon, check all six previews and choose each icon. Compare the home-screen
   icon with its preview in Light and Dark, then check Tinted appearance. Each uses the same
-  front-facing button and separate A. At home-screen size, the sidewall and contact shadow read
-  as one raised button, and the closer A sits slightly right of center. The Default icon remains
+  front-facing button, sideways arch well and centered A. At home-screen size, the sidewall and
+  contact shadow read as one raised button; the well continues off the left edge. The Default icon remains
   available without Plus.

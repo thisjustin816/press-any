@@ -1,7 +1,7 @@
 import GameIdentity
 import SwiftUI
 
-/// The open-source code and data that ship in the app. Licenses whose terms ask to be shown are
+/// The third-party code, artwork and data that ship in the app. Licenses whose terms ask to be shown are
 /// bundled verbatim from `App/Acknowledgements/`; public-domain code and freely licensed data get
 /// a credit instead.
 struct AcknowledgementsView: View {
@@ -28,6 +28,15 @@ struct AcknowledgementsView: View {
             license: .bundled(file: "SameBoy-LICENSE")
         ),
         Component(name: "GRDB.swift", use: "The game library’s database", license: .bundled(file: "GRDB-LICENSE")),
+        Component(
+            name: "Corporatus",
+            use: """
+            Wordmark lettering by Alex Rosario and Roc Mitchell.
+            Source: https://asr.me/font/corp.html
+            License: Desktop license for static artwork; the font file is not bundled.
+            """,
+            license: .bundled(file: "Corporatus-LICENSE")
+        ),
         Component(
             name: "gbtoolsid",
             use: "Detecting which tools a game was made with",

@@ -66,11 +66,11 @@ in App Store Connect, with stand-in app tests and completed physical-device chec
 app icon colorways and Auto State history gated at every scope, retaining stored choices without
 Plus; A Press Any folder in Files holding Exports, with the library kept in Application Support and
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
-Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (heavy
-italic, pink "A" and navy lettering) in library toolbar and controller body; Shared pink/navy/gray
-app colors; App icon (smooth front-facing A button with lettering below; six colorways,
+Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (rounded
+Corporatus artwork, pink "A" and navy lettering) in library toolbar and controller body; Shared pink/navy/gray
+app colors; App icon (smooth front-facing button in a sideways arch well with a centered A below; six colorways,
 light/dark/tinted and matching previews);
-Acknowledgements screen listing SameBoy + GRDB with full licenses.
+Acknowledgements screen listing code, artwork and data with credits and license notices.
 
 ### Architecture seams
 

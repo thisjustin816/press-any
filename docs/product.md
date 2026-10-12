@@ -1156,6 +1156,8 @@ exposes them; custom border editing is later.
   Show Titles in the grid; and Favorites Only. Add opens Import Files, then Quick Play ROM, Quick
   Play with a Save and Quick Play Sessions. The wordmark shrinks to fit rather than losing letters
   at large text sizes.
+- The wordmark uses rounded Corporatus artwork with a pink A and navy lettering in Light Mode,
+  and lighter pink and lettering in Dark Mode. The welcome screen and controller menu button share it.
 - Select adds checkboxes in the list and checkmark circles on tiles, and Done in the toolbar ends
   it. The bottom bar offers Select All / Deselect All and Delete (n) for the visible Games, with one
   confirmation. Tiles read Selected or Not selected to VoiceOver. Tapping while selecting changes

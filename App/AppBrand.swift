@@ -21,49 +21,25 @@ enum AppBrand {
         }
     }
 
-    /// The name in heavy italic system type, with the first letter of its last word in pink.
+    /// Fixed Corporatus wordmark artwork, with the first letter of its last word in pink.
     enum Wordmark {
-        static let parts: (lead: String, accent: String, tail: String) = split(AppBrand.displayName)
-
         static var lightInk: UIColor { Colors.ink.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)) }
         static var darkInk: UIColor { Colors.ink.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)) }
-        static var lightAccent: UIColor { Colors.accent.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)) }
-        static var darkAccent: UIColor { Colors.accent.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)) }
-        static var ink: UIColor { Colors.ink }
         static var accent: UIColor { Colors.accent }
 
-        /// Letter spacing as a fraction of the point size.
-        static let tracking: CGFloat = 0.028
-
-        /// Weight and slant are set together: adding italic with `withSymbolicTraits` to a black
-        /// system font replaces its traits and drops the weight back to regular.
-        static func font(size: CGFloat) -> UIFont {
-            let traits: [UIFontDescriptor.TraitKey: Any] = [
-                .weight: UIFont.Weight.black.rawValue,
-                .symbolic: UIFontDescriptor.SymbolicTraits.traitItalic.rawValue,
-            ]
-            let descriptor = UIFont.systemFont(ofSize: size).fontDescriptor.addingAttributes([.traits: traits])
-            return UIFont(descriptor: descriptor, size: size)
+        static var aspectRatio: CGFloat {
+            let image = UIImage(named: "Wordmark")
+            return (image?.size.width ?? 1) / max(image?.size.height ?? 1, 1)
         }
 
-        /// For drawing in UIKit, in fixed colors such as a controller theme's.
-        static func attributedString(size: CGFloat, ink: UIColor, accent: UIColor) -> NSAttributedString {
-            let string = NSMutableAttributedString()
-            for (text, color) in [(parts.lead, ink), (parts.accent, accent), (parts.tail, ink)] {
-                string.append(NSAttributedString(string: text, attributes: [
-                    .font: font(size: size),
-                    .kern: size * tracking,
-                    .foregroundColor: color,
-                ]))
+        static func artwork(size: CGFloat, appearance: UIUserInterfaceStyle, recessed: Bool = false) -> UIImage {
+            let traits = UITraitCollection(userInterfaceStyle: appearance)
+            guard let image = UIImage(named: recessed ? "WordmarkRecess" : "Wordmark", in: .main, compatibleWith: traits)
+            else { return UIImage() }
+            let canvas = CGSize(width: size * aspectRatio, height: size)
+            return UIGraphicsImageRenderer(size: canvas).image { _ in
+                image.draw(in: CGRect(origin: .zero, size: canvas))
             }
-            return string
-        }
-
-        static func split(_ name: String) -> (lead: String, accent: String, tail: String) {
-            let start = name.lastIndex(of: " ").map { name.index(after: $0) } ?? name.startIndex
-            guard start < name.endIndex else { return (name, "", "") }
-            let end = name.index(after: start)
-            return (String(name[..<start]), String(name[start..<end]), String(name[end...]))
         }
     }
 }
@@ -73,18 +49,11 @@ struct WordmarkView: View {
     var size: CGFloat = 20
 
     var body: some View {
-        let parts = AppBrand.Wordmark.parts
-        let ink = Color(uiColor: AppBrand.Wordmark.ink)
-        let accent = Color(uiColor: AppBrand.Wordmark.accent)
-        (Text(parts.lead).foregroundStyle(ink)
-            + Text(parts.accent).foregroundStyle(accent)
-            + Text(parts.tail).foregroundStyle(ink))
-            .font(Font(AppBrand.Wordmark.font(size: size)))
-            .kerning(size * AppBrand.Wordmark.tracking)
-            .lineLimit(1)
-            // Larger text sizes widen the toolbar buttons beside the library's title, so the name
-            // shrinks to fit the space left rather than losing its last letters.
-            .minimumScaleFactor(0.5)
+        Image("Wordmark")
+            .renderingMode(.original)
+            .resizable()
+            .aspectRatio(AppBrand.Wordmark.aspectRatio, contentMode: .fit)
+            .frame(maxWidth: size * AppBrand.Wordmark.aspectRatio, maxHeight: size)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(AppBrand.displayName)
             .accessibilityAddTraits(.isHeader)

@@ -33,9 +33,18 @@ the brighter pink in Dark Mode. Native interface surfaces, primary and secondary
 destructive actions and status colors follow iOS. Controller themes resolve their fixed
 appearance independently of the library.
 
-The wordmark is the product name in heavy italic system type with slight tracking. The first
+The wordmark is the product name in rounded Corporatus lettering with slight tracking. The first
 letter of its last word (the "A" in "Any") is pink; the other letters use the brand ink.
-`AppBrand.Wordmark` in `App/AppBrand.swift` defines it from the display name. `WordmarkView`
+`Scripts/render-wordmark.py` exports fixed outlined artwork from the display name, a separately
+licensed font and the named colors. It requires Python with fonttools, reportlab and PyYAML:
+
+```sh
+python Scripts/render-wordmark.py /path/outside/the/checkout/corporatus_regular.otf
+```
+
+The font stays outside the repository and app. Settings > Acknowledgements and
+`THIRD_PARTY_NOTICES.md` credit its authors and license. Regenerate the artwork when the display
+name or brand colors change. `AppBrand.Wordmark` in `App/AppBrand.swift` sizes the artwork. `WordmarkView`
 shows it in the library toolbar and welcome screen. The toolbar wordmark shrinks beside larger
 buttons at accessibility text sizes. The controller presses it into its menu button, and
 placeholder cartridges press the capitalized name into their plaque.
@@ -43,8 +52,9 @@ placeholder cartridges press the capitalized name into their plaque.
 ## App icon
 
 The app icon is a smooth pink Game Boy-style button viewed nearly straight on, with a shallow
-crown, lit rounded bevel and dark sidewall. A navy A is printed on the warm gray surface below
-and slightly right of the button's center. The Dark icon uses the dark body and lighter
+crown, lit rounded bevel and dark sidewall. A recessed well extends off the left edge and closes
+with a rounded arch on the right. A navy A is centered below the button on the warm gray surface.
+The Dark icon uses the dark body and lighter
 lettering; the Tinted icon has grayscale artwork on a transparent background for iOS 18.
 
 Berry, Grape, Teal, Kiwi and Dandelion use the same drawing with different button colors.
@@ -86,7 +96,8 @@ registered with Apple.
 A future rename changes:
 
 1. `INFOPLIST_KEY_CFBundleDisplayName` in `project.yml` (the only user-facing string). The
-   wordmark follows it, accenting the first letter of the new name's last word.
+   wordmark export reads it, accenting the first letter of the new name's last word. Regenerate
+   its artwork with `Scripts/render-wordmark.py`.
 2. If the technical name also changes: the project `name`, target, scheme and `PRODUCT_NAME`
    in `project.yml`, `PROJECT_NAME` in the `Makefile`, and the `App/` entry point and
    `AppTests/` file names.
