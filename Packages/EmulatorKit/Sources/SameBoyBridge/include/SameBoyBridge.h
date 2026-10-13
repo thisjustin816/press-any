@@ -102,6 +102,10 @@ void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode);
 /// Changes only DMG render colors, including separate BG/OBJ0/OBJ1 boot palettes.
 /// CGB and Super Game Boy hardware ignore this setting. Emulated palette RAM and state bytes are unchanged.
 void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette);
+/// On a Game Boy Advance or Game Boy Player, colors the picture as a Game Boy Color's screen
+/// would, with the same color correction, instead of as the darker Game Boy Advance screen. The
+/// emulated hardware doesn't change. Other models ignore it.
+void SBSetGBCColorsOnAGB(SBInstance *instance, bool enabled);
 /// Renders a temporary frame, restoring gameplay state and suppressing audio and rumble.
 bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame);
 size_t SBDrainAudio(SBInstance *instance, SBStereoSample *output, size_t max_frames);

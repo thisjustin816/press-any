@@ -332,10 +332,16 @@ public final class EmulationSession: @unchecked Sendable {
     }
 
     @discardableResult
-    public func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
+    public func setDisplaySettings(
+        colorCorrection: ColorCorrection,
+        dmgPalette: DMGPalette,
+        advanceColors: AdvanceColors = .gameBoyAdvance
+    ) throws -> EmulatorVideoFrame? {
         let (worker, context, _) = try snapshotActive()
         let frame = try worker.perform { core in
-            try (core as? any DisplaySettingsCapability)?.setDisplaySettings(colorCorrection: colorCorrection, dmgPalette: dmgPalette)
+            try (core as? any DisplaySettingsCapability)?.setDisplaySettings(
+                colorCorrection: colorCorrection, dmgPalette: dmgPalette, advanceColors: advanceColors
+            )
         }
         if let frame {
             lock.withLock {

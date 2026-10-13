@@ -135,4 +135,62 @@ final class SameBoyHardwareModelTests: XCTestCase {
         let pocket = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .pocket))
         XCTAssertEqual(green.bgra8888, pocket.bgra8888)
     }
+
+    /// A game that sets its background color, on each model and screen. The picture's corner shows
+    /// that color.
+    private static let backgroundColorROM: Data = {
+        // Background palette 0, color 0: r 11, g 20, b 6, then wait.
+        let color: UInt16 = 11 | 20 << 5 | 6 << 10
+        let program: [UInt8] = [
+            0x3e, 0x80, 0xe0, 0x68,
+            0x3e, UInt8(color & 0xff), 0xe0, 0x69,
+            0x3e, UInt8(color >> 8), 0xe0, 0x69,
+            0x18, 0xfe,
+        ]
+        return TestROM.make(title: "ADVANCE", cgb: true, program: program)
+    }()
+
+    private func corner(_ model: HardwareModel, _ correction: ColorCorrection, _ colors: AdvanceColors) throws -> UInt32 {
+        let core = SameBoyAdapter()
+        try core.setHardwareModel(model)
+        try core.loadImage(Self.backgroundColorROM, system: .gameBoyColor)
+        _ = try core.setDisplaySettings(colorCorrection: correction, dmgPalette: .dmgGreen, advanceColors: colors)
+        XCTAssertTrue(try core.skipBootAnimation())
+        var frame = try core.runFrame(input: .init())
+        for _ in 0..<4 { frame = try core.runFrame(input: .init()) }
+        return frame.bgra8888.withUnsafeBytes { $0.load(as: UInt32.self) }
+    }
+
+    func testAGameBoyAdvanceCanShowItsColorsAsAGameBoyColorWould() throws {
+        try SameBoyAdapterTests.requireGeneratedBootROMs()
+        for correction in ColorCorrection.allCases {
+            let gbc = try corner(.gameBoyColor, correction, .gameBoyAdvance)
+            let gba = try corner(.gameBoyAdvance, correction, .gameBoyAdvance)
+            for model in [HardwareModel.gameBoyAdvance, .gameBoyPlayer] {
+                XCTAssertEqual(try corner(model, correction, .gameBoyColor), gbc, "\(model) \(correction)")
+            }
+            XCTAssertEqual(try corner(.gameBoyColor, correction, .gameBoyColor), gbc, "a Game Boy Color ignores it")
+            if correction == .off {
+                XCTAssertEqual(gba, gbc, "Original is the same on both screens")
+            } else {
+                XCTAssertNotEqual(gba, gbc, "the Game Boy Advance screen is darker with \(correction)")
+            }
+        }
+    }
+
+    func testGameBoyColorColorsOnAGameBoyAdvanceChangeWhileThePictureIsPaused() throws {
+        try SameBoyAdapterTests.requireGeneratedBootROMs()
+        let core = SameBoyAdapter()
+        try core.setHardwareModel(.gameBoyAdvance)
+        try core.loadImage(Self.backgroundColorROM, system: .gameBoyColor)
+        XCTAssertTrue(try core.skipBootAnimation())
+        for _ in 0..<5 { _ = try core.runFrame(input: .init()) }
+        let state = try core.serializeState()
+        let advance = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .dmgGreen, advanceColors: .gameBoyAdvance))
+        let color = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .dmgGreen, advanceColors: .gameBoyColor))
+        XCTAssertNotEqual(color.bgra8888, advance.bgra8888)
+        XCTAssertEqual(try core.serializeState(), state, "the game doesn't move")
+        try core.setHardwareModel(.gameBoyPlayer)
+        XCTAssertEqual(core.advanceColors, .gameBoyColor, "the choice stays through a model change")
+    }
 }

@@ -36,6 +36,7 @@ final class GameplayViewController: UIViewController {
     private var orientation: ScreenOrientation
     private var lcdFilter: LCDFilter
     private var colorCorrection: ColorCorrection
+    private var advanceColors: AdvanceColors
     private var dmgPalette: DMGPalette
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
@@ -89,6 +90,7 @@ final class GameplayViewController: UIViewController {
         lcdFilter: LCDFilter = .off,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
+        advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending = .off,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted,
@@ -108,6 +110,7 @@ final class GameplayViewController: UIViewController {
         self.lcdFilter = lcdFilter
         self.colorCorrection = colorCorrection
         self.dmgPalette = dmgPalette
+        self.advanceColors = advanceColors
         self.frameBlending = frameBlending
         self.fastForwardSpeed = fastForwardSpeed
         self.fastForwardAudio = fastForwardAudio
@@ -787,13 +790,15 @@ final class GameplayViewController: UIViewController {
         lcdFilter: LCDFilter,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
+        advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted
     ) {
-        if colorCorrection != self.colorCorrection || dmgPalette != self.dmgPalette {
+        if colorCorrection != self.colorCorrection || dmgPalette != self.dmgPalette || advanceColors != self.advanceColors {
             self.colorCorrection = colorCorrection
             self.dmgPalette = dmgPalette
+            self.advanceColors = advanceColors
             applyCoreDisplaySettings()
         }
         if orientation != self.orientation {
@@ -827,7 +832,9 @@ final class GameplayViewController: UIViewController {
 
     private func applyCoreDisplaySettings() {
         do {
-            if let frame = try runtime.setDisplaySettings(colorCorrection: colorCorrection, dmgPalette: dmgPalette) {
+            if let frame = try runtime.setDisplaySettings(
+                colorCorrection: colorCorrection, dmgPalette: dmgPalette, advanceColors: advanceColors
+            ) {
                 renderer?.submit(frame, to: metalView, replacesHistory: true)
             }
         } catch {

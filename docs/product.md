@@ -1103,6 +1103,11 @@ Game Boy Player. App Settings has it on the Playing page.
 - Screen Colors lists the choices for the game's own system. A Game Boy game's palettes apply only
   on a Game Boy or Pocket: a Game Boy Color, Advance or Player colors it as its boot ROM does, and
   the Super Game Boys color the picture as the game asks.
+- A Game Boy Advance's screen is darker than a Game Boy Color's, and SameBoy colors a game on a
+  Game Boy Advance or Player the same way. When a game's Model is one of those, Display has **Game
+  Boy Advance Colors**: As on a Game Boy Advance, the default, or As on a Game Boy Color, which
+  colors the picture as a Game Boy Color would with the same Screen Colors correction. The game
+  still runs on a Game Boy Advance and can tell. Original colors look the same on both.
 - The Super Game Boy border isn't drawn yet: it makes the picture 256×224, which the layouts,
   screenshots and thumbnails don't fit. Custom border editing comes after the border.
 - Quick Play always uses Automatic.

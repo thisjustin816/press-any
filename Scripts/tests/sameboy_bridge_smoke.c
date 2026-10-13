@@ -36,7 +36,7 @@ static void make_endless_boot_rom(uint8_t *boot)
     boot[0x00] = 0x18; boot[0x01] = 0xfe; // jr @
 }
 
-// Every model draws into the same 160x144 buffer, Super Game Boys included, and keeps states.
+// Every model draws a 160x144 picture, Super Game Boys included, and keeps states.
 static void test_every_model(const uint8_t *rom, size_t rom_size)
 {
     const SBModel models[] = {
@@ -50,6 +50,9 @@ static void test_every_model(const uint8_t *rom, size_t rom_size)
         assert(SBLoadBootROM(instance, finishing, sizeof(finishing)));
         assert(SBLoadROM(instance, rom, rom_size));
         assert(SBSkipBootROM(instance, NULL, 0));
+        // Game Boy Advance models color each frame into their own buffer; the rest ignore it.
+        SBSetGBCColorsOnAGB(instance, true);
+        SBSetColorCorrection(instance, SB_COLOR_CORRECTION_ACCURATE);
         for (int frame_index = 0; frame_index < 120; frame_index++) {
             SBFrameView frame = SBRunFrame(instance);
             assert(frame.width == 160 && frame.height == 144 && frame.pixels);

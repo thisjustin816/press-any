@@ -23,6 +23,8 @@ struct ScopedSettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showsPlus = false
+    /// Whether games here run on a Game Boy Advance or Game Boy Player, which brings its colors row.
+    @State private var runsOnAdvance = false
 
     var body: some View {
         if inSheet {
@@ -48,6 +50,20 @@ struct ScopedSettingsView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .plusSheet(isPresented: $showsPlus, store: plus)
+        .onAppear(perform: refreshModel)
+        .onChange(of: plus.isUnlocked) { refreshModel() }
+    }
+
+    /// Without Plus every game plays on Automatic, which is never a Game Boy Advance.
+    private func refreshModel() {
+        let model = try? SettingsResolver(store: store).decode(
+            HardwareModel.self,
+            key: SettingKey.hardwareModel.rawValue,
+            system: system,
+            gameID: gameID,
+            buildID: buildID
+        )
+        runsOnAdvance = plus.isUnlocked && [.gameBoyAdvance, .gameBoyPlayer].contains(model ?? .automatic)
     }
 
     // Separate properties keep each section small enough for the compiler to type-check quickly.
@@ -68,6 +84,17 @@ struct ScopedSettingsView: View {
                 context: context
             )
             screenColors
+            if runsOnAdvance {
+                InheritableSettingRow(
+                    title: "Game Boy Advance Colors",
+                    key: .advanceColors,
+                    defaultValue: AdvanceColors.gameBoyAdvance,
+                    options: AdvanceColors.allCases.map { ($0, $0.displayName) },
+                    listSections: [SettingOptionSection(title: "Game Boy Advance Colors", values: AdvanceColors.allCases)],
+                    explanation: AdvanceColors.explanation,
+                    context: context
+                )
+            }
             InheritableSettingRow(
                 title: "LCD Filter",
                 key: .lcdFilter,
@@ -200,7 +227,10 @@ struct ScopedSettingsView: View {
             gameID: gameID,
             buildID: buildID,
             store: store,
-            onChange: onChange,
+            onChange: {
+                onChange?()
+                refreshModel()
+            },
             plus: plus.gate,
             openPlus: { showsPlus = true }
         )

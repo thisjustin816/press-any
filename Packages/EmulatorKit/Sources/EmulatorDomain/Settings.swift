@@ -88,6 +88,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case timedStates
     /// `HardwareModel`, unset means `.automatic`. Read when a game starts or restarts.
     case hardwareModel
+    /// `AdvanceColors`, unset means `.gameBoyAdvance`.
+    case advanceColors
 
     public var isAppOnly: Bool {
         switch self {
@@ -457,6 +459,25 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
         case .gameBoy, .gameBoyPocket: .gameBoy
         case .superGameBoy, .superGameBoy2: .superGameBoy
         case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: .gameBoyColor
+        }
+    }
+}
+
+/// How a game running on a Game Boy Advance or Game Boy Player is colored. Raw values are stored
+/// in settings.
+public enum AdvanceColors: String, Codable, Sendable, CaseIterable {
+    /// Darker, as the Game Boy Advance's screen shows a Game Boy Color game.
+    case gameBoyAdvance
+    /// As a Game Boy Color's screen shows the same colors. The game still runs on a Game Boy
+    /// Advance and can tell.
+    case gameBoyColor
+
+    public static let explanation = "A Game Boy Advance's screen is darker than a Game Boy Color's, so games made for it brighten their colors there. As on a Game Boy Color shows the game's colors as a Game Boy Color would, while the game still runs on a Game Boy Advance."
+
+    public var displayName: String {
+        switch self {
+        case .gameBoyAdvance: "As on a Game Boy Advance"
+        case .gameBoyColor: "As on a Game Boy Color"
         }
     }
 }

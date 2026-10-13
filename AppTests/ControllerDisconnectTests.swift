@@ -118,7 +118,11 @@ private final class FakeRuntime: GameplayRuntime, @unchecked Sendable {
 
     func drainAudio(maxFrames: Int) throws -> [StereoSample] { [] }
     func setSpeed(_ speed: EmulationSpeed) throws {}
-    func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? { nil }
+    func setDisplaySettings(
+        colorCorrection: ColorCorrection,
+        dmgPalette: DMGPalette,
+        advanceColors: AdvanceColors
+    ) throws -> EmulatorVideoFrame? { nil }
     func consumeRumbleAmplitude() throws -> Double { 0 }
     func pause() throws { lock.withLock { pauses += 1 } }
     func resume() throws {}

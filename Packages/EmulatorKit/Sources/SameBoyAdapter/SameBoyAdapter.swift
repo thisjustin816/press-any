@@ -33,6 +33,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     public private(set) var runningModel: HardwareModel?
     public private(set) var colorCorrection: ColorCorrection = .defaultValue
     public private(set) var dmgPalette: DMGPalette = .defaultValue
+    public private(set) var advanceColors: AdvanceColors = .gameBoyAdvance
     public private(set) var cheatCodes: [String] = []
     public private(set) var cheatsEnabled = true
 
@@ -185,9 +186,14 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         hasFrame = false
     }
 
-    public func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
+    public func setDisplaySettings(
+        colorCorrection: ColorCorrection,
+        dmgPalette: DMGPalette,
+        advanceColors: AdvanceColors = .gameBoyAdvance
+    ) throws -> EmulatorVideoFrame? {
         self.colorCorrection = colorCorrection
         self.dmgPalette = dmgPalette
+        self.advanceColors = advanceColors
         guard let instance else { return nil }
         applyDisplaySettings(to: instance)
         guard hasFrame else { return nil }
@@ -229,7 +235,9 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         case .cgbDonkeyKongLand: SB_DMG_PALETTE_CGB_DONKEY_KONG_LAND
         case .cgbCamera: SB_DMG_PALETTE_CGB_CAMERA
         }
+        // The correction first, so Game Boy Color colors are worked out once, for the new one.
         SBSetColorCorrection(instance, correction)
+        SBSetGBCColorsOnAGB(instance, advanceColors == .gameBoyColor)
         SBSetDMGPalette(instance, palette)
     }
 

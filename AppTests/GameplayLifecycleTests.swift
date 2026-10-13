@@ -188,6 +188,12 @@ final class GameplayLifecycleTests: XCTestCase {
         )
         XCTAssertEqual(runtime.displaySettings?.correction, .off)
         XCTAssertEqual(runtime.displaySettings?.palette, .cgbLeftB)
+        XCTAssertEqual(runtime.displaySettings?.advance, .gameBoyAdvance)
+        gameplay.applyDisplaySettings(
+            controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
+            colorCorrection: .off, dmgPalette: .cgbLeftB, advanceColors: .gameBoyColor, frameBlending: .off
+        )
+        XCTAssertEqual(runtime.displaySettings?.advance, .gameBoyColor, "Game Boy Advance colors reach it too")
         XCTAssertFalse(gameplay.isRunningFrames)
         XCTAssertEqual(runtime.frames, frames)
     }
@@ -804,8 +810,10 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     private var foregroundCount = 0
     private var failed = false
     private var frameCount = 0
-    private var displayOptions: (correction: ColorCorrection, palette: DMGPalette)?
-    var displaySettings: (correction: ColorCorrection, palette: DMGPalette)? { lock.withLock { displayOptions } }
+    private var displayOptions: (correction: ColorCorrection, palette: DMGPalette, advance: AdvanceColors)?
+    var displaySettings: (correction: ColorCorrection, palette: DMGPalette, advance: AdvanceColors)? {
+        lock.withLock { displayOptions }
+    }
     struct NotRunning: Error {}
 
     var backgrounds: Int { lock.withLock { backgroundCount } }
@@ -829,8 +837,12 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
 
     func drainAudio(maxFrames: Int) throws -> [StereoSample] { [] }
     func setSpeed(_ speed: EmulationSpeed) throws {}
-    func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
-        lock.withLock { displayOptions = (colorCorrection, dmgPalette) }
+    func setDisplaySettings(
+        colorCorrection: ColorCorrection,
+        dmgPalette: DMGPalette,
+        advanceColors: AdvanceColors
+    ) throws -> EmulatorVideoFrame? {
+        lock.withLock { displayOptions = (colorCorrection, dmgPalette, advanceColors) }
         return nil
     }
     func consumeRumbleAmplitude() throws -> Double { 0 }
