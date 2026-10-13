@@ -345,7 +345,8 @@ struct RootView: View {
                 onChange: {
                     // The cover's item keeps its identity, so the game updates in place.
                     gameplay?.display = container.gameplayDisplay(for: target)
-                }
+                },
+                requiresGameBoyColor: container.requiresGameBoyColor(gameID: target.gameID, buildID: target.buildID)
             )
             .presentationDetents([.medium, .large])
         }

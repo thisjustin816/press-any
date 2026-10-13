@@ -20,11 +20,14 @@ struct ScopedSettingsView: View {
     var onChange: (() -> Void)?
     /// False when App Settings pushes it as a page, which has its own navigation and Done.
     var inSheet = true
+    /// A game that runs only on a Game Boy Color, which the Model picker notes under Game Boy.
+    var requiresGameBoyColor = false
 
     @Environment(\.dismiss) private var dismiss
     @State private var showsPlus = false
-    /// Whether games here run on a Game Boy Advance or Game Boy Player, which brings its colors row.
-    @State private var runsOnAdvance = false
+    /// The hardware games here run on, which decides the Screen Colors row and whether Game Boy
+    /// Advance Colors shows. Read again after each change.
+    @State private var hardware: HardwareModel?
 
     var body: some View {
         if inSheet {
@@ -54,16 +57,26 @@ struct ScopedSettingsView: View {
         .onChange(of: plus.isUnlocked) { refreshModel() }
     }
 
-    /// Without Plus every game plays on Automatic, which is never a Game Boy Advance.
     private func refreshModel() {
-        let model = try? SettingsResolver(store: store).decode(
+        hardware = currentHardware()
+    }
+
+    /// Never Automatic: that resolves to the system's own hardware. Without Plus every game plays
+    /// on Automatic.
+    var resolvedHardware: HardwareModel {
+        hardware ?? currentHardware()
+    }
+
+    private func currentHardware() -> HardwareModel {
+        let stored = try? SettingsResolver(store: store).decode(
             HardwareModel.self,
             key: SettingKey.hardwareModel.rawValue,
             system: system,
             gameID: gameID,
             buildID: buildID
         )
-        runsOnAdvance = plus.isUnlocked && (model ?? .automatic).isGameBoyAdvance
+        let model = plus.isUnlocked ? stored ?? .automatic : .automatic
+        return model.resolved(for: system)
     }
 
     // Separate properties keep each section small enough for the compiler to type-check quickly.
@@ -84,7 +97,7 @@ struct ScopedSettingsView: View {
                 context: context
             )
             screenColors
-            if runsOnAdvance {
+            if resolvedHardware.isGameBoyAdvance {
                 InheritableSettingRow(
                     title: "Game Boy Advance Colors",
                     key: .advanceColors,
@@ -176,19 +189,35 @@ struct ScopedSettingsView: View {
                 key: .hardwareModel,
                 defaultValue: HardwareModel.automatic,
                 options: HardwareModel.allCases.map { ($0, $0.displayName) },
+                optionSubtitle: { $0 == .automatic ? HardwareModel.automaticSummary : nil },
+                listSections: modelSections,
+                explanation: plus.isUnlocked ? HardwareModel.settingExplanation : HardwareModel.lockedExplanation,
                 needsPlus: \.needsPlus,
                 context: context
             )
         } header: {
             Text("Playing")
         } footer: {
-            Text(HardwareModel.settingExplanation)
+            Text(HardwareModel.settingSummary)
         }
     }
 
-    var screenColorChoices: ScreenColorChoices { ScreenColorChoices(system: system) }
+    /// Automatic on its own, then each console's models.
+    var modelSections: [SettingOptionSection<HardwareModel>] {
+        [SettingOptionSection(values: [.automatic])] + HardwareConsole.allCases.map { console in
+            SettingOptionSection(
+                title: console.displayName,
+                values: console.models,
+                footer: console == .gameBoy && requiresGameBoyColor
+                    ? "This game needs a Game Boy Color, so on these it shows only its message for an original Game Boy."
+                    : nil
+            )
+        }
+    }
 
-    /// Each system has its own Screen Colors, so only the one that applies shows.
+    var screenColorChoices: ScreenColorChoices { ScreenColorChoices(hardware: resolvedHardware) }
+
+    /// Each kind of hardware has its own Screen Colors, so only the one that applies shows.
     @ViewBuilder private var screenColors: some View {
         switch screenColorChoices {
         case .dmg(let palettes):
@@ -217,6 +246,18 @@ struct ScopedSettingsView: View {
                 explanation: ColorCorrection.explanation,
                 context: context
             )
+        case .superGameBoy:
+            LabeledContent {
+                Text("Super Game Boy")
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Screen Colors")
+                    Text("Set by the game or the Super Game Boy")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -237,14 +278,19 @@ struct ScopedSettingsView: View {
     }
 }
 
-enum ScreenColorChoices {
+/// The Screen Colors that apply on the hardware a game runs on.
+enum ScreenColorChoices: Equatable {
     case dmg([DMGPalette])
     case correction([ColorCorrection])
+    /// The game or the Super Game Boy sets the colors, so there is nothing to choose.
+    case superGameBoy
 
-    init(system: GameSystem) {
-        switch system {
-        case .gameBoy: self = .dmg(DMGPalette.selectableCases)
-        case .gameBoyColor: self = .correction(ColorCorrection.allCases)
+    /// `hardware` is resolved, so Automatic doesn't arrive here.
+    init(hardware: HardwareModel) {
+        switch hardware {
+        case .automatic, .gameBoy, .gameBoyPocket: self = .dmg(DMGPalette.selectableCases)
+        case .superGameBoy, .superGameBoy2: self = .superGameBoy
+        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: self = .correction(ColorCorrection.allCases)
         }
     }
 }
@@ -270,9 +316,10 @@ struct InheritableSettingContext {
     }
 }
 
-private struct SettingOptionSection<Value> {
-    let title: String
+struct SettingOptionSection<Value> {
+    var title: String?
     let values: [Value]
+    var footer: String?
 }
 
 private struct InheritableSettingRow<Value: Codable & Hashable>: View {
@@ -287,7 +334,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     let options: [(Value, String)]
     var optionImage: ((Value) -> Image)?
     var optionTitle: ((Value) -> String)?
-    var optionSubtitle: ((Value) -> String)?
+    var optionSubtitle: ((Value) -> String?)?
     var listSections: [SettingOptionSection<Value>]?
     var explanation: String?
     var normalizeValue: (Value) -> Value = { $0 }
@@ -367,13 +414,17 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                 Section {
                     ForEach(sections[index].values, id: \.self) { value in
                         selectionButton(.value(value), title: optionTitle?(value) ?? label(for: value),
-                                        subtitle: optionSubtitle?(value), value: value)
+                                        subtitle: optionSubtitle?(value), value: value,
+                                        locked: context.plus.isLocked(needsPlus(value)))
                     }
                 } header: {
-                    Text(sections[index].title)
+                    if let title = sections[index].title {
+                        Text(title)
+                    }
                 } footer: {
-                    if index == sections.indices.last, let explanation {
-                        Text(explanation)
+                    let notes = [sections[index].footer, index == sections.indices.last ? explanation : nil].compactMap { $0 }
+                    if !notes.isEmpty {
+                        Text(notes.joined(separator: "\n\n"))
                     }
                 }
             }
@@ -385,7 +436,9 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func selectionButton(_ selection: Choice, title: String, subtitle: String?, value: Value) -> some View {
+    /// A locked value is marked Plus, and choosing it opens the Plus screen.
+    private func selectionButton(_ selection: Choice, title: String, subtitle: String?, value: Value,
+                                 locked: Bool = false) -> some View {
         Button {
             choose(selection)
         } label: {
@@ -399,6 +452,9 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 12)
+                if locked {
+                    PlusBadge()
+                }
                 if let optionImage {
                     optionImage(value)
                         .resizable()

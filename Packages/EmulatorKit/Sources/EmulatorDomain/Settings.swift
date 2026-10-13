@@ -427,7 +427,13 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     /// A Game Boy Advance inside the GameCube's Game Boy Player.
     case gameBoyPlayer = "gbp"
 
-    public static let settingExplanation = "Model is the hardware games run on. Automatic plays Game Boy Color games on a Game Boy Color and the rest on a Game Boy. An open game restarts on the new hardware when its settings close, keeping its save. A save state loads only on the kind of hardware it was made on."
+    /// Under the Model row.
+    public static let settingSummary = "Model is the hardware games run on. An open game restarts on the new hardware when its settings close, keeping its save."
+    /// Under the Model picker.
+    public static let settingExplanation = settingSummary + " A save state loads only on the kind of hardware it was made on."
+
+    /// What Automatic picks, under it in the Model picker.
+    public static let automaticSummary = "Game Boy Color for its games, Game Boy for the rest"
 
     public var displayName: String {
         switch self {
@@ -451,6 +457,16 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
         }
     }
 
+    /// The console this model is a version of, which the Model picker groups by. Nil for Automatic.
+    public var console: HardwareConsole? {
+        switch self {
+        case .automatic: nil
+        case .gameBoy, .gameBoyPocket, .superGameBoy, .superGameBoy2: .gameBoy
+        case .gameBoyColor: .gameBoyColor
+        case .gameBoyAdvance, .gameBoyPlayer: .gameBoyAdvance
+        }
+    }
+
     /// A Game Boy Advance, alone or in a Game Boy Player, whose darker screen Game Boy Advance
     /// Colors can undo.
     public var isGameBoyAdvance: Bool {
@@ -466,6 +482,26 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
         case .superGameBoy, .superGameBoy2: .superGameBoy
         case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: .gameBoyColor
         }
+    }
+}
+
+/// The consoles the Model picker groups its models under. Save states follow `HardwareFamily`
+/// instead: a Super Game Boy is a Game Boy here, but its states don't load on one.
+public enum HardwareConsole: CaseIterable, Sendable {
+    case gameBoy
+    case gameBoyColor
+    case gameBoyAdvance
+
+    public var displayName: String {
+        switch self {
+        case .gameBoy: "Game Boy"
+        case .gameBoyColor: "Game Boy Color"
+        case .gameBoyAdvance: "Game Boy Advance"
+        }
+    }
+
+    public var models: [HardwareModel] {
+        HardwareModel.allCases.filter { $0.console == self }
     }
 }
 
