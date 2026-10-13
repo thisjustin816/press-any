@@ -22,7 +22,8 @@ struct AcknowledgementsView: View {
         Component(
             name: "SameBoy",
             use: """
-            Game Boy and Game Boy Color emulation, boot ROMs and boot palettes by Lior Halphon.
+            Game Boy, Super Game Boy, Game Boy Color and Game Boy Advance emulation, boot ROMs and
+            boot palettes by Lior Halphon.
             Source: https://github.com/LIJI32/SameBoy
             """,
             license: .bundled(file: "SameBoy-LICENSE")

@@ -482,7 +482,7 @@ public enum AdvanceColors: String, Codable, Sendable, CaseIterable {
     }
 }
 
-public enum HardwareFamily: String, Sendable, CaseIterable {
+public enum HardwareFamily: Sendable {
     case gameBoy
     case superGameBoy
     case gameBoyColor

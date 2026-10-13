@@ -63,8 +63,8 @@ In v1, Plus includes:
   Plus a game keeps its latest Auto State.
 - **Timed States**: an Auto State every 1, 2, 5 or 10 minutes of library play, with Off as the
   default. Pausing restarts the interval (see Auto State).
-- **Model**: run a game on a Game Boy, Game Boy Pocket, Super Game Boy, Super Game Boy 2, Game Boy
-  Color, Game Boy Advance or Game Boy Player (see Settings). Without Plus, games play on Automatic
+- **Model**: run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy,
+  Super Game Boy 2, Game Boy Color, Game Boy Advance or Game Boy Player (see Settings). Without Plus, games play on Automatic
   and a stored choice is kept.
 
 Everything else is free: play, saves, manual, Quick and slot states, close and background Auto
@@ -73,8 +73,9 @@ Fast Forward, Frame Blending, Screen Colors and the layouts.
 
 Plus also includes everything on its roadmap and anything added later, at no extra cost. Some of
 it will be free for everyone, too. The roadmap on the Plus screen is the v1.1 list above, without
-crash reporting and usage counts. GBA isn't on it. The Plus screen lists it separately under Also
-Planned, as planned for a later version, with no promise that it's free or part of Plus.
+crash reporting and usage counts. Playing GBA games isn't on it, and is separate from the Game Boy
+Advance Model, which runs GB and GBC games. The Plus screen lists GBA games under Also Planned, as
+planned for a later version, with no promise that they're free or part of Plus.
 `App/Plus/PlusRoadmap.swift` holds the lists.
 
 Plus follows these rules:
@@ -1079,7 +1080,8 @@ Game's or Build's settings use:
 
 The settings for a system, a Game, a Build or the open game are one form: a page in App Settings
 for a system, and otherwise a sheet short enough to sit at half height over a paused game. They're
-grouped under Display (Orientation, Screen Scaling, Screen Colors, LCD Filter, Frame Blending),
+grouped under Display (Orientation, Screen Scaling, Screen Colors, Game Boy Advance Colors on those
+models, LCD Filter, Frame Blending),
 Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States,
 Skip Boot Logo, Model). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
@@ -1112,7 +1114,7 @@ Game Boy Player. App Settings has it on the Playing page.
   on a Game Boy or Pocket: a Game Boy Color, Advance or Player colors it as its boot ROM does, and
   the Super Game Boys color the picture as the game asks.
 - A Game Boy Advance's screen is darker than a Game Boy Color's, and SameBoy colors a game on a
-  Game Boy Advance or Player the same way. When a game's Model is one of those, Display has **Game
+  Game Boy Advance or Player for that darker screen. When a game's Model is one of those, Display has **Game
   Boy Advance Colors**: As on a Game Boy Advance, the default, or As on a Game Boy Color, which
   colors the picture as a Game Boy Color would with the same Screen Colors correction. The game
   still runs on a Game Boy Advance and can tell. Original colors look the same on both.

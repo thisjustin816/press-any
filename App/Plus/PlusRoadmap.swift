@@ -14,7 +14,7 @@ enum PlusRoadmap {
         Item(title: "App Icons", detail: "The home-screen icon in Berry, Grape, Teal, Kiwi or Dandelion."),
         Item(title: "Auto State History", detail: "Keep 3, 5 or 10 Auto States for each save. Without Plus, the latest is kept."),
         Item(title: "Timed States", detail: "An Auto State every 1, 2, 5 or 10 minutes of play. Pausing restarts the interval."),
-        Item(title: "Model", detail: "Run a game on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, with Super Game Boy colors."),
+        Item(title: "Model", detail: "Run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, with Super Game Boy colors."),
     ]
 
     static let upcoming = [
@@ -37,6 +37,6 @@ enum PlusRoadmap {
 
     /// Planned, but not part of what Plus promises: whether it's free or Plus isn't decided.
     static let alsoPlanned = [
-        Item(title: "Game Boy Advance", detail: "Game Boy Advance emulation is planned for a later version, with no date yet."),
+        Item(title: "Game Boy Advance", detail: "Playing Game Boy Advance games is planned for a later version, with no date yet."),
     ]
 }
