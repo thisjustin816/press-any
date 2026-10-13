@@ -427,7 +427,7 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     /// A Game Boy Advance inside the GameCube's Game Boy Player.
     case gameBoyPlayer = "gbp"
 
-    public static let settingExplanation = "Model is the hardware games run on. Automatic plays Game Boy Color games on a Game Boy Color and the rest on a Game Boy. A change applies when the game starts or restarts, and a save state loads only on the kind of hardware it was made on."
+    public static let settingExplanation = "Model is the hardware games run on. Automatic plays Game Boy Color games on a Game Boy Color and the rest on a Game Boy. An open game restarts on the new hardware when its settings close, keeping its save. A save state loads only on the kind of hardware it was made on."
 
     public var displayName: String {
         switch self {
@@ -489,5 +489,11 @@ public enum HardwareFamily: String, Sendable, CaseIterable {
 
     public var models: [HardwareModel] {
         HardwareModel.allCases.filter { $0.family == self }
+    }
+
+    /// "Game Boy Color, Game Boy Advance or Game Boy Player".
+    public var modelList: String {
+        let names = models.map(\.displayName)
+        return names.dropLast().joined(separator: ", ") + " or " + names.last!
     }
 }

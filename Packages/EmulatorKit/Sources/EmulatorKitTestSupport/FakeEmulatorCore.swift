@@ -126,13 +126,17 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
         // JSONEncoder doesn't promise a key order, so two encodes of one state could differ.
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
-        return try encoder.encode(
-            SerializedState(frameCounter: frameCounter, battery: battery, system: loadedSystem)
-        )
+        return try encoder.encode(SerializedState(
+            frameCounter: frameCounter, battery: battery, system: loadedSystem, hardwareModel: runningModel
+        ))
     }
 
     public func deserializeState(_ data: Data) throws {
         let state = try JSONDecoder().decode(SerializedState.self, from: data)
+        // As SameBoy does, a state from another hardware family is refused before anything loads.
+        if let made = state.hardwareModel?.family, let running = runningModel?.family, made != running {
+            throw StateNeedsOtherHardware(family: made)
+        }
         if failsNextStateLoadPartway {
             failsNextStateLoadPartway = false
             battery = state.battery
@@ -172,6 +176,15 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
         hardwareModel = model
     }
 
+    /// The hardware the loaded game runs on.
+    public var runningModel: HardwareModel? {
+        loadedSystem.map { hardwareModel.resolved(for: $0) }
+    }
+
+    public func hardwareFamily(ofState state: Data) -> HardwareFamily? {
+        (try? JSONDecoder().decode(SerializedState.self, from: state))?.hardwareModel?.family
+    }
+
     public var configuredSpeed: EmulationSpeed {
         speed
     }
@@ -181,4 +194,5 @@ private struct SerializedState: Codable {
     let frameCounter: UInt64
     let battery: Data
     let system: GameSystem?
+    var hardwareModel: HardwareModel?
 }

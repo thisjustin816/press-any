@@ -16,6 +16,9 @@ public enum AutoStateRestore: Equatable, Sendable {
     case restored(SaveState)
     /// The state was rejected and the game booted normally. The state is kept.
     case failed(SaveState)
+    /// The state was made on hardware of another family than the game now runs on, so the game
+    /// booted normally. The state is kept, and loads once the game runs on that family again.
+    case needsOtherHardware(SaveState, HardwareFamily)
 }
 
 public enum EmulationSessionError: Error, Equatable {
@@ -66,6 +69,8 @@ public final class EmulationSession: @unchecked Sendable {
     private let playtimeRecordingLock = NSLock()
     private var _state: EmulationSessionState = .idle
     private var worker: SessionWorker?
+    /// The hardware the open game runs on.
+    private var _runningHardwareModel: HardwareModel?
     private var activeContext: LaunchContext?
     /// Holds the running game's image from launch until the session ends.
     private var imageLease: InFlightFiles.Lease?
@@ -206,6 +211,10 @@ public final class EmulationSession: @unchecked Sendable {
                     try stateService.load(autoState, worker: candidate, context: context)
                     newWorker = candidate
                     restore = .restored(autoState)
+                } catch let needs as StateNeedsOtherHardware {
+                    // Refused before anything loaded, but boot clean as for any other refusal.
+                    newWorker = try bootedWorker(skipBoot: skipsBootAnimation(build))
+                    restore = .needsOtherHardware(autoState, needs.family)
                 } catch {
                     // The core may hold part of the rejected state, so boot a clean one.
                     newWorker = try bootedWorker(skipBoot: skipsBootAnimation(build))
@@ -219,6 +228,7 @@ public final class EmulationSession: @unchecked Sendable {
             lock.withLock {
                 worker = newWorker
                 activeContext = context
+                _runningHardwareModel = model.resolved(for: build.system)
                 imageLease = lease
                 sessionEmulatedNanoseconds = 0
                 recordedNanoseconds = 0
@@ -236,6 +246,7 @@ public final class EmulationSession: @unchecked Sendable {
             lock.withLock {
                 worker = nil
                 activeContext = nil
+                _runningHardwareModel = nil
                 imageLease = nil
                 latestFrame = nil
                 _state = .idle
@@ -292,6 +303,33 @@ public final class EmulationSession: @unchecked Sendable {
             buildID: build.id
         )
         return skip ?? false
+    }
+
+    /// The hardware the open game runs on, or nil with no game open.
+    public var runningHardwareModel: HardwareModel? {
+        lock.withLock { _runningHardwareModel }
+    }
+
+    /// The hardware the open game would run on now, when the Model setting has changed it since the
+    /// game started or last restarted; otherwise nil. `restart()` switches to it.
+    public func changedHardwareModel() -> HardwareModel? {
+        guard let (_, context, _) = try? snapshotActive(),
+              let build = try? builds.fetchBuild(id: context.buildID) else { return nil }
+        let model = hardwareModel(build).resolved(for: build.system)
+        return model == runningHardwareModel ? nil : model
+    }
+
+    /// The hardware family `state` was made on, when it's not the one its Build runs on now, so
+    /// the state can't load; otherwise nil. Unreadable or unmarked states give nil, and their load
+    /// decides.
+    public func hardwareFamilyNeeded(for state: SaveState) -> HardwareFamily? {
+        guard let build = try? builds.fetchBuild(id: state.buildID),
+              let asset = try? assets.fetchAsset(id: state.stateAssetID),
+              let url = try? assetStore.managedURL(relativePath: asset.relativePath),
+              let data = try? assetStore.readData(at: url),
+              let core = try? coreResolver.execute(buildID: build.id),
+              let family = (core as? any HardwareModelCapability)?.hardwareFamily(ofState: data) else { return nil }
+        return family == hardwareModel(build).resolved(for: build.system).family ? nil : family
     }
 
     /// The hardware the Build runs on: the setting resolved for it, or Automatic when choosing
@@ -544,7 +582,10 @@ public final class EmulationSession: @unchecked Sendable {
             try core.reset()
             if skipBoot { _ = try (core as? any BootSkippingCapability)?.skipBootAnimation() }
         }
-        lock.withLock { latestFrame = nil }
+        lock.withLock {
+            latestFrame = nil
+            if let model, let build, activeContext == context { _runningHardwareModel = model.resolved(for: build.system) }
+        }
     }
 
     /// The periodic save queue calls this during play. Checkpoints have their own cadence and
@@ -690,6 +731,7 @@ public final class EmulationSession: @unchecked Sendable {
         lock.withLock {
             worker = nil
             activeContext = nil
+            _runningHardwareModel = nil
             imageLease?.end()
             imageLease = nil
             latestFrame = nil

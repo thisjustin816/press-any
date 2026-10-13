@@ -299,6 +299,10 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         guard loaded else { throw SameBoyAdapterError.stateLoadFailed }
     }
 
+    public func hardwareFamily(ofState state: Data) -> HardwareFamily? {
+        Self.stateFamily(state)
+    }
+
     /// The hardware family a state was made on, from the model its BESS CORE block names, or nil
     /// when the state has no readable BESS footer.
     static func stateFamily(_ state: Data) -> HardwareFamily? {

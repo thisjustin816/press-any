@@ -462,7 +462,7 @@ struct RootView: View {
         let prepared = container.prepareLaunch(context: context)
         if launchStart == .startOver {
             start(prepared, resume: false)
-        } else if prepared.autoState != nil, prepared.policy == .ask {
+        } else if prepared.autoState != nil, prepared.policy == .ask, !prepared.autoStateNeedsOtherHardware {
             pendingResume = prepared
         } else {
             start(prepared, resume: true)
@@ -577,14 +577,25 @@ struct RootView: View {
         }
     }
 
+    /// Where the player left off can't resume on the hardware the game now runs on.
+    static func otherHardwareResumeMessage(family: HardwareFamily, running: HardwareModel?) -> String {
+        let started = running.map { "on a \($0.displayName) " } ?? ""
+        return "Where you left off was on a \(family.modelList), so the game started \(started)from its battery save. That point is kept in States, and loads once Model is set to one of those."
+    }
+
     private func start(_ launch: PreparedLaunch, resume: Bool) {
         pendingResume = nil
         guard let container = bootstrap.container else { return }
         do {
             let restore = try container.start(launch, resume: resume)
             var message: String?
-            if case .failed = restore {
+            switch restore {
+            case .failed:
                 message = "Couldn’t restore where you left off, so the game started from its battery save. The resume point was kept."
+            case .needsOtherHardware(_, let family):
+                message = Self.otherHardwareResumeMessage(family: family, running: launch.session.runningHardwareModel)
+            case .notRequested, .restored:
+                break
             }
             gameplay = GameplayPresentation(
                 kind: .library,

@@ -369,7 +369,10 @@ final class AppContainer {
         let session = makeEmulationSession()
         let policy = session.autoResumePolicy(for: context)
         let autoState = policy == .never ? nil : (try? session.resumableAutoState(for: context)) ?? nil
-        return PreparedLaunch(context: context, session: session, policy: policy, autoState: autoState)
+        return PreparedLaunch(
+            context: context, session: session, policy: policy, autoState: autoState,
+            autoStateNeedsOtherHardware: autoState.flatMap(session.hardwareFamilyNeeded) != nil
+        )
     }
 
     func start(_ launch: PreparedLaunch, resume: Bool) throws -> AutoStateRestore {
@@ -644,4 +647,7 @@ struct PreparedLaunch {
     let policy: AutoResumePolicy
     /// Nil when there is nothing safe to restore or the policy is `.never`.
     let autoState: SaveState?
+    /// The Auto State was made on hardware of another family than the game now runs on, so it
+    /// can't resume and isn't offered.
+    var autoStateNeedsOtherHardware = false
 }

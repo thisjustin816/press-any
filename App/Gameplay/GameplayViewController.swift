@@ -557,6 +557,11 @@ final class GameplayViewController: UIViewController {
     /// check until the state is loaded or the player cancels, so the game can't save in between.
     private func loadState(_ state: SaveState) {
         guard let states = runtime as? any SaveStateRuntime else { return }
+        // Before asking about the save, since a state from other hardware won't load either way.
+        if let family = states.hardwareFamilyNeeded(for: state) {
+            showTransientMessage(Self.stateLoadFailure(StateNeedsOtherHardware(family: family)))
+            return
+        }
         holdFrames()
         do {
             guard try states.loadingWouldRollBackSave(state) else {
@@ -1042,8 +1047,26 @@ final class GameplayViewController: UIViewController {
     func setCoveredBySheet(_ covered: Bool) {
         guard covered != coveredBySheet else { return }
         coveredBySheet = covered
-        guard covered else { return }
+        guard covered else {
+            restartOnChangedHardware()
+            return
+        }
         pauseGameplay()
+    }
+
+    /// A Model chosen in the open game's settings takes effect once the sheet closes: the game
+    /// restarts on the new hardware, as Restart does, keeping where it was as an Auto State.
+    private func restartOnChangedHardware() {
+        guard !halted, let model = runtime.changedHardwareModel() else { return }
+        holdFrames()
+        defer { releaseFrames() }
+        do {
+            try runtime.restart()
+            resumeTapped()
+            showTransientMessage("Restarted on \(model.displayName).")
+        } catch {
+            showTransientMessage("Couldn’t restart on \(model.displayName): \(error)")
+        }
     }
 
     private func addToLibraryTapped() {

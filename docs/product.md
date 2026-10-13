@@ -1094,12 +1094,20 @@ Game Boy Player. App Settings has it on the Playing page.
   Game Boy Color game brightening its colors on a Game Boy Advance. The Game Boy Player is SameBoy's
   model of a Game Boy Advance inside one. There's no promise that a Game Boy Color-only game works
   on a monochrome model.
-- A change applies when the game next starts. Restart in the game menu switches the open game,
-  keeping its save, cheats and display settings.
+- Changing Model in an open game's settings restarts the game on the new hardware when the sheet
+  closes, as SameBoy does, with "Restarted on Game Boy Advance." Like Restart, it keeps where the
+  player was as an Auto State first, and the battery save, cheats and display settings carry over.
+  Several changes in one visit restart once, and a change that leaves the hardware the same, such
+  as Automatic to Game Boy Color for a Game Boy Color game, doesn't restart. Changed anywhere else,
+  Model applies the next time the game starts.
+- Model is a setting, not part of a Save Profile: the battery save is the cartridge's, so every
+  model reads and writes the same save, and a profile shared by Builds on different models works
+  as it does on real hardware.
 - A save state loads only on the kind of hardware it was made on: Game Boy and Pocket; Super Game
   Boy and Super Game Boy 2; or Game Boy Color, Advance and Player. Loading one on another kind says
-  which models it needs. An Auto State that can't resume for that reason starts the game from its
-  save and is kept.
+  which models it needs, before any question about the save. Resume Games doesn't offer an Auto
+  State made on another kind: the game starts from its battery save, a message says where that
+  point can load, and the state stays in States. Crash recovery behaves the same way.
 - Screen Colors lists the choices for the game's own system. A Game Boy game's palettes apply only
   on a Game Boy or Pocket: a Game Boy Color, Advance or Player colors it as its boot ROM does, and
   the Super Game Boys color the picture as the game asks.

@@ -90,7 +90,7 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 | missing | Nonintrusive "core update available" notice | v1.1 | none |
 | missing | Explicit, reversible core-migration checkpoint (new state lineage, rollback when old core available) | v1.1 | none |
 | done | Automatic model selection | v1 | CGB flag 0x80/0xC0 -> GBC, else DMG (`HardwareModel.resolved`); SGB never chosen automatically |
-| done | Model setting (Plus) at App->System->Game->Build | v1 | `hardwareModel`: DMG, MGB, SGB, SGB2, CGB, AGB, GBP, each with its own boot ROM; Restart applies a change; states refused across hardware families name the models they need; Game Boy Advance Colors shows a GBA game as a GBC would (`advanceColors`); Quick Play uses Automatic. Device check pending |
+| done | Model setting (Plus) at App->System->Game->Build | v1 | `hardwareModel`: DMG, MGB, SGB, SGB2, CGB, AGB, GBP, each with its own boot ROM; an open game restarts on a changed Model when its settings close; states refused across hardware families name the models they need and aren't offered by Resume Games; Game Boy Advance Colors shows a GBA game as a GBC would (`advanceColors`); Quick Play uses Automatic. Device check pending |
 | partial | SGB mode: palettes, borders, game enhancements (custom border editing deferred) | v1.1 | SGB and SGB2 color the picture; the border (a 256x224 picture) isn't drawn yet |
 | missing | User-chosen alternate core per Build | later |  |
 | missing | mGBA/GBA adapter | 1.2 or 2.0 | after GB/GBC is feature complete |

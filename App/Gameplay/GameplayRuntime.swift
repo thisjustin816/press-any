@@ -33,11 +33,26 @@ protocol GameplayRuntime: AnyObject {
     @discardableResult func flushBatteryIfChanged() throws -> Bool
     /// Starts the game again from its boot, keeping its save. Stop the frame loop first.
     func restart() throws
+    /// The hardware the game would run on now, when the Model setting has changed it since the game
+    /// started; `restart()` switches to it.
+    func changedHardwareModel() -> HardwareModel?
+}
+
+extension GameplayRuntime {
+    /// Quick Play always runs on Automatic.
+    func changedHardwareModel() -> HardwareModel? { nil }
+}
+
+extension SaveStateRuntime {
+    /// A runtime that can't tell lets the load decide.
+    func hardwareFamilyNeeded(for state: SaveState) -> HardwareFamily? { nil }
 }
 
 /// Library sessions also keep manual save states. Quick Play does not, since nothing in its
 /// sandbox outlives the session unless it is promoted.
 protocol SaveStateRuntime: GameplayRuntime {
+    /// The hardware family the state was made on when the game runs on another, so it won't load.
+    func hardwareFamilyNeeded(for state: SaveState) -> HardwareFamily?
     func resetTimedStateInterval()
     @discardableResult func saveTimedStateIfDue() throws -> Bool
     @discardableResult func saveCrashRecoveryIfDue() throws -> Bool

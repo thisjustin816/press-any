@@ -198,6 +198,33 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(runtime.frames, frames)
     }
 
+    func testClosingSettingsWithAChangedModelRestartsTheGameOnIt() {
+        let (gameplay, runtime, _) = makeGameplay()
+        gameplay.setCoveredBySheet(true)
+        gameplay.setCoveredBySheet(false)
+        XCTAssertEqual(runtime.restarts, 0, "nothing changed, so the game stays paused where it was")
+        XCTAssertTrue(gameplay.isShowingPaused)
+
+        gameplay.setCoveredBySheet(true)
+        runtime.chooseModel(.gameBoyAdvance)
+        XCTAssertEqual(runtime.restarts, 0, "nothing restarts while the sheet is open")
+        gameplay.setCoveredBySheet(false)
+        XCTAssertEqual(runtime.restarts, 1)
+        XCTAssertNil(runtime.changedHardwareModel())
+        XCTAssertFalse(gameplay.isShowingPaused, "it plays from its boot, as Restart does")
+
+        gameplay.setCoveredBySheet(true)
+        gameplay.setCoveredBySheet(false)
+        XCTAssertEqual(runtime.restarts, 1, "once")
+    }
+
+    func testResumingOnOtherHardwareSaysWhereThatPointLoads() {
+        XCTAssertEqual(
+            RootView.otherHardwareResumeMessage(family: .gameBoyColor, running: .gameBoy),
+            "Where you left off was on a Game Boy Color, Game Boy Advance or Game Boy Player, so the game started on a Game Boy from its battery save. That point is kept in States, and loads once Model is set to one of those."
+        )
+    }
+
     func testControllerMenuOpensAndClosesWithTouchControlsHidden() throws {
         let (gameplay, runtime, monitor) = makeGameplay()
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
@@ -864,7 +891,18 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     func stop(createAutoState: Bool) throws {}
     func stop(createAutoState: Bool, discardUnsaved: Bool) throws {}
     func flushBatteryIfChanged() throws -> Bool { false }
-    func restart() throws {}
+    private var restartCount = 0
+    private var pendingModel: HardwareModel?
+    var restarts: Int { lock.withLock { restartCount } }
+    /// Stands in for a Model chosen in the settings sheet; a restart switches to it.
+    func chooseModel(_ model: HardwareModel?) { lock.withLock { pendingModel = model } }
+    func restart() throws {
+        lock.withLock {
+            restartCount += 1
+            pendingModel = nil
+        }
+    }
+    func changedHardwareModel() -> HardwareModel? { lock.withLock { pendingModel } }
 }
 
 private final class StateMenuRuntime: LifecycleRuntime, SaveStateRuntime, @unchecked Sendable {
