@@ -525,9 +525,9 @@ final class AppContainer {
         )
     }
 
-    /// Whether a game runs only on a Game Boy Color, from its header. With no Build given, every
-    /// Build of the Game must need one. A Build without a stored header counts as no.
-    func requiresGameBoyColor(gameID: UUID?, buildID: UUID?) -> Bool {
+    /// Whether a game's header marks it for a Game Boy Color only (CGB flag 0xC0). With no Build
+    /// given, every Build of the Game must be marked. A Build without a stored header counts as no.
+    func marksGameBoyColorOnly(gameID: UUID?, buildID: UUID?) -> Bool {
         let builds: [Build]
         if let buildID {
             builds = (try? repositories.builds.fetchBuild(id: buildID)).map { [$0] } ?? []

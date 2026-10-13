@@ -333,7 +333,7 @@ struct GameDetailView: View {
                     buildID: target.buildID,
                     store: container.repositories.settings,
                     plus: container.plus,
-                    requiresGameBoyColor: container.requiresGameBoyColor(gameID: model.gameID, buildID: target.buildID)
+                    marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: model.gameID, buildID: target.buildID)
                 )
             }
             .sheet(item: $buildDetails) { build in
