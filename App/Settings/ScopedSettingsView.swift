@@ -121,7 +121,7 @@ struct ScopedSettingsView: View {
     }
 
     private var playingSection: some View {
-        Section("Playing") {
+        Section {
             InheritableSettingRow(
                 title: "Timed States",
                 key: .timedStates,
@@ -144,6 +144,18 @@ struct ScopedSettingsView: View {
                 options: [(true, "On"), (false, "Off")],
                 context: context
             )
+            InheritableSettingRow(
+                title: "Model",
+                key: .hardwareModel,
+                defaultValue: HardwareModel.automatic,
+                options: HardwareModel.allCases.map { ($0, $0.displayName) },
+                needsPlus: \.needsPlus,
+                context: context
+            )
+        } header: {
+            Text("Playing")
+        } footer: {
+            Text(HardwareModel.settingExplanation)
         }
     }
 

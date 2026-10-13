@@ -606,6 +606,50 @@ extension EmulationSessionTests {
         try settings.setValueJSON("not json", key: key, scope: .app)
         XCTAssertEqual(try skipsOnStart(harness.contextA), 0, "an unreadable value shows the logo")
     }
+
+    func testTheResolvedModelIsSetBeforeTheImageLoads() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let key = SettingKey.hardwareModel.rawValue
+
+        func modelOnStart(_ context: LaunchContext, allowed: Bool = true) throws -> HardwareModel {
+            let session = harness.makeSession(settings: SettingsResolver(store: settings), choosesHardwareModel: { allowed })
+            try session.start(context: context)
+            try session.stop(createAutoState: false)
+            return try XCTUnwrap(harness.factory.cores.last).hardwareModel
+        }
+
+        XCTAssertEqual(try modelOnStart(harness.contextA), .automatic, "unset is Automatic")
+
+        try settings.set(HardwareModel.gameBoyPocket, key: key, scope: .app)
+        XCTAssertEqual(try modelOnStart(harness.contextA), .gameBoyPocket, "the app-wide setting applies")
+
+        try settings.set(HardwareModel.superGameBoy, key: key, scope: .build(harness.buildB.id))
+        XCTAssertEqual(try modelOnStart(harness.contextB), .superGameBoy, "a Build override wins")
+        XCTAssertEqual(try modelOnStart(harness.contextB, allowed: false), .automatic, "without Plus the game plays on Automatic")
+        XCTAssertEqual(try settings.valueJSON(key: key, scope: .build(harness.buildB.id)), "\"sgb\"", "and the choice is kept")
+
+        try settings.setValueJSON("not json", key: key, scope: .app)
+        XCTAssertEqual(try modelOnStart(harness.contextA), .automatic, "an unreadable value is Automatic")
+    }
+
+    func testRestartRunsTheGameOnAChangedModel() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: harness.contextA)
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        XCTAssertEqual(core.hardwareModel, .automatic)
+
+        try settings.set(HardwareModel.gameBoyAdvance, key: SettingKey.hardwareModel.rawValue, scope: .game(harness.contextA.gameID))
+        _ = try session.stepFrame()
+        XCTAssertEqual(core.hardwareModel, .automatic, "a running game keeps its hardware")
+
+        try session.restart()
+        XCTAssertEqual(core.hardwareModel, .gameBoyAdvance, "Restart switches it")
+        XCTAssertEqual(harness.factory.cores.count, 1, "on the same core")
+        try session.stop(createAutoState: false)
+    }
 }
 
 extension EmulationSessionTests {
@@ -1290,6 +1334,7 @@ private struct SessionHarness {
         thumbnails: (any FrameImageEncoding)? = nil,
         cheats: (any BuildCheatRepository)? = nil,
         writesTimedStates: @escaping @Sendable () -> Bool = { false },
+        choosesHardwareModel: @escaping @Sendable () -> Bool = { true },
         clock: (@Sendable () -> Date)? = nil,
         now: Date = Date(timeIntervalSince1970: 1_700_000_000)
     ) -> EmulationSession {
@@ -1306,6 +1351,7 @@ private struct SessionHarness {
             thumbnails: thumbnails,
             cheats: cheats,
             writesTimedStates: writesTimedStates,
+            choosesHardwareModel: choosesHardwareModel,
             now: clock ?? { now }
         )
     }

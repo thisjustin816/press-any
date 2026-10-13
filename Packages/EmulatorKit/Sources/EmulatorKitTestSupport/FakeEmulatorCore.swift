@@ -28,10 +28,13 @@ public struct FakeCoreFactory: EmulatorCoreFactory {
     }
 }
 
-public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability {
+public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability {
     public let descriptor: CoreDescriptor
     public let supportedSystems: Set<GameSystem>
     public let stateSerializationVersion = "fake-json-v1"
+    public private(set) var hardwareModel: HardwareModel = .automatic
+    /// Each model asked for, in order, including ones that change nothing.
+    public private(set) var hardwareModelRequests: [HardwareModel] = []
 
     private var loadedSystem: GameSystem?
     private var battery = Data()
@@ -162,6 +165,11 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
         guard loadedSystem != nil else { throw FakeEmulatorCoreError.romNotLoaded }
         bootAnimationSkips += 1
         return true
+    }
+
+    public func setHardwareModel(_ model: HardwareModel) throws {
+        hardwareModelRequests.append(model)
+        hardwareModel = model
     }
 
     public var configuredSpeed: EmulationSpeed {

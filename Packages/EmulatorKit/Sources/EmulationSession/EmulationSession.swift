@@ -59,6 +59,7 @@ public final class EmulationSession: @unchecked Sendable {
     private let cheats: (any BuildCheatRepository)?
     private var lastCheckpointNanoseconds: UInt64 = 0
     private let writesTimedStates: @Sendable () -> Bool
+    private let choosesHardwareModel: @Sendable () -> Bool
     private var timedStateStartedAt: Date?
 
     private let lock = NSLock()
@@ -96,6 +97,7 @@ public final class EmulationSession: @unchecked Sendable {
         cheats: (any BuildCheatRepository)? = nil,
         keepsAutoStateHistory: @escaping @Sendable () -> Bool = { true },
         writesTimedStates: @escaping @Sendable () -> Bool = { false },
+        choosesHardwareModel: @escaping @Sendable () -> Bool = { true },
         batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -107,6 +109,7 @@ public final class EmulationSession: @unchecked Sendable {
         self.imageResolver = imageResolver
         self.now = now
         self.writesTimedStates = writesTimedStates
+        self.choosesHardwareModel = choosesHardwareModel
         self.coreResolver = ResolveCoreForBuild(builds: builds, registry: coreRegistry, now: now)
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
         self.stateService = SaveStateService(
@@ -168,10 +171,14 @@ public final class EmulationSession: @unchecked Sendable {
             // The save as the core reports it, which can differ in size from the file, so an
             // unchanged save isn't mistaken for a new one.
             var savedBattery = Data()
+            let model = hardwareModel(build)
 
             func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
                 let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
-                try newWorker.perform { try $0.loadImage(rom, system: build.system) }
+                try newWorker.perform { core in
+                    try (core as? any HardwareModelCapability)?.setHardwareModel(model)
+                    try core.loadImage(rom, system: build.system)
+                }
                 try applyCheats(buildID: build.id, worker: newWorker)
                 try newWorker.perform { try $0.loadPersistentSave(battery) }
                 savedBattery = try newWorker.perform { try $0.persistentSaveData() }
@@ -285,6 +292,20 @@ public final class EmulationSession: @unchecked Sendable {
             buildID: build.id
         )
         return skip ?? false
+    }
+
+    /// The hardware the Build runs on: the setting resolved for it, or Automatic when choosing
+    /// isn't allowed or the setting can't be read.
+    private func hardwareModel(_ build: Build) -> HardwareModel {
+        guard choosesHardwareModel() else { return .automatic }
+        let model = try? settings?.decode(
+            HardwareModel.self,
+            key: SettingKey.hardwareModel.rawValue,
+            system: build.system,
+            gameID: build.gameID,
+            buildID: build.id
+        )
+        return model ?? .automatic
     }
 
     @discardableResult
@@ -504,12 +525,16 @@ public final class EmulationSession: @unchecked Sendable {
     /// Starts the game again from its boot, the way switching the cartridge off and on does. The
     /// cartridge keeps its battery-backed RAM through a reset, so the save stays. An Auto State
     /// taken first keeps the moment being left, so Load State can go back to it; when that state
-    /// can't be written, the game isn't reset. Stop the frame loop before calling this.
+    /// can't be written, the game isn't reset. A changed Model takes effect here. Stop the frame
+    /// loop before calling this.
     public func restart() throws {
         let (worker, context, _) = try snapshotActive()
         try saveAutoState()
-        let skipBoot = try builds.fetchBuild(id: context.buildID).map(skipsBootAnimation) ?? false
+        let build = try builds.fetchBuild(id: context.buildID)
+        let skipBoot = build.map(skipsBootAnimation) ?? false
+        let model = build.map(hardwareModel)
         try worker.perform { core in
+            if let model { try (core as? any HardwareModelCapability)?.setHardwareModel(model) }
             try core.reset()
             if skipBoot { _ = try (core as? any BootSkippingCapability)?.skipBootAnimation() }
         }

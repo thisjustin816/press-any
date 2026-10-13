@@ -357,7 +357,8 @@ final class AppContainer {
             inFlight: inFlightFiles,
             cheats: repositories.cheats,
             keepsAutoStateHistory: { ownership.keepsAutoStateHistory },
-            writesTimedStates: { ownership.isOwned }
+            writesTimedStates: { ownership.isOwned },
+            choosesHardwareModel: { ownership.isOwned }
         )
     }
 

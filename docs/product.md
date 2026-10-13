@@ -40,7 +40,7 @@ v1 is a good core experience: the library model with search, sorting and favorit
 states with Library Backup, patching, cheats, Quick Play, Fast Forward, rumble, Bluetooth controllers,
 landscape, the built-in layouts, clean screenshot sharing and artwork from a chosen game frame.
 Everything else waits for v1.1: iCloud sync, the Community Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
-artwork and documents, rewind, slow motion, frame advance and Quick Actions, the model override,
+artwork and documents, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
 curated shaders, the layout editor and skin import, a capture gallery and gameplay notes, external displays,
 crash reporting and usage counts, and Developer Mode. The Plus screen's roadmap lists these
 features, so change it with this paragraph (see Pricing).
@@ -63,6 +63,9 @@ In v1, Plus includes:
   Plus a game keeps its latest Auto State.
 - **Timed States**: an Auto State every 1, 2, 5 or 10 minutes of library play, with Off as the
   default. Pausing restarts the interval (see Auto State).
+- **Model**: run a game on a Game Boy, Game Boy Pocket, Super Game Boy, Super Game Boy 2, Game Boy
+  Color, Game Boy Advance or Game Boy Player (see Settings). Without Plus, games play on Automatic
+  and a stored choice is kept.
 
 Everything else is free: play, saves, manual, Quick and slot states, close and background Auto
 States, Library Backup and every export, patches, cheats, controllers, landscape, Quick Play,
@@ -1078,12 +1081,32 @@ The settings for a system, a Game, a Build or the open game are one form: a page
 for a system, and otherwise a sheet short enough to sit at half height over a paused game. They're
 grouped under Display (Orientation, Screen Scaling, Screen Colors, LCD Filter, Frame Blending),
 Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States,
-Skip Boot Logo). Under each setting's name a note says where its value
+Skip Boot Logo, Model). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
-v1.1 adds automatic DMG, GBC or SGB model selection with overrides at every level (no promise that
-every GBC-only game works in DMG mode), and SGB palettes, borders and enhancements where SameBoy
-exposes them; custom border editing is later.
+**Model** is the hardware a game runs on, set like the other settings at every level: Automatic,
+Game Boy, Game Boy Pocket, Super Game Boy, Super Game Boy 2, Game Boy Color, Game Boy Advance and
+Game Boy Player. App Settings has it on the Playing page.
+
+- Automatic runs a game marked for the Game Boy Color (CGB flag 0x80 or 0xC0) on a Game Boy Color
+  and the rest on a Game Boy. It never picks a Super Game Boy.
+- Each model boots its own SameBoy boot ROM, so a game finds the hardware it checks for, such as a
+  Game Boy Color game brightening its colors on a Game Boy Advance. The Game Boy Player is SameBoy's
+  model of a Game Boy Advance inside one. There's no promise that a Game Boy Color-only game works
+  on a monochrome model.
+- A change applies when the game next starts. Restart in the game menu switches the open game,
+  keeping its save, cheats and display settings.
+- A save state loads only on the kind of hardware it was made on: Game Boy and Pocket; Super Game
+  Boy and Super Game Boy 2; or Game Boy Color, Advance and Player. Loading one on another kind says
+  which models it needs. An Auto State that can't resume for that reason starts the game from its
+  save and is kept.
+- Screen Colors lists the choices for the game's own system. A Game Boy game's palettes apply only
+  on a Game Boy or Pocket: a Game Boy Color, Advance or Player colors it as its boot ROM does, and
+  the Super Game Boys color the picture as the game asks.
+- The Super Game Boy border isn't drawn yet: it makes the picture 256×224, which the layouts,
+  screenshots and thumbnails don't fit. Custom border editing comes after the border.
+- Quick Play always uses Automatic.
+- Choosing a model other than Automatic needs Plus (see Pricing).
 
 ## Deletion
 

@@ -86,6 +86,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case keepAutoStates
     /// `TimedStates`, unset means `.off`.
     case timedStates
+    /// `HardwareModel`, unset means `.automatic`. Read when a game starts or restarts.
+    case hardwareModel
 
     public var isAppOnly: Bool {
         switch self {
@@ -407,5 +409,64 @@ public enum TimedStates: Int, Codable, Sendable, CaseIterable {
         case .oneMinute: "Every 1 Minute"
         default: "Every \(rawValue) Minutes"
         }
+    }
+}
+
+/// The hardware a game runs on. Raw values are stored in settings.
+public enum HardwareModel: String, Codable, Sendable, CaseIterable {
+    /// A Game Boy Color for games marked for it, and a Game Boy for the rest.
+    case automatic
+    case gameBoy = "dmg"
+    case gameBoyPocket = "mgb"
+    case superGameBoy = "sgb"
+    case superGameBoy2 = "sgb2"
+    case gameBoyColor = "cgb"
+    case gameBoyAdvance = "agb"
+    /// A Game Boy Advance inside the GameCube's Game Boy Player.
+    case gameBoyPlayer = "gbp"
+
+    public static let settingExplanation = "Model is the hardware games run on. Automatic plays Game Boy Color games on a Game Boy Color and the rest on a Game Boy. A change applies when the game starts or restarts, and a save state loads only on the kind of hardware it was made on."
+
+    public var displayName: String {
+        switch self {
+        case .automatic: "Automatic"
+        case .gameBoy: "Game Boy"
+        case .gameBoyPocket: "Game Boy Pocket"
+        case .superGameBoy: "Super Game Boy"
+        case .superGameBoy2: "Super Game Boy 2"
+        case .gameBoyColor: "Game Boy Color"
+        case .gameBoyAdvance: "Game Boy Advance"
+        case .gameBoyPlayer: "Game Boy Player"
+        }
+    }
+
+    /// The hardware a game of `system` runs on: this model, or for Automatic the system's own.
+    public func resolved(for system: GameSystem) -> HardwareModel {
+        guard self == .automatic else { return self }
+        return switch system {
+        case .gameBoy: .gameBoy
+        case .gameBoyColor: .gameBoyColor
+        }
+    }
+
+    /// Models whose save states load on one another. A state made on one family doesn't load on
+    /// another.
+    public var family: HardwareFamily? {
+        switch self {
+        case .automatic: nil
+        case .gameBoy, .gameBoyPocket: .gameBoy
+        case .superGameBoy, .superGameBoy2: .superGameBoy
+        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: .gameBoyColor
+        }
+    }
+}
+
+public enum HardwareFamily: String, Sendable, CaseIterable {
+    case gameBoy
+    case superGameBoy
+    case gameBoyColor
+
+    public var models: [HardwareModel] {
+        HardwareModel.allCases.filter { $0.family == self }
     }
 }

@@ -45,7 +45,7 @@ final class SameBoyAdapterTests: XCTestCase {
         let directory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("../../Sources/SameBoyAdapter/Resources/BootROMs")
-        for name in ["dmg_boot.bin", "cgb_boot.bin", "cgb_boot_fast.bin"] {
+        for name in ["dmg_boot", "mgb_boot", "sgb_boot", "sgb2_boot", "cgb_boot", "cgb_boot_fast", "agb_boot"].map({ "\($0).bin" }) {
             let path = directory.appendingPathComponent(name).standardizedFileURL.path
             guard FileManager.default.fileExists(atPath: path) else {
                 throw XCTSkip("\(name) is not generated; run make bootroms")

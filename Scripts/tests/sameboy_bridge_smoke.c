@@ -36,6 +36,34 @@ static void make_endless_boot_rom(uint8_t *boot)
     boot[0x00] = 0x18; boot[0x01] = 0xfe; // jr @
 }
 
+// Every model draws into the same 160x144 buffer, Super Game Boys included, and keeps states.
+static void test_every_model(const uint8_t *rom, size_t rom_size)
+{
+    const SBModel models[] = {
+        SB_MODEL_DMG, SB_MODEL_MGB, SB_MODEL_SGB, SB_MODEL_SGB2, SB_MODEL_CGB, SB_MODEL_AGB, SB_MODEL_GBP,
+    };
+    uint8_t finishing[256];
+    make_finishing_boot_rom(finishing);
+    for (size_t i = 0; i < sizeof(models) / sizeof(models[0]); i++) {
+        SBInstance *instance = SBCreate(models[i]);
+        assert(instance);
+        assert(SBLoadBootROM(instance, finishing, sizeof(finishing)));
+        assert(SBLoadROM(instance, rom, rom_size));
+        assert(SBSkipBootROM(instance, NULL, 0));
+        for (int frame_index = 0; frame_index < 120; frame_index++) {
+            SBFrameView frame = SBRunFrame(instance);
+            assert(frame.width == 160 && frame.height == 144 && frame.pixels);
+        }
+        size_t state_size = SBStateSize(instance);
+        uint8_t *state = malloc(state_size);
+        assert(state);
+        assert(SBSaveState(instance, state, state_size));
+        assert(SBLoadState(instance, state, state_size));
+        free(state);
+        SBDestroy(instance);
+    }
+}
+
 static void test_boot_skip(const uint8_t *rom, size_t rom_size)
 {
     uint8_t finishing[256], endless[256];
@@ -212,6 +240,7 @@ int main(void)
     SBDestroy(instance);
 
     test_boot_skip(rom, sizeof(rom));
+    test_every_model(rom, sizeof(rom));
     test_cartridge_rumble();
     test_oversized_battery();
     test_rom_size_limit();

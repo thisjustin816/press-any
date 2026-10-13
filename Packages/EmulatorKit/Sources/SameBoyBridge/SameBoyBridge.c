@@ -53,7 +53,8 @@ struct SBInstance {
 static void sb_apply_dmg_palette(SBInstance *instance)
 {
     GB_gameboy_t *gb = instance->gb;
-    if (GB_is_cgb(gb)) return;
+    // A Super Game Boy colors the picture with the palettes the game sends it.
+    if (GB_is_cgb(gb) || GB_is_sgb(gb)) return;
 
     const GB_palette_t *colors;
     switch (instance->dmg_palette) {
@@ -121,6 +122,16 @@ static GB_model_t sb_model(SBModel model)
     switch (model) {
         case SB_MODEL_CGB:
             return GB_MODEL_CGB_E;
+        case SB_MODEL_MGB:
+            return GB_MODEL_MGB;
+        case SB_MODEL_SGB:
+            return GB_MODEL_SGB_NTSC;
+        case SB_MODEL_SGB2:
+            return GB_MODEL_SGB2;
+        case SB_MODEL_AGB:
+            return GB_MODEL_AGB_A;
+        case SB_MODEL_GBP:
+            return GB_MODEL_GBP_A;
         case SB_MODEL_DMG:
         default:
             return GB_MODEL_DMG_B;
@@ -157,6 +168,16 @@ SBInstance *SBCreate(SBModel model)
     atomic_init(&instance->audio_write, 0);
     atomic_init(&instance->rumble_bits, 0);
 
+    // The pixel buffer holds 160x144. SameBoy's default draws a Super Game Boy's 256x224 border
+    // around the picture, which wouldn't fit.
+    GB_set_border_mode(instance->gb, GB_BORDER_NEVER);
+    if (GB_get_screen_width(instance->gb) != SB_WIDTH || GB_get_screen_height(instance->gb) != SB_HEIGHT) {
+        GB_free(instance->gb);
+        GB_dealloc(instance->gb);
+        free(instance->pixels);
+        free(instance);
+        return NULL;
+    }
     GB_set_user_data(instance->gb, instance);
     GB_set_rgb_encode_callback(instance->gb, sb_encode_bgra);
     GB_set_pixels_output(instance->gb, instance->pixels);

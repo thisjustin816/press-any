@@ -541,6 +541,14 @@ final class GameplayViewController: UIViewController {
         }
     }
 
+    /// Names the hardware a state needs when it was made on another kind.
+    static func stateLoadFailure(_ error: any Error) -> String {
+        if let needs = error as? StateNeedsOtherHardware, let reason = needs.errorDescription {
+            return "Couldn’t load that state. \(reason)"
+        }
+        return "Couldn’t load that state: \(error)"
+    }
+
     /// A state carries the game save from when it was made, so loading one older than the
     /// current save asks first and keeps the newer save as a copy. Frames stay stopped from the
     /// check until the state is loaded or the player cancels, so the game can't save in between.
@@ -556,7 +564,7 @@ final class GameplayViewController: UIViewController {
             }
         } catch {
             releaseFrames()
-            showTransientMessage("Couldn’t load that state: \(error)")
+            showTransientMessage(Self.stateLoadFailure(error))
             return
         }
         let alert = UIAlertController(
@@ -575,7 +583,7 @@ final class GameplayViewController: UIViewController {
                 try states.loadStateKeepingCopy(state)
                 self.showTransientMessage("State loaded. The newer save was kept as a copy.")
             } catch {
-                self.showTransientMessage("Couldn’t load that state: \(error)")
+                self.showTransientMessage(Self.stateLoadFailure(error))
             }
         })
         present(alert, animated: true)
