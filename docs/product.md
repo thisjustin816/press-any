@@ -1098,10 +1098,11 @@ list shows no model numbers. App Settings has it on the Playing page.
 - Each model boots its own SameBoy boot ROM, so a game finds the hardware it checks for, such as a
   Game Boy Color game brightening its colors on a Game Boy Advance. The Game Boy Player is SameBoy's
   model of a Game Boy Advance inside one. There's no promise that a Game Boy Color-only game works
-  on a monochrome model. For a game whose header says it needs a Game Boy Color (CGB flag 0xC0),
-  the Game Boy models stay selectable, with "This game needs a Game Boy Color, so on these it shows
-  only its message for an original Game Boy." under them. A Game's settings say it only when every
-  Build needs one.
+  on a monochrome model. For a game whose header marks it for a Game Boy Color only (CGB flag 0xC0),
+  the Game Boy models stay selectable, with "This game is made for a Game Boy Color. On these models
+  it may play in black and white, or only show a message that it needs one." under them. The flag
+  doesn't stop a game from running on a Game Boy: Dragonyhm is marked 0xC0 and plays in black and
+  white there. A Game's settings show the note only when every Build is marked.
 - Changing Model in an open game's settings restarts the game on the new hardware when the sheet
   closes, as SameBoy does, with "Restarted on Game Boy Advance." Like Restart, it keeps where the
   player was as an Auto State first, and the battery save, cheats and display settings carry over.

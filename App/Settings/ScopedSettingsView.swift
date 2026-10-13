@@ -20,8 +20,9 @@ struct ScopedSettingsView: View {
     var onChange: (() -> Void)?
     /// False when App Settings pushes it as a page, which has its own navigation and Done.
     var inSheet = true
-    /// A game that runs only on a Game Boy Color, which the Model picker notes under Game Boy.
-    var requiresGameBoyColor = false
+    /// A game whose header marks it for a Game Boy Color only, which the Model picker notes under
+    /// Game Boy. Some such games still play on a Game Boy, so the note doesn't say they can't.
+    var marksGameBoyColorOnly = false
 
     @Environment(\.dismiss) private var dismiss
     @State private var showsPlus = false
@@ -208,8 +209,8 @@ struct ScopedSettingsView: View {
             SettingOptionSection(
                 title: console.displayName,
                 values: console.models,
-                footer: console == .gameBoy && requiresGameBoyColor
-                    ? "This game needs a Game Boy Color, so on these it shows only its message for an original Game Boy."
+                footer: console == .gameBoy && marksGameBoyColorOnly
+                    ? "This game is made for a Game Boy Color. On these models it may play in black and white, or only show a message that it needs one."
                     : nil
             )
         }
