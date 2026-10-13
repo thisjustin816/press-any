@@ -1,3 +1,4 @@
+import EmulationCore
 import EmulatorApplication
 import EmulatorDomain
 import Importing
@@ -10,8 +11,8 @@ import XCTest
 final class PlusTests: XCTestCase {
     func testRoadmapListsWhatPlusHoldsAndWhatsComing() {
         XCTAssertFalse(PlusRoadmap.upcoming.isEmpty)
-        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History", "Timed States"])
-        XCTAssertFalse(PlusRoadmap.upcoming.contains { $0.title.contains("Timed") })
+        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History", "Timed States", "Model"])
+        XCTAssertFalse(PlusRoadmap.upcoming.contains { $0.title.contains("Timed") || $0.title == "Model" })
         XCTAssertEqual(PlusRoadmap.alsoPlanned.map(\.title), ["Game Boy Advance"])
         let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming + PlusRoadmap.alsoPlanned
         XCTAssertEqual(Set(items.map(\.id)).count, items.count, "titles are unique")
@@ -29,6 +30,23 @@ final class PlusTests: XCTestCase {
 
         let owner = try AppContainer(rootURL: fixture.root, plus: .fixed(ownsPlus: true))
         XCTAssertEqual(owner.lcdFilter(for: fixture.context), .lcd1x, "Plus brings the stored filter back")
+    }
+
+    func testChoosingTheModelNeedsPlusAndAutomaticStaysFree() {
+        let locked = PlusGate(isUnlocked: false)
+        XCTAssertFalse(locked.isLocked(HardwareModel.automatic.needsPlus))
+        for model in HardwareModel.allCases where model != .automatic {
+            XCTAssertTrue(locked.isLocked(model.needsPlus), "\(model)")
+        }
+        XCTAssertEqual(locked.label(HardwareModel.superGameBoy.displayName, needsPlus: true), "Super Game Boy (Plus)")
+        XCTAssertFalse(PlusGate(isUnlocked: true).isLocked(HardwareModel.gameBoyPlayer.needsPlus))
+    }
+
+    func testAStateFromOtherHardwareSaysWhichHardwareItNeeds() {
+        XCTAssertEqual(
+            GameplayViewController.stateLoadFailure(StateNeedsOtherHardware(family: .superGameBoy)),
+            "Couldn’t load that state. It was made on a Super Game Boy or Super Game Boy 2. Set Model to one of those to load it."
+        )
     }
 
     func testLockedOptionsAreMarkedAndOffStaysFree() {
@@ -117,6 +135,9 @@ final class PlusTests: XCTestCase {
         unasked.set(true)
         XCTAssertTrue(unasked.keepsAutoStateHistory)
         XCTAssertTrue(PlusStore.fixed(ownsPlus: true).ownership.keepsAutoStateHistory)
+        XCTAssertTrue(PlusOwnership(false, resolved: false).appliesHardwareModel, "an owner's game starts on its Model before StoreKit answers")
+        XCTAssertFalse(PlusOwnership(false).appliesHardwareModel)
+        XCTAssertTrue(PlusOwnership(true).appliesHardwareModel)
         XCTAssertFalse(PlusStore.fixed(ownsPlus: false).ownership.keepsAutoStateHistory)
     }
 

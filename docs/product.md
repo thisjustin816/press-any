@@ -40,7 +40,7 @@ v1 is a good core experience: the library model with search, sorting and favorit
 states with Library Backup, patching, cheats, Quick Play, Fast Forward, rumble, Bluetooth controllers,
 landscape, the built-in layouts, clean screenshot sharing and artwork from a chosen game frame.
 Everything else waits for v1.1: iCloud sync, the Community Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
-artwork and documents, rewind, slow motion, frame advance and Quick Actions, the model override,
+artwork and documents, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
 curated shaders, the layout editor and skin import, a capture gallery and gameplay notes, external displays,
 crash reporting and usage counts, and Developer Mode. The Plus screen's roadmap lists these
 features, so change it with this paragraph (see Pricing).
@@ -63,6 +63,9 @@ In v1, Plus includes:
   Plus a game keeps its latest Auto State.
 - **Timed States**: an Auto State every 1, 2, 5 or 10 minutes of library play, with Off as the
   default. Pausing restarts the interval (see Auto State).
+- **Model**: run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy,
+  Super Game Boy 2, Game Boy Color, Game Boy Advance or Game Boy Player (see Settings). Without Plus, games play on Automatic
+  and a stored choice is kept.
 
 Everything else is free: play, saves, manual, Quick and slot states, close and background Auto
 States, Library Backup and every export, patches, cheats, controllers, landscape, Quick Play,
@@ -70,8 +73,9 @@ Fast Forward, Frame Blending, Screen Colors and the layouts.
 
 Plus also includes everything on its roadmap and anything added later, at no extra cost. Some of
 it will be free for everyone, too. The roadmap on the Plus screen is the v1.1 list above, without
-crash reporting and usage counts. GBA isn't on it. The Plus screen lists it separately under Also
-Planned, as planned for a later version, with no promise that it's free or part of Plus.
+crash reporting and usage counts. Playing GBA games isn't on it, and is separate from the Game Boy
+Advance Model, which runs GB and GBC games. The Plus screen lists GBA games under Also Planned, as
+planned for a later version, with no promise that they're free or part of Plus.
 `App/Plus/PlusRoadmap.swift` holds the lists.
 
 Plus follows these rules:
@@ -1076,14 +1080,48 @@ Game's or Build's settings use:
 
 The settings for a system, a Game, a Build or the open game are one form: a page in App Settings
 for a system, and otherwise a sheet short enough to sit at half height over a paused game. They're
-grouped under Display (Orientation, Screen Scaling, Screen Colors, LCD Filter, Frame Blending),
+grouped under Display (Orientation, Screen Scaling, Screen Colors, Game Boy Advance Colors on those
+models, LCD Filter, Frame Blending),
 Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States,
-Skip Boot Logo). Under each setting's name a note says where its value
+Skip Boot Logo, Model). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
-v1.1 adds automatic DMG, GBC or SGB model selection with overrides at every level (no promise that
-every GBC-only game works in DMG mode), and SGB palettes, borders and enhancements where SameBoy
-exposes them; custom border editing is later.
+**Model** is the hardware a game runs on, set like the other settings at every level: Automatic,
+Game Boy, Game Boy Pocket, Super Game Boy, Super Game Boy 2, Game Boy Color, Game Boy Advance and
+Game Boy Player. App Settings has it on the Playing page.
+
+- Automatic runs a game marked for the Game Boy Color (CGB flag 0x80 or 0xC0) on a Game Boy Color
+  and the rest on a Game Boy. It never picks a Super Game Boy.
+- Each model boots its own SameBoy boot ROM, so a game finds the hardware it checks for, such as a
+  Game Boy Color game brightening its colors on a Game Boy Advance. The Game Boy Player is SameBoy's
+  model of a Game Boy Advance inside one. There's no promise that a Game Boy Color-only game works
+  on a monochrome model.
+- Changing Model in an open game's settings restarts the game on the new hardware when the sheet
+  closes, as SameBoy does, with "Restarted on Game Boy Advance." Like Restart, it keeps where the
+  player was as an Auto State first, and the battery save, cheats and display settings carry over.
+  Several changes in one visit restart once, and a change that leaves the hardware the same, such
+  as Automatic to Game Boy Color for a Game Boy Color game, doesn't restart. Changed anywhere else,
+  Model applies the next time the game starts.
+- Model is a setting, not part of a Save Profile: the battery save is the cartridge's, so every
+  model reads and writes the same save, and a profile shared by Builds on different models works
+  as it does on real hardware.
+- A save state loads only on the kind of hardware it was made on: Game Boy and Pocket; Super Game
+  Boy and Super Game Boy 2; or Game Boy Color, Advance and Player. Loading one on another kind says
+  which models it needs, before any question about the save. Resume Games doesn't offer an Auto
+  State made on another kind: the game starts from its battery save, a message says where that
+  point can load, and the state stays in States. Crash recovery behaves the same way.
+- Screen Colors lists the choices for the game's own system. A Game Boy game's palettes apply only
+  on a Game Boy or Pocket: a Game Boy Color, Advance or Player colors it as its boot ROM does, and
+  the Super Game Boys color the picture as the game asks.
+- A Game Boy Advance's screen is darker than a Game Boy Color's, and SameBoy colors a game on a
+  Game Boy Advance or Player for that darker screen. When a game's Model is one of those, Display has **Game
+  Boy Advance Colors**: As on a Game Boy Advance, the default, or As on a Game Boy Color, which
+  colors the picture as a Game Boy Color would with the same Screen Colors correction. The game
+  still runs on a Game Boy Advance and can tell. Original colors look the same on both.
+- The Super Game Boy border isn't drawn yet: it makes the picture 256×224, which the layouts,
+  screenshots and thumbnails don't fit. Custom border editing comes after the border.
+- Quick Play always uses Automatic.
+- Choosing a model other than Automatic needs Plus (see Pricing).
 
 ## Deletion
 

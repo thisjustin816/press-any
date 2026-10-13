@@ -330,8 +330,9 @@ review. Until then, Settings > Press Any Plus says the App Store isn't available
    - **Review Information**: a screenshot of Settings > Press Any Plus from an iPhone, and these
      notes: "Settings > Press Any Plus shows what Plus includes, the price, Buy and Restore
      Purchases. Plus turns on LCD 1× and LCD 3× (Settings > Display), app icon colors (Settings >
-     App Icon) and Auto State history (Settings > Playing > Keep Auto States). Everything else is
-     free and works without it."
+     App Icon), Auto State history and Timed States (Settings > Playing > Keep Auto States and
+     Timed States), and Model, which runs a game on other Game Boy hardware (Settings > Playing >
+     Model). Everything else is free and works without it."
 4. **Submit it with the first build that uses it.** A first in-app purchase goes to review with an
    app version: on the version page, under **In-App Purchases and Subscriptions**, select Press Any
    Plus before **Add for Review**. Later changes to it can go on their own.

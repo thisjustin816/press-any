@@ -116,7 +116,7 @@ final class SameBoyBootPaletteTests: XCTestCase {
         for skipBoot in [false, true] {
             for palette in palettes {
                 let core = SameBoyAdapter()
-                _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting)
+                _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance)
                 try boot(core, skipBoot: skipBoot)
                 let frame = try core.runFrame(input: .init())
                 assertColors(frame, palette: palette)
@@ -135,7 +135,7 @@ final class SameBoyBootPaletteTests: XCTestCase {
         let battery = try core.persistentSaveData()
         _ = core.drainAudio(maxFrames: 32768)
         for palette in palettes {
-            let preview = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting))
+            let preview = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance))
             assertColors(preview, palette: palette)
             XCTAssertEqual(preview.emulatedNanoseconds, 0)
             XCTAssertEqual(try core.serializeState(), state)
@@ -152,15 +152,15 @@ final class SameBoyBootPaletteTests: XCTestCase {
 
     func testStatesSavedWithBootPalettesLoadWithOtherBootAndOriginalPalettes() throws {
         let core = SameBoyAdapter()
-        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palettes[1].setting)
+        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palettes[1].setting, advanceColors: .gameBoyAdvance)
         try boot(core, skipBoot: true)
         let state = try core.serializeState()
         for palette in palettes {
-            _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting)
+            _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance)
             try core.deserializeState(state)
             assertColors(try core.runFrame(input: .init()), palette: palette)
         }
-        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: .grey)
+        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: .grey, advanceColors: .gameBoyAdvance)
         try core.deserializeState(state)
         let grey = pixels(try core.runFrame(input: .init()))
         XCTAssertEqual(grey[0], 0xffffffff)
@@ -172,7 +172,7 @@ final class SameBoyBootPaletteTests: XCTestCase {
     func testResetAndNewImagesKeepBootPalette() throws {
         let core = SameBoyAdapter()
         let palette = palettes[1]
-        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting)
+        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance)
         try boot(core, skipBoot: true)
         try core.reset()
         XCTAssertTrue(try core.skipBootAnimation())
@@ -185,11 +185,11 @@ final class SameBoyBootPaletteTests: XCTestCase {
     func testColorCorrectionAppliesToAllThreePalettes() throws {
         let core = SameBoyAdapter()
         let palette = palettes[1]
-        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting)
+        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance)
         try boot(core, skipBoot: true)
         let original = pixels(try core.runFrame(input: .init()))
         for correction in ColorCorrection.allCases where correction != .off {
-            let corrected = pixels(try XCTUnwrap(core.setDisplaySettings(colorCorrection: correction, dmgPalette: palette.setting)))
+            let corrected = pixels(try XCTUnwrap(core.setDisplaySettings(colorCorrection: correction, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance)))
             for index in [8, 32 * 160, 48 * 160] {
                 XCTAssertNotEqual(corrected[index], original[index], "\(correction), pixel \(index)")
             }
@@ -204,9 +204,9 @@ final class SameBoyBootPaletteTests: XCTestCase {
                 try core.loadImage(TestROMFixtures.rom(filename), system: .gameBoyColor)
                 try finishBoot(core, skipBoot: skipBoot)
                 let state = try core.serializeState()
-                let frame = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .grey))
+                let frame = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .grey, advanceColors: .gameBoyAdvance))
                 for palette in palettes {
-                    let changed = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: palette.setting))
+                    let changed = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance))
                     XCTAssertEqual(changed.bgra8888, frame.bgra8888, "\(filename), \(palette.rawValue)")
                     XCTAssertEqual(try core.serializeState(), state)
                 }
@@ -233,11 +233,11 @@ final class SameBoyBootPaletteTests: XCTestCase {
             XCTAssertEqual((reference.readMemory(0xff50) ?? 0) & 1, 1)
             for _ in 0..<8 { _ = try reference.runFrame(input: .init()) }
             let core = SameBoyAdapter()
-            _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting)
+            _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance)
             try boot(core, skipBoot: true)
             for correction in ColorCorrection.allCases {
-                let expected = try XCTUnwrap(reference.setDisplaySettings(colorCorrection: correction, dmgPalette: .grey))
-                let actual = try XCTUnwrap(core.setDisplaySettings(colorCorrection: correction, dmgPalette: palette.setting))
+                let expected = try XCTUnwrap(reference.setDisplaySettings(colorCorrection: correction, dmgPalette: .grey, advanceColors: .gameBoyAdvance))
+                let actual = try XCTUnwrap(core.setDisplaySettings(colorCorrection: correction, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance))
                 XCTAssertEqual(actual.bgra8888, expected.bgra8888, "\(palette.rawValue), \(correction)")
             }
         }
@@ -253,7 +253,7 @@ final class SameBoyBootPaletteTests: XCTestCase {
         let battery = try core.persistentSaveData()
         XCTAssertEqual(battery.count, 8192)
         for palette in palettes {
-            _ = try core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: palette.setting)
+            _ = try core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: palette.setting, advanceColors: .gameBoyAdvance)
             XCTAssertEqual(try core.serializeState(), state)
             XCTAssertEqual(try core.persistentSaveData(), battery)
         }
@@ -273,7 +273,7 @@ final class SameBoyBootPaletteTests: XCTestCase {
         for index in scopes.indices.reversed() {
             let choice = try XCTUnwrap(resolver.decode(DMGPalette.self, key: SettingKey.dmgPalette.rawValue,
                                                       system: .gameBoy, gameID: gameID, buildID: buildID))
-            let frame = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .off, dmgPalette: choice))
+            let frame = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .off, dmgPalette: choice, advanceColors: .gameBoyAdvance))
             assertColors(frame, palette: palettes[index + 1])
             try store.removeValue(key: SettingKey.dmgPalette.rawValue, scope: scopes[index])
         }

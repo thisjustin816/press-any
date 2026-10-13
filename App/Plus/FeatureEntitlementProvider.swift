@@ -136,3 +136,8 @@ extension KeepAutoStates {
 extension TimedStates {
     var needsPlus: Bool { self != .off }
 }
+
+extension HardwareModel {
+    /// Choosing the hardware is a Plus feature. Automatic stays free.
+    var needsPlus: Bool { self != .automatic }
+}

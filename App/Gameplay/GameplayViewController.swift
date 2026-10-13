@@ -28,6 +28,8 @@ final class GameplayViewController: UIViewController {
     private var firstFrameClock: UInt64?
     private var pauseReasons = GameplayPauseReasons()
     private var coveredBySheet = false
+    /// Set from the menu's Settings until the sheet over the game closes.
+    private var settingsOpen = false
     /// Set when the scene went to the background, so returning applies Resume Games.
     private var backgrounded = false
     /// Set once an emulation error has stopped the game for good.
@@ -36,6 +38,7 @@ final class GameplayViewController: UIViewController {
     private var orientation: ScreenOrientation
     private var lcdFilter: LCDFilter
     private var colorCorrection: ColorCorrection
+    private var advanceColors: AdvanceColors
     private var dmgPalette: DMGPalette
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
@@ -89,6 +92,7 @@ final class GameplayViewController: UIViewController {
         lcdFilter: LCDFilter = .off,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
+        advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending = .off,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted,
@@ -108,6 +112,7 @@ final class GameplayViewController: UIViewController {
         self.lcdFilter = lcdFilter
         self.colorCorrection = colorCorrection
         self.dmgPalette = dmgPalette
+        self.advanceColors = advanceColors
         self.frameBlending = frameBlending
         self.fastForwardSpeed = fastForwardSpeed
         self.fastForwardAudio = fastForwardAudio
@@ -326,7 +331,7 @@ final class GameplayViewController: UIViewController {
         ))
         if onOpenSettings != nil {
             elements.append(UIAction(title: "Settings", image: UIImage(systemName: "gearshape")) { [weak self] _ in
-                self?.onOpenSettings?()
+                self?.openSettings()
             })
         }
         if onAddToLibrary != nil {
@@ -541,11 +546,24 @@ final class GameplayViewController: UIViewController {
         }
     }
 
+    /// Names the hardware a state needs when it was made on another kind.
+    static func stateLoadFailure(_ error: any Error) -> String {
+        if let needs = error as? StateNeedsOtherHardware, let reason = needs.errorDescription {
+            return "Couldn’t load that state. \(reason)"
+        }
+        return "Couldn’t load that state: \(error)"
+    }
+
     /// A state carries the game save from when it was made, so loading one older than the
     /// current save asks first and keeps the newer save as a copy. Frames stay stopped from the
     /// check until the state is loaded or the player cancels, so the game can't save in between.
     private func loadState(_ state: SaveState) {
         guard let states = runtime as? any SaveStateRuntime else { return }
+        // Before asking about the save, since a state from other hardware won't load either way.
+        if let family = states.hardwareFamilyNeeded(for: state) {
+            showTransientMessage(Self.stateLoadFailure(StateNeedsOtherHardware(family: family)))
+            return
+        }
         holdFrames()
         do {
             guard try states.loadingWouldRollBackSave(state) else {
@@ -556,7 +574,7 @@ final class GameplayViewController: UIViewController {
             }
         } catch {
             releaseFrames()
-            showTransientMessage("Couldn’t load that state: \(error)")
+            showTransientMessage(Self.stateLoadFailure(error))
             return
         }
         let alert = UIAlertController(
@@ -575,7 +593,7 @@ final class GameplayViewController: UIViewController {
                 try states.loadStateKeepingCopy(state)
                 self.showTransientMessage("State loaded. The newer save was kept as a copy.")
             } catch {
-                self.showTransientMessage("Couldn’t load that state: \(error)")
+                self.showTransientMessage(Self.stateLoadFailure(error))
             }
         })
         present(alert, animated: true)
@@ -779,13 +797,15 @@ final class GameplayViewController: UIViewController {
         lcdFilter: LCDFilter,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
+        advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted
     ) {
-        if colorCorrection != self.colorCorrection || dmgPalette != self.dmgPalette {
+        if colorCorrection != self.colorCorrection || dmgPalette != self.dmgPalette || advanceColors != self.advanceColors {
             self.colorCorrection = colorCorrection
             self.dmgPalette = dmgPalette
+            self.advanceColors = advanceColors
             applyCoreDisplaySettings()
         }
         if orientation != self.orientation {
@@ -819,7 +839,9 @@ final class GameplayViewController: UIViewController {
 
     private func applyCoreDisplaySettings() {
         do {
-            if let frame = try runtime.setDisplaySettings(colorCorrection: colorCorrection, dmgPalette: dmgPalette) {
+            if let frame = try runtime.setDisplaySettings(
+                colorCorrection: colorCorrection, dmgPalette: dmgPalette, advanceColors: advanceColors
+            ) {
                 renderer?.submit(frame, to: metalView, replacesHistory: true)
             }
         } catch {
@@ -1027,8 +1049,36 @@ final class GameplayViewController: UIViewController {
     func setCoveredBySheet(_ covered: Bool) {
         guard covered != coveredBySheet else { return }
         coveredBySheet = covered
-        guard covered else { return }
+        guard covered else {
+            if settingsOpen {
+                settingsOpen = false
+                restartOnChangedHardware()
+            }
+            return
+        }
         pauseGameplay()
+    }
+
+    /// The menu's Settings. Model is chosen there, so closing that sheet, and no other, can restart
+    /// the game on new hardware.
+    func openSettings() {
+        settingsOpen = true
+        onOpenSettings?()
+    }
+
+    /// A Model chosen in the open game's settings takes effect once that sheet closes: the game
+    /// restarts on the new hardware, as Restart does, keeping where it was as an Auto State.
+    private func restartOnChangedHardware() {
+        guard !halted, let model = runtime.changedHardwareModel() else { return }
+        holdFrames()
+        defer { releaseFrames() }
+        do {
+            try runtime.restart()
+            resumeTapped()
+            showTransientMessage("Restarted on \(model.displayName).")
+        } catch {
+            showTransientMessage("Couldn’t restart on \(model.displayName): \(error)")
+        }
     }
 
     private func addToLibraryTapped() {

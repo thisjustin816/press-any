@@ -28,8 +28,12 @@ targets:
       - name: Check boot ROMs
         inputFiles:
           - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/dmg_boot.bin
+          - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/mgb_boot.bin
+          - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/sgb_boot.bin
+          - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/sgb2_boot.bin
           - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/cgb_boot.bin
           - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/cgb_boot_fast.bin
+          - $(SRCROOT)/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/agb_boot.bin
         basedOnDependencyAnalysis: false
         shell: /bin/bash
         script: |

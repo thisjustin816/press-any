@@ -32,6 +32,8 @@
 #define SB_MAX_ROM_SIZE (8u * 1024u * 1024u)
 // Enough for the longest Blargg report, which the harness drains every frame.
 #define SB_SERIAL_CAPACITY 4096u
+// Every RGB555 color.
+#define SB_RGB555_COLORS 32768u
 
 struct SBInstance {
     GB_gameboy_t *gb;
@@ -44,6 +46,15 @@ struct SBInstance {
     bool has_run; // Whether any emulation has run since the image was loaded or reset.
     bool previewing;
     SBDMGPalette dmg_palette;
+    SBColorCorrection correction;
+    bool gbc_colors_on_agb;
+    // With Game Boy Color colors on a Game Boy Advance, the core renders uncorrected colors into
+    // `pixels` and each frame is colored into `display_pixels` through `gbc_colors`, every RGB555
+    // color as a Game Boy Color's screen shows it with `gbc_colors_correction`.
+    bool remaps_colors;
+    uint32_t *display_pixels;
+    uint32_t *gbc_colors;
+    SBColorCorrection gbc_colors_correction;
     uint8_t serial[SB_SERIAL_CAPACITY];
     size_t serial_count;
     uint8_t serial_byte;
@@ -53,7 +64,8 @@ struct SBInstance {
 static void sb_apply_dmg_palette(SBInstance *instance)
 {
     GB_gameboy_t *gb = instance->gb;
-    if (GB_is_cgb(gb)) return;
+    // A Super Game Boy colors the picture with the palettes the game sends it.
+    if (GB_is_cgb(gb) || GB_is_sgb(gb)) return;
 
     const GB_palette_t *colors;
     switch (instance->dmg_palette) {
@@ -78,6 +90,63 @@ static uint32_t sb_encode_bgra(GB_gameboy_t *gb, uint8_t r, uint8_t g, uint8_t b
 {
     (void)gb;
     return 0xff000000u | ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
+}
+
+static GB_color_correction_mode_t sb_correction_mode(SBColorCorrection mode)
+{
+    switch (mode) {
+        case SB_COLOR_CORRECTION_OFF: return GB_COLOR_CORRECTION_DISABLED;
+        case SB_COLOR_CORRECTION_ACCURATE: return GB_COLOR_CORRECTION_MODERN_ACCURATE;
+        case SB_COLOR_CORRECTION_REDUCE_CONTRAST: return GB_COLOR_CORRECTION_REDUCE_CONTRAST;
+        case SB_COLOR_CORRECTION_LOW_CONTRAST: return GB_COLOR_CORRECTION_LOW_CONTRAST;
+        case SB_COLOR_CORRECTION_BOOST_CONTRAST: return GB_COLOR_CORRECTION_MODERN_BOOST_CONTRAST;
+        case SB_COLOR_CORRECTION_BALANCED:
+        default: return GB_COLOR_CORRECTION_MODERN_BALANCED;
+    }
+}
+
+// Colors every RGB555 value as a Game Boy Color with the instance's correction does, using a
+// Game Boy Color that exists only for this.
+static bool sb_build_gbc_colors(SBInstance *instance)
+{
+    if (instance->gbc_colors && instance->gbc_colors_correction == instance->correction) return true;
+    if (!instance->gbc_colors) {
+        instance->gbc_colors = malloc(SB_RGB555_COLORS * sizeof(uint32_t));
+        if (!instance->gbc_colors) return false;
+    }
+    if (!instance->display_pixels) {
+        instance->display_pixels = calloc(SB_WIDTH * SB_HEIGHT, sizeof(uint32_t));
+        if (!instance->display_pixels) return false;
+    }
+    GB_gameboy_t *allocation = GB_alloc();
+    if (!allocation) return false;
+    GB_gameboy_t *gbc = GB_init(allocation, GB_MODEL_CGB_E);
+    if (!gbc) {
+        GB_dealloc(allocation);
+        return false;
+    }
+    GB_set_rgb_encode_callback(gbc, sb_encode_bgra);
+    GB_set_color_correction_mode(gbc, sb_correction_mode(instance->correction));
+    for (uint32_t color = 0; color < SB_RGB555_COLORS; color++) {
+        instance->gbc_colors[color] = GB_convert_rgb15(gbc, (uint16_t)color, false);
+    }
+    GB_free(gbc);
+    GB_dealloc(gbc);
+    instance->gbc_colors_correction = instance->correction;
+    return true;
+}
+
+// Original colors are the same on both screens, so only a corrected picture on a Game Boy Advance
+// needs coloring as a Game Boy Color's.
+static void sb_apply_correction(SBInstance *instance)
+{
+    GB_gameboy_t *gb = instance->gb;
+    bool agb = gb->model == GB_MODEL_AGB_A || gb->model == GB_MODEL_GBP_A;
+    instance->remaps_colors = agb && instance->gbc_colors_on_agb &&
+        instance->correction != SB_COLOR_CORRECTION_OFF && sb_build_gbc_colors(instance);
+    GB_set_color_correction_mode(gb, instance->remaps_colors ? GB_COLOR_CORRECTION_DISABLED
+                                                             : sb_correction_mode(instance->correction));
+    sb_apply_dmg_palette(instance);
 }
 
 static void sb_audio_callback(GB_gameboy_t *gb, GB_sample_t *sample)
@@ -121,6 +190,16 @@ static GB_model_t sb_model(SBModel model)
     switch (model) {
         case SB_MODEL_CGB:
             return GB_MODEL_CGB_E;
+        case SB_MODEL_MGB:
+            return GB_MODEL_MGB;
+        case SB_MODEL_SGB:
+            return GB_MODEL_SGB_NTSC;
+        case SB_MODEL_SGB2:
+            return GB_MODEL_SGB2;
+        case SB_MODEL_AGB:
+            return GB_MODEL_AGB_A;
+        case SB_MODEL_GBP:
+            return GB_MODEL_GBP_A;
         case SB_MODEL_DMG:
         default:
             return GB_MODEL_DMG_B;
@@ -153,10 +232,21 @@ SBInstance *SBCreate(SBModel model)
         return NULL;
     }
 
+    instance->correction = SB_COLOR_CORRECTION_BALANCED;
     atomic_init(&instance->audio_read, 0);
     atomic_init(&instance->audio_write, 0);
     atomic_init(&instance->rumble_bits, 0);
 
+    // The pixel buffer holds 160x144. SameBoy's default draws a Super Game Boy's 256x224 border
+    // around the picture, which wouldn't fit.
+    GB_set_border_mode(instance->gb, GB_BORDER_NEVER);
+    if (GB_get_screen_width(instance->gb) != SB_WIDTH || GB_get_screen_height(instance->gb) != SB_HEIGHT) {
+        GB_free(instance->gb);
+        GB_dealloc(instance->gb);
+        free(instance->pixels);
+        free(instance);
+        return NULL;
+    }
     GB_set_user_data(instance->gb, instance);
     GB_set_rgb_encode_callback(instance->gb, sb_encode_bgra);
     GB_set_pixels_output(instance->gb, instance->pixels);
@@ -182,6 +272,8 @@ void SBDestroy(SBInstance *instance)
         GB_dealloc(instance->gb);
     }
     free(instance->pixels);
+    free(instance->display_pixels);
+    free(instance->gbc_colors);
     free(instance);
 }
 
@@ -261,10 +353,19 @@ SBFrameView SBRunFrame(SBInstance *instance)
     while (!instance->vblank) {
         ticks += GB_run(instance->gb);
     }
+    // Uncorrected channels are a 5-bit value repeated into 8 bits, so the top 5 bits are the
+    // value. The core's buffer is left as drawn, since it isn't redrawn while the LCD is off.
+    if (instance->remaps_colors) {
+        for (size_t i = 0; i < SB_WIDTH * SB_HEIGHT; i++) {
+            uint32_t pixel = instance->pixels[i];
+            uint32_t color = ((pixel >> 19) & 0x1f) | (((pixel >> 11) & 0x1f) << 5) | (((pixel >> 3) & 0x1f) << 10);
+            instance->display_pixels[i] = instance->gbc_colors[color];
+        }
+    }
     return (SBFrameView){
         .width = SB_WIDTH,
         .height = SB_HEIGHT,
-        .pixels = instance->pixels,
+        .pixels = instance->remaps_colors ? instance->display_pixels : instance->pixels,
         .emulated_nanoseconds = sb_ticks_to_nanoseconds(instance->gb, ticks),
     };
 }
@@ -272,18 +373,16 @@ SBFrameView SBRunFrame(SBInstance *instance)
 void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode)
 {
     if (!instance || !instance->gb) return;
-    GB_color_correction_mode_t correction;
-    switch (mode) {
-        case SB_COLOR_CORRECTION_OFF: correction = GB_COLOR_CORRECTION_DISABLED; break;
-        case SB_COLOR_CORRECTION_ACCURATE: correction = GB_COLOR_CORRECTION_MODERN_ACCURATE; break;
-        case SB_COLOR_CORRECTION_BALANCED: correction = GB_COLOR_CORRECTION_MODERN_BALANCED; break;
-        case SB_COLOR_CORRECTION_BOOST_CONTRAST: correction = GB_COLOR_CORRECTION_MODERN_BOOST_CONTRAST; break;
-        case SB_COLOR_CORRECTION_REDUCE_CONTRAST: correction = GB_COLOR_CORRECTION_REDUCE_CONTRAST; break;
-        case SB_COLOR_CORRECTION_LOW_CONTRAST: correction = GB_COLOR_CORRECTION_LOW_CONTRAST; break;
-        default: return;
-    }
-    GB_set_color_correction_mode(instance->gb, correction);
-    sb_apply_dmg_palette(instance);
+    if (mode < SB_COLOR_CORRECTION_OFF || mode > SB_COLOR_CORRECTION_LOW_CONTRAST) return;
+    instance->correction = mode;
+    sb_apply_correction(instance);
+}
+
+void SBSetGBCColorsOnAGB(SBInstance *instance, bool enabled)
+{
+    if (!instance || !instance->gb) return;
+    instance->gbc_colors_on_agb = enabled;
+    sb_apply_correction(instance);
 }
 
 void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette)

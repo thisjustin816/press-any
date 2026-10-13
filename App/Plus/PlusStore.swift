@@ -136,6 +136,10 @@ final class PlusOwnership: @unchecked Sendable {
     /// StoreKit hasn't answered yet at launch can't be undone, so an unanswered question keeps them.
     var keepsAutoStateHistory: Bool { lock.withLock { owned || !resolved } }
 
+    /// Whether a game starts on its stored Model. Starting an owner's game on Automatic because
+    /// StoreKit hasn't answered yet refuses its resume point, so an unanswered question keeps it.
+    var appliesHardwareModel: Bool { lock.withLock { owned || !resolved } }
+
     func set(_ owned: Bool) {
         lock.withLock {
             self.owned = owned

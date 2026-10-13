@@ -13,6 +13,11 @@ typedef struct SBInstance SBInstance;
 typedef enum {
     SB_MODEL_DMG,
     SB_MODEL_CGB,
+    SB_MODEL_MGB,
+    SB_MODEL_SGB,
+    SB_MODEL_SGB2,
+    SB_MODEL_AGB,
+    SB_MODEL_GBP,
 } SBModel;
 
 typedef enum {
@@ -77,6 +82,8 @@ typedef struct {
     uint16_t sp, pc;
 } SBRegisters;
 
+/// Super Game Boy models color the picture as the game asks but draw no border, so every model
+/// renders 160x144.
 SBInstance *SBCreate(SBModel model);
 void SBDestroy(SBInstance *instance);
 
@@ -93,8 +100,12 @@ void SBSetInput(SBInstance *instance, SBInputState input);
 SBFrameView SBRunFrame(SBInstance *instance);
 void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode);
 /// Changes only DMG render colors, including separate BG/OBJ0/OBJ1 boot palettes.
-/// CGB hardware ignores this setting. Emulated palette RAM and state bytes are unchanged.
+/// CGB and Super Game Boy hardware ignore this setting. Emulated palette RAM and state bytes are unchanged.
 void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette);
+/// On a Game Boy Advance or Game Boy Player, colors the picture as a Game Boy Color's screen
+/// would, with the same color correction, instead of as the darker Game Boy Advance screen. The
+/// emulated hardware doesn't change. Other models ignore it.
+void SBSetGBCColorsOnAGB(SBInstance *instance, bool enabled);
 /// Renders a temporary frame, restoring gameplay state and suppressing audio and rumble.
 bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame);
 size_t SBDrainAudio(SBInstance *instance, SBStereoSample *output, size_t max_frames);

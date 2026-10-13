@@ -606,6 +606,125 @@ extension EmulationSessionTests {
         try settings.setValueJSON("not json", key: key, scope: .app)
         XCTAssertEqual(try skipsOnStart(harness.contextA), 0, "an unreadable value shows the logo")
     }
+
+    func testTheResolvedModelIsSetBeforeTheImageLoads() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let key = SettingKey.hardwareModel.rawValue
+
+        func modelOnStart(_ context: LaunchContext, allowed: Bool = true) throws -> HardwareModel {
+            let session = harness.makeSession(settings: SettingsResolver(store: settings), choosesHardwareModel: { allowed })
+            try session.start(context: context)
+            try session.stop(createAutoState: false)
+            return try XCTUnwrap(harness.factory.cores.last).hardwareModel
+        }
+
+        XCTAssertEqual(try modelOnStart(harness.contextA), .automatic, "unset is Automatic")
+
+        try settings.set(HardwareModel.gameBoyPocket, key: key, scope: .app)
+        XCTAssertEqual(try modelOnStart(harness.contextA), .gameBoyPocket, "the app-wide setting applies")
+
+        try settings.set(HardwareModel.superGameBoy, key: key, scope: .build(harness.buildB.id))
+        XCTAssertEqual(try modelOnStart(harness.contextB), .superGameBoy, "a Build override wins")
+        XCTAssertEqual(try modelOnStart(harness.contextB, allowed: false), .automatic, "without Plus the game plays on Automatic")
+        XCTAssertEqual(try settings.valueJSON(key: key, scope: .build(harness.buildB.id)), "\"sgb\"", "and the choice is kept")
+
+        try settings.setValueJSON("not json", key: key, scope: .app)
+        XCTAssertEqual(try modelOnStart(harness.contextA), .automatic, "an unreadable value is Automatic")
+    }
+
+    func testRestartRunsTheGameOnAChangedModel() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: harness.contextA)
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        XCTAssertEqual(core.hardwareModel, .automatic)
+
+        try settings.set(HardwareModel.gameBoyAdvance, key: SettingKey.hardwareModel.rawValue, scope: .game(harness.contextA.gameID))
+        _ = try session.stepFrame()
+        XCTAssertEqual(core.hardwareModel, .automatic, "a running game keeps its hardware")
+
+        try session.restart()
+        XCTAssertEqual(core.hardwareModel, .gameBoyAdvance, "Restart switches it")
+        XCTAssertEqual(harness.factory.cores.count, 1, "on the same core")
+        try session.stop(createAutoState: false)
+    }
+
+    func testAChangedModelIsReportedUntilRestartSwitchesToIt() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let key = SettingKey.hardwareModel.rawValue
+        let plus = PlusSwitch()
+        let session = harness.makeSession(settings: SettingsResolver(store: settings), choosesHardwareModel: { plus.owned })
+        XCTAssertNil(session.changedHardwareModel(), "no game is open")
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyColor, "Automatic runs a Game Boy Color game on one")
+        XCTAssertNil(session.changedHardwareModel())
+
+        try settings.set(HardwareModel.gameBoyColor, key: key, scope: .game(harness.contextA.gameID))
+        XCTAssertNil(session.changedHardwareModel(), "the same hardware needs no restart")
+
+        try settings.set(HardwareModel.gameBoyAdvance, key: key, scope: .build(harness.buildA.id))
+        XCTAssertEqual(session.changedHardwareModel(), .gameBoyAdvance)
+        plus.owned = false
+        XCTAssertNil(session.changedHardwareModel(), "without Plus the game stays on Automatic")
+        plus.owned = true
+
+        try session.restart()
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyAdvance)
+        XCTAssertNil(session.changedHardwareModel(), "Restart switched to it")
+        try session.stop(createAutoState: false)
+        XCTAssertNil(session.runningHardwareModel)
+    }
+
+    func testAnOpenGameChecksStatesAgainstTheHardwareItRunsOn() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: harness.contextA)
+        let madeOnColor = try session.saveQuickState()
+
+        try settings.set(HardwareModel.gameBoy, key: SettingKey.hardwareModel.rawValue, scope: .build(harness.buildA.id))
+        XCTAssertNil(session.hardwareFamilyNeeded(for: madeOnColor), "the game still runs on a Game Boy Color, so it loads")
+        try session.restart()
+        XCTAssertEqual(session.hardwareFamilyNeeded(for: madeOnColor), .gameBoyColor, "now it runs on a Game Boy")
+        XCTAssertThrowsError(try session.loadState(madeOnColor)) { error in
+            XCTAssertEqual(error as? StateNeedsOtherHardware, StateNeedsOtherHardware(family: .gameBoyColor))
+        }
+        try session.stop(createAutoState: false)
+    }
+
+    func testAnAutoStateFromOtherHardwareStartsTheGameFromItsSaveAndIsKept() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let key = SettingKey.hardwareModel.rawValue
+        let first = harness.makeSession(settings: SettingsResolver(store: settings))
+        try first.start(context: harness.contextA)
+        for _ in 0..<3 { _ = try first.stepFrame() }
+        try first.stop(createAutoState: true)
+
+        try settings.set(HardwareModel.gameBoy, key: key, scope: .build(harness.buildA.id))
+        let second = harness.makeSession(settings: SettingsResolver(store: settings))
+        let autoState = try XCTUnwrap(second.resumableAutoState(for: harness.contextA))
+        let pinned = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
+        XCTAssertEqual(second.hardwareFamilyNeeded(for: autoState), .gameBoyColor, "made on a Game Boy Color, opening on a Game Boy")
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.buildA.id), pinned, "checking writes nothing")
+        let cores = harness.factory.cores.count
+        XCTAssertEqual(try second.start(context: harness.contextA, resumeFrom: autoState),
+                       .needsOtherHardware(autoState, .gameBoyColor))
+        XCTAssertEqual(harness.factory.cores.count, cores + 1, "the refused state left its core clean to play")
+        XCTAssertEqual(second.runningHardwareModel, .gameBoy)
+        try second.stop(createAutoState: false)
+        XCTAssertTrue(try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)
+            .contains { $0.id == autoState.id }, "the state is kept")
+
+        try settings.set(HardwareModel.gameBoyPlayer, key: key, scope: .build(harness.buildA.id))
+        let third = harness.makeSession(settings: SettingsResolver(store: settings))
+        XCTAssertNil(third.hardwareFamilyNeeded(for: autoState), "a Game Boy Player loads Game Boy Color states")
+        XCTAssertEqual(try third.start(context: harness.contextA, resumeFrom: autoState), .restored(autoState))
+        try third.stop(createAutoState: false)
+    }
 }
 
 extension EmulationSessionTests {
@@ -1091,6 +1210,15 @@ extension EmulationSessionTests {
     }
 }
 
+private final class PlusSwitch: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _owned = true
+    var owned: Bool {
+        get { lock.withLock { _owned } }
+        set { lock.withLock { _owned = newValue } }
+    }
+}
+
 private final class TimedStateClock: @unchecked Sendable {
     private let lock = NSLock()
     private var date = Date(timeIntervalSince1970: 1_700_000_000)
@@ -1290,6 +1418,7 @@ private struct SessionHarness {
         thumbnails: (any FrameImageEncoding)? = nil,
         cheats: (any BuildCheatRepository)? = nil,
         writesTimedStates: @escaping @Sendable () -> Bool = { false },
+        choosesHardwareModel: @escaping @Sendable () -> Bool = { true },
         clock: (@Sendable () -> Date)? = nil,
         now: Date = Date(timeIntervalSince1970: 1_700_000_000)
     ) -> EmulationSession {
@@ -1306,6 +1435,7 @@ private struct SessionHarness {
             thumbnails: thumbnails,
             cheats: cheats,
             writesTimedStates: writesTimedStates,
+            choosesHardwareModel: choosesHardwareModel,
             now: clock ?? { now }
         )
     }

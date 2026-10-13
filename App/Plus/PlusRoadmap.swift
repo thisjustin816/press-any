@@ -14,6 +14,7 @@ enum PlusRoadmap {
         Item(title: "App Icons", detail: "The home-screen icon in Berry, Grape, Teal, Kiwi or Dandelion."),
         Item(title: "Auto State History", detail: "Keep 3, 5 or 10 Auto States for each save. Without Plus, the latest is kept."),
         Item(title: "Timed States", detail: "An Auto State every 1, 2, 5 or 10 minutes of play. Pausing restarts the interval."),
+        Item(title: "Model", detail: "Run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, with Super Game Boy colors."),
     ]
 
     static let upcoming = [
@@ -26,7 +27,7 @@ enum PlusRoadmap {
         Item(title: "Slow Motion", detail: "Play at a quarter, half or three quarters of full speed."),
         Item(title: "Frame Advance", detail: "Move a game on one frame at a time, with a frame counter."),
         Item(title: "Quick Actions", detail: "Save, load, rewind and more from the game menu, controller buttons and skins."),
-        Item(title: "Model Override", detail: "Run a game as a Game Boy, Game Boy Color or Super Game Boy, with Super Game Boy palettes and borders."),
+        Item(title: "Super Game Boy Borders", detail: "The border a Super Game Boy game draws around the picture."),
         Item(title: "Shaders", detail: "A small, tested set of screen effects, chosen with the community."),
         Item(title: "Layout Editor and Skins", detail: "Move and resize the screen and controls, and import Delta and Manic skins."),
         Item(title: "Capture Gallery and Notes", detail: "Screenshots kept with each Build, and timestamped gameplay notes."),
@@ -36,6 +37,6 @@ enum PlusRoadmap {
 
     /// Planned, but not part of what Plus promises: whether it's free or Plus isn't decided.
     static let alsoPlanned = [
-        Item(title: "Game Boy Advance", detail: "Game Boy Advance emulation is planned for a later version, with no date yet."),
+        Item(title: "Game Boy Advance", detail: "Playing Game Boy Advance games is planned for a later version, with no date yet."),
     ]
 }

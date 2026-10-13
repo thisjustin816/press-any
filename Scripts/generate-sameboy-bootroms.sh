@@ -31,8 +31,9 @@ fi
 # cgb_boot_fast is not part of SameBoy's bootroms target; Quick Play uses it to skip the CGB animation.
 make -C "$SAMEBOY_ROOT" bootroms build/bin/BootROMs/cgb_boot_fast.bin CONF=release
 mkdir -p "$RESOURCE_DIR"
-cp "$SAMEBOY_ROOT/build/bin/BootROMs/dmg_boot.bin" "$RESOURCE_DIR/dmg_boot.bin"
-cp "$SAMEBOY_ROOT/build/bin/BootROMs/cgb_boot.bin" "$RESOURCE_DIR/cgb_boot.bin"
-cp "$SAMEBOY_ROOT/build/bin/BootROMs/cgb_boot_fast.bin" "$RESOURCE_DIR/cgb_boot_fast.bin"
+# One boot ROM for each model the Model setting offers; the Game Boy Player uses agb_boot.
+for name in dmg_boot mgb_boot sgb_boot sgb2_boot cgb_boot cgb_boot_fast agb_boot; do
+  cp "$SAMEBOY_ROOT/build/bin/BootROMs/$name.bin" "$RESOURCE_DIR/$name.bin"
+done
 
 echo "Generated SameBoy boot ROM resources in $RESOURCE_DIR"

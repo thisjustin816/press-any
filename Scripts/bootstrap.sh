@@ -17,10 +17,11 @@ if ! resolve_sameboy_root "$(pwd)" >/dev/null; then
   exit 1
 fi
 
-if [[ ! -f Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/dmg_boot.bin || \
-      ! -f Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/cgb_boot.bin || \
-      ! -f Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/cgb_boot_fast.bin ]]; then
-  ./Scripts/generate-sameboy-bootroms.sh
-fi
+for name in dmg_boot mgb_boot sgb_boot sgb2_boot cgb_boot cgb_boot_fast agb_boot; do
+  if [[ ! -f Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/$name.bin ]]; then
+    ./Scripts/generate-sameboy-bootroms.sh
+    break
+  fi
+done
 
 xcodegen generate

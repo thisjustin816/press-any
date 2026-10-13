@@ -215,6 +215,7 @@ struct PlayingSettingsPage: View {
     @State private var keepSaveStates: KeepSaveStates
     @State private var keepAutoStates: KeepAutoStates
     @State private var timedStates: TimedStates
+    @State private var hardwareModel: HardwareModel
     @State private var errorMessage: String?
 
     init(storage: AppSettingsStorage, plus: PlusStore) {
@@ -230,6 +231,7 @@ struct PlayingSettingsPage: View {
         _fastForwardAudio = State(initialValue: storage.value(FastForwardAudio.self, .fastForwardAudio) ?? .muted)
         _autoResumePolicy = State(initialValue: storage.value(AutoResumePolicy.self, .autoResumePolicy) ?? .always)
         _skipBootAnimation = State(initialValue: storage.value(Bool.self, .skipBootAnimation) ?? false)
+        _hardwareModel = State(initialValue: storage.value(HardwareModel.self, .hardwareModel) ?? .automatic)
     }
 
     var body: some View {
@@ -273,6 +275,12 @@ struct PlayingSettingsPage: View {
             }
 
             Section {
+                hardwareModelControl
+            } footer: {
+                Text(HardwareModel.settingExplanation + " Quick Play always uses Automatic.")
+            }
+
+            Section {
                 Picker("Slots", selection: $saveStateSlots) {
                     ForEach(SaveStateSlots.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
@@ -305,6 +313,29 @@ struct PlayingSettingsPage: View {
         .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
         .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
         .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
+        .onChange(of: hardwareModel) { _, newValue in save(newValue, .hardwareModel) }
+    }
+
+    /// Without Plus the row shows Automatic, which games play on, and each other model opens the
+    /// Plus screen. The stored choice is left alone for when Plus returns.
+    private var hardwareModelControl: some View {
+        Picker(selection: Binding(get: { plus.gate.isLocked(hardwareModel.needsPlus) ? .automatic : hardwareModel }, set: { choice in
+            if plus.gate.isLocked(choice.needsPlus) {
+                showsPlus = true
+            } else {
+                hardwareModel = choice
+            }
+        })) {
+            ForEach(HardwareModel.allCases, id: \.self) { model in
+                Text(plus.gate.label(model.displayName, needsPlus: model.needsPlus)).tag(model)
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Model")
+                if !plus.isUnlocked { PlusBadge() }
+            }
+        }
+        .accessibilityLabel("Model")
     }
 
     /// Without Plus the newest Auto State is kept, so the row shows 1 and each number opens the

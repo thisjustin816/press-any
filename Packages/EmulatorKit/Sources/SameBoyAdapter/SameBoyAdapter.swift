@@ -18,16 +18,22 @@ public enum SameBoyAdapterError: Error, Equatable {
 }
 
 public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability,
-    CheatCapability {
+    CheatCapability, HardwareModelCapability {
     public let descriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
     public let supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
     public let stateSerializationVersion = "sameboy-bess-v1"
 
     private var instance: OpaquePointer?
     private var loadedSystem: GameSystem?
+    /// Kept so a model change can load the game again on the new hardware.
+    private var loadedImage: Data?
     private var hasFrame = false
+    public private(set) var hardwareModel: HardwareModel = .automatic
+    /// The hardware the loaded game runs on.
+    public private(set) var runningModel: HardwareModel?
     public private(set) var colorCorrection: ColorCorrection = .defaultValue
     public private(set) var dmgPalette: DMGPalette = .defaultValue
+    public private(set) var advanceColors: AdvanceColors = .gameBoyAdvance
     public private(set) var cheatCodes: [String] = []
     public private(set) var cheatsEnabled = true
 
@@ -43,21 +49,44 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         guard supportedSystems.contains(system) else {
             throw SameBoyAdapterError.unsupportedSystem(system)
         }
-
-        if let instance {
-            SBDestroy(instance)
-            self.instance = nil
-        }
-
-        let model: SBModel = system == .gameBoyColor ? SB_MODEL_CGB : SB_MODEL_DMG
-        guard let created = SBCreate(model) else {
-            throw SameBoyAdapterError.instanceCreationFailed
-        }
+        let model = hardwareModel.resolved(for: system)
+        let created = try makeInstance(rom, model: model)
+        if let instance { SBDestroy(instance) }
         instance = created
         hasFrame = false
+        loadedSystem = system
+        loadedImage = rom
+        runningModel = model
+    }
 
+    public func setHardwareModel(_ model: HardwareModel) throws {
+        guard model != hardwareModel else { return }
+        guard let instance, let rom = loadedImage, let system = loadedSystem,
+              model.resolved(for: system) != runningModel else {
+            hardwareModel = model
+            return
+        }
+        let battery = try persistentSaveData()
+        let resolved = model.resolved(for: system)
+        let created = try makeInstance(rom, model: resolved)
+        battery.withUnsafeBytes { bytes in
+            SBLoadBattery(created, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
+        }
+        SBDestroy(instance)
+        self.instance = created
+        hasFrame = false
+        hardwareModel = model
+        runningModel = resolved
+    }
+
+    /// A new instance of `model` with the boot ROM, the image, the display settings and the cheats.
+    /// The current instance is left alone, so a failure keeps the game that's running.
+    private func makeInstance(_ rom: Data, model: HardwareModel) throws -> OpaquePointer {
+        guard let created = SBCreate(Self.bridgeModel(model)) else {
+            throw SameBoyAdapterError.instanceCreationFailed
+        }
         do {
-            let bootROM = try Self.loadBootROM(for: system)
+            let bootROM = try Self.loadBootROM(for: model)
             let bootLoaded = bootROM.withUnsafeBytes { bytes in
                 SBLoadBootROM(created, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
             }
@@ -71,11 +100,22 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             // Every code was read when it was set, so a new instance reads them too.
             _ = Self.setCheats(cheatCodes, on: created)
             SBSetCheatsEnabled(created, cheatsEnabled)
-            loadedSystem = system
+            return created
         } catch {
             SBDestroy(created)
-            instance = nil
             throw error
+        }
+    }
+
+    private static func bridgeModel(_ model: HardwareModel) -> SBModel {
+        switch model {
+        case .automatic, .gameBoy: SB_MODEL_DMG
+        case .gameBoyPocket: SB_MODEL_MGB
+        case .superGameBoy: SB_MODEL_SGB
+        case .superGameBoy2: SB_MODEL_SGB2
+        case .gameBoyColor: SB_MODEL_CGB
+        case .gameBoyAdvance: SB_MODEL_AGB
+        case .gameBoyPlayer: SB_MODEL_GBP
         }
     }
 
@@ -146,9 +186,14 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         hasFrame = false
     }
 
-    public func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
+    public func setDisplaySettings(
+        colorCorrection: ColorCorrection,
+        dmgPalette: DMGPalette,
+        advanceColors: AdvanceColors
+    ) throws -> EmulatorVideoFrame? {
         self.colorCorrection = colorCorrection
         self.dmgPalette = dmgPalette
+        self.advanceColors = advanceColors
         guard let instance else { return nil }
         applyDisplaySettings(to: instance)
         guard hasFrame else { return nil }
@@ -190,7 +235,9 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         case .cgbDonkeyKongLand: SB_DMG_PALETTE_CGB_DONKEY_KONG_LAND
         case .cgbCamera: SB_DMG_PALETTE_CGB_CAMERA
         }
+        // The correction first, so Game Boy Color colors are worked out once, for the new one.
         SBSetColorCorrection(instance, correction)
+        SBSetGBCColorsOnAGB(instance, advanceColors == .gameBoyColor)
         SBSetDMGPalette(instance, palette)
     }
 
@@ -219,6 +266,11 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         return pointers.withUnsafeBufferPointer { SBSetCheats(instance, $0.baseAddress, $0.count) }
     }
 
+    /// The CPU registers, for tests.
+    func registers() -> SBRegisters? {
+        instance.map { SBReadRegisters($0) }
+    }
+
     /// The byte the game would read at `address`, cheats included, for tests.
     func readMemory(_ address: UInt16) -> UInt8? {
         instance.map { SBReadMemory($0, address) }
@@ -238,18 +290,57 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
 
     public func deserializeState(_ data: Data) throws {
         guard let instance else { throw SameBoyAdapterError.romNotLoaded }
+        if let family = Self.stateFamily(data), let running = runningModel?.family, family != running {
+            throw StateNeedsOtherHardware(family: family)
+        }
         let loaded = data.withUnsafeBytes { bytes in
             SBLoadState(instance, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
         }
         guard loaded else { throw SameBoyAdapterError.stateLoadFailed }
     }
 
+    public func hardwareFamily(ofState state: Data) -> HardwareFamily? {
+        Self.stateFamily(state)
+    }
+
+    /// The hardware family a state was made on, from the model its BESS CORE block names, or nil
+    /// when the state has no readable BESS footer.
+    static func stateFamily(_ state: Data) -> HardwareFamily? {
+        let bytes = [UInt8](state)
+        func uint32LE(_ offset: Int) -> Int? {
+            guard offset >= 0, offset + 4 <= bytes.count else { return nil }
+            return Int(bytes[offset]) | Int(bytes[offset + 1]) << 8 | Int(bytes[offset + 2]) << 16 | Int(bytes[offset + 3]) << 24
+        }
+        func tag(_ offset: Int) -> String? {
+            guard offset >= 0, offset + 4 <= bytes.count else { return nil }
+            return String(bytes: bytes[offset..<offset + 4], encoding: .ascii)
+        }
+        guard bytes.count >= 8, tag(bytes.count - 4) == "BESS", var offset = uint32LE(bytes.count - 8) else {
+            return nil
+        }
+        while let name = tag(offset), let size = uint32LE(offset + 4), name != "END " {
+            if name == "CORE" {
+                // After the block header come the major and minor versions, then the model.
+                guard offset + 12 < bytes.count else { return nil }
+                switch bytes[offset + 12] {
+                case UInt8(ascii: "G"): return .gameBoy
+                case UInt8(ascii: "S"): return .superGameBoy
+                case UInt8(ascii: "C"): return .gameBoyColor
+                default: return nil
+                }
+            }
+            offset += 8 + size
+        }
+        return nil
+    }
+
     @discardableResult
     public func skipBootAnimation() throws -> Bool {
         guard let instance else { throw SameBoyAdapterError.romNotLoaded }
-        // The CGB boot ROM's animation is most of its run time; the fast variant skips it. DMG has no
-        // fast variant, and an older resource set without it falls back to the regular boot ROM.
-        let fastBootROM = loadedSystem == .gameBoyColor ? Self.bundledBootROM(named: "cgb_boot_fast") : nil
+        // The CGB boot ROM's animation is most of its run time; the fast variant skips it. Other
+        // models have no fast variant, and an older resource set without it falls back to the
+        // regular boot ROM.
+        let fastBootROM = runningModel == .gameBoyColor ? Self.bundledBootROM(named: "cgb_boot_fast") : nil
         guard let fastBootROM else { return SBSkipBootROM(instance, nil, 0) }
         return fastBootROM.withUnsafeBytes { bytes in
             SBSkipBootROM(instance, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
@@ -261,13 +352,14 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         return SBConsumeRumbleAmplitude(instance)
     }
 
-    private static func loadBootROM(for system: GameSystem) throws -> Data {
-        let resourceName: String
-        switch system {
-        case .gameBoy:
-            resourceName = "dmg_boot"
-        case .gameBoyColor:
-            resourceName = "cgb_boot"
+    private static func loadBootROM(for model: HardwareModel) throws -> Data {
+        let resourceName = switch model {
+        case .automatic, .gameBoy: "dmg_boot"
+        case .gameBoyPocket: "mgb_boot"
+        case .superGameBoy: "sgb_boot"
+        case .superGameBoy2: "sgb2_boot"
+        case .gameBoyColor: "cgb_boot"
+        case .gameBoyAdvance, .gameBoyPlayer: "agb_boot"
         }
         guard let data = bundledBootROM(named: resourceName) else {
             throw SameBoyAdapterError.bootROMUnavailable("\(resourceName).bin")

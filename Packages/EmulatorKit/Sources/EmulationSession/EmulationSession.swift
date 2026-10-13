@@ -16,6 +16,9 @@ public enum AutoStateRestore: Equatable, Sendable {
     case restored(SaveState)
     /// The state was rejected and the game booted normally. The state is kept.
     case failed(SaveState)
+    /// The state was made on hardware of another family than the game now runs on, so the game
+    /// booted normally. The state is kept, and loads once the game runs on that family again.
+    case needsOtherHardware(SaveState, HardwareFamily)
 }
 
 public enum EmulationSessionError: Error, Equatable {
@@ -50,6 +53,7 @@ public final class EmulationSession: @unchecked Sendable {
     private let assetStore: any AssetStore
     private let imageResolver: any BuildImageResolving
     private let coreResolver: ResolveCoreForBuild
+    private let coreRegistry: CoreRegistry
     private let persistentSaveService: PersistentSaveService
     private let stateService: SaveStateService
     private let settings: SettingsResolver?
@@ -59,12 +63,15 @@ public final class EmulationSession: @unchecked Sendable {
     private let cheats: (any BuildCheatRepository)?
     private var lastCheckpointNanoseconds: UInt64 = 0
     private let writesTimedStates: @Sendable () -> Bool
+    private let choosesHardwareModel: @Sendable () -> Bool
     private var timedStateStartedAt: Date?
 
     private let lock = NSLock()
     private let playtimeRecordingLock = NSLock()
     private var _state: EmulationSessionState = .idle
     private var worker: SessionWorker?
+    /// The hardware the open game runs on.
+    private var _runningHardwareModel: HardwareModel?
     private var activeContext: LaunchContext?
     /// Holds the running game's image from launch until the session ends.
     private var imageLease: InFlightFiles.Lease?
@@ -96,6 +103,7 @@ public final class EmulationSession: @unchecked Sendable {
         cheats: (any BuildCheatRepository)? = nil,
         keepsAutoStateHistory: @escaping @Sendable () -> Bool = { true },
         writesTimedStates: @escaping @Sendable () -> Bool = { false },
+        choosesHardwareModel: @escaping @Sendable () -> Bool = { true },
         batteryCheckInterval: TimeInterval = 5,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -107,7 +115,9 @@ public final class EmulationSession: @unchecked Sendable {
         self.imageResolver = imageResolver
         self.now = now
         self.writesTimedStates = writesTimedStates
+        self.choosesHardwareModel = choosesHardwareModel
         self.coreResolver = ResolveCoreForBuild(builds: builds, registry: coreRegistry, now: now)
+        self.coreRegistry = coreRegistry
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
         self.stateService = SaveStateService(
             states: states,
@@ -168,10 +178,14 @@ public final class EmulationSession: @unchecked Sendable {
             // The save as the core reports it, which can differ in size from the file, so an
             // unchanged save isn't mistaken for a new one.
             var savedBattery = Data()
+            let model = hardwareModel(build)
 
             func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
                 let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
-                try newWorker.perform { try $0.loadImage(rom, system: build.system) }
+                try newWorker.perform { core in
+                    try (core as? any HardwareModelCapability)?.setHardwareModel(model)
+                    try core.loadImage(rom, system: build.system)
+                }
                 try applyCheats(buildID: build.id, worker: newWorker)
                 try newWorker.perform { try $0.loadPersistentSave(battery) }
                 savedBattery = try newWorker.perform { try $0.persistentSaveData() }
@@ -199,6 +213,15 @@ public final class EmulationSession: @unchecked Sendable {
                     try stateService.load(autoState, worker: candidate, context: context)
                     newWorker = candidate
                     restore = .restored(autoState)
+                } catch let needs as StateNeedsOtherHardware {
+                    // Refused before anything loaded, so the booted core is clean to play.
+                    if skipsBootAnimation(build) {
+                        try candidate.perform { core in
+                            _ = try (core as? any BootSkippingCapability)?.skipBootAnimation()
+                        }
+                    }
+                    newWorker = candidate
+                    restore = .needsOtherHardware(autoState, needs.family)
                 } catch {
                     // The core may hold part of the rejected state, so boot a clean one.
                     newWorker = try bootedWorker(skipBoot: skipsBootAnimation(build))
@@ -212,6 +235,7 @@ public final class EmulationSession: @unchecked Sendable {
             lock.withLock {
                 worker = newWorker
                 activeContext = context
+                _runningHardwareModel = model.resolved(for: build.system)
                 imageLease = lease
                 sessionEmulatedNanoseconds = 0
                 recordedNanoseconds = 0
@@ -229,6 +253,7 @@ public final class EmulationSession: @unchecked Sendable {
             lock.withLock {
                 worker = nil
                 activeContext = nil
+                _runningHardwareModel = nil
                 imageLease = nil
                 latestFrame = nil
                 _state = .idle
@@ -287,6 +312,61 @@ public final class EmulationSession: @unchecked Sendable {
         return skip ?? false
     }
 
+    /// The hardware the open game runs on, or nil with no game open.
+    public var runningHardwareModel: HardwareModel? {
+        lock.withLock { _runningHardwareModel }
+    }
+
+    /// The hardware the open game would run on now, when the Model setting has changed it since the
+    /// game started or last restarted; otherwise nil. `restart()` switches to it.
+    public func changedHardwareModel() -> HardwareModel? {
+        guard let (_, context, _) = try? snapshotActive(),
+              let build = try? builds.fetchBuild(id: context.buildID) else { return nil }
+        let model = hardwareModel(build).resolved(for: build.system)
+        return model == runningHardwareModel ? nil : model
+    }
+
+    /// The hardware family `state` was made on, when it's not the one its Build runs on, so the
+    /// state can't load; otherwise nil. With the Build open, that's the hardware it runs on now;
+    /// otherwise the hardware it would start on. Unreadable or unmarked states give nil, and
+    /// their load decides.
+    public func hardwareFamilyNeeded(for state: SaveState) -> HardwareFamily? {
+        guard let build = try? builds.fetchBuild(id: state.buildID),
+              let asset = try? assets.fetchAsset(id: state.stateAssetID),
+              let url = try? assetStore.managedURL(relativePath: asset.relativePath),
+              let data = try? assetStore.readData(at: url) else { return nil }
+        let made: HardwareFamily?
+        let runsOn: HardwareModel
+        if let active = try? snapshotActive(), active.1.buildID == build.id, let running = runningHardwareModel {
+            made = (try? active.0.perform { ($0 as? any HardwareModelCapability)?.hardwareFamily(ofState: data) }) ?? nil
+            runsOn = running
+        } else {
+            // A Build with states has run, so it has a pin to read with; checking a state never
+            // pins one.
+            guard let pin = build.corePin, let core = try? coreRegistry.factory(for: pin.descriptor).makeCore() else {
+                return nil
+            }
+            made = (core as? any HardwareModelCapability)?.hardwareFamily(ofState: data)
+            runsOn = hardwareModel(build).resolved(for: build.system)
+        }
+        guard let made, made != runsOn.family else { return nil }
+        return made
+    }
+
+    /// The hardware the Build runs on: the setting resolved for it, or Automatic when choosing
+    /// isn't allowed or the setting can't be read.
+    private func hardwareModel(_ build: Build) -> HardwareModel {
+        guard choosesHardwareModel() else { return .automatic }
+        let model = try? settings?.decode(
+            HardwareModel.self,
+            key: SettingKey.hardwareModel.rawValue,
+            system: build.system,
+            gameID: build.gameID,
+            buildID: build.id
+        )
+        return model ?? .automatic
+    }
+
     @discardableResult
     public func stepFrame(input: EmulatorInputState = .init()) throws -> EmulatorVideoFrame {
         let (worker, context, running) = try snapshotActive()
@@ -311,10 +391,16 @@ public final class EmulationSession: @unchecked Sendable {
     }
 
     @discardableResult
-    public func setDisplaySettings(colorCorrection: ColorCorrection, dmgPalette: DMGPalette) throws -> EmulatorVideoFrame? {
+    public func setDisplaySettings(
+        colorCorrection: ColorCorrection,
+        dmgPalette: DMGPalette,
+        advanceColors: AdvanceColors
+    ) throws -> EmulatorVideoFrame? {
         let (worker, context, _) = try snapshotActive()
         let frame = try worker.perform { core in
-            try (core as? any DisplaySettingsCapability)?.setDisplaySettings(colorCorrection: colorCorrection, dmgPalette: dmgPalette)
+            try (core as? any DisplaySettingsCapability)?.setDisplaySettings(
+                colorCorrection: colorCorrection, dmgPalette: dmgPalette, advanceColors: advanceColors
+            )
         }
         if let frame {
             lock.withLock {
@@ -504,16 +590,23 @@ public final class EmulationSession: @unchecked Sendable {
     /// Starts the game again from its boot, the way switching the cartridge off and on does. The
     /// cartridge keeps its battery-backed RAM through a reset, so the save stays. An Auto State
     /// taken first keeps the moment being left, so Load State can go back to it; when that state
-    /// can't be written, the game isn't reset. Stop the frame loop before calling this.
+    /// can't be written, the game isn't reset. A changed Model takes effect here. Stop the frame
+    /// loop before calling this.
     public func restart() throws {
         let (worker, context, _) = try snapshotActive()
         try saveAutoState()
-        let skipBoot = try builds.fetchBuild(id: context.buildID).map(skipsBootAnimation) ?? false
+        let build = try builds.fetchBuild(id: context.buildID)
+        let skipBoot = build.map(skipsBootAnimation) ?? false
+        let model = build.map(hardwareModel)
         try worker.perform { core in
+            if let model { try (core as? any HardwareModelCapability)?.setHardwareModel(model) }
             try core.reset()
             if skipBoot { _ = try (core as? any BootSkippingCapability)?.skipBootAnimation() }
         }
-        lock.withLock { latestFrame = nil }
+        lock.withLock {
+            latestFrame = nil
+            if let model, let build, activeContext == context { _runningHardwareModel = model.resolved(for: build.system) }
+        }
     }
 
     /// The periodic save queue calls this during play. Checkpoints have their own cadence and
@@ -659,6 +752,7 @@ public final class EmulationSession: @unchecked Sendable {
         lock.withLock {
             worker = nil
             activeContext = nil
+            _runningHardwareModel = nil
             imageLease?.end()
             imageLease = nil
             latestFrame = nil

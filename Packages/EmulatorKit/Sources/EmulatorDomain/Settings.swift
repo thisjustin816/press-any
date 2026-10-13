@@ -86,6 +86,10 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case keepAutoStates
     /// `TimedStates`, unset means `.off`.
     case timedStates
+    /// `HardwareModel`, unset means `.automatic`. Read when a game starts or restarts.
+    case hardwareModel
+    /// `AdvanceColors`, unset means `.gameBoyAdvance`.
+    case advanceColors
 
     public var isAppOnly: Bool {
         switch self {
@@ -407,5 +411,95 @@ public enum TimedStates: Int, Codable, Sendable, CaseIterable {
         case .oneMinute: "Every 1 Minute"
         default: "Every \(rawValue) Minutes"
         }
+    }
+}
+
+/// The hardware a game runs on. Raw values are stored in settings.
+public enum HardwareModel: String, Codable, Sendable, CaseIterable {
+    /// A Game Boy Color for games marked for it, and a Game Boy for the rest.
+    case automatic
+    case gameBoy = "dmg"
+    case gameBoyPocket = "mgb"
+    case superGameBoy = "sgb"
+    case superGameBoy2 = "sgb2"
+    case gameBoyColor = "cgb"
+    case gameBoyAdvance = "agb"
+    /// A Game Boy Advance inside the GameCube's Game Boy Player.
+    case gameBoyPlayer = "gbp"
+
+    public static let settingExplanation = "Model is the hardware games run on. Automatic plays Game Boy Color games on a Game Boy Color and the rest on a Game Boy. An open game restarts on the new hardware when its settings close, keeping its save. A save state loads only on the kind of hardware it was made on."
+
+    public var displayName: String {
+        switch self {
+        case .automatic: "Automatic"
+        case .gameBoy: "Game Boy"
+        case .gameBoyPocket: "Game Boy Pocket"
+        case .superGameBoy: "Super Game Boy"
+        case .superGameBoy2: "Super Game Boy 2"
+        case .gameBoyColor: "Game Boy Color"
+        case .gameBoyAdvance: "Game Boy Advance"
+        case .gameBoyPlayer: "Game Boy Player"
+        }
+    }
+
+    /// The hardware a game of `system` runs on: this model, or for Automatic the system's own.
+    public func resolved(for system: GameSystem) -> HardwareModel {
+        guard self == .automatic else { return self }
+        return switch system {
+        case .gameBoy: .gameBoy
+        case .gameBoyColor: .gameBoyColor
+        }
+    }
+
+    /// A Game Boy Advance, alone or in a Game Boy Player, whose darker screen Game Boy Advance
+    /// Colors can undo.
+    public var isGameBoyAdvance: Bool {
+        self == .gameBoyAdvance || self == .gameBoyPlayer
+    }
+
+    /// Models whose save states load on one another. A state made on one family doesn't load on
+    /// another.
+    public var family: HardwareFamily? {
+        switch self {
+        case .automatic: nil
+        case .gameBoy, .gameBoyPocket: .gameBoy
+        case .superGameBoy, .superGameBoy2: .superGameBoy
+        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: .gameBoyColor
+        }
+    }
+}
+
+/// How a game running on a Game Boy Advance or Game Boy Player is colored. Raw values are stored
+/// in settings.
+public enum AdvanceColors: String, Codable, Sendable, CaseIterable {
+    /// Darker, as the Game Boy Advance's screen shows a Game Boy Color game.
+    case gameBoyAdvance
+    /// As a Game Boy Color's screen shows the same colors. The game still runs on a Game Boy
+    /// Advance and can tell.
+    case gameBoyColor
+
+    public static let explanation = "A Game Boy Advance's screen is darker than a Game Boy Color's, so games made for it brighten their colors there. As on a Game Boy Color shows the game's colors as a Game Boy Color would, while the game still runs on a Game Boy Advance."
+
+    public var displayName: String {
+        switch self {
+        case .gameBoyAdvance: "As on a Game Boy Advance"
+        case .gameBoyColor: "As on a Game Boy Color"
+        }
+    }
+}
+
+public enum HardwareFamily: Sendable {
+    case gameBoy
+    case superGameBoy
+    case gameBoyColor
+
+    public var models: [HardwareModel] {
+        HardwareModel.allCases.filter { $0.family == self }
+    }
+
+    /// "Game Boy Color, Game Boy Advance or Game Boy Player".
+    public var modelList: String {
+        let names = models.map(\.displayName)
+        return names.dropLast().joined(separator: ", ") + " or " + names.last!
     }
 }

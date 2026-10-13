@@ -34,8 +34,8 @@ GameShark cheats.
 
 v1 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
 The rest waits for v1.1: 7z and multi-asset import, automatic artwork and documents with the
-manual reader, rewind, slow motion, frame advance and Quick Actions, the DMG/GBC/SGB model
-override, shaders and the layout editor with skin import,
+manual reader, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
+shaders and the layout editor with skin import,
 a screenshot gallery and gameplay notes, external displays, tags and collections, iCloud sync once the schema has
 settled, the Community Catalog and metadata providers, crash reporting and usage counts, Developer
 Mode, editable patch stacks, the Build timeline and comparison screen, in-game Build switching,
@@ -89,9 +89,9 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 |---|---|---|---|
 | missing | Nonintrusive "core update available" notice | v1.1 | none |
 | missing | Explicit, reversible core-migration checkpoint (new state lineage, rollback when old core available) | v1.1 | none |
-| partial | Automatic model selection | v1.1 | CGB flag 0x80/0xC0 -> CGB, else DMG (SameBoyAdapter.loadImage); SGB never chosen |
-| missing | Model override DMG/GBC/SGB at App->System->Game->Build | v1.1 | no setting key |
-| missing | SGB mode: palettes, borders, game enhancements (custom border editing deferred) | v1.1 | no SGB model/boot ROM in bridge |
+| done | Automatic model selection | v1 | CGB flag 0x80/0xC0 -> GBC, else DMG (`HardwareModel.resolved`); SGB never chosen automatically |
+| done | Model setting (Plus) at App->System->Game->Build | v1 | `hardwareModel`: DMG, MGB, SGB, SGB2, CGB, AGB, GBP, each with its own boot ROM; an open game restarts on a changed Model when its settings close; states refused across hardware families name the models they need and aren't offered by Resume Games; Game Boy Advance Colors shows a GBA game as a GBC would (`advanceColors`); Quick Play uses Automatic. Device check pending |
+| partial | SGB mode: palettes, borders, game enhancements (custom border editing deferred) | v1.1 | SGB and SGB2 color the picture; the border (a 256x224 picture) isn't drawn yet |
 | missing | User-chosen alternate core per Build | later |  |
 | missing | mGBA/GBA adapter | 1.2 or 2.0 | after GB/GBC is feature complete |
 

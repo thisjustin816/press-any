@@ -357,7 +357,8 @@ final class AppContainer {
             inFlight: inFlightFiles,
             cheats: repositories.cheats,
             keepsAutoStateHistory: { ownership.keepsAutoStateHistory },
-            writesTimedStates: { ownership.isOwned }
+            writesTimedStates: { ownership.isOwned },
+            choosesHardwareModel: { ownership.appliesHardwareModel }
         )
     }
 
@@ -368,7 +369,10 @@ final class AppContainer {
         let session = makeEmulationSession()
         let policy = session.autoResumePolicy(for: context)
         let autoState = policy == .never ? nil : (try? session.resumableAutoState(for: context)) ?? nil
-        return PreparedLaunch(context: context, session: session, policy: policy, autoState: autoState)
+        return PreparedLaunch(
+            context: context, session: session, policy: policy, autoState: autoState,
+            autoStateNeedsOtherHardware: autoState.flatMap(session.hardwareFamilyNeeded) != nil
+        )
     }
 
     func start(_ launch: PreparedLaunch, resume: Bool) throws -> AutoStateRestore {
@@ -461,6 +465,14 @@ final class AppContainer {
         launchSetting(DMGPalette.self, .dmgPalette, for: context) ?? .defaultValue
     }
 
+    func advanceColors(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> AdvanceColors {
+        launchSetting(AdvanceColors.self, .advanceColors, system: system, gameID: gameID, buildID: buildID) ?? .gameBoyAdvance
+    }
+
+    func advanceColors(for context: LaunchContext) -> AdvanceColors {
+        launchSetting(AdvanceColors.self, .advanceColors, for: context) ?? .gameBoyAdvance
+    }
+
     /// A Game's Builds, for suggesting a new one's name and roles. Unreadable means none.
     func builds(in gameID: UUID) -> [Build] {
         (try? repositories.builds.fetchBuilds(gameID: gameID)) ?? []
@@ -522,6 +534,7 @@ final class AppContainer {
             lcdFilter: lcdFilter(system: target.system, gameID: target.gameID, buildID: target.buildID),
             colorCorrection: colorCorrection(system: target.system, gameID: target.gameID, buildID: target.buildID),
             dmgPalette: dmgPalette(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            advanceColors: advanceColors(system: target.system, gameID: target.gameID, buildID: target.buildID),
             frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID),
             fastForwardSpeed: fastForwardSpeed(system: target.system, gameID: target.gameID, buildID: target.buildID),
             fastForwardAudio: fastForwardAudio(system: target.system, gameID: target.gameID, buildID: target.buildID)
@@ -622,6 +635,7 @@ struct GameplayDisplaySettings: Equatable {
     var lcdFilter: LCDFilter
     var colorCorrection: ColorCorrection
     var dmgPalette: DMGPalette
+    var advanceColors: AdvanceColors = .gameBoyAdvance
     var frameBlending: FrameBlending
     var fastForwardSpeed: FastForwardSpeed
     var fastForwardAudio: FastForwardAudio
@@ -633,4 +647,7 @@ struct PreparedLaunch {
     let policy: AutoResumePolicy
     /// Nil when there is nothing safe to restore or the policy is `.never`.
     let autoState: SaveState?
+    /// The Auto State was made on hardware of another family than the game now runs on, so it
+    /// can't resume and isn't offered.
+    var autoStateNeedsOtherHardware = false
 }
