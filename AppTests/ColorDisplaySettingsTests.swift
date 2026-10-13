@@ -85,8 +85,78 @@ final class ColorDisplaySettingsTests: XCTestCase {
             case .correction(let choices):
                 XCTAssertEqual(system, .gameBoyColor)
                 XCTAssertEqual(choices, [.balanced, .accurate, .boostContrast, .reduceContrast, .lowContrast, .off])
+            case .superGameBoy:
+                XCTFail("Automatic never runs on a Super Game Boy")
             }
         }
+    }
+
+    func testScreenColorsAndAdvanceColorsFollowTheModelGamesRunOn() throws {
+        let store = InMemorySettingsStore()
+        let palettes = ScreenColorChoices.dmg(DMGPalette.selectableCases)
+        let corrections = ScreenColorChoices.correction(ColorCorrection.allCases)
+        let expected: [(HardwareModel, ScreenColorChoices)] = [
+            (.automatic, palettes), (.gameBoy, palettes), (.gameBoyPocket, palettes),
+            (.superGameBoy, .superGameBoy), (.superGameBoy2, .superGameBoy),
+            (.gameBoyColor, corrections), (.gameBoyAdvance, corrections), (.gameBoyPlayer, corrections),
+        ]
+        func view(_ system: GameSystem, ownsPlus: Bool) -> ScopedSettingsView {
+            ScopedSettingsView(
+                title: "Settings", scope: .system(system), system: system,
+                gameID: nil, buildID: nil, store: store, plus: .fixed(ownsPlus: ownsPlus)
+            )
+        }
+        for (model, choices) in expected {
+            try store.set(model, key: SettingKey.hardwareModel.rawValue, scope: .app)
+            XCTAssertEqual(view(.gameBoy, ownsPlus: true).screenColorChoices, choices, "\(model)")
+            XCTAssertEqual(view(.gameBoy, ownsPlus: true).resolvedHardware.isGameBoyAdvance, model.isGameBoyAdvance, "\(model)")
+            XCTAssertEqual(view(.gameBoy, ownsPlus: false).screenColorChoices, palettes, "\(model) plays on Automatic without Plus")
+            XCTAssertEqual(view(.gameBoyColor, ownsPlus: false).screenColorChoices, corrections, "\(model) plays on Automatic without Plus")
+        }
+        try store.set(HardwareModel.automatic, key: SettingKey.hardwareModel.rawValue, scope: .app)
+        XCTAssertEqual(view(.gameBoyColor, ownsPlus: true).resolvedHardware, .gameBoyColor)
+    }
+
+    func testModelPickerGroupsModelsByConsoleAndNotesGameBoyColorOnlyGames() throws {
+        let view = ScopedSettingsView(
+            title: "Settings", scope: .app, system: .gameBoyColor,
+            gameID: nil, buildID: nil, store: InMemorySettingsStore(), plus: .fixed(ownsPlus: true)
+        )
+        XCTAssertEqual(view.modelSections.map(\.title), [nil, "Game Boy", "Game Boy Color", "Game Boy Advance"])
+        XCTAssertEqual(view.modelSections.map(\.values), [
+            [.automatic], [.gameBoy, .gameBoyPocket, .superGameBoy, .superGameBoy2], [.gameBoyColor], [.gameBoyAdvance, .gameBoyPlayer],
+        ])
+        XCTAssertEqual(view.modelSections.compactMap(\.footer), [])
+        var colorOnly = view
+        colorOnly.requiresGameBoyColor = true
+        XCTAssertEqual(colorOnly.modelSections.map(\.footer), [
+            nil, "This game needs a Game Boy Color, so on these it shows only its message for an original Game Boy.", nil, nil,
+        ])
+    }
+
+    func testOnlyGamesWhoseEveryBuildNeedsAGameBoyColorAreMarkedSo() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        func importBuild(_ name: String, cgbFlag: UInt8, into gameID: UUID?) throws -> Build {
+            let file = root.appendingPathComponent("\(name).gbc")
+            try TestROM.make(title: name, cgbFlag: cgbFlag).write(to: file)
+            let analysis = try container.importAnalyzer.analyzeROM(at: file, targetGameID: gameID)
+            return try container.importCommitter.commit(ROMImportPlan(
+                analysis: analysis,
+                disposition: gameID.map { .addBuild(gameID: $0) } ?? .createGame(title: name),
+                buildDisplayName: name, markAsBase: gameID == nil
+            )).build
+        }
+        let colorOnly = try importBuild("COLORONLY", cgbFlag: 0xC0, into: nil)
+        XCTAssertTrue(container.requiresGameBoyColor(gameID: colorOnly.gameID, buildID: colorOnly.id))
+        XCTAssertTrue(container.requiresGameBoyColor(gameID: colorOnly.gameID, buildID: nil))
+        let dual = try importBuild("DUAL", cgbFlag: 0x80, into: colorOnly.gameID)
+        XCTAssertFalse(container.requiresGameBoyColor(gameID: colorOnly.gameID, buildID: dual.id))
+        XCTAssertFalse(container.requiresGameBoyColor(gameID: colorOnly.gameID, buildID: nil), "one Build plays on a Game Boy")
+        XCTAssertTrue(container.requiresGameBoyColor(gameID: colorOnly.gameID, buildID: colorOnly.id))
+        XCTAssertFalse(container.requiresGameBoyColor(gameID: nil, buildID: nil))
+        XCTAssertFalse(container.requiresGameBoyColor(gameID: UUID(), buildID: nil))
     }
 
     func testPaletteThumbnailsShowAllBackgroundAndSpriteColorsWithoutTinting() throws {

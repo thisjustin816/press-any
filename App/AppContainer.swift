@@ -525,6 +525,23 @@ final class AppContainer {
         )
     }
 
+    /// Whether a game runs only on a Game Boy Color, from its header. With no Build given, every
+    /// Build of the Game must need one. A Build without a stored header counts as no.
+    func requiresGameBoyColor(gameID: UUID?, buildID: UUID?) -> Bool {
+        let builds: [Build]
+        if let buildID {
+            builds = (try? repositories.builds.fetchBuild(id: buildID)).map { [$0] } ?? []
+        } else if let gameID {
+            builds = (try? repositories.builds.fetchBuilds(gameID: gameID)) ?? []
+        } else {
+            builds = []
+        }
+        guard !builds.isEmpty,
+              let fingerprints = try? repositories.fingerprints.fetchFingerprints(imageSHA256s: builds.map(\.imageSHA256))
+        else { return false }
+        return builds.allSatisfy { fingerprints[$0.imageSHA256]?.cgbFlag == 0xC0 }
+    }
+
     /// The display settings for an open game, resolved down to its Build.
     func gameplayDisplay(for target: GameplaySettingsTarget) -> GameplayDisplaySettings {
         GameplayDisplaySettings(

@@ -56,6 +56,10 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(HardwareFamily.superGameBoy.models, [.superGameBoy, .superGameBoy2])
         XCTAssertEqual(HardwareFamily.gameBoyColor.models, [.gameBoyColor, .gameBoyAdvance, .gameBoyPlayer])
         XCTAssertEqual(HardwareModel.allCases.filter(\.isGameBoyAdvance), [.gameBoyAdvance, .gameBoyPlayer])
+        XCTAssertEqual(HardwareConsole.gameBoy.models, [.gameBoy, .gameBoyPocket, .superGameBoy, .superGameBoy2])
+        XCTAssertEqual(HardwareConsole.gameBoyColor.models, [.gameBoyColor])
+        XCTAssertEqual(HardwareConsole.gameBoyAdvance.models, [.gameBoyAdvance, .gameBoyPlayer])
+        XCTAssertEqual(HardwareConsole.allCases.flatMap(\.models).count, HardwareModel.allCases.count - 1, "every model but Automatic has a console")
         XCTAssertEqual(AdvanceColors.allCases.map(\.rawValue), ["gameBoyAdvance", "gameBoyColor"])
     }
 

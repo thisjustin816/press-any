@@ -277,7 +277,7 @@ struct PlayingSettingsPage: View {
             Section {
                 hardwareModelControl
             } footer: {
-                Text(HardwareModel.settingExplanation + " Quick Play always uses Automatic.")
+                Text(HardwareModel.settingSummary + " Quick Play always uses Automatic.")
             }
 
             Section {
@@ -316,26 +316,84 @@ struct PlayingSettingsPage: View {
         .onChange(of: hardwareModel) { _, newValue in save(newValue, .hardwareModel) }
     }
 
-    /// Without Plus the row shows Automatic, which games play on, and each other model opens the
-    /// Plus screen. The stored choice is left alone for when Plus returns.
+    /// Without Plus the row shows Automatic, which games play on, and each other model is marked
+    /// Plus and opens the Plus screen. The stored choice is left alone for when Plus returns.
+    private var shownHardwareModel: HardwareModel {
+        plus.gate.isLocked(hardwareModel.needsPlus) ? .automatic : hardwareModel
+    }
+
     private var hardwareModelControl: some View {
-        Picker(selection: Binding(get: { plus.gate.isLocked(hardwareModel.needsPlus) ? .automatic : hardwareModel }, set: { choice in
-            if plus.gate.isLocked(choice.needsPlus) {
-                showsPlus = true
-            } else {
-                hardwareModel = choice
-            }
-        })) {
-            ForEach(HardwareModel.allCases, id: \.self) { model in
-                Text(plus.gate.label(model.displayName, needsPlus: model.needsPlus)).tag(model)
-            }
+        NavigationLink {
+            hardwareModelList
         } label: {
             HStack(spacing: 6) {
                 Text("Model")
                 if !plus.isUnlocked { PlusBadge() }
+                Spacer(minLength: 12)
+                Text(shownHardwareModel.displayName)
+                    .foregroundStyle(Color.secondary)
             }
         }
         .accessibilityLabel("Model")
+        .accessibilityValue(shownHardwareModel.displayName)
+    }
+
+    /// Automatic on its own, then each console's models.
+    private var hardwareModelList: some View {
+        Form {
+            Section {
+                hardwareModelButton(.automatic)
+            }
+            ForEach(HardwareConsole.allCases, id: \.self) { console in
+                Section {
+                    ForEach(console.models, id: \.self) { hardwareModelButton($0) }
+                } header: {
+                    Text(console.displayName)
+                } footer: {
+                    if console == HardwareConsole.allCases.last {
+                        Text(plus.isUnlocked
+                             ? HardwareModel.settingExplanation + " Quick Play always uses Automatic."
+                             : HardwareModel.lockedExplanation)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Model")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func hardwareModelButton(_ model: HardwareModel) -> some View {
+        let locked = plus.gate.isLocked(model.needsPlus)
+        let selected = model == shownHardwareModel
+        return Button {
+            if locked {
+                showsPlus = true
+            } else {
+                hardwareModel = model
+            }
+        } label: {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.displayName)
+                        .foregroundStyle(Color.primary)
+                    if model == .automatic {
+                        Text(HardwareModel.automaticSummary)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+                Spacer(minLength: 12)
+                if locked {
+                    PlusBadge()
+                }
+                Image(systemName: "checkmark")
+                    .foregroundStyle(Color.accentColor)
+                    .opacity(selected ? 1 : 0)
+                    .accessibilityHidden(true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     /// Without Plus the newest Auto State is kept, so the row shows 1 and each number opens the

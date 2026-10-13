@@ -931,9 +931,10 @@ picture. A connected controller still hides the touch controls.
   back to Fill when not even one whole multiple fits. Fill draws as large as the frame allows at
   10:9, sampling each pixel flat and blending only across its edges. On the Game Boy layout the
   frame itself follows the setting.
-- **Screen Colors** (System, Game or Build) is a different setting on each system, and only the
-  one for the system at hand shows: in Game Boy or Game Boy Color settings, and in the Settings
-  of a Game, a Build or the open game. App Settings doesn't show it, and a choice made there in
+- **Screen Colors** (System, Game or Build) is a different setting for each kind of hardware, and
+  only the one for the hardware the game runs on shows: in Game Boy or Game Boy Color settings,
+  and in the Settings of a Game, a Build or the open game. Under Automatic that's the system's own
+  hardware; with another Model see Settings. App Settings doesn't show it, and a choice made there in
   an earlier version became that system's setting. Screen Colors opens a scrolling list inside
   Settings, including from the in-game menu. The first row restores the inherited value and names
   its source, or says Default when no parent sets it. A checkmark marks the selected row; choosing
@@ -1086,16 +1087,21 @@ Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Ga
 Skip Boot Logo, Model). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
-**Model** is the hardware a game runs on, set like the other settings at every level: Automatic,
-Game Boy, Game Boy Pocket, Super Game Boy, Super Game Boy 2, Game Boy Color, Game Boy Advance and
-Game Boy Player. App Settings has it on the Playing page.
+**Model** is the hardware a game runs on, set like the other settings at every level. It's one
+setting, chosen from a list grouped by console: Automatic on its own, with "Game Boy Color for its
+games, Game Boy for the rest" under it; then Game Boy (Game Boy, Game Boy Pocket, Super Game Boy,
+Super Game Boy 2), Game Boy Color, and Game Boy Advance (Game Boy Advance, Game Boy Player). The
+list shows no model numbers. App Settings has it on the Playing page.
 
 - Automatic runs a game marked for the Game Boy Color (CGB flag 0x80 or 0xC0) on a Game Boy Color
   and the rest on a Game Boy. It never picks a Super Game Boy.
 - Each model boots its own SameBoy boot ROM, so a game finds the hardware it checks for, such as a
   Game Boy Color game brightening its colors on a Game Boy Advance. The Game Boy Player is SameBoy's
   model of a Game Boy Advance inside one. There's no promise that a Game Boy Color-only game works
-  on a monochrome model.
+  on a monochrome model. For a game whose header says it needs a Game Boy Color (CGB flag 0xC0),
+  the Game Boy models stay selectable, with "This game needs a Game Boy Color, so on these it shows
+  only its message for an original Game Boy." under them. A Game's settings say it only when every
+  Build needs one.
 - Changing Model in an open game's settings restarts the game on the new hardware when the sheet
   closes, as SameBoy does, with "Restarted on Game Boy Advance." Like Restart, it keeps where the
   player was as an Auto State first, and the battery save, cheats and display settings carry over.
@@ -1110,9 +1116,12 @@ Game Boy Player. App Settings has it on the Playing page.
   which models it needs, before any question about the save. Resume Games doesn't offer an Auto
   State made on another kind: the game starts from its battery save, a message says where that
   point can load, and the state stays in States. Crash recovery behaves the same way.
-- Screen Colors lists the choices for the game's own system. A Game Boy game's palettes apply only
-  on a Game Boy or Pocket: a Game Boy Color, Advance or Player colors it as its boot ROM does, and
-  the Super Game Boys color the picture as the game asks.
+- Screen Colors follows the hardware the game runs on. On a Game Boy or Pocket it lists the Game
+  Boy palettes, for Game Boy Color games too. On a Game Boy Color, Advance or Player it lists Color
+  Correction, for Game Boy games too, which those color as their boot ROM does. On a Super Game Boy
+  or Super Game Boy 2 the row can't be changed: it says "Set by the game or the Super Game Boy"
+  with Super Game Boy as its value. Without Plus every game plays on Automatic, so the row follows
+  the game's own system.
 - A Game Boy Advance's screen is darker than a Game Boy Color's, and SameBoy colors a game on a
   Game Boy Advance or Player for that darker screen. When a game's Model is one of those, Display has **Game
   Boy Advance Colors**: As on a Game Boy Advance, the default, or As on a Game Boy Color, which
@@ -1121,7 +1130,9 @@ Game Boy Player. App Settings has it on the Playing page.
 - The Super Game Boy border isn't drawn yet: it makes the picture 256×224, which the layouts,
   screenshots and thumbnails don't fit. Custom border editing comes after the border.
 - Quick Play always uses Automatic.
-- Choosing a model other than Automatic needs Plus (see Pricing).
+- Choosing a model other than Automatic needs Plus (see Pricing). Without it, every model but
+  Automatic carries a Plus badge in the list, choosing one opens the Plus screen, and the note
+  under the list says so.
 
 ## Deletion
 

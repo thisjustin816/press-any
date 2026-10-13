@@ -140,4 +140,7 @@ extension TimedStates {
 extension HardwareModel {
     /// Choosing the hardware is a Plus feature. Automatic stays free.
     var needsPlus: Bool { self != .automatic }
+
+    /// Under the Model picker without Plus, in place of `settingExplanation`.
+    static let lockedExplanation = "Choosing a model needs Plus, and opens the Plus screen. Without Plus, games play on Automatic."
 }
