@@ -358,7 +358,7 @@ final class AppContainer {
             cheats: repositories.cheats,
             keepsAutoStateHistory: { ownership.keepsAutoStateHistory },
             writesTimedStates: { ownership.isOwned },
-            choosesHardwareModel: { ownership.isOwned }
+            choosesHardwareModel: { ownership.appliesHardwareModel }
         )
     }
 

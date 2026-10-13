@@ -678,6 +678,23 @@ extension EmulationSessionTests {
         XCTAssertNil(session.runningHardwareModel)
     }
 
+    func testAnOpenGameChecksStatesAgainstTheHardwareItRunsOn() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: harness.contextA)
+        let madeOnColor = try session.saveQuickState()
+
+        try settings.set(HardwareModel.gameBoy, key: SettingKey.hardwareModel.rawValue, scope: .build(harness.buildA.id))
+        XCTAssertNil(session.hardwareFamilyNeeded(for: madeOnColor), "the game still runs on a Game Boy Color, so it loads")
+        try session.restart()
+        XCTAssertEqual(session.hardwareFamilyNeeded(for: madeOnColor), .gameBoyColor, "now it runs on a Game Boy")
+        XCTAssertThrowsError(try session.loadState(madeOnColor)) { error in
+            XCTAssertEqual(error as? StateNeedsOtherHardware, StateNeedsOtherHardware(family: .gameBoyColor))
+        }
+        try session.stop(createAutoState: false)
+    }
+
     func testAnAutoStateFromOtherHardwareStartsTheGameFromItsSaveAndIsKept() throws {
         let harness = try SessionHarness.make()
         let settings = InMemorySettingsStore()
@@ -690,9 +707,13 @@ extension EmulationSessionTests {
         try settings.set(HardwareModel.gameBoy, key: key, scope: .build(harness.buildA.id))
         let second = harness.makeSession(settings: SettingsResolver(store: settings))
         let autoState = try XCTUnwrap(second.resumableAutoState(for: harness.contextA))
+        let pinned = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
         XCTAssertEqual(second.hardwareFamilyNeeded(for: autoState), .gameBoyColor, "made on a Game Boy Color, opening on a Game Boy")
+        XCTAssertEqual(try harness.builds.fetchBuild(id: harness.buildA.id), pinned, "checking writes nothing")
+        let cores = harness.factory.cores.count
         XCTAssertEqual(try second.start(context: harness.contextA, resumeFrom: autoState),
                        .needsOtherHardware(autoState, .gameBoyColor))
+        XCTAssertEqual(harness.factory.cores.count, cores + 1, "the refused state left its core clean to play")
         XCTAssertEqual(second.runningHardwareModel, .gameBoy)
         try second.stop(createAutoState: false)
         XCTAssertTrue(try harness.states.fetchSaveStates(buildID: harness.buildA.id, saveProfileID: harness.profile.id)

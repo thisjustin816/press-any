@@ -189,7 +189,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     public func setDisplaySettings(
         colorCorrection: ColorCorrection,
         dmgPalette: DMGPalette,
-        advanceColors: AdvanceColors = .gameBoyAdvance
+        advanceColors: AdvanceColors
     ) throws -> EmulatorVideoFrame? {
         self.colorCorrection = colorCorrection
         self.dmgPalette = dmgPalette

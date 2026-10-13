@@ -131,8 +131,8 @@ final class SameBoyHardwareModelTests: XCTestCase {
         try core.loadImage(TestROM.make(title: "SGBCOLORS"), system: .gameBoy)
         XCTAssertTrue(try core.skipBootAnimation())
         for _ in 0..<90 { _ = try core.runFrame(input: .init()) }
-        let green = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .dmgGreen))
-        let pocket = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .pocket))
+        let green = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .dmgGreen, advanceColors: .gameBoyAdvance))
+        let pocket = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .pocket, advanceColors: .gameBoyAdvance))
         XCTAssertEqual(green.bgra8888, pocket.bgra8888)
     }
 

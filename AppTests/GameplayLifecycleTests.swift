@@ -200,22 +200,33 @@ final class GameplayLifecycleTests: XCTestCase {
 
     func testClosingSettingsWithAChangedModelRestartsTheGameOnIt() {
         let (gameplay, runtime, _) = makeGameplay()
-        gameplay.setCoveredBySheet(true)
-        gameplay.setCoveredBySheet(false)
+        gameplay.onOpenSettings = {}
+        var restarts = 0
+        func openAndCloseSettings(choosing model: HardwareModel? = nil) {
+            gameplay.openSettings()
+            gameplay.setCoveredBySheet(true)
+            if let model { runtime.chooseModel(model) }
+            XCTAssertEqual(runtime.restarts, restarts, "nothing restarts while the sheet is open")
+            gameplay.setCoveredBySheet(false)
+        }
+
+        openAndCloseSettings()
         XCTAssertEqual(runtime.restarts, 0, "nothing changed, so the game stays paused where it was")
         XCTAssertTrue(gameplay.isShowingPaused)
 
-        gameplay.setCoveredBySheet(true)
-        runtime.chooseModel(.gameBoyAdvance)
-        XCTAssertEqual(runtime.restarts, 0, "nothing restarts while the sheet is open")
-        gameplay.setCoveredBySheet(false)
+        openAndCloseSettings(choosing: .gameBoyAdvance)
+        restarts = 1
         XCTAssertEqual(runtime.restarts, 1)
         XCTAssertNil(runtime.changedHardwareModel())
         XCTAssertFalse(gameplay.isShowingPaused, "it plays from its boot, as Restart does")
 
+        openAndCloseSettings()
+        XCTAssertEqual(runtime.restarts, 1, "once")
+
+        runtime.chooseModel(.superGameBoy)
         gameplay.setCoveredBySheet(true)
         gameplay.setCoveredBySheet(false)
-        XCTAssertEqual(runtime.restarts, 1, "once")
+        XCTAssertEqual(runtime.restarts, 1, "closing another sheet, such as Cheats, never restarts the game")
     }
 
     func testResumingOnOtherHardwareSaysWhereThatPointLoads() {

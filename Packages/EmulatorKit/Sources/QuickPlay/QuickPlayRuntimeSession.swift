@@ -148,7 +148,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
     public func setDisplaySettings(
         colorCorrection: ColorCorrection,
         dmgPalette: DMGPalette,
-        advanceColors: AdvanceColors = .gameBoyAdvance
+        advanceColors: AdvanceColors
     ) throws -> EmulatorVideoFrame? {
         let worker = try activeWorker(requireRunning: false)
         let frame = try worker.perform { core in

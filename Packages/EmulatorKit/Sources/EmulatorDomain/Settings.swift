@@ -451,6 +451,12 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
         }
     }
 
+    /// A Game Boy Advance, alone or in a Game Boy Player, whose darker screen Game Boy Advance
+    /// Colors can undo.
+    public var isGameBoyAdvance: Bool {
+        self == .gameBoyAdvance || self == .gameBoyPlayer
+    }
+
     /// Models whose save states load on one another. A state made on one family doesn't load on
     /// another.
     public var family: HardwareFamily? {

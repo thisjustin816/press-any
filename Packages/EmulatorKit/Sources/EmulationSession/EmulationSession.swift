@@ -53,6 +53,7 @@ public final class EmulationSession: @unchecked Sendable {
     private let assetStore: any AssetStore
     private let imageResolver: any BuildImageResolving
     private let coreResolver: ResolveCoreForBuild
+    private let coreRegistry: CoreRegistry
     private let persistentSaveService: PersistentSaveService
     private let stateService: SaveStateService
     private let settings: SettingsResolver?
@@ -116,6 +117,7 @@ public final class EmulationSession: @unchecked Sendable {
         self.writesTimedStates = writesTimedStates
         self.choosesHardwareModel = choosesHardwareModel
         self.coreResolver = ResolveCoreForBuild(builds: builds, registry: coreRegistry, now: now)
+        self.coreRegistry = coreRegistry
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
         self.stateService = SaveStateService(
             states: states,
@@ -212,8 +214,13 @@ public final class EmulationSession: @unchecked Sendable {
                     newWorker = candidate
                     restore = .restored(autoState)
                 } catch let needs as StateNeedsOtherHardware {
-                    // Refused before anything loaded, but boot clean as for any other refusal.
-                    newWorker = try bootedWorker(skipBoot: skipsBootAnimation(build))
+                    // Refused before anything loaded, so the booted core is clean to play.
+                    if skipsBootAnimation(build) {
+                        try candidate.perform { core in
+                            _ = try (core as? any BootSkippingCapability)?.skipBootAnimation()
+                        }
+                    }
+                    newWorker = candidate
                     restore = .needsOtherHardware(autoState, needs.family)
                 } catch {
                     // The core may hold part of the rejected state, so boot a clean one.
@@ -319,17 +326,31 @@ public final class EmulationSession: @unchecked Sendable {
         return model == runningHardwareModel ? nil : model
     }
 
-    /// The hardware family `state` was made on, when it's not the one its Build runs on now, so
-    /// the state can't load; otherwise nil. Unreadable or unmarked states give nil, and their load
-    /// decides.
+    /// The hardware family `state` was made on, when it's not the one its Build runs on, so the
+    /// state can't load; otherwise nil. With the Build open, that's the hardware it runs on now;
+    /// otherwise the hardware it would start on. Unreadable or unmarked states give nil, and
+    /// their load decides.
     public func hardwareFamilyNeeded(for state: SaveState) -> HardwareFamily? {
         guard let build = try? builds.fetchBuild(id: state.buildID),
               let asset = try? assets.fetchAsset(id: state.stateAssetID),
               let url = try? assetStore.managedURL(relativePath: asset.relativePath),
-              let data = try? assetStore.readData(at: url),
-              let core = try? coreResolver.execute(buildID: build.id),
-              let family = (core as? any HardwareModelCapability)?.hardwareFamily(ofState: data) else { return nil }
-        return family == hardwareModel(build).resolved(for: build.system).family ? nil : family
+              let data = try? assetStore.readData(at: url) else { return nil }
+        let made: HardwareFamily?
+        let runsOn: HardwareModel
+        if let active = try? snapshotActive(), active.1.buildID == build.id, let running = runningHardwareModel {
+            made = (try? active.0.perform { ($0 as? any HardwareModelCapability)?.hardwareFamily(ofState: data) }) ?? nil
+            runsOn = running
+        } else {
+            // A Build with states has run, so it has a pin to read with; checking a state never
+            // pins one.
+            guard let pin = build.corePin, let core = try? coreRegistry.factory(for: pin.descriptor).makeCore() else {
+                return nil
+            }
+            made = (core as? any HardwareModelCapability)?.hardwareFamily(ofState: data)
+            runsOn = hardwareModel(build).resolved(for: build.system)
+        }
+        guard let made, made != runsOn.family else { return nil }
+        return made
     }
 
     /// The hardware the Build runs on: the setting resolved for it, or Automatic when choosing
@@ -373,7 +394,7 @@ public final class EmulationSession: @unchecked Sendable {
     public func setDisplaySettings(
         colorCorrection: ColorCorrection,
         dmgPalette: DMGPalette,
-        advanceColors: AdvanceColors = .gameBoyAdvance
+        advanceColors: AdvanceColors
     ) throws -> EmulatorVideoFrame? {
         let (worker, context, _) = try snapshotActive()
         let frame = try worker.perform { core in

@@ -28,6 +28,8 @@ final class GameplayViewController: UIViewController {
     private var firstFrameClock: UInt64?
     private var pauseReasons = GameplayPauseReasons()
     private var coveredBySheet = false
+    /// Set from the menu's Settings until the sheet over the game closes.
+    private var settingsOpen = false
     /// Set when the scene went to the background, so returning applies Resume Games.
     private var backgrounded = false
     /// Set once an emulation error has stopped the game for good.
@@ -329,7 +331,7 @@ final class GameplayViewController: UIViewController {
         ))
         if onOpenSettings != nil {
             elements.append(UIAction(title: "Settings", image: UIImage(systemName: "gearshape")) { [weak self] _ in
-                self?.onOpenSettings?()
+                self?.openSettings()
             })
         }
         if onAddToLibrary != nil {
@@ -1048,13 +1050,23 @@ final class GameplayViewController: UIViewController {
         guard covered != coveredBySheet else { return }
         coveredBySheet = covered
         guard covered else {
-            restartOnChangedHardware()
+            if settingsOpen {
+                settingsOpen = false
+                restartOnChangedHardware()
+            }
             return
         }
         pauseGameplay()
     }
 
-    /// A Model chosen in the open game's settings takes effect once the sheet closes: the game
+    /// The menu's Settings. Model is chosen there, so closing that sheet, and no other, can restart
+    /// the game on new hardware.
+    func openSettings() {
+        settingsOpen = true
+        onOpenSettings?()
+    }
+
+    /// A Model chosen in the open game's settings takes effect once that sheet closes: the game
     /// restarts on the new hardware, as Restart does, keeping where it was as an Auto State.
     private func restartOnChangedHardware() {
         guard !halted, let model = runtime.changedHardwareModel() else { return }

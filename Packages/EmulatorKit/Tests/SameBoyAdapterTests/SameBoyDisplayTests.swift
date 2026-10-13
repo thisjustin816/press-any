@@ -9,7 +9,7 @@ final class SameBoyDisplayTests: XCTestCase {
     func testDMGPalettesMatchSameBoyColorsForEveryPixel() throws {
         let core = try booted(.gameBoy)
         let state = try core.serializeState()
-        let grey = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .grey))
+        let grey = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .grey, advanceColors: .gameBoyAdvance))
         let shades: [UInt32] = [0xff000000, 0xff555555, 0xffaaaaaa, 0xffffffff]
         let palettes: [(DMGPalette, [UInt32])] = [
             (.grey, shades),
@@ -22,7 +22,7 @@ final class SameBoyDisplayTests: XCTestCase {
         for (palette, colors) in palettes {
             XCTAssertEqual(palette.previewColors, Array(repeating: colors.reversed().map { $0 & 0xffffff }, count: 3))
             try core.deserializeState(state)
-            let frame = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: palette))
+            let frame = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: palette, advanceColors: .gameBoyAdvance))
             let expected = try original.map { pixel in
                 colors[try XCTUnwrap(shades.firstIndex(of: pixel))]
             }
@@ -36,12 +36,12 @@ final class SameBoyDisplayTests: XCTestCase {
         let state = try core.serializeState()
         let defaultFrame = try core.runFrame(input: .init())
         try core.deserializeState(state)
-        let balanced = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .grey))
+        let balanced = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .balanced, dmgPalette: .grey, advanceColors: .gameBoyAdvance))
         XCTAssertEqual(defaultFrame.bgra8888, balanced.bgra8888)
-        let off = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .off, dmgPalette: .grey))
+        let off = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .off, dmgPalette: .grey, advanceColors: .gameBoyAdvance))
         XCTAssertNotEqual(off.bgra8888, balanced.bgra8888)
         for mode in ColorCorrection.allCases where mode != .off {
-            let corrected = try XCTUnwrap(core.setDisplaySettings(colorCorrection: mode, dmgPalette: .grey))
+            let corrected = try XCTUnwrap(core.setDisplaySettings(colorCorrection: mode, dmgPalette: .grey, advanceColors: .gameBoyAdvance))
             XCTAssertNotEqual(corrected.bgra8888, off.bgra8888, "\(mode)")
         }
     }
@@ -50,7 +50,7 @@ final class SameBoyDisplayTests: XCTestCase {
         for system in [GameSystem.gameBoy, .gameBoyColor] {
             let core = try booted(system)
             let state = try core.serializeState()
-            let configured = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .lowContrast, dmgPalette: .pocket))
+            let configured = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .lowContrast, dmgPalette: .pocket, advanceColors: .gameBoyAdvance))
             try core.deserializeState(state)
             XCTAssertEqual(try core.runFrame(input: .init()).bgra8888, configured.bgra8888)
             try core.reset()
@@ -70,7 +70,7 @@ final class SameBoyDisplayTests: XCTestCase {
             let core = try booted(system)
             _ = core.drainAudio(maxFrames: 32768)
             let state = try core.serializeState()
-            let preview = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .accurate, dmgPalette: .light))
+            let preview = try XCTUnwrap(core.setDisplaySettings(colorCorrection: .accurate, dmgPalette: .light, advanceColors: .gameBoyAdvance))
             XCTAssertEqual(preview.emulatedNanoseconds, 0)
             XCTAssertEqual(try core.serializeState(), state)
             XCTAssertTrue(core.drainAudio(maxFrames: 32768).isEmpty)
@@ -82,7 +82,7 @@ final class SameBoyDisplayTests: XCTestCase {
     func testSettingsAppliedBeforeLoadingAnImage() throws {
         try SameBoyAdapterTests.requireGeneratedBootROMs()
         let core = SameBoyAdapter()
-        XCTAssertNil(try core.setDisplaySettings(colorCorrection: .off, dmgPalette: .dmgGreen))
+        XCTAssertNil(try core.setDisplaySettings(colorCorrection: .off, dmgPalette: .dmgGreen, advanceColors: .gameBoyAdvance))
         try core.loadImage(TestROMFixtures.rom(fixture(.gameBoy)), system: .gameBoy)
         XCTAssertTrue(try core.skipBootAnimation())
         for _ in 0..<8 { _ = try core.runFrame(input: .init()) }

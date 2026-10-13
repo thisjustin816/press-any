@@ -135,6 +135,9 @@ final class PlusTests: XCTestCase {
         unasked.set(true)
         XCTAssertTrue(unasked.keepsAutoStateHistory)
         XCTAssertTrue(PlusStore.fixed(ownsPlus: true).ownership.keepsAutoStateHistory)
+        XCTAssertTrue(PlusOwnership(false, resolved: false).appliesHardwareModel, "an owner's game starts on its Model before StoreKit answers")
+        XCTAssertFalse(PlusOwnership(false).appliesHardwareModel)
+        XCTAssertTrue(PlusOwnership(true).appliesHardwareModel)
         XCTAssertFalse(PlusStore.fixed(ownsPlus: false).ownership.keepsAutoStateHistory)
     }
 

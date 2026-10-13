@@ -63,7 +63,7 @@ struct ScopedSettingsView: View {
             gameID: gameID,
             buildID: buildID
         )
-        runsOnAdvance = plus.isUnlocked && [.gameBoyAdvance, .gameBoyPlayer].contains(model ?? .automatic)
+        runsOnAdvance = plus.isUnlocked && (model ?? .automatic).isGameBoyAdvance
     }
 
     // Separate properties keep each section small enough for the compiler to type-check quickly.

@@ -44,6 +44,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(SettingKey.fastForwardSpeed.rawValue, "fastForwardSpeed")
         XCTAssertEqual(SettingKey.fastForwardAudio.rawValue, "fastForwardAudio")
         XCTAssertEqual(SettingKey.hardwareModel.rawValue, "hardwareModel")
+        XCTAssertEqual(SettingKey.advanceColors.rawValue, "advanceColors")
     }
 
     func testHardwareModelValuesAreStableAndAutomaticFollowsTheSystem() {
@@ -54,6 +55,8 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(HardwareFamily.gameBoy.models, [.gameBoy, .gameBoyPocket])
         XCTAssertEqual(HardwareFamily.superGameBoy.models, [.superGameBoy, .superGameBoy2])
         XCTAssertEqual(HardwareFamily.gameBoyColor.models, [.gameBoyColor, .gameBoyAdvance, .gameBoyPlayer])
+        XCTAssertEqual(HardwareModel.allCases.filter(\.isGameBoyAdvance), [.gameBoyAdvance, .gameBoyPlayer])
+        XCTAssertEqual(AdvanceColors.allCases.map(\.rawValue), ["gameBoyAdvance", "gameBoyColor"])
     }
 
     func testSettingValuesAreStable() {
