@@ -47,6 +47,8 @@ final class AppContainer {
     let chooseSaveForBuild: ChooseSaveForBuild
     let evictGeneratedImage: EvictGeneratedImage
     let gameArtwork: GameArtwork
+    private let artworkProvider: (any ArtworkProvider)?
+    private var artworkTasks: [UUID: Task<Void, Never>] = [:]
     let quickPlayWorkspace: QuickPlayWorkspace
     let quickPlayPromoter: PromoteQuickPlay
     let coreRegistry: CoreRegistry
@@ -97,12 +99,14 @@ final class AppContainer {
         }
         #endif
         removeEmptyInbox()
-        return try AppContainer(rootURL: root, plus: .live())
+        return try AppContainer(rootURL: root, plus: .live(), artworkProvider: LibretroArtworkProvider())
     }
 
-    /// Without `plus`, Plus isn't owned and StoreKit isn't used.
-    init(rootURL: URL, plus: PlusStore? = nil) throws {
+    /// Production services are supplied by `live`; tests use StoreKit and artwork networking
+    /// only when those services are injected.
+    init(rootURL: URL, plus: PlusStore? = nil, artworkProvider: (any ArtworkProvider)? = nil) throws {
         self.plus = plus ?? .fixed(ownsPlus: false)
+        self.artworkProvider = artworkProvider
         fileStore = try ManagedFileStore(rootURL: rootURL)
         sharedFileInbox = SharedFileInbox(store: fileStore)
         database = try AppDatabase(url: rootURL.appendingPathComponent("Library.sqlite"))
@@ -262,7 +266,9 @@ final class AppContainer {
         gameArtwork = GameArtwork(
             games: repositories.games,
             assets: repositories.assets,
-            assetStore: fileStore
+            assetStore: fileStore,
+            transactions: repositories.transactions,
+            settings: repositories.settings
         )
         quickPlayWorkspace = QuickPlayWorkspace(
             profiles: repositories.saveProfiles,
@@ -327,6 +333,42 @@ final class AppContainer {
               let url = try? fileStore.managedURL(relativePath: asset.relativePath),
               fileStore.fileExists(at: url) else { return nil }
         return url
+    }
+
+    /// The import is already committed. Artwork failure leaves it playable and retryable from
+    /// the Game's artwork menu; a chosen image is never rechecked automatically.
+    func fetchArtworkAfterImport(_ build: Build) {
+        guard let artworkProvider, artworkTasks[build.id] == nil,
+              let request = artworkLookup(gameID: build.gameID, importedBuild: build) else { return }
+        let automatic = AutomaticGameArtwork(games: repositories.games, artwork: gameArtwork,
+            settings: repositories.settings, providers: [artworkProvider], transactions: repositories.transactions)
+        artworkTasks[build.id] = Task(priority: .utility) { [weak self] in
+            defer { self?.artworkTasks[build.id] = nil }
+            if (try? await automatic.execute(gameID: build.gameID, lookup: request.lookup,
+                expectedPreferredBuildID: request.preferredBuildID)) == true {
+                NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+            }
+        }
+    }
+
+    /// Explicit checks work even when automatic artwork is off, and don't save the download.
+    func findArtwork(gameID: UUID) async throws -> ProvidedArtwork? {
+        guard let artworkProvider, let request = artworkLookup(gameID: gameID) else { return nil }
+        return try await artworkProvider.artwork(for: request.lookup)
+    }
+
+    private func artworkLookup(gameID: UUID, importedBuild: Build? = nil) -> (lookup: ArtworkLookup, preferredBuildID: UUID?)? {
+        guard let knownDumps, let game = try? repositories.games.fetchGame(id: gameID),
+              let builds = try? repositories.builds.fetchBuilds(gameID: gameID) else { return nil }
+        let preferred = builds.first { $0.id == game.preferredBuildID }
+        let ordered = [preferred, importedBuild].compactMap { $0 } + builds
+        var visited: Set<UUID> = []
+        for build in ordered where visited.insert(build.id).inserted {
+            if let lookup = knownDumps.artworkLookup(for: build, lookup: { try? repositories.builds.fetchBuild(id: $0) }) {
+                return (lookup, game.preferredBuildID)
+            }
+        }
+        return nil
     }
 
     /// Checks a typed cheat code with the core that plays the Build, without applying it. With no

@@ -434,6 +434,7 @@ enum BackupCoverage {
         "LibraryBackupRepository": "Snapshot orchestration; restore reports excluded from snapshots.",
         "LibraryTransactionRunner": "Transaction orchestration; no stored records.",
         "AssetStore": "Files belong to the archive caller, outside SQLite.",
+        "ArtworkProvider": "External lookup; only chosen artwork and its managed-asset provenance are backed up.",
         "BuildImageResolving": "Generated image resolution; no separate stored records.",
         "PatchApplying": "Patch execution; no separate stored records.",
     ]

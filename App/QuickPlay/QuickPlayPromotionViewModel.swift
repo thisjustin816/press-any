@@ -105,6 +105,7 @@ final class QuickPlayPromotionViewModel: ObservableObject {
             )
             errorMessage = nil
             shortfallNotice = Self.notice(for: result.shortfalls)
+            if !review.isExactDuplicate { container.fetchArtworkAfterImport(result.build) }
             NotificationCenter.default.post(name: .libraryDidChange, object: nil)
             return result
         } catch let error as PromoteQuickPlayError {

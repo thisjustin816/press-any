@@ -197,6 +197,26 @@ These checks cover the Capture submenu and remain pending until run on a physica
 - [ ] Use Current Frame as Artwork on a library game with no artwork. Close the game and confirm the library tile, list row and Game Details show the whole frame with sharp pixels; relaunch and check it remains. Capture a different frame: Replace asks first, Cancel keeps the old artwork and Replace updates it. Back up and restore the Game to confirm the artwork survives.
 - [ ] Quick Play offers Share Screenshot and disables Use Current Frame as Artwork with Add to Library to use artwork. Without Plus, both capture actions work for library games. VoiceOver reads their names and the submenu stays readable at the largest text size.
 
+## Automatic artwork device checks
+
+- [ ] With Find Artwork on Import on, import a recognized GB and GBC release without choosing
+  artwork. Import closes without waiting for the network; the correct regional box art appears
+  when available, remains after relaunch, and survives backup/restore. Import an exact duplicate:
+  its artwork stays and no lookup starts. Choose Photos/Files artwork in review: it wins.
+- [ ] Add a recognized Build to a Game with manual artwork: its image stays. During a slow
+  download, choose artwork, then remove it: the download must not put artwork back. Disable
+  Find Artwork on Import during a download: its result is discarded. Import in Airplane Mode:
+  the ROM remains playable, with the normal placeholder.
+- [ ] In a Game's Artwork menu, Check for New Artwork shows any current image and the fetched
+  image. Cancel preserves the current one; Use Artwork assigns the preview. Repeat with
+  automatic artwork off. For an unknown homebrew image, a missing thumbnail and an unavailable
+  service, check the empty/error message and use Photos/Files as usual.
+- [ ] Quick Play alone makes no artwork request. Add a recognized ROM from Quick Play to the
+  library: lookup starts after promotion and keeps the promoted save. A modified Build with a
+  recognized base can show inherited art, including a GBC colorization of a GB game.
+- [ ] At the largest Dynamic Type size and with VoiceOver, the Artwork setting, lookup progress,
+  current/fetched images, Cancel and Use Artwork stay readable and operable without Plus.
+
 ## Icon and app color regression checks
 
 - [ ] Check the Corporatus wordmark in the library toolbar, welcome screen, controller menu

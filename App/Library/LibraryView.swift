@@ -519,6 +519,7 @@ struct LibraryView: View {
                 coordinator: importCoordinator,
                 existingBuilds: { container.builds(in: $0) },
                 setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) },
+                fetchArtwork: container.fetchArtworkAfterImport,
                 knownDumps: container.knownDumps,
                 releasePreference: (try? ReleasePreferenceStore(store: container.repositories.settings).load()) ?? ReleasePreference()
             )

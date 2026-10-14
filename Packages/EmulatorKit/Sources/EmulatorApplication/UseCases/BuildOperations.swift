@@ -525,7 +525,8 @@ public struct BuildOperations: Sendable {
             gameID: gameID,
             imageData: data,
             fileExtension: URL(fileURLWithPath: asset.relativePath).pathExtension,
-            originalFilename: asset.originalFilename
+            originalFilename: asset.originalFilename,
+            provenanceJSON: asset.provenanceJSON
         )
     }
 

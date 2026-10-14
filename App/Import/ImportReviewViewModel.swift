@@ -49,6 +49,7 @@ final class ImportReviewViewModel: ObservableObject {
     private let existingBuilds: (UUID) -> [Build]
     /// Sets a Game's artwork. Without it, review doesn't offer artwork.
     private let setArtwork: ((UUID, Data, String) throws -> Void)?
+    private let fetchArtwork: ((Build) -> Void)?
     /// The last name suggested, so changing the destination replaces it unless the player edited it.
     private var suggestedBuildName: String
 
@@ -58,6 +59,7 @@ final class ImportReviewViewModel: ObservableObject {
         coordinator: ImportCoordinator,
         existingBuilds: @escaping (UUID) -> [Build] = { _ in [] },
         setArtwork: ((UUID, Data, String) throws -> Void)? = nil,
+        fetchArtwork: ((Build) -> Void)? = nil,
         knownDumps: KnownDumpIndex? = nil,
         releasePreference: ReleasePreference = ReleasePreference()
     ) {
@@ -74,6 +76,7 @@ final class ImportReviewViewModel: ObservableObject {
         self.coordinator = coordinator
         self.existingBuilds = existingBuilds
         self.setArtwork = setArtwork
+        self.fetchArtwork = fetchArtwork
         let metadata = BuildImportMetadata(analysis: analysis)
         region = metadata.region ?? ""
         language = metadata.language ?? ""
@@ -341,6 +344,7 @@ final class ImportReviewViewModel: ObservableObject {
                 artworkFailure = error.localizedDescription
             }
         }
+        if artwork == nil, !isExactDuplicate { fetchArtwork?(result.build) }
         return result
     }
 

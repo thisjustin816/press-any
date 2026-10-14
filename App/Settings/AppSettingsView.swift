@@ -91,6 +91,7 @@ struct AppSettingsView: View {
 
                 if (libraryDeletion != nil && games != nil) || integrityChecker != nil || libraryStorageContext != nil {
                     Section("Library") {
+                        NavigationLink("Artwork") { ArtworkSettingsView(store: store) }
                         NavigationLink("Regions and Languages") { ReleasePreferenceView(store: store) }
                         if let libraryDeletion, let games {
                             NavigationLink("Recently Deleted") {
