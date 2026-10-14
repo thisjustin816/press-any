@@ -994,7 +994,7 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
 
 @MainActor
 private final class MenuDismissalAnimator: NSObject, UIContextMenuInteractionAnimating {
-    var preview: UITargetedPreview? { nil }
+    var previewViewController: UIViewController? { nil }
     private var completions: [() -> Void] = []
 
     func addAnimations(_ animations: @escaping () -> Void) { animations() }
