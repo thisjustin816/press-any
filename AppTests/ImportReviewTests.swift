@@ -234,6 +234,7 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertTrue(retail.build.isBase, "a new Game's first Build is its Base")
         let revision = try review("Example (USA) (Rev 1).gb", retailImages[1], games: [retail.game])
         XCTAssertEqual(revision.destination, .existing(retail.game.id))
+        XCTAssertEqual(revision.normalizedFilename, "Example (USA) (Rev 1) [!].gb", "the name Export ROM gives it")
         XCTAssertFalse(revision.markAsBase, "a No-Intro revision leaves the clean Base alone")
         let unknown = try review("Example v9.gb", image(), games: [retail.game])
         unknown.destination = .existing(retail.game.id)

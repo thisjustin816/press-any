@@ -81,6 +81,10 @@ public enum FilenameMetadataParser {
         var translation: String?
         var status: String?
         var isHack = false
+        // Export and GoodTools describe a modification in brackets after the base game's full
+        // name, which may hold " - " itself, as in "Pokemon - Crystal Version (USA) [Hack by Jane]".
+        // A bare "[Hack]" marks "Base - Hack" instead.
+        var describesModification = false
         var recognizedGroups = Set<String>()
         for (index, group) in (parenthetical + bracketed).enumerated() {
             let inParentheses = index < parenthetical.count
@@ -93,7 +97,10 @@ public enum FilenameMetadataParser {
             if !inParentheses, let flag = goodToolsDumpFlag(group) {
                 // Trained, fixed and hacked dumps are modifications; the rest describe the copy,
                 // which hashing judges better than a tag.
-                if flag == .modified { isHack = true }
+                if flag == .modified {
+                    isHack = true
+                    describesModification = true
+                }
                 recognizedGroups.insert(group)
                 continue
             }
@@ -103,33 +110,59 @@ public enum FilenameMetadataParser {
                 continue
             }
             // A translation as GoodTools names it, "T+Eng1.03_Group", or as some releases do,
-            // "T-En by Jane v1.0".
+            // "T-En by Jane v1.0" or "T-En v1.0 by Jane".
             if let parts = optionalMatchGroups(
                 in: group,
                 pattern: #"(?i)^\s*T[+\-]([A-Za-z]{2,3})(?:\s+by\s+(.+?))?(?:\s+v("# + versionPattern + #"))?\s*$"#
             ) ?? optionalMatchGroups(
                 in: group,
-                pattern: #"^\s*T[+\-]([A-Za-z]{2,3})([0-9]+(?:\.[0-9]+)*)?(?:[_ ](.+?))?\s*$"#
-            ).map({ [$0[0], $0[2], $0[1]] }), parts[1] != nil || parts[2] != nil {
+                pattern: #"(?i)^\s*T[+\-]([A-Za-z]{2,3})\s+v("# + versionPattern + #")\s+by\s+(.+?)\s*$"#
+            ).map({ [$0[0], $0[2], $0[1]] }) ?? goodToolsTranslation(group), parts[1] != nil || parts[2] != nil {
                 translation = translation ?? parts[0]
                 author = author ?? parts[1]
                 version = version ?? parts[2]
                 isHack = true
+                describesModification = describesModification || !inParentheses
                 recognizedGroups.insert(group)
                 continue
             }
             // A hack as released: "Night patch by Jane v0.3", or "Hack by Jane" with no title of
-            // its own.
+            // its own. In parentheses it needs a version or a hack word, so a credit such as
+            // "(Music by Izma)" isn't taken for one.
             if let parts = optionalMatchGroups(
                 in: group,
                 pattern: #"(?i)^\s*(.+?)\s+by\s+(.+?)(?:\s+v("# + versionPattern + #"))?\s*$"#
-            ), let title = parts[0], let by = parts[1] {
+            ), let title = parts[0], let by = parts[1],
+               !inParentheses || parts[2] != nil
+                || title.range(of: #"(?i)\b(?:hack(?:ed)?|patch|fix|mod)\b"#, options: .regularExpression) != nil {
                 if title.range(of: #"(?i)^(?:ROM\s+)?Hack(?:ed)?$"#, options: .regularExpression) == nil {
                     hackTitle = hackTitle ?? title
                 }
                 author = author ?? by
                 version = version ?? parts[2]
                 isHack = true
+                describesModification = describesModification || !inParentheses
+                recognizedGroups.insert(group)
+                continue
+            }
+            // A hack exported without an author: "[Nueva v1.0]", or "[Hack v1.3]" with no title.
+            if !inParentheses, let parts = optionalMatchGroups(
+                in: group,
+                pattern: #"^\s*(.+?)\s+v("# + versionPattern + #")\s*$"#
+            ), let title = parts[0] {
+                if title.range(of: #"(?i)^(?:ROM\s+)?Hack(?:ed)?$"#, options: .regularExpression) == nil {
+                    hackTitle = hackTitle ?? title
+                }
+                version = version ?? parts[1]
+                isHack = true
+                describesModification = true
+                recognizedGroups.insert(group)
+                continue
+            }
+            // A No-Intro date, "(2016-06-09)", which names a build as a date stamp does.
+            if let parts = optionalMatchGroups(in: group, pattern: #"^\s*((?:19|20)[0-9]{2})-?([0-9]{2})-?([0-9]{2})\s*$"#),
+               let year = parts[0], let month = parts[1], let day = parts[2], isDateVersion("\(year).\(month).\(day)") {
+                version = version ?? "\(year).\(month).\(day)"
                 recognizedGroups.insert(group)
                 continue
             }
@@ -238,11 +271,13 @@ public enum FilenameMetadataParser {
             language = language ?? tail.language
             cleanTitle = tail.title
         }
+        // A stamp after " - " leaves the dash: "Brainrot Port - 2026-10-14" is "Brainrot Port".
+        cleanTitle = cleanTitle.trimmingCharacters(in: CharacterSet(charactersIn: " -_:\u{2013}\u{2014}"))
         if !cleanTitle.contains(" ") {
             cleanTitle = spacedTitle(cleanTitle)
         }
 
-        if isHack, baseTitle == nil, hackTitle == nil,
+        if isHack, !describesModification, baseTitle == nil, hackTitle == nil,
            let separator = cleanTitle.range(of: " - ") {
             baseTitle = String(cleanTitle[..<separator.lowerBound]).trimmingCharacters(in: .whitespaces)
             hackTitle = String(cleanTitle[separator.upperBound...]).trimmingCharacters(in: .whitespaces)
@@ -347,19 +382,26 @@ public enum FilenameMetadataParser {
             }
             if !word.isEmpty { words.append(word) }
         }
-        if title.allSatisfy({ !$0.isUppercase }) {
-            words = words.map(capitalized)
-        }
-        return words.joined(separator: " ")
+        return capitalizedIfLowercase(words, in: title).joined(separator: " ")
+    }
+
+    /// The words of a joined name, split at spaces and underscores, and at hyphens when it has no
+    /// spaces, so "R-Type v2" keeps "R-Type" while "Moon-Garden-v5" is three words.
+    private static func joinedWords(_ title: String) -> [String] {
+        let splitsHyphens = !title.contains(" ")
+        return title.split(whereSeparator: { $0 == " " || $0 == "_" || (splitsHyphens && $0 == "-") }).map(String.init)
+    }
+
+    /// An all-lowercase name's words capitalized, as "match-land" reads "Match Land".
+    private static func capitalizedIfLowercase(_ words: [String], in title: String) -> [String] {
+        title.allSatisfy({ !$0.isUppercase }) ? words.map(capitalized) : words
     }
 
     /// A "v" version word after at least one title word, separated by spaces or underscores, or by
     /// hyphens in a name that has no spaces, so "R-Type v2" keeps its title. The title words are
     /// joined with spaces, and the words after the version are the variant.
     private static func versionStamp(in title: String) -> (title: String, version: String, variant: String?)? {
-        let splitsHyphens = !title.contains(" ")
-        let words = title.split(whereSeparator: { $0 == " " || $0 == "_" || (splitsHyphens && $0 == "-") })
-            .map(String.init)
+        let words = joinedWords(title)
         guard words.count >= 2 else { return nil }
         // A bare number needs a dot to count, so "Mega Man 2" keeps its 2.
         let bareVersion = #"^([0-9]+(?:\.[0-9]+){1,3}"# + versionSuffixPattern + #")$"#
@@ -372,10 +414,7 @@ public enum FilenameMetadataParser {
             if titleWords.count >= 2, ["rev", "revision", "version", "ver"].contains(titleWords[titleWords.count - 1].lowercased()) {
                 titleWords.removeLast()
             }
-            // An all-lowercase joined name, as in "match-land-live-0.3.0", reads better capitalized.
-            if title.allSatisfy({ !$0.isUppercase }) {
-                titleWords = titleWords.map(capitalized)
-            }
+            titleWords = capitalizedIfLowercase(titleWords, in: title)
             // In a joined name the separators stand in for the version's dots: "mole_mania_dx_v1_3" is 1.3.
             var version = value
             var variantStart = index + 1
@@ -393,19 +432,27 @@ public enum FilenameMetadataParser {
     }
 
     /// A date stamp after at least one title word, as "20261006" or "2026-10-06", separated by
-    /// spaces or underscores. Words after it are the variant.
+    /// spaces or underscores, or by hyphens in a name that has no spaces, as in
+    /// "brainrot-port-2026-10-14". Words after it are the variant.
     private static func dateStamp(in title: String) -> (title: String, version: String, variant: String?)? {
-        let words = title.split(whereSeparator: { $0 == "_" || $0 == " " }).map(String.init)
+        let words = joinedWords(title)
         guard words.count >= 2 else { return nil }
         for index in stride(from: words.count - 1, through: 1, by: -1) {
-            let digits = words[index].replacingOccurrences(of: "-", with: "")
+            // Split hyphens leave a date as three words: "2026", "10", "14".
+            let isSplit = !title.contains(" ") && words[index].count == 4 && index + 2 < words.count
+                && words[index + 1].count == 2 && words[index + 2].count == 2
+            let dateWords = isSplit ? Array(words[index...(index + 2)]) : [words[index]]
+            let digits = dateWords.joined().replacingOccurrences(of: "-", with: "")
             guard digits.count == 8, digits.allSatisfy(\.isNumber),
-                  words[index].count == 8 || words[index].range(of: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"#, options: .regularExpression) != nil
+                  isSplit || words[index].count == 8
+                    || words[index].range(of: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"#, options: .regularExpression) != nil
             else { continue }
             let version = "\(digits.prefix(4)).\(digits.dropFirst(4).prefix(2)).\(digits.suffix(2))"
             guard isDateVersion(version) else { continue }
-            let variant = words[(index + 1)...].joined(separator: " ")
-            return (words[..<index].joined(separator: " "), version, variant.isEmpty ? nil : variant)
+            var titleWords = Array(words[..<index])
+            titleWords = capitalizedIfLowercase(titleWords, in: title)
+            let variant = words[(index + dateWords.count)...].joined(separator: " ")
+            return (titleWords.joined(separator: " "), version, variant.isEmpty ? nil : variant)
         }
         return nil
     }
@@ -417,9 +464,7 @@ public enum FilenameMetadataParser {
     private static func tagTail(
         in title: String, regions: Set<String>, languages: Set<String>
     ) -> (title: String, region: String?, language: String?)? {
-        let splitsHyphens = !title.contains(" ")
-        let words = title.split(whereSeparator: { $0 == " " || $0 == "_" || (splitsHyphens && $0 == "-") })
-            .map(String.init)
+        let words = joinedWords(title)
         guard words.count >= 2 else { return nil }
         let systems: Set<String> = ["gb", "gbc", "dmg", "cgb"]
         var end = words.count
@@ -441,9 +486,7 @@ public enum FilenameMetadataParser {
         }
         guard end < words.count, sawSystem || (!foundRegions.isEmpty && !foundLanguages.isEmpty) else { return nil }
         var titleWords = Array(words[..<end])
-        if title.allSatisfy({ !$0.isUppercase }) {
-            titleWords = titleWords.map(capitalized)
-        }
+        titleWords = capitalizedIfLowercase(titleWords, in: title)
         return (
             titleWords.joined(separator: " "),
             foundRegions.isEmpty ? nil : foundRegions.joined(separator: ", "),
@@ -455,9 +498,7 @@ public enum FilenameMetadataParser {
     /// title word, separated by spaces or underscores, or by hyphens in a name that has no spaces.
     /// "alpha" and "beta" count without a number; the other words could end a title, so they need one.
     private static func statusStamp(in title: String) -> (title: String, status: String)? {
-        let splitsHyphens = !title.contains(" ")
-        let words = title.split(whereSeparator: { $0 == " " || $0 == "_" || (splitsHyphens && $0 == "-") })
-            .map(String.init)
+        let words = joinedWords(title)
         guard words.count >= 2 else { return nil }
         let statusWords = "alpha|beta|rc|proto|prototype|preview|demo"
         var parts = optionalMatchGroups(in: words[words.count - 1], pattern: #"(?i)^("# + statusWords + #")\.?([0-9]+)?$"#)
@@ -473,9 +514,7 @@ public enum FilenameMetadataParser {
               let status = canonicalStatus(number.map { "\(word) \($0)" } ?? word)
         else { return nil }
         var titleWords = Array(words[..<titleCount])
-        if title.allSatisfy({ !$0.isUppercase }) {
-            titleWords = titleWords.map(capitalized)
-        }
+        titleWords = capitalizedIfLowercase(titleWords, in: title)
         return (titleWords.joined(separator: " "), status)
     }
 
@@ -518,14 +557,27 @@ public enum FilenameMetadataParser {
         return nil
     }
 
+    /// GoodTools' translation code, "T+Eng1.03_Group", as [language, author, version]. The language
+    /// can be any name the exporter wrote, as in "T+Vietnamese1.0_Jane". With neither a version nor
+    /// GoodTools' underscore, the language must be a known code, so "T-Rex Runner" stays a title.
+    private static func goodToolsTranslation(_ group: String) -> [String?]? {
+        guard let parts = optionalMatchGroups(
+            in: group,
+            pattern: #"^\s*T[+\-]([A-Za-z]{2,}?)("# + versionPattern + #")?(?:([_ ])(.+?))?\s*$"#
+        ), let language = parts[0] else { return nil }
+        guard parts[1] != nil || parts[2] == "_" || goodToolsLanguageCodes[language.lowercased()] != nil else { return nil }
+        return [language, parts[3], parts[1]]
+    }
+
     /// GoodTools' short regions as No-Intro names them: "U" is "USA", and joined codes such as "UE"
-    /// list each, in No-Intro's Japan, USA, Europe order, with all three being "World".
+    /// list each, in No-Intro's Japan, USA, Europe order, with all three being "World". "Nl" is left
+    /// to No-Intro, which uses it for Dutch.
     private static func goodToolsRegion(_ group: String) -> String? {
         let code = group.trimmingCharacters(in: .whitespaces)
         let single: [String: String] = [
             "U": "USA", "E": "Europe", "J": "Japan", "W": "World", "A": "Australia", "B": "Brazil",
             "C": "China", "F": "France", "G": "Germany", "I": "Italy", "K": "Korea", "S": "Spain",
-            "Sw": "Sweden", "Nl": "Netherlands", "D": "Netherlands", "UK": "United Kingdom",
+            "Sw": "Sweden", "D": "Netherlands", "UK": "United Kingdom",
             "As": "Asia", "Ca": "Canada", "Tw": "Taiwan",
         ]
         if let name = single[code] { return name }

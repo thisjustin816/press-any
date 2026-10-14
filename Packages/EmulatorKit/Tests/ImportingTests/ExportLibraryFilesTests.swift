@@ -70,13 +70,16 @@ final class ExportLibraryFilesTests: XCTestCase {
             baseTitle: "Moon Garden", hackTitle: "Night patch", author: "Jane", version: "0.3"
         )
         let bare = fixture.build(kind: .patchRecipe, parent: base.id)
-        let exporter = fixture.exporter(builds: [base, bad, hack, bare], knownDumps: index)
+        // Import Review titles a hack left blank with its Game's title, and records no base.
+        let untitled = fixture.build(kind: .patchRecipe, parent: base.id, hackTitle: "Moon Garden", author: "Jane")
+        let exporter = fixture.exporter(builds: [base, bad, hack, bare, untitled], knownDumps: index)
         let name = { (build: Build) in try exporter.exportROM(buildID: build.id, to: fixture.exports).lastPathComponent }
 
         XCTAssertEqual(try name(base), "Moon Garden (USA) (Rev 1) [!].gbc")
         XCTAssertEqual(try name(bad), "Moon Garden (Europe) [b].gbc")
         XCTAssertEqual(try name(hack), "Moon Garden (USA) (Rev 1) [Night patch by Jane v0.3].gbc")
         XCTAssertEqual(try name(bare), "Moon Garden (USA) (Rev 1) [Hack].gbc", "a patched copy never passes for the dump")
+        XCTAssertEqual(try name(untitled), "Moon Garden (USA) (Rev 1) [Hack by Jane].gbc")
     }
 
     func testANameCannotEscapeTheFolderOrHideTheFile() {

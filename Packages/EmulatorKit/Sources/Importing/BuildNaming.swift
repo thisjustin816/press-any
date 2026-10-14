@@ -223,7 +223,21 @@ public enum GameMatcher {
         return nil
     }
 
+    /// The title as a key: "Pokémon" matches "Pokemon", and No-Intro's "Moon Garden, The" matches
+    /// "The Moon Garden", as an exported file must match its own Game when imported again.
     public static func normalized(_ title: String) -> String {
-        String(title.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
+        let folded = FilenameMetadataParser.foldingLatinDiacritics(articleFirst(title)).lowercased()
+        return String(folded.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }.map(Character.init))
+    }
+
+    /// Undoes No-Intro's trailing article on the main title: "Legend of Zelda, The - Link's
+    /// Awakening" is "The Legend of Zelda - Link's Awakening".
+    static func articleFirst(_ title: String) -> String {
+        let mainEnd = title.range(of: " - ")?.lowerBound ?? title.endIndex
+        let main = title[..<mainEnd]
+        for article in ["The", "A", "An"] where main.hasSuffix(", \(article)") && main.count > article.count + 2 {
+            return "\(article) \(main.dropLast(article.count + 2))\(title[mainEnd...])"
+        }
+        return title
     }
 }

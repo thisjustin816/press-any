@@ -11,6 +11,10 @@ extension FilenameMetadataParser {
         unknownGroups: [String]
     ) -> String {
         let modified = isModification(metadata)
+        // A hack without a recorded base is a hack of this title, so a hack title that repeats it
+        // is no title of its own.
+        var metadata = metadata
+        if modified { metadata.baseTitle = metadata.baseTitle ?? title }
         var groups: [String] = []
         if let region = metadata.region { groups.append("(\(region))") }
         if let language = metadata.language { groups.append("(\(noIntroLanguages(language)))") }
@@ -19,12 +23,16 @@ extension FilenameMetadataParser {
             // The version and status belong to the hack, so they go with it, not with the base.
             groups += modificationGroups(for: metadata)
         } else {
-            if let version = metadata.versionString { groups.append("(v\(version))") }
+            // No-Intro writes a date after the status, "(Beta) (2000-02-21)", which reads back as
+            // the same date.
+            let date = metadata.versionString.flatMap { isDateVersion($0) ? $0.replacingOccurrences(of: ".", with: "-") : nil }
+            if let version = metadata.versionString, date == nil { groups.append("(v\(version))") }
             if let status = metadata.status { groups.append("(\(noIntroStatus(status)))") }
+            if let date { groups.append("(\(date))") }
             if let author = metadata.author { groups.append("[by \(author)]") }
         }
         groups += unknownGroups.map { "[\($0)]" }
-        let name = noIntroTitle(modified ? metadata.baseTitle ?? title : title)
+        let name = noIntroTitle(metadata.baseTitle ?? title)
         let stem = ([name] + groups).filter { !$0.isEmpty }.joined(separator: " ")
         return fileExtension.isEmpty ? stem : "\(stem).\(fileExtension)"
     }
@@ -58,14 +66,22 @@ extension FilenameMetadataParser {
     /// No-Intro titles are plain ASCII, with a subtitle after " - " and a leading article moved to
     /// the end of the main title: "Legend of Zelda, The - Link's Awakening".
     static func noIntroTitle(_ title: String) -> String {
-        let plain = title.folding(options: .diacriticInsensitive, locale: nil)
-            .replacingOccurrences(of: ": ", with: " - ")
+        let plain = foldingLatinDiacritics(title).replacingOccurrences(of: ": ", with: " - ")
         let mainEnd = plain.range(of: " - ")?.lowerBound ?? plain.endIndex
         let main = plain[..<mainEnd]
         for article in ["The", "A", "An"] where main.hasPrefix("\(article) ") && main.count > article.count + 1 {
             return "\(main.dropFirst(article.count + 1)), \(article)\(plain[mainEnd...])"
         }
         return plain
+    }
+
+    /// "é" as "e", for each letter that folds to ASCII. Other scripts stay as written, since
+    /// folding would strip the dakuten from kana and turn "ガ" into "カ".
+    static func foldingLatinDiacritics(_ title: String) -> String {
+        title.map { character in
+            let folded = String(character).folding(options: .diacriticInsensitive, locale: nil)
+            return folded.allSatisfy(\.isASCII) ? folded : String(character)
+        }.joined()
     }
 
     /// No-Intro lists languages with a comma and no space: "En,Fr,De".
@@ -82,32 +98,33 @@ extension FilenameMetadataParser {
     /// GoodTools' three-letter language code for a translation tag: "Spanish", "Es" and "Spa" all
     /// become "Spa". An unknown name stays as written.
     static func goodToolsLanguage(for language: String) -> String {
-        let key = language.trimmingCharacters(in: .whitespaces).lowercased()
-        let codes: [String: String] = [
-            "english": "Eng", "en": "Eng", "eng": "Eng",
-            "japanese": "Jap", "ja": "Jap", "jap": "Jap", "jpn": "Jap",
-            "french": "Fre", "fr": "Fre", "fre": "Fre", "fra": "Fre",
-            "german": "Ger", "de": "Ger", "ger": "Ger", "deu": "Ger",
-            "spanish": "Spa", "es": "Spa", "spa": "Spa",
-            "italian": "Ita", "it": "Ita", "ita": "Ita",
-            "portuguese": "Por", "pt": "Por", "por": "Por",
-            "brazilian portuguese": "Bra", "pt-br": "Bra", "bra": "Bra",
-            "dutch": "Dut", "nl": "Dut", "dut": "Dut", "nld": "Dut",
-            "swedish": "Swe", "sv": "Swe", "swe": "Swe",
-            "norwegian": "Nor", "no": "Nor", "nor": "Nor",
-            "danish": "Dan", "da": "Dan", "dan": "Dan",
-            "finnish": "Fin", "fi": "Fin", "fin": "Fin",
-            "russian": "Rus", "ru": "Rus", "rus": "Rus",
-            "polish": "Pol", "pl": "Pol", "pol": "Pol",
-            "greek": "Gre", "el": "Gre", "gre": "Gre",
-            "turkish": "Tur", "tr": "Tur", "tur": "Tur",
-            "hungarian": "Hun", "hu": "Hun", "hun": "Hun",
-            "catalan": "Cat", "ca": "Cat", "cat": "Cat",
-            "hebrew": "Heb", "he": "Heb", "heb": "Heb",
-            "arabic": "Ara", "ar": "Ara", "ara": "Ara",
-            "chinese": "Chi", "zh": "Chi", "chi": "Chi",
-            "korean": "Kor", "ko": "Kor", "kor": "Kor",
-        ]
-        return codes[key] ?? language
+        goodToolsLanguageCodes[language.trimmingCharacters(in: .whitespaces).lowercased()] ?? language
     }
+
+    /// Language names and codes, lowercased, to GoodTools' three-letter code.
+    static let goodToolsLanguageCodes: [String: String] = [
+        "english": "Eng", "en": "Eng", "eng": "Eng",
+        "japanese": "Jap", "ja": "Jap", "jap": "Jap", "jpn": "Jap",
+        "french": "Fre", "fr": "Fre", "fre": "Fre", "fra": "Fre",
+        "german": "Ger", "de": "Ger", "ger": "Ger", "deu": "Ger",
+        "spanish": "Spa", "es": "Spa", "spa": "Spa",
+        "italian": "Ita", "it": "Ita", "ita": "Ita",
+        "portuguese": "Por", "pt": "Por", "por": "Por",
+        "brazilian portuguese": "Bra", "pt-br": "Bra", "bra": "Bra",
+        "dutch": "Dut", "nl": "Dut", "dut": "Dut", "nld": "Dut",
+        "swedish": "Swe", "sv": "Swe", "swe": "Swe",
+        "norwegian": "Nor", "no": "Nor", "nor": "Nor",
+        "danish": "Dan", "da": "Dan", "dan": "Dan",
+        "finnish": "Fin", "fi": "Fin", "fin": "Fin",
+        "russian": "Rus", "ru": "Rus", "rus": "Rus",
+        "polish": "Pol", "pl": "Pol", "pol": "Pol",
+        "greek": "Gre", "el": "Gre", "gre": "Gre",
+        "turkish": "Tur", "tr": "Tur", "tur": "Tur",
+        "hungarian": "Hun", "hu": "Hun", "hun": "Hun",
+        "catalan": "Cat", "ca": "Cat", "cat": "Cat",
+        "hebrew": "Heb", "he": "Heb", "heb": "Heb",
+        "arabic": "Ara", "ar": "Ara", "ara": "Ara",
+        "chinese": "Chi", "zh": "Chi", "chi": "Chi",
+        "korean": "Kor", "ko": "Kor", "kor": "Kor",
+    ]
 }
