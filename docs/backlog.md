@@ -470,7 +470,8 @@ Close and Add to Library wait for the menu's dismissal animation to finish befor
 | missing | Multiple typed assets (box front/back, cart, title, screenshots, logo, fan) | v1.1 |  |
 | missing | Non-destructive crop/reposition | v1.1 |  |
 | done | Manual "Check for New Artwork"; cache only selected primary | v1.1 | current/fetched preview with explicit Use Artwork and Cancel; works with automatic lookups off; no persistent HTTP cache |
-| done | Find Missing Artwork across the library | v1.1 | library More menu; includes Games hidden by search/filters; progress and cancellation; works with import-time lookups off; preserves existing artwork and deliberate removals |
+| done | Grouped Library settings | v1.1 | one Library page with Preferences, Organization, Files, and Backup and Restore; Artwork contains its import setting and the Find Missing Artwork review |
+| done | Find Missing Artwork across the library | v1.1 | Settings > Library > Artwork; includes Games hidden by search/filters; progress, image previews and per-Game acceptance before saving; Cancel discards temporary proposals; works with import-time lookups off; preserves existing artwork and deliberate removals, including choices made during review |
 | done | Artwork provenance (provider, URL, fetch time, rights) | v1.1 | kept in ManagedAsset.provenanceJSON with inherited base name; backup/restore and artwork copies preserve it |
 
 Done: Use Current Frame as Artwork in the game menu's Capture submenu for library games,

@@ -360,25 +360,50 @@ final class AppContainer {
     struct MissingArtworkProgress: Sendable {
         let total: Int
         var checked = 0
-        var added = 0
+        var found = 0
         var failed = 0
     }
 
-    func findMissingArtwork(onProgress: (MissingArtworkProgress) -> Void = { _ in }) async throws -> MissingArtworkProgress {
-        let games = try repositories.games.fetchGames().filter { $0.artworkAssetID == nil }
-        let finder = FindMissingGameArtwork(games: repositories.games, artwork: gameArtwork,
+    struct MissingArtworkProposal: Identifiable, Sendable {
+        let id: UUID
+        let gameTitle: String
+        let preferredBuildID: UUID?
+        let imageURL: URL
+        let provenance: ArtworkProvenance
+    }
+
+    struct MissingArtworkSearch: Sendable {
+        let progress: MissingArtworkProgress
+        let proposals: [MissingArtworkProposal]
+    }
+
+    private var missingArtworkFinder: FindMissingGameArtwork {
+        FindMissingGameArtwork(games: repositories.games, artwork: gameArtwork,
             settings: repositories.settings, providers: artworkProvider.map { [$0] } ?? [],
             transactions: repositories.transactions)
+    }
+
+    func findMissingArtwork(proposalDirectory: URL,
+                            onProgress: (MissingArtworkProgress) -> Void = { _ in }) async throws -> MissingArtworkSearch {
+        let games = try repositories.games.fetchGames().filter { $0.artworkAssetID == nil }
+        let finder = missingArtworkFinder
+        try FileManager.default.createDirectory(at: proposalDirectory, withIntermediateDirectories: true)
         var progress = MissingArtworkProgress(total: games.count)
+        var proposals: [MissingArtworkProposal] = []
         onProgress(progress)
         for game in games {
             try Task.checkCancellation()
             if let request = artworkLookup(gameID: game.id) {
                 do {
-                    if try await finder.execute(gameID: game.id, lookup: request.lookup,
+                    if let provided = try await finder.find(gameID: game.id, lookup: request.lookup,
                         expectedPreferredBuildID: request.preferredBuildID, trigger: .userRequested) {
-                        progress.added += 1
-                        NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+                        try Task.checkCancellation()
+                        let image = try ArtworkImage.downscaled(provided.data, fileExtension: provided.fileExtension)
+                        let url = proposalDirectory.appendingPathComponent(game.id.uuidString).appendingPathExtension("png")
+                        try image.data.write(to: url, options: .atomic)
+                        proposals.append(MissingArtworkProposal(id: game.id, gameTitle: game.primaryTitle,
+                            preferredBuildID: request.preferredBuildID, imageURL: url, provenance: provided.provenance))
+                        progress.found += 1
                     }
                 } catch is CancellationError {
                     throw CancellationError()
@@ -391,7 +416,14 @@ final class AppContainer {
             onProgress(progress)
             await Task.yield()
         }
-        return progress
+        return MissingArtworkSearch(progress: progress, proposals: proposals)
+    }
+
+    func applyMissingArtwork(_ proposal: MissingArtworkProposal) throws -> Bool {
+        let provided = ProvidedArtwork(data: try fileStore.readData(at: proposal.imageURL), fileExtension: "png",
+            provenance: proposal.provenance)
+        return try missingArtworkFinder.apply(provided, gameID: proposal.id,
+            expectedPreferredBuildID: proposal.preferredBuildID, trigger: .userRequested)
     }
 
     private func artworkLookup(gameID: UUID, importedBuild: Build? = nil) -> (lookup: ArtworkLookup, preferredBuildID: UUID?)? {

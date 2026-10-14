@@ -1092,8 +1092,10 @@ Game's or Build's settings use:
   inheritable and needs Plus).
 - **App Icon** (Plus): the default icon and its colorways, each with a preview.
 - **Systems**: Game Boy and Game Boy Color, each a page with that system's settings.
-- **Library**: Regions and Languages, Recently Deleted, Check Library Files, Storage, and the
-  Suggest Names and Suggest Game Merges reviews.
+- **Library**: a page grouped into Preferences (Artwork and Regions and Languages), Organization
+  (Suggest Names and Suggest Game Merges), Files (Storage, Check Library Files and Recently
+  Deleted), and Backup and Restore (Back Up Library, Restore from Backup and Last Restore).
+  Artwork holds Find Artwork on Import and the Find Missing Artwork review.
 - **Press Any Plus**: the Plus screen, with Restore Purchases (see Pricing).
 - **About**: How Press Any Works, the Privacy Policy and Acknowledgements.
 
@@ -1382,11 +1384,14 @@ same storage as manually chosen artwork.
 
 Check for New Artwork in a Game's Artwork menu works even with automatic lookups off. It shows
 the fetched image and any current artwork; Use Artwork assigns it, and Cancel discards it.
-Find Missing Artwork in the library's More menu checks all Games without artwork, including
-those hidden by search and filters, even with import-time lookups off. It shows progress and
-fills available matches without replacing existing artwork or refilling deliberately removed
-artwork. Cancel stops the search and keeps artwork already saved. Games with no match stay
-unchanged and can be checked again later.
+Settings > Library > Artwork > Find Missing Artwork checks all Games without artwork, including
+those hidden by search and filters, even with import-time lookups off. It shows search progress,
+then previews each proposal with its Game title, source and rights notice. Players can accept or
+exclude each image before Use Artwork saves the accepted proposals. Searching changes no library
+artwork or choices; Cancel discards the proposals and their temporary files. Existing artwork
+and deliberate removals stay unchanged, including choices made during review. A changed Preferred
+Build or deleted Game cannot receive a stale proposal. Games with no match or a declined proposal
+stay unchanged and can be checked again later.
 Only the selected image is stored, as user data. Nothing rechecks an assigned image automatically.
 Its provider, source URL, fetch date, rights notice and inherited base name stay with the managed
 asset through backup, restore and copying between Games. Private artwork is never published.

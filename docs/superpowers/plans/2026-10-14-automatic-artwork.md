@@ -84,16 +84,18 @@ XCTAssertFalse(try AutomaticArtworkSetting(store: settings).load())
 
 ## Verification
 
-- `make test-core`: 524 XCTest cases (32 platform-dependent skips), plus 230 Swift Testing tests; zero failures.
+- `make test-core`: 529 XCTest cases (32 platform-dependent skips), plus 230 Swift Testing tests; zero failures.
 - Live URLSession downloader: valid 476,267-byte PNG from Libretro; clean exit.
 - Repository hygiene, dependency notices and `git diff --check`: passed.
-- Changed app and app-test files: Swift syntax parse passed. Apple SDK compilation, app-test execution, ImageIO checks and physical iPhone flows remain pending.
+- Changed app and app-test files: Swift syntax parse passed. Apple SDK compilation, app-test execution and ImageIO checks for proposal review remain pending, along with physical iPhone flows.
 
 ### Library-wide missing artwork
 
-- [x] Add Find Missing Artwork to the library's More menu, with progress and cancellation.
+- [x] Add Find Missing Artwork under Settings > Library > Artwork, with progress and proposal review.
 - [x] Reuse the per-Game lookup and its protections for existing artwork, deliberate removals,
   changed preferences and in-flight player choices. An explicit search ignores the import setting.
 - [x] Test the explicit-search policy with automatic artwork off, including a failing control.
 - [x] Add App tests for library-wide progress, mixed artwork states, cancellation and an unreadable image.
-- [ ] Verify the combined Apple checks and upload a new feature-branch TestFlight build.
+- [x] Verify the automatic-fill and menu-exit changes on Apple CI and upload TestFlight 1.0 (140).
+- [x] Separate proposal discovery from acceptance; preserve late choices and discard canceled previews.
+- [ ] Verify the proposal-review changes on Apple CI and upload a revised feature-branch TestFlight build.

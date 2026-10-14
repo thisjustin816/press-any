@@ -203,11 +203,20 @@ These checks cover the Capture submenu and remain pending until run on a physica
 
 ## Automatic artwork device checks
 
+- [ ] Settings opens Library as one page with Preferences, Organization, Files, and Backup and
+  Restore groups. Artwork contains its import toggle and Find Missing Artwork. Suggest Names,
+  Suggest Game Merges, file checking, Recently Deleted and backup/restore still open their tools.
+  Resume a kept Quick Play session from Storage: Settings closes and gameplay opens.
+
 - [ ] With Find Artwork on Import off and search or Favorites Only hiding some Games, choose
-  More > Find Missing Artwork. Recognized Games without artwork get images across the whole
-  library; existing and deliberately removed artwork stay unchanged. Progress and the final
-  counts are readable with VoiceOver and the largest text size. Cancel during a slow lookup:
-  artwork already saved stays, its late download is discarded, and a later search can retry.
+  Settings > Library > Artwork > Find Missing Artwork. Recognized Games without artwork get
+  image proposals across the whole library; existing and deliberately removed artwork stay
+  unchanged. Inspect each image and its source, exclude one, then confirm Use Artwork: only
+  accepted proposals are saved. Cancel a completed review and a slow lookup: no artwork is
+  assigned, temporary previews are discarded, and a later search can retry. Progress, previews
+  and acceptance controls are readable with VoiceOver and the largest text size. Change a
+  Game's artwork, remove it, or change its Preferred Build while review is open: accepting the
+  stale proposal keeps the later choice and reports the skipped change.
 - [ ] With Find Artwork on Import on, import a recognized GB and GBC release without choosing
   artwork. Import closes without waiting for the network; the correct regional box art appears
   when available, remains after relaunch, and survives backup/restore. Import an exact duplicate:

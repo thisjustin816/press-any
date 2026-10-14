@@ -7,6 +7,58 @@ import XCTest
 
 @MainActor
 final class FindMissingGameArtworkTests: XCTestCase {
+    func testFindingAProposalDoesNotStoreItOrRecordAChoice() async throws {
+        let fixture = try ArtworkSearchFixture()
+        defer { fixture.removeFiles() }
+        try AutomaticArtworkSetting(store: fixture.settings).save(false)
+        let finder = fixture.finder([TestArtworkProvider { fixture.download }])
+
+        let proposal = try await finder.find(gameID: fixture.game.id, lookup: fixture.lookup, trigger: .userRequested)
+
+        XCTAssertNil(try fixture.games.fetchGame(id: fixture.game.id)?.artworkAssetID)
+        XCTAssertTrue(try fixture.assets.fetchAssets().isEmpty)
+        XCTAssertNil(try fixture.settings.valueJSON(key: "artwork.chosen", scope: .game(fixture.game.id)))
+        let provided = try XCTUnwrap(proposal)
+        XCTAssertEqual(provided.data, fixture.download.data)
+        XCTAssertTrue(try finder.apply(provided, gameID: fixture.game.id, trigger: .userRequested))
+        XCTAssertNotNil(try fixture.games.fetchGame(id: fixture.game.id)?.artworkAssetID)
+    }
+
+    func testAcceptingAProposalPreservesALaterChoiceOrRemoval() async throws {
+        for remove in [false, true] {
+            let fixture = try ArtworkSearchFixture()
+            defer { fixture.removeFiles() }
+            let finder = fixture.finder([TestArtworkProvider { fixture.download }])
+            let proposal = try await finder.find(gameID: fixture.game.id, lookup: fixture.lookup, trigger: .userRequested)
+            let chosen = try fixture.artwork.set(gameID: fixture.game.id, imageData: Data([9]), fileExtension: "png")
+            if remove { try fixture.artwork.remove(gameID: fixture.game.id) }
+
+            let wrote = try finder.apply(XCTUnwrap(proposal), gameID: fixture.game.id, trigger: .userRequested)
+
+            XCTAssertFalse(wrote)
+            XCTAssertEqual(try fixture.games.fetchGame(id: fixture.game.id)?.artworkAssetID, remove ? nil : chosen.artworkAssetID)
+        }
+    }
+
+    func testAcceptingAProposalPreservesAChangedBuildOrDeletedGame() async throws {
+        for delete in [false, true] {
+            let fixture = try ArtworkSearchFixture()
+            defer { fixture.removeFiles() }
+            let finder = fixture.finder([TestArtworkProvider { fixture.download }])
+            let proposal = try await finder.find(gameID: fixture.game.id, lookup: fixture.lookup, trigger: .userRequested)
+            if delete {
+                try fixture.games.deleteGame(id: fixture.game.id)
+            } else {
+                var game = fixture.game
+                game.preferredBuildID = UUID()
+                try fixture.games.updateGame(game)
+            }
+
+            XCTAssertFalse(try finder.apply(XCTUnwrap(proposal), gameID: fixture.game.id, trigger: .userRequested))
+            XCTAssertTrue(try fixture.assets.fetchAssets().isEmpty)
+        }
+    }
+
     func testUserRequestedSearchWorksWithAutomaticArtworkOff() async throws {
         let fixture = try ArtworkSearchFixture()
         defer { fixture.removeFiles() }
