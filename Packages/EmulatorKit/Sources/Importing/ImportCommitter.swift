@@ -126,16 +126,26 @@ public struct ImportCommitter: Sendable {
                 let createdNewGame: Bool
                 switch plan.disposition {
                 case .createGame(let title):
-                    game = Game(
+                    let titleProvenance = plan.titleProvenance(value: title, at: timestamp)
+                    var newGame = Game(
                         id: makeID(),
                         primaryTitle: title,
                         systemFamily: "gameboy",
-                        hasPlayerTitle: plan.titleProvenance(value: title, at: timestamp).source == .player,
+                        hasPlayerTitle: titleProvenance.source == .player,
                         createdAt: timestamp,
                         modifiedAt: timestamp
                     )
+                    // A title typed over the suggested one keeps the suggestion as an alias, as Rename
+                    // Game keeps a former title, so the next file with that name still finds the Game.
+                    // A generic suggestion such as "game" would match unrelated files, so it's dropped.
+                    if titleProvenance.source == .player, let offered = titleProvenance.providedValue,
+                       DevelopmentBuildMatcher.isDistinctiveTitle(offered),
+                       GameMatcher.normalized(offered) != GameMatcher.normalized(title) {
+                        newGame.addAliases([offered])
+                    }
+                    game = newGame
                     try games.insertGame(game)
-                    try games.saveMetadataProvenance(plan.titleProvenance(value: title, at: timestamp), ownerID: game.id)
+                    try games.saveMetadataProvenance(titleProvenance, ownerID: game.id)
                     createdNewGame = true
                 case .addBuild(let gameID):
                     guard let existingGame = try games.fetchGame(id: gameID) else {

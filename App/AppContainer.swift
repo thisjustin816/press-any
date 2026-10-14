@@ -113,7 +113,7 @@ final class AppContainer {
             inFlight: inFlightFiles)
         knownDumps = try? KnownDumpIndex.bundled()
         importAnalyzer = ROMImportAnalyzer(builds: repositories.builds, games: repositories.games,
-            fingerprints: repositories.fingerprints,
+            assets: repositories.assets, fingerprints: repositories.fingerprints,
             toolchainReports: repositories.toolchainReports,
             assetStore: fileStore, knownDumps: knownDumps)
         importCommitter = ImportCommitter(

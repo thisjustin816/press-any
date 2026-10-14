@@ -149,10 +149,12 @@ final class ImportReviewViewModel: ObservableObject {
     }
     var shortHash: String { String(analysis.sha256.prefix(12)) }
     var normalizedFilename: String {
-        // A known dump's canonical name is No-Intro's.
+        // A known dump's canonical name is No-Intro's, with GoodTools' mark for a good or bad
+        // copy, as Export ROM names it.
         if let dump = analysis.knownDump {
             let fileExtension = URL(fileURLWithPath: analysis.originalFilename).pathExtension.lowercased()
-            return fileExtension.isEmpty ? dump.name : "\(dump.name).\(fileExtension)"
+            let name = "\(dump.name) \(analysis.knownFile?.bad == true ? "[b]" : "[!]")"
+            return fileExtension.isEmpty ? name : "\(name).\(fileExtension)"
         }
         return FilenameMetadataParser.canonicalFilename(
             fileExtension: URL(fileURLWithPath: analysis.originalFilename).pathExtension.lowercased(),

@@ -3,6 +3,73 @@ import XCTest
 @testable import Importing
 
 final class FilenameMetadataParserTests: XCTestCase {
+    func testDatesNameTheBuildInHyphenatedNamesAndNoIntroGroups() {
+        for filename in ["brainrot-port-2026-10-14.gb", "brainrot_port_20261014.gb", "BrainrotPort-2026-10-14.gb",
+                         "Brainrot Port - 2026-10-14.gb", "Brainrot Port (2026-10-14).gb"] {
+            let parsed = FilenameMetadataParser.parse(filename: filename)
+            XCTAssertEqual(parsed.suggestedTitle, "Brainrot Port", filename)
+            XCTAssertEqual(parsed.suggestedBuildName, "2026-10-14", filename)
+            XCTAssertEqual(parsed.unknownGroups, [], filename)
+            XCTAssertEqual(parsed.normalizedFilename, "Brainrot Port (2026-10-14).gb", filename)
+        }
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: "My Game - Beta 2.gb").suggestedTitle, "My Game")
+
+        let beta = FilenameMetadataParser.parse(filename: "Mario Golf (USA) (Beta) (2000-02-21).gbc")
+        XCTAssertEqual(beta.buildMetadata.versionString, "2000.02.21")
+        XCTAssertEqual(beta.buildMetadata.status, "Beta")
+        XCTAssertEqual(beta.normalizedFilename, "Mario Golf (USA) (Beta) (2000-02-21).gbc", "No-Intro's order, read back the same")
+        XCTAssertEqual(FilenameMetadataParser.parse(filename: beta.normalizedFilename).buildMetadata, beta.buildMetadata)
+    }
+
+    func testExportedHackNamesReadBackAsTheSameHack() {
+        let titleless = FilenameMetadataParser.parse(
+            filename: "Pokemon - Crystal Version (USA, Europe) (Rev 1) [Hack by Jane v1.3].gbc"
+        )
+        XCTAssertEqual(titleless.suggestedTitle, "Pokemon - Crystal Version", "the dump's own \" - \" stays in its name")
+        XCTAssertEqual(titleless.buildMetadata.baseTitle, "Pokemon - Crystal Version")
+        XCTAssertEqual(titleless.buildMetadata.author, "Jane")
+        XCTAssertEqual(titleless.buildMetadata.versionString, "1.3")
+
+        for metadata in [
+            BuildImportMetadata(versionString: "1.0", baseTitle: "Base Game", hackTitle: "Nueva"),
+            BuildImportMetadata(versionString: "1.3", baseTitle: "Base Game", hackTitle: "Base Game"),
+            BuildImportMetadata(versionString: "1.0", baseTitle: "Base Game", author: "Jane", translation: "Vietnamese"),
+            BuildImportMetadata(versionString: "1.0-beta.2", baseTitle: "Base Game", author: "Jane", translation: "En"),
+        ] {
+            let name = FilenameMetadataParser.canonicalFilename(fileExtension: "gb", title: "Base Game", metadata: metadata, unknownGroups: [])
+            let parsed = FilenameMetadataParser.parse(filename: name)
+            XCTAssertEqual(parsed.releaseKind, .romHack, name)
+            XCTAssertEqual(parsed.unknownGroups, [], name)
+            XCTAssertEqual(parsed.buildMetadata.hackTitle, metadata.translation == nil ? metadata.hackTitle : "Base Game", name)
+            XCTAssertEqual(parsed.buildMetadata.versionString, metadata.versionString, name)
+        }
+        XCTAssertEqual(
+            FilenameMetadataParser.canonicalFilename(fileExtension: "gb", title: "Moon Garden",
+                metadata: BuildImportMetadata(hackTitle: "Moon Garden", author: "Jane"), unknownGroups: []),
+            "Moon Garden [Hack by Jane].gb", "a hack titled as its base has no title of its own"
+        )
+    }
+
+    func testCreditsLanguagesAndLookalikesAreNotMistakenForHacks() {
+        for filename in ["Deadeus (World) (Music by Izma).gb", "Game [T-Rex Runner].gb"] {
+            let parsed = FilenameMetadataParser.parse(filename: filename)
+            XCTAssertNotEqual(parsed.releaseKind, .romHack, filename)
+            XCTAssertNil(parsed.buildMetadata.translation, filename)
+        }
+        let reordered = FilenameMetadataParser.parse(filename: "Game [T+Eng v1.0 by Jane].gb")
+        XCTAssertEqual(reordered.buildMetadata.translation, "Eng")
+        XCTAssertEqual(reordered.buildMetadata.author, "Jane")
+        XCTAssertEqual(reordered.buildMetadata.versionString, "1.0")
+        let dutch = FilenameMetadataParser.parse(filename: "Moon Garden (Europe) (Nl).gb")
+        XCTAssertEqual(dutch.buildMetadata.region, "Europe")
+        XCTAssertEqual(dutch.buildMetadata.language, "Nl", "No-Intro's Dutch, not GoodTools' Netherlands")
+    }
+
+    func testNoIntroTitlesFoldOnlyLettersThatBecomeASCII() {
+        XCTAssertEqual(FilenameMetadataParser.noIntroTitle("Pokémon Café"), "Pokemon Cafe")
+        XCTAssertEqual(FilenameMetadataParser.noIntroTitle("ガンバレ ゴエモン"), "ガンバレ ゴエモン", "kana keep their dakuten")
+    }
+
     func testNumberedDevelopmentFlagsPreserveTheirNumbersAndCanonicalStatus() {
         for (flag, status) in [
             ("Alpha 1", "Alpha 1"), ("Beta 2", "Beta 2"), ("Demo 2", "Demo 2"),

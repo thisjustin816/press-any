@@ -7,6 +7,7 @@ import ToolchainDetection
 public struct ROMImportAnalyzer: Sendable {
     private let builds: any BuildRepository
     private let games: (any GameRepository)?
+    private let assets: (any ManagedAssetRepository)?
     private let fingerprints: any ImageFingerprintRepository
     private let toolchainReports: any ToolchainReportRepository
     private let assetStore: any AssetStore
@@ -17,6 +18,7 @@ public struct ROMImportAnalyzer: Sendable {
     public init(
         builds: any BuildRepository,
         games: (any GameRepository)? = nil,
+        assets: (any ManagedAssetRepository)? = nil,
         fingerprints: any ImageFingerprintRepository,
         toolchainReports: any ToolchainReportRepository,
         assetStore: any AssetStore,
@@ -26,6 +28,7 @@ public struct ROMImportAnalyzer: Sendable {
     ) {
         self.builds = builds
         self.games = games
+        self.assets = assets
         self.fingerprints = fingerprints
         self.toolchainReports = toolchainReports
         self.assetStore = assetStore
@@ -100,13 +103,22 @@ public struct ROMImportAnalyzer: Sendable {
         let imported = try builds.fetchAllBuilds().filter { $0.sourceKind == .importedImage }
         let stored = try fingerprints.fetchFingerprints(imageSHA256s: imported.map(\.imageSHA256))
         let storedReports = try toolchainReports.fetchAllReports()
+        let filenameTitles = try Dictionary(uniqueKeysWithValues: imported.map { ($0.id, try filenameTitle(of: $0)) })
         let grouped = Dictionary(grouping: imported, by: \.gameID)
         return DevelopmentBuildMatcher.match(arriving: .init(fingerprint: fingerprint, filenameMetadata: naming, reports: reports),
             games: try games.fetchGames().map { game in
                 .init(game: game, builds: (grouped[game.id] ?? []).map {
-                    .init(fingerprint: stored[$0.imageSHA256], reports: storedReports[$0.id] ?? [])
+                    .init(fingerprint: stored[$0.imageSHA256], reports: storedReports[$0.id] ?? [],
+                          filenameTitle: filenameTitles[$0.id] ?? nil)
                 })
             })
+    }
+
+    /// The title in the name of the file a Build was imported from, read as an arriving file's is.
+    private func filenameTitle(of build: Build) throws -> String? {
+        guard let filename = try assets?.fetchAsset(id: build.imageAssetID)?.originalFilename else { return nil }
+        let title = FilenameMetadataParser.parse(filename: filename.removingPercentEncoding ?? filename).suggestedTitle
+        return title.isEmpty ? nil : title
     }
 
     /// The Games already holding a Build from any file of the dump's No-Intro family, bad copies

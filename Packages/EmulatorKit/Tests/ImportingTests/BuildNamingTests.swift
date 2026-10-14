@@ -195,6 +195,16 @@ final class GameMatcherTests: XCTestCase {
         }
     }
 
+    func testAnExportedNameMatchesItsOwnGame() {
+        XCTAssertEqual(GameMatcher.normalized("Moon Garden, The"), GameMatcher.normalized("The Moon Garden"))
+        XCTAssertEqual(GameMatcher.normalized("Legend of Zelda, The - Link's Awakening"),
+                       GameMatcher.normalized("The Legend of Zelda: Link's Awakening"))
+        XCTAssertEqual(GameMatcher.normalized("Pokémon Moon"), GameMatcher.normalized("Pokemon Moon"))
+        let moon = game("The Moon Garden")
+        let exported = FilenameMetadataParser.parse(filename: "Moon Garden, The (USA).gb")
+        XCTAssertEqual(GameMatcher.matchingGameID(for: exported, headerTitle: "", in: [moon]), moon.id)
+    }
+
     func testTheHeaderTitleAndAHacksBaseTitleAlsoMatch() {
         let tetris = game("Tetris")
         let header = FilenameMetadataParser.parse(filename: "unknown.gb")

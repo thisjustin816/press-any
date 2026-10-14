@@ -81,7 +81,11 @@ public struct ExportLibraryFiles: Sendable {
         case .badDump(let dump):
             name = "\(dump.name) [b].\(fileExtension)"
         case .modified(let dump):
-            let groups = FilenameMetadataParser.modificationGroups(for: metadata)
+            // A hack without a recorded base is a hack of its Game, so a hack title that repeats
+            // the Game's is no title of its own: "[Hack by Jane]".
+            var modification = metadata
+            modification.baseTitle = modification.baseTitle ?? game.primaryTitle
+            let groups = FilenameMetadataParser.modificationGroups(for: modification)
             name = "\(([dump.name] + groups).joined(separator: " ")).\(fileExtension)"
         case .unknown, nil:
             name = FilenameMetadataParser.canonicalFilename(

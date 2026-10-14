@@ -51,6 +51,44 @@ struct DevelopmentImportTests {
         #expect(analysis.developmentCandidates.isEmpty)
     }
 
+    @Test("a title typed over the filename's keeps it as an alias that finds the Game")
+    func typedTitleKeepsFilenameTitle() throws {
+        let h = try Harness()
+        defer { try? FileManager.default.removeItem(at: h.root) }
+        let first = try h.commit(h.analyze("Brainrot Port 2026-10-03.gb", title: "BRAINROT", payload: 1), title: "Steal a Brainrot")
+        #expect(first.game.aliases == ["Brainrot Port"])
+        let kept = try h.commit(h.analyze("Moon Garden v1.gb", title: "MOON", payload: 2), title: "Moon Garden")
+        #expect(kept.game.aliases.isEmpty, "a title left as suggested adds no alias")
+        let next = try h.analyze("Brainrot Port 2026-10-14.gb", title: "PORT", payload: 3)
+        #expect(next.developmentCandidates.first?.gameID == first.game.id)
+        #expect(next.developmentCandidates.first?.reasons.contains("title or alias matches") == true)
+    }
+
+    @Test("an earlier Build's filename title matches a Game retitled without an alias")
+    func earlierBuildFilenameTitle() throws {
+        let h = try Harness()
+        defer { try? FileManager.default.removeItem(at: h.root) }
+        let first = try h.commit(h.analyze("Brainrot Port 2026-10-03.gb", title: "BRAINROT", payload: 1), title: "Steal a Brainrot")
+        // A Game imported before typed titles kept the suggestion as an alias.
+        var game = try #require(try h.games.fetchGame(id: first.game.id))
+        game.aliases = []
+        try h.games.updateGame(game)
+        let next = try h.analyze("Brainrot Port 2026-10-14.gb", title: "PORT", payload: 3)
+        #expect(next.developmentCandidates.first?.gameID == first.game.id)
+        #expect(next.developmentCandidates.first?.reasons.first == "same filename title as a Build")
+        #expect(next.developmentCandidates.first?.reasons.contains("title or alias matches") == false)
+    }
+
+    @Test("a generic filename title says nothing about the Game")
+    func genericFilenameTitle() throws {
+        let h = try Harness()
+        defer { try? FileManager.default.removeItem(at: h.root) }
+        let first = try h.commit(h.analyze("game.gb", title: "MOON", payload: 1), title: "Moon Garden")
+        #expect(first.game.aliases.isEmpty, "a generic suggestion isn't kept as an alias")
+        let next = try h.analyze("game.gb", title: "OTHER", payload: 2)
+        #expect(next.developmentCandidates.isEmpty)
+    }
+
     @Test("No-Intro dumps and exact duplicates bypass development queries")
     func precedence() throws {
         let h = try Harness()
@@ -96,7 +134,7 @@ struct DevelopmentImportTests {
         func analyze(_ filename: String, image: Data) throws -> ROMImportAnalysis {
             let file = root.appendingPathComponent(filename)
             try image.write(to: file)
-            return try ROMImportAnalyzer(builds: builds, games: games, fingerprints: fingerprints,
+            return try ROMImportAnalyzer(builds: builds, games: games, assets: assets, fingerprints: fingerprints,
                 toolchainReports: reports, assetStore: store, detectors: .init(detectors: [SyntheticDetector()]))
                 .analyzeROM(at: file, targetGameID: nil)
         }

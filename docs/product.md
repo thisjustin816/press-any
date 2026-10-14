@@ -133,7 +133,8 @@ A Game keeps alternate titles as aliases in an indexed table, ready for the late
 Library search already matches them. A No-Intro family's other regional titles become aliases
 when a release joins the Game, so "Pocket Monsters Crystal" finds Pokémon Crystal. Rename Game,
 in Game Details' menu or a Game's long-press menu in the library, keeps the former title as an
-alias and records the player's title choice.
+alias and records the player's title choice. Typing a new Game's title over the one Import Review
+suggests keeps the suggestion as an alias the same way, unless it's a generic name like "game".
 
 A Game stores whether it is a favorite. Merging Games keeps the survivor a favorite if either
 was, and Make Separate Game carries the source Game's favorite state. Game titles and Build
@@ -296,16 +297,20 @@ ROM) under its canonical name:
 Names use No-Intro for the game and GoodTools' codes for what was done to it:
 
 - A good copy of a known dump takes No-Intro's name with GoodTools' verified mark, "Moon Garden
-  (USA) (Rev 1) [!].gbc", and a bad one adds `[b]`.
+  (USA) (Rev 1) [!].gbc", and a bad one adds `[b]`. Import Review suggests the same name.
 - A hack or translation of a known dump takes that dump's name, then the modification in brackets.
   A hack names itself with its author and version, "[Night patch by Jane v0.3]", or "[Hack by Jane
-  v1.3]" without a title of its own. A translation takes GoodTools' form, "[T+Eng1.03_Jane]", with
-  a three-letter language code. A patched copy with nothing recorded about it adds "[Hack]", so it
-  never passes for the dump.
+  v1.3]" without a title of its own, as when its title is the Game's. A translation takes
+  GoodTools' form, "[T+Eng1.03_Jane]", with a three-letter language code. A patched copy with
+  nothing recorded about it adds "[Hack]", so it never passes for the dump.
 - Anything else is named from its metadata in No-Intro's order and spelling: "Title (Region)
-  (En,Fr) (Rev A) (v1.2) (Beta 2)", with an ASCII title, a leading article moved to the end
-  ("Legend of Zelda, The") and "Proto" for a prototype. A hack keeps the base game's name with the
+  (En,Fr) (Rev A) (v1.2) (Beta 2)", with a date version after the status as No-Intro writes it,
+  "(Beta) (2000-02-21)", an ASCII title, a leading article moved to the end ("Legend of Zelda,
+  The") and "Proto" for a prototype. Only letters that become ASCII lose their accents, so
+  Japanese titles keep their kana as written. A hack keeps the base game's name with the
   modification after it, as above. Import Review's Suggested Filename follows the same rules.
+  Title matching folds accents and reads "Moon Garden, The" as "The Moon Garden", so an exported
+  file finds its own Game again.
 
 Settings > Library > Back Up Library writes an ordinary `.zip` backup there and offers sharing.
 Game Details > More > Export Game writes a Game package in the
@@ -364,7 +369,10 @@ changes the library; review shows what will happen; commit is all or nothing.
   Unknown ROMs compare their filename title, header title and hack base title with Game titles and
   aliases, using whole titles and ignoring case, punctuation and spacing. Development matching
   treats a header title unique to one Game, a Game title or alias match, and at least half of the
-  smaller image's distinct 16 KB banks shared with one Build as strong signals. Matching cartridge
+  smaller image's distinct 16 KB banks shared with one Build as strong signals. A Game whose title
+  matches nothing still counts as a title match when the title in an earlier Build's filename
+  matches, so a Game retitled from "Brainrot Port" still takes "Brainrot Port 2026-10-14.gb".
+  Generic filename titles like "game" don't count. Matching cartridge
   type and RAM size, color support, toolchain with the same detected engine, and at least a quarter
   of banks shared provide supporting evidence. Banks count even when they move; entirely 0x00 or
   0xFF banks do not count, and neither do banks already in two Games, which are engine or library
@@ -505,9 +513,11 @@ isn't stored.
   DX and SGB kept in capitals. Underscored or hyphenated numbers after a "v" word are its dotted
   parts: "mole_mania_dx_v1_3" is "Mole Mania DX", version 1.3. A lone "v2" is never the whole
   title.
-- A date stamp after the title, as in "AeonMetalFighters_20261006_classic", becomes the version,
-  shown as "2026-10-06" and sorted by date; the words after it become the status. Only a valid
-  eight-digit or hyphenated date counts, and never as the whole title.
+- A date stamp after the title, as in "AeonMetalFighters_20261006_classic" or
+  "brainrot-port-2026-10-14", becomes the version, shown as "2026-10-06" and sorted by date; the
+  words after it become the status. No-Intro's date group, "(2000-02-21)", counts the same way.
+  Only a valid eight-digit or hyphenated date counts, and never as the whole title. A dash left
+  before a stamp is dropped: "Brainrot Port - 2026-10-14" is "Brainrot Port".
 - A status ending a name with no version, as in "Match-Land-GBC-alpha.21", "game_beta2" or
   "game-rc1", becomes the status: "Alpha 21", "Beta 2", "RC 1". "alpha" and "beta" count on their
   own; "demo", "preview", "proto" and "rc" need a number, since they could end a title. A name
@@ -518,10 +528,15 @@ isn't stored.
   system ("GB", "GBC", "DMG", "CGB") or holds both a region and a language, so "Super_Mario_World"
   keeps its title.
 - A hack or translation is recognized in the bracket it's released with: "[Night patch by Jane
-  v0.3]" or "[Hack by Jane]" for a hack, GoodTools' "[T+Eng1.03_Jane]" or "[T-En by Jane v1.0]"
-  for a translation. The words before "by" are the hack's title unless they only say "Hack".
+  v0.3]", "[Night patch v0.3]" or "[Hack by Jane]" for a hack, GoodTools' "[T+Eng1.03_Jane]" or
+  "[T-En by Jane v1.0]" for a translation. The words before "by" are the hack's title unless they
+  only say "Hack". In parentheses a credit needs a version or a word such as hack or patch, so
+  "(Music by Izma)" stays a tag, and "[T-Rex Runner]" isn't a translation. A bracket like these
+  follows the base game's full name, so "Pokemon - Crystal Version (USA) [Hack by Jane]" keeps
+  the whole name as the base; only a bare "[Hack]" or "(Hack)" splits "Base - Hack" at its dash.
+  Every name the app exports reads back as the same fields.
 - GoodTools names are read as No-Intro fields: a short region such as "(U)" is USA and "(UE)"
-  is USA, Europe ("(JUE)" is World), and "(V1.1)" is a version. Its dump codes are understood
+  is USA, Europe ("(JUE)" is World), and "(V1.1)" is a version. "(Nl)" stays No-Intro's Dutch. Its dump codes are understood
   and left out of the title: "[!]", "[a1]", "[b1]", "[o1]", "[p1]", "[x]", GoodGBx's "[C]" and
   "[S]", "(M3)" and "(PD)" describe the copy, and "[h1]", "[h1C]", "[hI]", "[t1]" and "[f1]" mark
   a modified one, which imports as a hack. Verification still comes from hashing, not the tags.
