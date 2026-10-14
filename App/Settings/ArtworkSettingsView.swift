@@ -9,7 +9,7 @@ struct ArtworkSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Find Artwork on Import", isOn: Binding(get: { automatic }, set: save))
+                Toggle("Find Artwork on Import", isOn: Binding(get: { automatic }, set: { save($0) }))
             } footer: {
                 Text("Finds box art from Libretro for recognized games after import. Existing artwork stays. You can check from a Game's Artwork menu at any time.")
             }
