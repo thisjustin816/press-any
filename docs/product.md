@@ -133,7 +133,8 @@ A Game keeps alternate titles as aliases in an indexed table, ready for the late
 Library search already matches them. A No-Intro family's other regional titles become aliases
 when a release joins the Game, so "Pocket Monsters Crystal" finds Pokémon Crystal. Rename Game,
 in Game Details' menu or a Game's long-press menu in the library, keeps the former title as an
-alias and records the player's title choice.
+alias and records the player's title choice. Typing a new Game's title over the one Import Review
+suggests keeps the suggestion as an alias the same way, unless it's a generic name like "game".
 
 A Game stores whether it is a favorite. Merging Games keeps the survivor a favorite if either
 was, and Make Separate Game carries the source Game's favorite state. Game titles and Build
@@ -364,7 +365,10 @@ changes the library; review shows what will happen; commit is all or nothing.
   Unknown ROMs compare their filename title, header title and hack base title with Game titles and
   aliases, using whole titles and ignoring case, punctuation and spacing. Development matching
   treats a header title unique to one Game, a Game title or alias match, and at least half of the
-  smaller image's distinct 16 KB banks shared with one Build as strong signals. Matching cartridge
+  smaller image's distinct 16 KB banks shared with one Build as strong signals. A Game whose title
+  matches nothing still counts as a title match when the title in an earlier Build's filename
+  matches, so a Game retitled from "Brainrot Port" still takes "Brainrot Port 2026-10-14.gb".
+  Generic filename titles like "game" don't count. Matching cartridge
   type and RAM size, color support, toolchain with the same detected engine, and at least a quarter
   of banks shared provide supporting evidence. Banks count even when they move; entirely 0x00 or
   0xFF banks do not count, and neither do banks already in two Games, which are engine or library

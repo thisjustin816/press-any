@@ -26,10 +26,14 @@ public enum DevelopmentBuildMatcher {
     public struct BuildSignals: Sendable {
         public let fingerprint: ImageFingerprint?
         public let reports: [ToolchainDetectionReport]
+        /// The title in the name of the file the Build was imported from, which stays when the
+        /// Game is retitled.
+        public let filenameTitle: String?
 
-        public init(fingerprint: ImageFingerprint?, reports: [ToolchainDetectionReport] = []) {
+        public init(fingerprint: ImageFingerprint?, reports: [ToolchainDetectionReport] = [], filenameTitle: String? = nil) {
             self.fingerprint = fingerprint
             self.reports = reports
+            self.filenameTitle = filenameTitle
         }
     }
 
@@ -51,7 +55,8 @@ public enum DevelopmentBuildMatcher {
         "game", "mygame", "newgame", "untitled", "test", "demo", "gbstudio", "gbdk", "gameboy", "gameboycolor",
     ]
 
-    public static func isDistinctiveHeader(_ title: String) -> Bool {
+    /// Whether a header or filename title is specific enough to point at one Game.
+    public static func isDistinctiveTitle(_ title: String) -> Bool {
         let key = GameMatcher.normalized(title)
         return key.count >= 3 && !genericHeaders.contains(key)
     }
@@ -74,7 +79,7 @@ public enum DevelopmentBuildMatcher {
         let commonBanks = Set(bankOwners.filter { $0.value.count > 1 }.keys)
         let incoming = arriving.fingerprint
         let headerKey = GameMatcher.normalized(incoming.headerTitle)
-        let usableHeader = isDistinctiveHeader(incoming.headerTitle) && (headerOwners[headerKey]?.count ?? 0) <= 1
+        let usableHeader = isDistinctiveTitle(incoming.headerTitle) && (headerOwners[headerKey]?.count ?? 0) <= 1
         let titleKeys = Set(([arriving.filenameMetadata.suggestedTitle,
                               arriving.filenameMetadata.buildMetadata.baseTitle ?? ""]
             + (usableHeader ? [incoming.headerTitle] : []))
@@ -96,11 +101,18 @@ public enum DevelopmentBuildMatcher {
             guard !colorConflict, !toolConflict else { continue }
             var strong: [String] = []
             var supporting: [String] = []
-            if isDistinctiveHeader(incoming.headerTitle), headerOwners[headerKey] == Set([entry.game.id]) {
+            if isDistinctiveTitle(incoming.headerTitle), headerOwners[headerKey] == Set([entry.game.id]) {
                 strong.append("same header title")
             }
+            // One title signal: the Game's title or an alias, or else the title in an earlier
+            // Build's filename, which survives a title typed over it. A generic name like "game"
+            // says nothing.
             if ([entry.game.primaryTitle] + entry.game.aliases).contains(where: { titleKeys.contains(GameMatcher.normalized($0)) }) {
                 strong.append("title or alias matches")
+            } else if entry.builds.contains(where: { build in
+                build.filenameTitle.map { isDistinctiveTitle($0) && titleKeys.contains(GameMatcher.normalized($0)) } ?? false
+            }) {
+                strong.append("same filename title as a Build")
             }
             let sharedFraction = images.filter { $0.bankSize == incoming.bankSize }.map { image in
                 let other = Set(image.bankHashes).subtracting(commonBanks)
