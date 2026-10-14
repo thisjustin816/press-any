@@ -66,6 +66,7 @@ final class GameplayViewController: UIViewController {
     // reach the controller, so the nonisolated deinit can remove the observers without a hop.
     nonisolated(unsafe) private var lifecycleObservers: [NSObjectProtocol] = []
     private var stopped = false
+    private var pendingExit: Exit?
 
     var onClose: (() -> Void)?
     /// Set for Quick Play: the menu then offers Add to Library, which closes the game and calls this.
@@ -757,6 +758,11 @@ final class GameplayViewController: UIViewController {
     private func placeMenuButtons(over areas: [TouchRect]) {
         while menuButtons.count < areas.count {
             let button = GameMenuButton(menu: gameMenu)
+            button.onMenuDismissed = { [weak self] in
+                guard let self, let exit = self.pendingExit else { return }
+                self.pendingExit = nil
+                self.finish(exit)
+            }
             // Where a menu area overlaps a control, as on narrow screens, the control wins.
             button.yieldsTouch = { [weak self] point in
                 guard let self, self.touchControls.showsControls else { return false }
@@ -1041,6 +1047,9 @@ final class GameplayViewController: UIViewController {
     /// Closes the game as the menu's Close Game does, for a caller replacing it with another game.
     func requestClose() {
         closeTapped()
+        for button in menuButtons where button.isMenuPresented {
+            button.contextMenuInteraction?.dismissMenu()
+        }
     }
 
     /// A sheet over the game, such as a file shared mid-game, pauses it as the game menu does, so
@@ -1089,6 +1098,10 @@ final class GameplayViewController: UIViewController {
     /// game stays open and paused, and the player chooses to try again or to close without the
     /// save.
     private func finish(_ exit: Exit) {
+        if menuButtons.contains(where: { $0.isMenuPresented || $0.isMenuDismissing }) {
+            if pendingExit == nil { pendingExit = exit }
+            return
+        }
         do {
             try stopRuntime()
         } catch {
@@ -1187,6 +1200,8 @@ final class GameplayViewController: UIViewController {
 /// remains clear.
 final class GameMenuButton: UIButton {
     private(set) var isMenuPresented = false
+    private(set) var isMenuDismissing = false
+    var onMenuDismissed: (() -> Void)?
 
     override func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
@@ -1203,7 +1218,18 @@ final class GameMenuButton: UIButton {
         animator: (any UIContextMenuInteractionAnimating)?
     ) {
         isMenuPresented = false
+        isMenuDismissing = true
         super.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
+        if let animator {
+            animator.addCompletion { [weak self] in self?.menuDidDismiss() }
+        } else {
+            menuDidDismiss()
+        }
+    }
+
+    private func menuDidDismiss() {
+        isMenuDismissing = false
+        onMenuDismissed?()
     }
 
     private let face = CAGradientLayer()

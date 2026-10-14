@@ -767,6 +767,8 @@ claims reliability from just an old ROM, old save and new ROM.
   unless told otherwise, so the menu's button asks for a fixed order: it sits in one place and always
   opens upward. Every other menu keeps the system's default, which puts the first item nearest
   where it was opened, as in Photos and Files.
+- **Closing.** Close Game and Quick Play's Add to Library wait for the game menu to finish
+  dismissing before saving and leaving gameplay.
 - **Restart and Start Over.** Restart, beside Close Game in the game menu, asks first, then starts
   the game again from its boot and plays. The cartridge keeps its save through a reset. A library
   game first keeps where the player was as an Auto State, so States can go back to it; Quick

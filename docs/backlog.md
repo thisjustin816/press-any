@@ -444,6 +444,7 @@ passed and remain as regression coverage in mvp-verification.md.
 
 Done: In-game menu from the wordmark with or without a controller: Pause/Resume, Fast Forward,
 Save State, Load State and Close; Quick Play offers Add to Library and explains disabled Save State.
+Close and Add to Library wait for the menu's dismissal animation to finish before leaving gameplay.
 
 ### Manuals / documents
 
