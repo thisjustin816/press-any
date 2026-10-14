@@ -28,6 +28,7 @@ struct LibraryView: View {
     @State private var pendingFileAction: FileAction = .importFiles
     @State private var importReview: ImportReviewPresentation?
     @State private var showSettings = false
+    @State private var showMissingArtwork = false
     @State private var settingsGame: Game?
     @State private var showSaveChooser = false
     @State private var chosenQuickPlaySave: UUID?
@@ -146,6 +147,11 @@ struct LibraryView: View {
                             Section {
                                 Button("Select", systemImage: "checkmark.circle") { model.selection.toggleMode() }
                                     .disabled(model.visibleGames.isEmpty)
+                                Button("Find Missing Artwork", systemImage: "photo.on.rectangle") {
+                                    showMissingArtwork = true
+                                }
+                                .disabled(model.games.isEmpty)
+                                .accessibilityIdentifier("library.findMissingArtwork")
                                 // Dragging works in the list; the grid shows the same order.
                                 if sort == .manual && displayMode == .list {
                                     Button("Reorder", systemImage: "line.3.horizontal") { isReordering = true }
@@ -240,6 +246,9 @@ struct LibraryView: View {
                         screenshotBuildInfoShown = true
                         ScreenshotScene.log(ScreenshotScene.readyMessage)
                     }
+            }
+            .sheet(isPresented: $showMissingArtwork) {
+                MissingArtworkSearchView(container: container)
             }
             // Quick Play promotion adds Games from sheets this screen doesn't own.
             .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in model.reload() }

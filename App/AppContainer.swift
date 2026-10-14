@@ -340,7 +340,7 @@ final class AppContainer {
     func fetchArtworkAfterImport(_ build: Build) {
         guard let artworkProvider, artworkTasks[build.id] == nil,
               let request = artworkLookup(gameID: build.gameID, importedBuild: build) else { return }
-        let automatic = AutomaticGameArtwork(games: repositories.games, artwork: gameArtwork,
+        let automatic = FindMissingGameArtwork(games: repositories.games, artwork: gameArtwork,
             settings: repositories.settings, providers: [artworkProvider], transactions: repositories.transactions)
         artworkTasks[build.id] = Task(priority: .utility) { [weak self] in
             defer { self?.artworkTasks[build.id] = nil }
@@ -355,6 +355,43 @@ final class AppContainer {
     func findArtwork(gameID: UUID) async throws -> ProvidedArtwork? {
         guard let artworkProvider, let request = artworkLookup(gameID: gameID) else { return nil }
         return try await artworkProvider.artwork(for: request.lookup)
+    }
+
+    struct MissingArtworkProgress: Sendable {
+        let total: Int
+        var checked = 0
+        var added = 0
+        var failed = 0
+    }
+
+    func findMissingArtwork(onProgress: (MissingArtworkProgress) -> Void = { _ in }) async throws -> MissingArtworkProgress {
+        let games = try repositories.games.fetchGames().filter { $0.artworkAssetID == nil }
+        let finder = FindMissingGameArtwork(games: repositories.games, artwork: gameArtwork,
+            settings: repositories.settings, providers: artworkProvider.map { [$0] } ?? [],
+            transactions: repositories.transactions)
+        var progress = MissingArtworkProgress(total: games.count)
+        onProgress(progress)
+        for game in games {
+            try Task.checkCancellation()
+            if let request = artworkLookup(gameID: game.id) {
+                do {
+                    if try await finder.execute(gameID: game.id, lookup: request.lookup,
+                        expectedPreferredBuildID: request.preferredBuildID, trigger: .userRequested) {
+                        progress.added += 1
+                        NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+                    }
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    try Task.checkCancellation()
+                    progress.failed += 1
+                }
+            }
+            progress.checked += 1
+            onProgress(progress)
+            await Task.yield()
+        }
+        return progress
     }
 
     private func artworkLookup(gameID: UUID, importedBuild: Build? = nil) -> (lookup: ArtworkLookup, preferredBuildID: UUID?)? {

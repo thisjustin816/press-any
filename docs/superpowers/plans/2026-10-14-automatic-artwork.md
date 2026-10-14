@@ -22,15 +22,15 @@
 ### Task 1: Provider, matching and safe storage
 
 **Files:**
-- Create `Packages/EmulatorKit/Sources/EmulatorApplication/Ports/ArtworkProvider.swift` and `UseCases/AutomaticGameArtwork.swift`.
+- Create `Packages/EmulatorKit/Sources/EmulatorApplication/Ports/ArtworkProvider.swift` and `UseCases/FindMissingGameArtwork.swift`.
 - Create `Packages/EmulatorKit/Sources/GameIdentity/ArtworkLookup+KnownDumps.swift`, `LibretroArtworkProvider.swift`, and `ArtworkHTTPClient.swift`.
 - Modify `GameIdentity/KnownDumps.swift`, `EmulatorApplication/UseCases/GameArtwork.swift`, and `BuildOperations.swift`.
-- Test in `Tests/GameIdentityTests/ArtworkLookupTests.swift`, `LibretroArtworkProviderTests.swift`, `ArtworkHTTPClientTests.swift`, and `Tests/EmulatorApplicationTests/AutomaticGameArtworkTests.swift`.
+- Test in `Tests/GameIdentityTests/ArtworkLookupTests.swift`, `LibretroArtworkProviderTests.swift`, `ArtworkHTTPClientTests.swift`, and `Tests/EmulatorApplicationTests/FindMissingGameArtworkTests.swift`.
 
 **Interfaces:**
 - `ArtworkLookup(system: GameSystem, releaseNames: [String], inherited: Bool)` carries known identity.
 - `ArtworkProvider.artwork(for: ArtworkLookup) async throws -> ProvidedArtwork?` returns the selected download or a miss.
-- `AutomaticGameArtwork.execute(gameID: UUID, lookup: ArtworkLookup, expectedPreferredBuildID: UUID? = nil) async throws -> Bool` fills only an empty Game whose preference still matches the lookup and reports whether it wrote an image.
+- `FindMissingGameArtwork.execute(gameID: UUID, lookup: ArtworkLookup, expectedPreferredBuildID: UUID? = nil, trigger: Trigger = .automatic) async throws -> Bool` fills only an empty Game whose preference still matches the lookup and reports whether it wrote an image.
 - `GameArtwork.set(..., provenance: ArtworkProvenance? = nil)` keeps current manual callers valid.
 
 - [x] Write tests for canonical/region/revision matching, unknown/bad images, explicit base inheritance, URL character substitution, 404 fallback, HTTP failures, byte limits, cancellation, and provenance.
@@ -88,3 +88,12 @@ XCTAssertFalse(try AutomaticArtworkSetting(store: settings).load())
 - Live URLSession downloader: valid 476,267-byte PNG from Libretro; clean exit.
 - Repository hygiene, dependency notices and `git diff --check`: passed.
 - Changed app and app-test files: Swift syntax parse passed. Apple SDK compilation, app-test execution, ImageIO checks and physical iPhone flows remain pending.
+
+### Library-wide missing artwork
+
+- [x] Add Find Missing Artwork to the library's More menu, with progress and cancellation.
+- [x] Reuse the per-Game lookup and its protections for existing artwork, deliberate removals,
+  changed preferences and in-flight player choices. An explicit search ignores the import setting.
+- [x] Test the explicit-search policy with automatic artwork off, including a failing control.
+- [x] Add App tests for library-wide progress, mixed artwork states, cancellation and an unreadable image.
+- [ ] Verify the combined Apple checks and upload a new feature-branch TestFlight build.

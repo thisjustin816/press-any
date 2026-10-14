@@ -55,7 +55,7 @@ final class ArtworkPersistenceTests: XCTestCase {
             sourceURL: URL(string: "https://example.com/art.png")!, fetchedAt: .distantPast, rights: "Synthetic test data"))
         let artwork = GameArtwork(games: repos.games, assets: repos.assets, assetStore: store,
             prepareImage: { ($0, $1) }, transactions: repos.transactions, settings: repos.settings)
-        let automatic = AutomaticGameArtwork(games: repos.games, artwork: artwork, settings: repos.settings,
+        let automatic = FindMissingGameArtwork(games: repos.games, artwork: artwork, settings: repos.settings,
             providers: [PersistenceArtworkProvider(provided: provided)], transactions: repos.transactions)
         let wrote = try await automatic.execute(gameID: game.id,
             lookup: .init(system: .gameBoy, releaseNames: ["Example (World)"], inherited: false))

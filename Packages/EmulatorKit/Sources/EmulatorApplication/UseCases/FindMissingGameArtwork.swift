@@ -1,7 +1,12 @@
 import Foundation
 
-/// Fills empty artwork without delaying ROM import or replacing a player's choice.
-public struct AutomaticGameArtwork: Sendable {
+/// Fills empty artwork without replacing a player's choice.
+public struct FindMissingGameArtwork: Sendable {
+    public enum Trigger: Sendable {
+        case automatic
+        case userRequested
+    }
+
     private let games: any GameRepository
     private let artwork: GameArtwork
     private let settings: AutomaticArtworkSetting
@@ -18,8 +23,9 @@ public struct AutomaticGameArtwork: Sendable {
     }
 
     @discardableResult
-    public func execute(gameID: UUID, lookup: ArtworkLookup, expectedPreferredBuildID: UUID? = nil) async throws -> Bool {
-        guard try settings.load(), let game = try games.fetchGame(id: gameID), game.artworkAssetID == nil,
+    public func execute(gameID: UUID, lookup: ArtworkLookup, expectedPreferredBuildID: UUID? = nil,
+                        trigger: Trigger = .automatic) async throws -> Bool {
+        guard try isEnabled(for: trigger), let game = try games.fetchGame(id: gameID), game.artworkAssetID == nil,
               game.preferredBuildID == expectedPreferredBuildID,
               try !artwork.hasArtworkChoice(gameID: gameID) else { return false }
         for provider in providers {
@@ -36,7 +42,7 @@ public struct AutomaticGameArtwork: Sendable {
             guard let provided else { continue }
             try Task.checkCancellation()
             return try transactions.run {
-                guard try settings.load(), let current = try games.fetchGame(id: gameID),
+                guard try isEnabled(for: trigger), let current = try games.fetchGame(id: gameID),
                       current.artworkAssetID == nil, current.preferredBuildID == expectedPreferredBuildID,
                       try !artwork.hasArtworkChoice(gameID: gameID) else { return false }
                 try artwork.set(gameID: gameID, imageData: provided.data, fileExtension: provided.fileExtension,
@@ -45,5 +51,12 @@ public struct AutomaticGameArtwork: Sendable {
             }
         }
         return false
+    }
+
+    private func isEnabled(for trigger: Trigger) throws -> Bool {
+        switch trigger {
+        case .automatic: try settings.load()
+        case .userRequested: true
+        }
     }
 }

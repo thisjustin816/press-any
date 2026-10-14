@@ -11,7 +11,7 @@ struct ArtworkSettingsView: View {
             Section {
                 Toggle("Find Artwork on Import", isOn: Binding(get: { automatic }, set: { save($0) }))
             } footer: {
-                Text("Finds box art from Libretro for recognized games after import. Existing artwork stays. You can check from a Game's Artwork menu at any time.")
+                Text("Finds box art from Libretro for recognized games after import. Existing artwork stays. Check one Game from its Artwork menu, or use Find Missing Artwork in the library's More menu.")
             }
             Section {
                 Text("Libretro receives the recognized game's release name and your network address. ROM files, saves, and names you edit are never sent.")

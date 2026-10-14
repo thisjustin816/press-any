@@ -39,9 +39,11 @@ saves, account information or player-edited names are sent.
 
 Turn off Find Artwork on Import in Settings > Library > Artwork to stop automatic
 requests. Check for New Artwork in a Game's Artwork menu makes an explicit request
-even with automatic lookups off. Existing artwork is never replaced automatically.
-Only the selected image is saved in your local library, along with its source URL,
-provider, fetch date and rights notice. A canceled manual check discards its download.
+even with automatic lookups off. Find Missing Artwork in the library's More menu
+checks Games without artwork the same way, preserving existing and deliberately removed artwork.
+Assigned images are saved in your local library, along with their source URL,
+provider, fetch date and rights notice. Canceling a Game's preview discards its download;
+canceling the library search keeps artwork already saved.
 The app uses no tracking cookies for artwork requests and never publishes your artwork.
 
 ## Files, backups, and Apple services

@@ -203,6 +203,11 @@ These checks cover the Capture submenu and remain pending until run on a physica
 
 ## Automatic artwork device checks
 
+- [ ] With Find Artwork on Import off and search or Favorites Only hiding some Games, choose
+  More > Find Missing Artwork. Recognized Games without artwork get images across the whole
+  library; existing and deliberately removed artwork stay unchanged. Progress and the final
+  counts are readable with VoiceOver and the largest text size. Cancel during a slow lookup:
+  artwork already saved stays, its late download is discarded, and a later search can retry.
 - [ ] With Find Artwork on Import on, import a recognized GB and GBC release without choosing
   artwork. Import closes without waiting for the network; the correct regional box art appears
   when available, remains after relaunch, and survives backup/restore. Import an exact duplicate:

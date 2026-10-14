@@ -1382,6 +1382,11 @@ same storage as manually chosen artwork.
 
 Check for New Artwork in a Game's Artwork menu works even with automatic lookups off. It shows
 the fetched image and any current artwork; Use Artwork assigns it, and Cancel discards it.
+Find Missing Artwork in the library's More menu checks all Games without artwork, including
+those hidden by search and filters, even with import-time lookups off. It shows progress and
+fills available matches without replacing existing artwork or refilling deliberately removed
+artwork. Cancel stops the search and keeps artwork already saved. Games with no match stay
+unchanged and can be checked again later.
 Only the selected image is stored, as user data. Nothing rechecks an assigned image automatically.
 Its provider, source URL, fetch date, rights notice and inherited base name stay with the managed
 asset through backup, restore and copying between Games. Private artwork is never published.
