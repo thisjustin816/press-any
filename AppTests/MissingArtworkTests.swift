@@ -5,6 +5,18 @@ import XCTest
 
 @MainActor
 final class MissingArtworkTests: XCTestCase {
+    func testSearchDoesNotStoreArtworkBeforeApproval() async throws {
+        let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
+        let library = try ArtworkTestLibrary(provider: provider)
+        defer { library.removeFiles() }
+        let game = try library.addGame(dump: library.dumps[0], marker: 1)
+
+        _ = try await library.container.findMissingArtwork()
+
+        XCTAssertNil(try library.container.repositories.games.fetchGame(id: game.id)?.artworkAssetID)
+        XCTAssertTrue(try library.container.repositories.assets.fetchAssets().filter { $0.kind == .artwork }.isEmpty)
+    }
+
     func testSearchChecksTheWholeLibraryAndPreservesExistingAndRemovedArtwork() async throws {
         let png = ArtworkTestLibrary.png()
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: png))
