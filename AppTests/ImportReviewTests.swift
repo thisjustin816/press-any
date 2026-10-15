@@ -100,6 +100,26 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertEqual(lookedUp, [result.build.id])
     }
 
+    func testRemovingAnArtworkChoiceDoesNotStartAnotherAutomaticLookup() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let file = root.appendingPathComponent("Example.gb")
+        try Data(repeating: 0, count: 0x8000).write(to: file)
+        let coordinator = ImportCoordinator(analyzer: container.importAnalyzer, committer: container.importCommitter, assetStore: container.fileStore)
+        var lookups = 0
+        let review = ImportReviewViewModel(analysis: try coordinator.analyzeROM(at: file), games: [], coordinator: coordinator,
+            setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) },
+            fetchArtwork: { _ in lookups += 1 })
+        review.chooseArtwork(ArtworkTestLibrary.png(), fileExtension: "png")
+        review.removeArtwork()
+
+        let result = try review.commit()
+
+        XCTAssertNil(try container.repositories.games.fetchGame(id: result.build.gameID)?.artworkAssetID)
+        XCTAssertEqual(lookups, 0, "Removing the import's artwork must not start another lookup")
+    }
+
     func testFailedImportDoesNotStartArtworkLookup() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
