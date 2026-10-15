@@ -1,7 +1,7 @@
 import GameIdentity
 import SwiftUI
 
-/// The third-party code, artwork and data that ship in the app. Licenses whose terms ask to be shown are
+/// The third-party code, artwork, data and online sources the app uses. Licenses whose terms ask to be shown are
 /// bundled verbatim from `App/Acknowledgements/`; public-domain code and freely licensed data get
 /// a credit instead.
 struct AcknowledgementsView: View {
@@ -10,6 +10,7 @@ struct AcknowledgementsView: View {
             case bundled(file: String)
             case publicDomain(credit: String)
             case freeData(credit: String)
+            case rightsNotice(credit: String)
         }
 
         let name: String
@@ -62,6 +63,22 @@ struct AcknowledgementsView: View {
             use: "Recognizing known Game Boy and Game Boy Color releases",
             license: .freeData(credit: AcknowledgementsView.noIntroCredit)
         ),
+        Component(
+            name: "Libretro thumbnails",
+            use: "Optional online box art for recognized games",
+            license: .rightsNotice(credit: """
+            Source: https://github.com/libretro-thumbnails/libretro-thumbnails
+            Service: https://thumbnails.libretro.com
+
+            Credits: the Libretro thumbnail community's scanners, collectors and contributors.
+            Upstream also credits MobyGames and Fandom as sources.
+
+            \(LibretroArtworkProvider.rights)
+
+            No game artwork is bundled in \(AppBrand.displayName). Selected downloads are kept \
+            in your local library with their source URL and rights notice.
+            """)
+        ),
     ]
 
     /// The data's source and date, read from the bundled file so a refresh updates it.
@@ -113,7 +130,7 @@ private struct LicenseTextView: View {
 
     private var text: String {
         switch component.license {
-        case .publicDomain(let credit), .freeData(let credit):
+        case .publicDomain(let credit), .freeData(let credit), .rightsNotice(let credit):
             return credit
         case .bundled(let file):
             guard let url = Bundle.main.url(forResource: file, withExtension: "txt"),

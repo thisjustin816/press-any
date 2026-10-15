@@ -208,6 +208,10 @@ public struct KnownDumpIndex: Sendable {
         bySHA1[sha1.lowercased()]?.game
     }
 
+    public func dump(named name: String, system: GameSystem) -> KnownDump? {
+        byName[Key(system: system, name: name)]
+    }
+
     /// The listed image itself, which says whether it is a bad copy.
     public func file(sha1: String) -> KnownDumpFile? {
         bySHA1[sha1.lowercased()]?.file

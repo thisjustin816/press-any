@@ -1,6 +1,6 @@
 # Press Any Privacy Policy
 
-Last updated: October 8, 2026
+Last updated: October 14, 2026
 
 Press Any is a Game Boy and Game Boy Color emulator for iPhone, developed by
 Justin Beeson. This policy describes the current app, including builds
@@ -11,7 +11,7 @@ distributed through TestFlight.
 Press Any does not collect or transmit personal information to the developer.
 The app does not require an account and contains no advertising, analytics,
 tracking, or third-party crash-reporting SDKs. Its gameplay and library features
-work offline.
+work offline. Optional artwork lookups use an online service.
 
 ## Information stored on your device
 
@@ -19,12 +19,36 @@ The app processes the files you choose to import and stores your library in its
 private storage on your device. This includes game ROMs, patches, game metadata,
 artwork, battery saves, save states and their thumbnails, Save Profiles, playtime,
 and app settings. These files and records support emulation and library management.
-The app does not automatically send them to the developer or a remote service.
+ROMs, patches, saves, states, private artwork and your edited titles are never uploaded
+to the developer or an artwork service. Online artwork requests use recognized release
+names as described below.
 
 Press Any uses local settings, file timestamps, and system timing information to
 save preferences, manage temporary files, and schedule gameplay. These uses are
 declared in the app's Apple privacy manifest and do not track you across apps or
 websites.
+
+## Online artwork
+
+After import, automatic artwork is on by default. For a recognized release, Press Any
+requests box art from Libretro's public thumbnail service at `thumbnails.libretro.com`.
+The request contains the system and canonical release name from the bundled No-Intro
+data, or the recognized base game for a modified Build. Libretro and its hosting
+providers receive that request and your network address. No ROM bytes, ROM hashes,
+saves, account information or player-edited names are sent.
+
+Import Review can show an automatic proposal before you import. It is saved only after
+the ROM is imported; if the preview is still loading, lookup can continue after import.
+Turn off Find Artwork on Import in Settings > Library > Artwork to stop automatic
+requests. Check for New Artwork in a Game's Artwork menu makes an explicit request
+even with automatic lookups off. Settings > Library > Artwork > Find Missing Artwork
+checks Games without artwork the same way, including artwork you removed. Existing artwork
+stays, and removed artwork stays blank unless you accept a proposal.
+It previews proposed images for you to accept or decline. Proposals use temporary files
+that are deleted when the review closes; searching saves no artwork to your library.
+Accepted images are saved in your local library, along with their source URL,
+provider, fetch date and rights notice. Canceling either review discards its proposals.
+The app uses no tracking cookies for artwork requests and never publishes your artwork.
 
 ## Files, backups, and Apple services
 

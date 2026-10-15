@@ -33,6 +33,19 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
 - Usage: SQLite persistence through Swift Package Manager.
 - License: MIT; see the pinned upstream package for the authoritative license text.
 
+## Libretro thumbnails
+
+- Source: https://github.com/libretro-thumbnails/libretro-thumbnails
+- Service: https://thumbnails.libretro.com
+- Usage: optional online box-art lookup using recognized GB/GBC release names. No game
+  artwork or thumbnail repository is bundled in the app or committed as a fixture.
+- Credits: the Libretro thumbnail community's scanners, collectors and contributors;
+  upstream also credits MobyGames and Fandom as sources.
+- Rights: original game and promotional artwork belongs to the respective developers and
+  publishers. The repository does not establish a blanket artwork redistribution license.
+  A fetched image keeps its source URL and this rights notice in the player's local library.
+  This credit grants no additional rights to the app or its users.
+
 ## Corporatus wordmark
 
 - Authors: Alex Rosario and Roc Mitchell.

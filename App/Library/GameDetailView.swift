@@ -34,6 +34,7 @@ struct GameDetailView: View {
     @State private var showMerge = false
     @State private var settingsTarget: SettingsTarget?
     @State private var showPhotoPicker = false
+    @State private var showArtworkLookup = false
     @State private var photoItem: PhotosPickerItem?
     @State private var buildDetails: Build?
     @State private var cheatsBuild: Build?
@@ -282,6 +283,11 @@ struct GameDetailView: View {
     private var artworkMenu: some View {
         Menu {
             Button {
+                showArtworkLookup = true
+            } label: {
+                Label("Check for New Artwork", systemImage: "arrow.clockwise")
+            }
+            Button {
                 showPhotoPicker = true
             } label: {
                 Label("From Photos…", systemImage: "photo")
@@ -305,6 +311,9 @@ struct GameDetailView: View {
 
     private func withPresentations(_ content: some View) -> some View {
         content
+            .sheet(isPresented: $showArtworkLookup) {
+                ArtworkReviewView(gameID: model.gameID, container: container)
+            }
             .sheet(isPresented: $showGameExport) {
                 LibraryBackupView(container: container, gameID: model.gameID)
             }

@@ -1,8 +1,8 @@
+import EmulatorApplication
 import EmulatorDomain
 import Foundation
 import GameIdentity
 import Importing
-import UIKit
 import XCTest
 @testable import PressAny
 
@@ -45,11 +45,13 @@ final class ImportReviewTests: XCTestCase {
         let file = root.appendingPathComponent("Artwork Example.gb")
         try Data(repeating: 0, count: 0x8000).write(to: file)
         let coordinator = ImportCoordinator(analyzer: container.importAnalyzer, committer: container.importCommitter, assetStore: container.fileStore)
+        var artworkLookups = 0
         let review = ImportReviewViewModel(
             analysis: try coordinator.analyzeROM(at: file),
             games: [],
             coordinator: coordinator,
-            setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) }
+            setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) },
+            fetchArtwork: { _ in artworkLookups += 1 }
         )
         XCTAssertTrue(review.canChooseArtwork)
 
@@ -57,10 +59,7 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertNil(review.artwork, "an unreadable image is refused in review")
         XCTAssertNotNil(review.errorMessage)
 
-        let png = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).pngData { context in
-            UIColor.green.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
-        }
+        let png = ArtworkTestLibrary.png()
         review.chooseArtwork(png, fileExtension: "png")
         XCTAssertNotNil(review.artwork)
         XCTAssertNil(review.errorMessage)
@@ -69,15 +68,107 @@ final class ImportReviewTests: XCTestCase {
         XCTAssertNil(review.artworkFailure)
         let game = try XCTUnwrap(container.repositories.games.fetchGame(id: result.build.gameID))
         XCTAssertNotNil(game.artworkAssetID)
+        XCTAssertEqual(artworkLookups, 0, "a manual choice skips automatic lookup")
 
         // The same ROM again changes nothing, so review doesn't offer artwork for it.
         let duplicate = ImportReviewViewModel(
             analysis: try coordinator.analyzeROM(at: file),
             games: [game],
             coordinator: coordinator,
-            setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) }
+            setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) },
+            fetchArtwork: { _ in artworkLookups += 1 }
         )
         XCTAssertFalse(duplicate.canChooseArtwork)
+        _ = try duplicate.commit()
+        XCTAssertEqual(artworkLookups, 0, "an exact duplicate skips automatic lookup")
+    }
+
+    func testImportWithoutChosenArtworkStartsALookupAfterCommit() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let file = root.appendingPathComponent("Example.gb")
+        try Data(repeating: 0, count: 0x8000).write(to: file)
+        let coordinator = ImportCoordinator(analyzer: container.importAnalyzer, committer: container.importCommitter, assetStore: container.fileStore)
+        var lookedUp: [UUID] = []
+        let review = ImportReviewViewModel(analysis: try coordinator.analyzeROM(at: file), games: [], coordinator: coordinator,
+            fetchArtwork: { build in
+                XCTAssertNotNil(try? container.repositories.builds.fetchBuild(id: build.id))
+                lookedUp.append(build.id)
+            })
+        let result = try review.commit()
+        XCTAssertEqual(lookedUp, [result.build.id])
+    }
+
+    func testRemovingAnArtworkChoiceDoesNotStartAnotherAutomaticLookup() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let file = root.appendingPathComponent("Example.gb")
+        try Data(repeating: 0, count: 0x8000).write(to: file)
+        let coordinator = ImportCoordinator(analyzer: container.importAnalyzer, committer: container.importCommitter, assetStore: container.fileStore)
+        var lookups = 0
+        let review = ImportReviewViewModel(analysis: try coordinator.analyzeROM(at: file), games: [], coordinator: coordinator,
+            setArtwork: { _ = try container.gameArtwork.set(gameID: $0, imageData: $1, fileExtension: $2) },
+            fetchArtwork: { _ in lookups += 1 })
+        review.chooseArtwork(ArtworkTestLibrary.png(), fileExtension: "png")
+        review.removeArtwork()
+
+        let result = try review.commit()
+
+        XCTAssertNil(try container.repositories.games.fetchGame(id: result.build.gameID)?.artworkAssetID)
+        XCTAssertEqual(lookups, 0, "Removing the import's artwork must not start another lookup")
+    }
+
+    func testFailedImportDoesNotStartArtworkLookup() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let file = root.appendingPathComponent("Example.gb")
+        try Data(repeating: 0, count: 0x8000).write(to: file)
+        let coordinator = ImportCoordinator(analyzer: container.importAnalyzer, committer: container.importCommitter, assetStore: container.fileStore)
+        let review = ImportReviewViewModel(analysis: try coordinator.analyzeROM(at: file), games: [], coordinator: coordinator,
+            fetchArtwork: { _ in XCTFail("A failed import must not request artwork") })
+        review.cancel()
+        XCTAssertThrowsError(try review.commit(), "the staged ROM has been discarded")
+        XCTAssertNotNil(review.errorMessage)
+    }
+
+    func testASecondImportedBuildCanFindArtworkWhileTheFirstLookupIsPending() async throws {
+        let firstRequest = expectation(description: "First lookup starts")
+        let secondRequest = expectation(description: "Second lookup starts before the first completes")
+        let provider = PendingArtworkProvider { _, number in
+            if number == 1 { firstRequest.fulfill() }
+            if number == 2 { secondRequest.fulfill() }
+        }
+        let library = try ArtworkTestLibrary(provider: provider)
+        defer { library.removeFiles() }
+        let container = library.container
+        var game = Game(id: UUID(), primaryTitle: "Example", systemFamily: "gameboy", createdAt: .distantPast, modifiedAt: .distantPast)
+        try container.repositories.games.insertGame(game)
+        let first = try library.addBuild(to: game, dump: library.dumps[0], marker: 1)
+        let second = try library.addBuild(to: game, dump: library.dumps[1], marker: 2)
+        game.preferredBuildID = first.id
+        try container.repositories.games.updateGame(game)
+        container.fetchArtworkAfterImport(first)
+        await fulfillment(of: [firstRequest], timeout: 2)
+        game.preferredBuildID = second.id
+        try container.repositories.games.updateGame(game)
+        container.fetchArtworkAfterImport(second)
+        await fulfillment(of: [secondRequest], timeout: 2)
+
+        let stored = expectation(description: "Current Preferred Build's artwork is stored")
+        let games = container.repositories.games
+        let gameID = game.id
+        let observer = NotificationCenter.default.addObserver(forName: .libraryDidChange, object: nil, queue: nil) { _ in
+            if (try? games.fetchGame(id: gameID))?.artworkAssetID != nil { stored.fulfill() }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        let png = ArtworkTestLibrary.png()
+        await provider.finish(with: ProvidedArtwork(data: png, fileExtension: "png", provenance: .init(provider: "test",
+            sourceURL: URL(string: "https://example.com/art.png")!, fetchedAt: .distantPast, rights: "Synthetic test data")))
+        await fulfillment(of: [stored], timeout: 2)
+        XCTAssertNotNil(try games.fetchGame(id: gameID)?.artworkAssetID)
     }
 
     func testDevelopmentAndHackNamesSuggestDifferentBaseRolesAndBothPreferTheNewBuild() throws {

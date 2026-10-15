@@ -12,6 +12,15 @@ final class ImportReviewViewModel: ObservableObject {
         case existing(UUID)
     }
 
+    struct ArtworkRequest: Hashable {
+        let destination: Destination
+        let baseRelease: String?
+        let baseSystem: String?
+        let prefersIncoming: Bool
+        let enabled: Bool
+        let hasManualArtwork: Bool
+    }
+
     @Published var destination: Destination
     @Published var gameTitle: String
     @Published var buildDisplayName: String
@@ -35,6 +44,10 @@ final class ImportReviewViewModel: ObservableObject {
     @Published private(set) var artwork: (data: Data, fileExtension: String)?
     /// Set when the ROM imported but its chosen artwork couldn't be saved.
     @Published private(set) var artworkFailure: String?
+    @Published var useAutomaticArtwork = true
+    @Published private(set) var findingArtwork = false
+    @Published private(set) var automaticArtworkError: String?
+    @Published private var automaticArtworkProposal: ImportArtworkProposal?
 
     let analysis: ROMImportAnalysis
     let games: [Game]
@@ -49,6 +62,12 @@ final class ImportReviewViewModel: ObservableObject {
     private let existingBuilds: (UUID) -> [Build]
     /// Sets a Game's artwork. Without it, review doesn't offer artwork.
     private let setArtwork: ((UUID, Data, String) throws -> Void)?
+    private let fetchArtwork: ((Build) -> Void)?
+    private let proposeArtwork: (@MainActor (ROMImportPlan) async throws -> ImportArtworkProposal?)?
+    private let applyArtworkProposal: (@MainActor (ROMImportResult, ImportArtworkProposal) throws -> Void)?
+    private var automaticArtworkRequest: ArtworkRequest?
+    private var artworkRequestToken = UUID()
+    private var finished = false
     /// The last name suggested, so changing the destination replaces it unless the player edited it.
     private var suggestedBuildName: String
 
@@ -58,6 +77,9 @@ final class ImportReviewViewModel: ObservableObject {
         coordinator: ImportCoordinator,
         existingBuilds: @escaping (UUID) -> [Build] = { _ in [] },
         setArtwork: ((UUID, Data, String) throws -> Void)? = nil,
+        fetchArtwork: ((Build) -> Void)? = nil,
+        proposeArtwork: (@MainActor (ROMImportPlan) async throws -> ImportArtworkProposal?)? = nil,
+        applyArtworkProposal: (@MainActor (ROMImportResult, ImportArtworkProposal) throws -> Void)? = nil,
         knownDumps: KnownDumpIndex? = nil,
         releasePreference: ReleasePreference = ReleasePreference()
     ) {
@@ -74,6 +96,9 @@ final class ImportReviewViewModel: ObservableObject {
         self.coordinator = coordinator
         self.existingBuilds = existingBuilds
         self.setArtwork = setArtwork
+        self.fetchArtwork = fetchArtwork
+        self.proposeArtwork = proposeArtwork
+        self.applyArtworkProposal = applyArtworkProposal
         let metadata = BuildImportMetadata(analysis: analysis)
         region = metadata.region ?? ""
         language = metadata.language ?? ""
@@ -325,6 +350,8 @@ final class ImportReviewViewModel: ObservableObject {
     var offeredGameTitle: String? { proposedHackTitle ?? proposedTitle }
 
     func commit() throws -> ROMImportResult {
+        let proposal = selectedAutomaticArtwork
+        let alreadyChecked = automaticArtworkRequest == artworkRequest
         let result: ROMImportResult
         do {
             result = try coordinator.committer.commit(plan)
@@ -333,6 +360,7 @@ final class ImportReviewViewModel: ObservableObject {
             errorMessage = error.localizedDescription
             throw error
         }
+        finished = true
         // The ROM is in the library now, so a failure here is reported without undoing the import.
         if canChooseArtwork, let artwork, let setArtwork {
             do {
@@ -340,8 +368,64 @@ final class ImportReviewViewModel: ObservableObject {
             } catch {
                 artworkFailure = error.localizedDescription
             }
+        } else if let proposal, let applyArtworkProposal {
+            do { try applyArtworkProposal(result, proposal) }
+            catch { artworkFailure = error.localizedDescription }
+        } else if artwork == nil, useAutomaticArtwork, !alreadyChecked, !isExactDuplicate {
+            fetchArtwork?(result.build)
         }
         return result
+    }
+
+    var artworkRequest: ArtworkRequest {
+        ArtworkRequest(destination: destination, baseRelease: baseGameReference?.releaseName,
+            baseSystem: baseGameReference?.system.rawValue, prefersIncoming: markAsPreferred,
+            enabled: useAutomaticArtwork, hasManualArtwork: artwork != nil)
+    }
+
+    var canPreviewAutomaticArtwork: Bool { canChooseArtwork && proposeArtwork != nil }
+
+    private var selectedAutomaticArtwork: ImportArtworkProposal? {
+        guard artwork == nil, useAutomaticArtwork, automaticArtworkRequest == artworkRequest else { return nil }
+        return automaticArtworkProposal
+    }
+
+    var proposedAutomaticArtwork: ProvidedArtwork? { selectedAutomaticArtwork?.artwork }
+
+    var artworkPreview: Data? { artwork?.data ?? proposedAutomaticArtwork?.data }
+
+    func loadAutomaticArtwork() async {
+        let token = UUID()
+        artworkRequestToken = token
+        let request = artworkRequest
+        automaticArtworkProposal = nil
+        automaticArtworkRequest = nil
+        automaticArtworkError = nil
+        findingArtwork = false
+        guard !finished, canPreviewAutomaticArtwork, artwork == nil, useAutomaticArtwork, let proposeArtwork else { return }
+        findingArtwork = true
+        defer { if artworkRequestToken == token { findingArtwork = false } }
+        do {
+            let proposal = try await proposeArtwork(plan)
+            try Task.checkCancellation()
+            guard !finished, artworkRequestToken == token, request == artworkRequest else { return }
+            if let proposal {
+                try ImportSizeLimit.artwork.check(byteCount: Int64(proposal.artwork.data.count))
+                let image = try ArtworkImage.downscaled(proposal.artwork.data, fileExtension: proposal.artwork.fileExtension)
+                let prepared = ProvidedArtwork(data: image.data, fileExtension: image.fileExtension,
+                    provenance: proposal.artwork.provenance)
+                automaticArtworkProposal = ImportArtworkProposal(artwork: prepared,
+                    destinationGameID: proposal.destinationGameID, preferredBuildID: proposal.preferredBuildID,
+                    incomingIsPreferred: proposal.incomingIsPreferred)
+            }
+            automaticArtworkRequest = request
+        } catch is CancellationError {
+            return
+        } catch {
+            if !finished, artworkRequestToken == token, request == artworkRequest {
+                automaticArtworkError = error.localizedDescription
+            }
+        }
     }
 
     /// Artwork applies to the Game the ROM lands in, so an exact duplicate, which changes nothing,
@@ -379,6 +463,8 @@ final class ImportReviewViewModel: ObservableObject {
 
     func removeArtwork() {
         artwork = nil
+        useAutomaticArtwork = false
+        automaticArtworkProposal = nil
     }
 
     func report(_ error: Error) {
@@ -386,6 +472,8 @@ final class ImportReviewViewModel: ObservableObject {
     }
 
     func cancel() {
+        finished = true
+        automaticArtworkProposal = nil
         coordinator.discard(analysis)
     }
 

@@ -47,6 +47,8 @@ final class AppContainer {
     let chooseSaveForBuild: ChooseSaveForBuild
     let evictGeneratedImage: EvictGeneratedImage
     let gameArtwork: GameArtwork
+    private let artworkProvider: (any ArtworkProvider)?
+    private var artworkTasks: [UUID: Task<Void, Never>] = [:]
     let quickPlayWorkspace: QuickPlayWorkspace
     let quickPlayPromoter: PromoteQuickPlay
     let coreRegistry: CoreRegistry
@@ -97,12 +99,14 @@ final class AppContainer {
         }
         #endif
         removeEmptyInbox()
-        return try AppContainer(rootURL: root, plus: .live())
+        return try AppContainer(rootURL: root, plus: .live(), artworkProvider: LibretroArtworkProvider())
     }
 
-    /// Without `plus`, Plus isn't owned and StoreKit isn't used.
-    init(rootURL: URL, plus: PlusStore? = nil) throws {
+    /// Production services are supplied by `live`; tests use StoreKit and artwork networking
+    /// only when those services are injected.
+    init(rootURL: URL, plus: PlusStore? = nil, artworkProvider: (any ArtworkProvider)? = nil) throws {
         self.plus = plus ?? .fixed(ownsPlus: false)
+        self.artworkProvider = artworkProvider
         fileStore = try ManagedFileStore(rootURL: rootURL)
         sharedFileInbox = SharedFileInbox(store: fileStore)
         database = try AppDatabase(url: rootURL.appendingPathComponent("Library.sqlite"))
@@ -262,7 +266,9 @@ final class AppContainer {
         gameArtwork = GameArtwork(
             games: repositories.games,
             assets: repositories.assets,
-            assetStore: fileStore
+            assetStore: fileStore,
+            transactions: repositories.transactions,
+            settings: repositories.settings
         )
         quickPlayWorkspace = QuickPlayWorkspace(
             profiles: repositories.saveProfiles,
@@ -327,6 +333,162 @@ final class AppContainer {
               let url = try? fileStore.managedURL(relativePath: asset.relativePath),
               fileStore.fileExists(at: url) else { return nil }
         return url
+    }
+
+    /// The import is already committed. Artwork failure leaves it playable and retryable from
+    /// the Game's artwork menu; a chosen image is never rechecked automatically.
+    func fetchArtworkAfterImport(_ build: Build) {
+        guard let artworkProvider, artworkTasks[build.id] == nil,
+              let request = artworkLookup(gameID: build.gameID, importedBuild: build) else { return }
+        let automatic = FindMissingGameArtwork(games: repositories.games, artwork: gameArtwork,
+            settings: repositories.settings, providers: [artworkProvider], transactions: repositories.transactions)
+        artworkTasks[build.id] = Task(priority: .utility) { [weak self] in
+            defer { self?.artworkTasks[build.id] = nil }
+            if (try? await automatic.execute(gameID: build.gameID, lookup: request.lookup,
+                expectedPreferredBuildID: request.preferredBuildID)) == true {
+                NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+            }
+        }
+    }
+
+    /// Explicit checks work even when automatic artwork is off, and don't save the download.
+    func findArtwork(gameID: UUID) async throws -> ProvidedArtwork? {
+        guard let artworkProvider, let request = artworkLookup(gameID: gameID) else { return nil }
+        return try await artworkProvider.artwork(for: request.lookup)
+    }
+
+    func proposeImportArtwork(_ plan: ROMImportPlan) async throws -> ImportArtworkProposal? {
+        guard let artworkProvider,
+              try AutomaticArtworkSetting(store: repositories.settings).load() else { return nil }
+        let gameID: UUID?
+        switch plan.disposition {
+        case .createGame: gameID = nil
+        case .addBuild(let id): gameID = id
+        case .duplicateExisting: return nil
+        }
+        let game = try gameID.flatMap { try repositories.games.fetchGame(id: $0) }
+        if gameID != nil, game == nil { return nil }
+        let incoming = Build(id: plan.analysis.transactionID, gameID: gameID ?? plan.analysis.transactionID,
+            system: plan.analysis.header.system, displayName: plan.buildDisplayName,
+            imageAssetID: plan.analysis.transactionID, imageSHA256: plan.analysis.sha256,
+            imageSHA1: plan.analysis.imageSHA1, sourceKind: .importedImage,
+            baseGameReference: plan.baseGameReference, createdAt: .distantPast, modifiedAt: .distantPast)
+        let builds = try gameID.map { try repositories.builds.fetchBuilds(gameID: $0) } ?? []
+        let incomingIsPreferred = gameID == nil || plan.markAsPreferred
+        let preferred = incomingIsPreferred ? incoming : builds.first { $0.id == game?.preferredBuildID }
+        let ordered = [preferred, incoming].compactMap { $0 } + builds
+        guard let lookup = artworkLookup(in: ordered) else { return nil }
+        let provided: ProvidedArtwork?
+        if let game {
+            provided = try await missingArtworkFinder.find(gameID: game.id, lookup: lookup,
+                expectedPreferredBuildID: game.preferredBuildID)
+        } else {
+            provided = try await artworkProvider.artwork(for: lookup)
+        }
+        try Task.checkCancellation()
+        guard let provided, try AutomaticArtworkSetting(store: repositories.settings).load() else { return nil }
+        return ImportArtworkProposal(artwork: provided, destinationGameID: gameID,
+            preferredBuildID: game?.preferredBuildID, incomingIsPreferred: incomingIsPreferred)
+    }
+
+    func applyImportArtworkProposal(_ result: ROMImportResult, _ proposal: ImportArtworkProposal) throws {
+        guard result.createdNewBuild,
+              proposal.destinationGameID.map({ $0 == result.build.gameID }) ?? result.createdNewGame else { return }
+        let preferred = proposal.incomingIsPreferred ? result.build.id : proposal.preferredBuildID
+        try missingArtworkFinder.apply(proposal.artwork, gameID: result.build.gameID, expectedPreferredBuildID: preferred)
+    }
+
+    struct MissingArtworkProgress: Sendable {
+        let total: Int
+        var checked = 0
+        var found = 0
+        var failed = 0
+    }
+
+    struct MissingArtworkProposal: Identifiable, Sendable {
+        let id: UUID
+        let gameTitle: String
+        let preferredBuildID: UUID?
+        let artworkChoice: String?
+        let imageURL: URL
+        let provenance: ArtworkProvenance
+    }
+
+    struct MissingArtworkSearch: Sendable {
+        let progress: MissingArtworkProgress
+        let proposals: [MissingArtworkProposal]
+    }
+
+    private var missingArtworkFinder: FindMissingGameArtwork {
+        FindMissingGameArtwork(games: repositories.games, artwork: gameArtwork,
+            settings: repositories.settings, providers: artworkProvider.map { [$0] } ?? [],
+            transactions: repositories.transactions)
+    }
+
+    func findMissingArtwork(proposalDirectory: URL,
+                            onProgress: (MissingArtworkProgress) -> Void = { _ in }) async throws -> MissingArtworkSearch {
+        let games = try repositories.games.fetchGames().filter { $0.artworkAssetID == nil }
+        let finder = missingArtworkFinder
+        try FileManager.default.createDirectory(at: proposalDirectory, withIntermediateDirectories: true)
+        var progress = MissingArtworkProgress(total: games.count)
+        var proposals: [MissingArtworkProposal] = []
+        onProgress(progress)
+        for game in games {
+            try Task.checkCancellation()
+            if let request = artworkLookup(gameID: game.id) {
+                do {
+                    let choice = try gameArtwork.choiceToken(gameID: game.id)
+                    if let provided = try await finder.find(gameID: game.id, lookup: request.lookup,
+                        expectedPreferredBuildID: request.preferredBuildID, trigger: .userRequested) {
+                        try Task.checkCancellation()
+                        let image = try ArtworkImage.downscaled(provided.data, fileExtension: provided.fileExtension)
+                        let url = proposalDirectory.appendingPathComponent(game.id.uuidString).appendingPathExtension("png")
+                        try image.data.write(to: url, options: .atomic)
+                        proposals.append(MissingArtworkProposal(id: game.id, gameTitle: game.primaryTitle,
+                            preferredBuildID: request.preferredBuildID, artworkChoice: choice,
+                            imageURL: url, provenance: provided.provenance))
+                        progress.found += 1
+                    }
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    try Task.checkCancellation()
+                    progress.failed += 1
+                }
+            }
+            progress.checked += 1
+            onProgress(progress)
+            await Task.yield()
+        }
+        return MissingArtworkSearch(progress: progress, proposals: proposals)
+    }
+
+    func applyMissingArtwork(_ proposal: MissingArtworkProposal) throws -> Bool {
+        let provided = ProvidedArtwork(data: try fileStore.readData(at: proposal.imageURL), fileExtension: "png",
+            provenance: proposal.provenance)
+        return try missingArtworkFinder.apply(provided, gameID: proposal.id,
+            expectedPreferredBuildID: proposal.preferredBuildID, trigger: .userRequested,
+            expectedArtworkChoice: proposal.artworkChoice)
+    }
+
+    private func artworkLookup(gameID: UUID, importedBuild: Build? = nil) -> (lookup: ArtworkLookup, preferredBuildID: UUID?)? {
+        guard let game = try? repositories.games.fetchGame(id: gameID),
+              let builds = try? repositories.builds.fetchBuilds(gameID: gameID) else { return nil }
+        let preferred = builds.first { $0.id == game.preferredBuildID }
+        let ordered = [preferred, importedBuild].compactMap { $0 } + builds
+        guard let lookup = artworkLookup(in: ordered) else { return nil }
+        return (lookup, game.preferredBuildID)
+    }
+
+    private func artworkLookup(in builds: [Build]) -> ArtworkLookup? {
+        guard let knownDumps else { return nil }
+        var visited: Set<UUID> = []
+        for build in builds where visited.insert(build.id).inserted {
+            if let lookup = knownDumps.artworkLookup(for: build, lookup: { try? repositories.builds.fetchBuild(id: $0) }) {
+                return lookup
+            }
+        }
+        return nil
     }
 
     /// Checks a typed cheat code with the core that plays the Build, without applying it. With no

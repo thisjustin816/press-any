@@ -18,6 +18,80 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertTrue(button.showsMenuAsPrimaryAction)
     }
 
+    func testCloseGameWaitsForTheMenuDismissalAnimationToFinish() throws {
+        let (gameplay, runtime, _) = makeGameplay()
+        var closes = 0
+        gameplay.onClose = { closes += 1 }
+        let (button, interaction, configuration) = try showMenu(in: gameplay)
+        let animator = MenuDismissalAnimator()
+        button.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
+
+        try selectMenuAction("Close Game", in: gameplay)
+        XCTAssertEqual(runtime.stops, 0)
+        XCTAssertEqual(closes, 0, "the gameplay screen must stay while the menu animates back to its button")
+        animator.complete()
+        XCTAssertEqual(runtime.stops, 1)
+        XCTAssertEqual(closes, 1)
+    }
+
+    func testAddToLibraryWaitsForTheMenuDismissalAnimationToFinish() throws {
+        let (gameplay, runtime, _) = makeGameplay()
+        var additions = 0
+        gameplay.onAddToLibrary = { additions += 1 }
+        let (button, interaction, configuration) = try showMenu(in: gameplay)
+
+        try selectMenuAction("Add to Library…", in: gameplay)
+        XCTAssertEqual(runtime.stops, 0)
+        XCTAssertEqual(additions, 0)
+        let animator = MenuDismissalAnimator()
+        button.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
+        XCTAssertEqual(additions, 0, "willEnd is the start of dismissal, not its completion")
+        animator.complete()
+        XCTAssertEqual(runtime.stops, 1)
+        XCTAssertEqual(additions, 1)
+    }
+
+    func testCloseGameFinishesWhenTheMenuDismissesWithoutAnimation() throws {
+        let (gameplay, runtime, _) = makeGameplay()
+        var closes = 0
+        gameplay.onClose = { closes += 1 }
+        let (button, interaction, configuration) = try showMenu(in: gameplay)
+
+        try selectMenuAction("Close Game", in: gameplay)
+        XCTAssertEqual(runtime.stops, 0)
+        XCTAssertEqual(closes, 0)
+        button.contextMenuInteraction(interaction, willEndFor: configuration, animator: nil)
+        XCTAssertEqual(runtime.stops, 1)
+        XCTAssertEqual(closes, 1)
+    }
+
+    func testCloseGameWithoutAnOpenMenuSavesAndClosesImmediately() {
+        let (gameplay, runtime, _) = makeGameplay()
+        var closes = 0
+        gameplay.onClose = { closes += 1 }
+        gameplay.requestClose()
+        XCTAssertEqual(runtime.stops, 1)
+        XCTAssertEqual(closes, 1)
+    }
+
+    private func showMenu(in gameplay: GameplayViewController) throws
+        -> (GameMenuButton, UIContextMenuInteraction, UIContextMenuConfiguration) {
+        gameplay.view.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+        gameplay.view.layoutIfNeeded()
+        let button = try XCTUnwrap(gameplay.view.subviews.compactMap { $0 as? GameMenuButton }.first)
+        let interaction = try XCTUnwrap(button.contextMenuInteraction)
+        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in UIMenu(children: []) }
+        button.contextMenuInteraction(interaction, willDisplayMenuFor: configuration, animator: nil)
+        return (button, interaction, configuration)
+    }
+
+    private func selectMenuAction(_ title: String, in gameplay: GameplayViewController) throws {
+        let action = try XCTUnwrap(gameplay.prepareGameMenu().allActions.first { $0.title == title })
+        let trigger = UIButton(type: .system)
+        trigger.addAction(action, for: .touchUpInside)
+        trigger.sendActions(for: .touchUpInside)
+    }
+
     func testStatesListCallsTimedStatesAutoStatesAndKeepsTheirNote() throws {
         let gameplay = GameplayViewController(runtime: StateMenuRuntime(), autoResumePolicy: .always)
         let timed = try XCTUnwrap(gameplay.prepareGameMenu().allActions.first { $0.title == "Auto State" })
@@ -899,8 +973,10 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
         }
         return policy == .always
     }
-    func stop(createAutoState: Bool) throws {}
-    func stop(createAutoState: Bool, discardUnsaved: Bool) throws {}
+    private var stopCount = 0
+    var stops: Int { lock.withLock { stopCount } }
+    func stop(createAutoState: Bool) throws { lock.withLock { stopCount += 1 } }
+    func stop(createAutoState: Bool, discardUnsaved: Bool) throws { lock.withLock { stopCount += 1 } }
     func flushBatteryIfChanged() throws -> Bool { false }
     private var restartCount = 0
     private var pendingModel: HardwareModel?
@@ -914,6 +990,21 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
         }
     }
     func changedHardwareModel() -> HardwareModel? { lock.withLock { pendingModel } }
+}
+
+@MainActor
+private final class MenuDismissalAnimator: NSObject, UIContextMenuInteractionAnimating {
+    var previewViewController: UIViewController? { nil }
+    private var completions: [() -> Void] = []
+
+    func addAnimations(_ animations: @escaping () -> Void) { animations() }
+    func addCompletion(_ completion: @escaping () -> Void) { completions.append(completion) }
+
+    func complete() {
+        let pending = completions
+        completions.removeAll()
+        for completion in pending { completion() }
+    }
 }
 
 private final class StateMenuRuntime: LifecycleRuntime, SaveStateRuntime, @unchecked Sendable {

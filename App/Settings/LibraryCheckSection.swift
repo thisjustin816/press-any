@@ -29,7 +29,7 @@ struct LibraryCheckSection: View {
                     .foregroundStyle(.secondary)
             }
         } footer: {
-            Text("Rereads every ROM and patch, so a large library takes a moment.")
+            Text("Checks ROMs and patches for missing or damaged files and removes leftover files that nothing uses. Large libraries take a moment.")
         }
     }
 

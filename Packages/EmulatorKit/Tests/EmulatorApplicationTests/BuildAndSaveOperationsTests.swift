@@ -403,7 +403,11 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         let hack = try XCTUnwrap(harness.builds.fetchBuilds(gameID: harness.game.id).first { !$0.isBase })
         let main = try harness.createProfile(name: "Main", battery: Data([1]))
         let hackSave = try harness.createProfile(name: "Hack Run", battery: Data([2]))
-        _ = try harness.setArtwork(Data([7, 7]), gameID: harness.game.id)
+        let provenance = ArtworkProvenance(provider: "test", sourceURL: URL(string: "https://example.com/art.png")!,
+            fetchedAt: harness.now, rights: "Synthetic test data", inheritedFrom: "Base (World)")
+        _ = try GameArtwork(games: harness.games, assets: harness.assets, assetStore: harness.store,
+            prepareImage: { ($0, $1) }, now: { harness.now })
+            .set(gameID: harness.game.id, imageData: Data([7, 7]), fileExtension: "png", provenance: provenance)
         let operations = harness.buildOperations()
         try operations.setPreferredSaveProfile(buildID: hack.id, profileID: hackSave.id)
 
@@ -423,6 +427,9 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         let promoted = try XCTUnwrap(harness.games.fetchGame(id: newGame.id))
         XCTAssertNotEqual(promoted.artworkAssetID, try harness.games.fetchGame(id: harness.game.id)?.artworkAssetID, "its own copy")
         XCTAssertEqual(try harness.artworkBytes(gameID: newGame.id), Data([7, 7]))
+        let copiedAsset = try XCTUnwrap(harness.assets.fetchAsset(id: XCTUnwrap(promoted.artworkAssetID)))
+        let copiedProvenance = try JSONDecoder().decode(ArtworkProvenance.self, from: Data(XCTUnwrap(copiedAsset.provenanceJSON).utf8))
+        XCTAssertEqual(copiedProvenance, provenance)
         _ = try GameArtwork(games: harness.games, assets: harness.assets, assetStore: harness.store).remove(gameID: newGame.id)
         XCTAssertEqual(try harness.artworkBytes(gameID: harness.game.id), Data([7, 7]), "removing one leaves the other")
     }

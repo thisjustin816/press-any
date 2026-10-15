@@ -105,6 +105,10 @@ Verify with a user-supplied legal ROM:
 - [x] Play Build A of a homebrew Game, then launch Build B, made with different tools, with the same save; the warning appears, and Play with a Copy leaves the original save unchanged.
 - [x] Replace from File on a profile with a save asks first and keeps "<name> before import"; on a blank profile it doesn't ask.
 - [ ] Open the game menu from the Press Any button a dozen times, closing it by tapping away and by choosing Resume, in portrait and landscape: the icon row is always at the top and Close Game always last, never reversed.
+- [ ] Repeat Close Game from library and Quick Play sessions in portrait and landscape, with
+  Reduce Motion both off and on. The menu finishes closing before gameplay leaves, no crash
+  occurs, and reopening a library game restores its saved progress. Repeat Quick Play's Add to
+  Library: its review appears after the menu closes, and Cancel keeps the session available.
 - [x] The game menu opens with a row of four icons (Resume, Fast Forward, Quick Save, Quick Load) above States, Sound, Settings, Restart and Close Game, and fits on screen in portrait and landscape. VoiceOver reads each icon's name. States lists Save New State, then each state with its thumbnail.
 - [x] Play a library game past its title screen, then choose Restart from the game menu: it asks first, Cancel changes nothing, and Restart boots the game from the beginning with its save intact. States lists a new Auto State that returns to the moment before the restart. With Resume Games set to Always, choose Start Over from the Game's menu: the game boots from its save, and Play afterwards still resumes from the Auto State. In Quick Play, Restart says progress since the game last saved is lost.
 - [x] Before saving, the icon row's Quick Load is disabled. Quick Save twice at different points: each confirms "State saved.", one "Quick Save" remains with the later date in States and Save States, and Quick Load returns to the later point. Rename it, save again, and check the name stays. Delete it, make a new Quick Save, then restore the deleted one: both remain, with only the new one used by Quick Load. Another Build or Save Profile has its own Quick State. Quick Play disables both, and States shows "Add to Library to save states". Relaunch with Resume Games set to Always and confirm it uses the Auto State, then check Quick Load still uses the Quick State.
@@ -196,6 +200,47 @@ These checks cover the Capture submenu and remain pending until run on a physica
 - [ ] Share Screenshot from a GB game and a GBC game in portrait and landscape. Save to Files and verify a 160 x 144 PNG with the current screen colors and no controls, menu, LCD grid or frame blending. Cancel sharing once, then share again. The game remains paused until Resume; a controller cannot resume under the share sheet.
 - [ ] Use Current Frame as Artwork on a library game with no artwork. Close the game and confirm the library tile, list row and Game Details show the whole frame with sharp pixels; relaunch and check it remains. Capture a different frame: Replace asks first, Cancel keeps the old artwork and Replace updates it. Back up and restore the Game to confirm the artwork survives.
 - [ ] Quick Play offers Share Screenshot and disables Use Current Frame as Artwork with Add to Library to use artwork. Without Plus, both capture actions work for library games. VoiceOver reads their names and the submenu stays readable at the largest text size.
+
+## Automatic artwork device checks
+
+- [ ] Settings opens Library as one page with Preferences, Organization, Files, and Backup and
+  Restore groups. Artwork contains its import toggle and Find Missing Artwork. Suggest Names,
+  Suggest Game Merges, file checking, Recently Deleted and backup/restore still open their tools.
+  Resume a kept Quick Play session from Storage: Settings closes and gameplay opens.
+
+- [ ] With Find Artwork on Import off and search or Favorites Only hiding some Games, choose
+  Settings > Library > Artwork > Find Missing Artwork. Recognized Games without artwork get
+  image proposals across the whole library, including Games whose artwork was removed;
+  existing artwork stays. Inspect each image and its source, exclude one, then confirm Use Artwork: only
+  accepted proposals are saved, including a removed image accepted again. Remove artwork
+  again while its proposal is open: acceptance must keep the new blank choice. Cancel a completed review and a slow lookup: no artwork is
+  assigned, temporary previews are discarded, and a later search can retry. Progress, previews
+  and acceptance controls are readable with VoiceOver and the largest text size. Change a
+  Game's artwork, remove it, or change its Preferred Build while review is open: accepting the
+  stale proposal keeps the later choice and reports the skipped change.
+- [ ] Import Review shows Artwork second, after Destination and before Match Game or Build
+  Details, for recognized and unknown ROMs. With automatic artwork on, wait for the proposed
+  image and inspect its source; Import saves that image. Replace it from Photos or Files:
+  the manual image wins. Remove the proposal: import stays blank without another lookup.
+  Change destination or base match during a slow lookup: its late result is discarded. Cancel:
+  no Game or artwork is saved. Import before the preview finishes: import does not wait.
+- [ ] With Find Artwork on Import on, import a recognized GB and GBC release without choosing
+  artwork. Import closes without waiting for the network; the correct regional box art appears
+  when available, remains after relaunch, and survives backup/restore. Import an exact duplicate:
+  its artwork stays and no lookup starts. Choose Photos/Files artwork in review: it wins.
+- [ ] Add a recognized Build to a Game with manual artwork: its image stays. During a slow
+  download, choose artwork, then remove it: the download must not put artwork back. Disable
+  Find Artwork on Import during a download: its result is discarded. Import in Airplane Mode:
+  the ROM remains playable, with the normal placeholder.
+- [ ] In a Game's Artwork menu, Check for New Artwork shows any current image and the fetched
+  image. Cancel preserves the current one; Use Artwork assigns the preview. Repeat with
+  automatic artwork off. For an unknown homebrew image, a missing thumbnail and an unavailable
+  service, check the empty/error message and use Photos/Files as usual.
+- [ ] Quick Play alone makes no artwork request. Add a recognized ROM from Quick Play to the
+  library: lookup starts after promotion and keeps the promoted save. A modified Build with a
+  recognized base can show inherited art, including a GBC colorization of a GB game.
+- [ ] At the largest Dynamic Type size and with VoiceOver, the Artwork setting, lookup progress,
+  current/fetched images, Cancel and Use Artwork stay readable and operable without Plus.
 
 ## Icon and app color regression checks
 

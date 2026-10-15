@@ -22,7 +22,7 @@ enum PlusRoadmap {
         Item(title: "Community Catalog", detail: "Game details, expected hashes and patch links from a shared catalog and other sources. Never ROMs."),
         Item(title: "Tags and Collections", detail: "Group and filter the library your own way."),
         Item(title: "More Imports", detail: "7z archives, and a game with its saves, patches, artwork and manuals in one step."),
-        Item(title: "Artwork and Documents", detail: "Artwork found on import, and manuals and guides that open over a paused game."),
+        Item(title: "Artwork and Documents", detail: "Multiple artwork images, regional covers, and manuals and guides that open over a paused game."),
         Item(title: "Rewind", detail: "Step back from a few seconds to a few minutes."),
         Item(title: "Slow Motion", detail: "Play at a quarter, half or three quarters of full speed."),
         Item(title: "Frame Advance", detail: "Move a game on one frame at a time, with a frame counter."),

@@ -22,7 +22,7 @@ public struct Game: Identifiable, Codable, Equatable, Sendable {
     public let systemFamily: String
     public var preferredBuildID: UUID?
     public var preferredSaveProfileID: UUID?
-    /// Manually assigned cover art, a user-data asset.
+    /// The chosen cover art, a user-data asset.
     public var artworkAssetID: UUID?
     public var lineage: GameLineage?
     public let createdAt: Date

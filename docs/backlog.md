@@ -33,7 +33,8 @@ the last game, Restart and Start Over, the controller's Menu button, and per-Bui
 GameShark cheats.
 
 v1 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
-The rest waits for v1.1: 7z and multi-asset import, automatic artwork and documents with the
+The first v1.1 artwork slice adds automatic Libretro lookup after import and a reviewed manual
+check. The rest waits for v1.1: 7z and multi-asset import, additional artwork providers and documents with the
 manual reader, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
 shaders and the layout editor with skin import,
 a screenshot gallery and gameplay notes, external displays, tags and collections, iCloud sync once the schema has
@@ -203,7 +204,7 @@ altering a ROM.
 | partial | ZIP + 7z with archive safety (size limits, traversal, password detect) | v1.1 | shared zips open each ROM, patch and save inside, read in memory with the system zlib (stored and deflate, per-kind size limits, CRC checked, encrypted and Zip64 refused; other entries and links skipped); 7z remains |
 | missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 |  |
 | partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path only repairs the blob |
-| missing | Visual artwork comparison (existing/fetched/packaged) in review | v1.1 |  |
+| partial | Visual artwork comparison (existing/fetched/packaged) in review | v1.1 | manual Check for New Artwork shows current and fetched images; Import Review shows the automatic proposal in its second section; packaged comparison remains |
 | missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1.1 |  |
 | missing | Multiple ROMs attached to one Game in one flow | v1.1 |  |
 
@@ -211,7 +212,7 @@ Done: Share Sheet / Open In for ROMs, patches and `.sav`/`.srm` saves, with the 
 Import choice on open, a Game/base Build choice for patches and a Game choice for saves; Owner rank with Viewer copy imports, imported format
 declarations only, and compatibility identifiers from the public plists cited in product.md;
 Analyze -> ImportPlan -> Review -> transactional Commit; Game artwork from Photos or Files in
-Import Review; Files picker for .gb/.gbc; .sav and
+Import Review, with an automatic proposal in the second section and a per-import opt-out; Files picker for .gb/.gbc; .sav and
 .ips/.bps from Game detail; Exact duplicate: no second blob/Build, shows it's already there,
 re-import repairs damaged file; New Game vs Add Build choice, reviewable Base/Preferred suggestions
 (a file No-Intro doesn't know defaults to both unless its version is older than the Base's;
@@ -443,6 +444,7 @@ passed and remain as regression coverage in mvp-verification.md.
 
 Done: In-game menu from the wordmark with or without a controller: Pause/Resume, Fast Forward,
 Save State, Load State and Close; Quick Play offers Add to Library and explains disabled Save State.
+Close and Add to Library wait for the menu's dismissal animation to finish before leaving gameplay.
 
 ### Manuals / documents
 
@@ -459,16 +461,18 @@ Save State, Load State and Close; Quick Play offers Add to Library and explains 
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Automatic fetch on import + setting to disable | v1.1 |  |
-| missing | Provider chain: local/imported, Community Catalog, OpenVGDB (experimental), Libretro thumbnails, SteamGridDB (user key), title-screen fallback | v1.1 |  |
-| missing | Priority manual -> hack-specific -> inherited base (recorded as inherited) -> generated | v1.1 |  |
+| done | Automatic fetch on import + setting to disable | v1.1 | Libretro lookup after import and Quick Play promotion; default on; preserves existing artwork and in-flight player choices; duplicates skip lookup |
+| partial | Provider chain: local/imported, Community Catalog, OpenVGDB (experimental), Libretro thumbnails, SteamGridDB (user key), title-screen fallback | v1.1 | pluggable provider port and Libretro box art built; chosen Photos/Files artwork wins; remaining providers missing; OpenVGDB still blocked by its data license |
+| partial | Priority manual -> hack-specific -> inherited base (recorded as inherited) -> generated | v1.1 | existing artwork is preserved; verified and confirmed base inheritance is recorded; hack-specific and generated priority missing |
 | missing | Automatic artwork generated from the Game's title screen | v1.1 | Detect the title screen while running the game after import; manual selection from the current frame is built |
 | missing | Build-level artwork override | v1.1 |  |
-| missing | Regional artwork: lookups use the Build's region, and a Game's primary artwork follows the preferred region | v1.1 | box art differs by region |
+| partial | Regional artwork: lookups use the Build's region, and a Game's primary artwork follows the preferred region | v1.1 | lookups use the preferred recognized No-Intro release and same-release revision fallback; automatic primary changes by region require typed artwork |
 | missing | Multiple typed assets (box front/back, cart, title, screenshots, logo, fan) | v1.1 |  |
 | missing | Non-destructive crop/reposition | v1.1 |  |
-| missing | Manual "Check for New Artwork"; cache only selected primary | v1.1 |  |
-| missing | Artwork provenance (provider, URL, fetch time, rights) | v1.1 |  |
+| done | Manual "Check for New Artwork"; cache only selected primary | v1.1 | current/fetched preview with explicit Use Artwork and Cancel; works with automatic lookups off; no persistent HTTP cache |
+| done | Grouped Library settings | v1.1 | one Library page with Preferences, Organization, Files, and Backup and Restore; Artwork contains its import setting and the Find Missing Artwork review |
+| done | Find Missing Artwork across the library | v1.1 | Settings > Library > Artwork; includes Games hidden by search/filters; progress, image previews and per-Game acceptance before saving; Cancel discards temporary proposals; works with import-time lookups off; preserves existing artwork; proposes previously removed artwork for explicit acceptance; newer choices and removals during search or review win |
+| done | Artwork provenance (provider, URL, fetch time, rights) | v1.1 | kept in ManagedAsset.provenanceJSON with inherited base name; backup/restore and artwork copies preserve it |
 
 Done: Use Current Frame as Artwork in the game menu's Capture submenu for library games,
 confirming before replacing existing artwork; whole-image library tiles with sharp pixels;
@@ -568,9 +572,10 @@ Low Power Mode or under heat.
 | missing | Opt-in crash reporting limited to non-content diagnostics | v1.1 | no crash reporting at all |
 | missing | Opt-in anonymous usage counts (Games, Builds per Game, Save Profiles used by several Builds, Quick Play sessions added to the library), never titles, hashes, filenames or contents | v1.1 | endpoint or provider and privacy copy not chosen; PRIVACY.md and the App Store privacy answers change with it |
 | missing | Explicit bug-report export with checklist/preview | v1.1 |  |
-| missing | Accurate privacy/consent copy for provider queries and catalog; keys server-side/secure storage | v1.1 |  |
+| partial | Accurate privacy/consent copy for provider queries and catalog; keys server-side/secure storage | v1.1 | Libretro release-name/network-address disclosure and disable setting built; other providers, catalog and keys pending |
 
-Done: Nothing uploaded automatically (ROMs, saves, screenshots, memory, filenames, notes).
+Done: ROMs, saves, screenshots, memory, imported filenames and notes stay local. Artwork queries
+send canonical release names, with disclosures in Settings and the privacy policy.
 
 ### Accessibility
 
@@ -640,7 +645,7 @@ build/tests).
 | missing | RAR import (tentative) | v1.1 |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v1.1 |  |
 | missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v1.1 | saved recordings also land in the Files folder |
-| missing | Browse and download games: itch.io's Game Boy tag in an in-app browser and Homebrew Hub (hh.gbdev.io) by its API, from the library's + menu; downloads go straight to Import Review, with Quick Play | v1.1 | needs zip import; the app's first network use, so revisit the privacy manifest and label; confirm App Store guideline 4.7 wording |
+| missing | Browse and download games: itch.io's Game Boy tag in an in-app browser and Homebrew Hub (hh.gbdev.io) by its API, from the library's + menu; downloads go straight to Import Review, with Quick Play | v1.1 | needs zip import; extend privacy disclosures for these providers and confirm App Store guideline 4.7 wording |
 | missing | Share an itch.io game page or GitHub page to download and import a ROM | v1.1 | web-URL share extension; resolve supported ROM downloads, choose when several exist, then Import Review or Quick Play; safe ZIP extraction; preserve itch.io's normal purchase/login flow |
 | missing | `.gbproject`-style project import/export | v1.1 |  |
 | missing | Better ROM comparison + BPS generation | v1.1 |  |

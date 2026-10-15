@@ -106,8 +106,9 @@ it says so calmly with Try Again.
 Ownership comes from StoreKit 2: `Transaction.currentEntitlements` at launch, then
 `Transaction.updates`. Verified transactions are finished, and revoked or refunded ones don't
 count. Restore Purchases calls `AppStore.sync()`. StoreKit's own on-device cache keeps Plus
-working offline; there's no receipt storage, no server and no analytics, and StoreKit makes the
-only network calls. Debug builds take `-GrantPlus YES` for screenshots and UI tests, and
+working offline; there's no receipt storage, purchase server or analytics. StoreKit handles
+purchase network calls; optional artwork lookups use Libretro separately. Debug builds take
+`-GrantPlus YES` for screenshots and UI tests, and
 `-ScreenshotLCDFilter` implies it. `Config/PressAnyPlus.storekit` defines the product for Xcode
 runs.
 
@@ -766,6 +767,8 @@ claims reliability from just an old ROM, old save and new ROM.
   unless told otherwise, so the menu's button asks for a fixed order: it sits in one place and always
   opens upward. Every other menu keeps the system's default, which puts the first item nearest
   where it was opened, as in Photos and Files.
+- **Closing.** Close Game and Quick Play's Add to Library wait for the game menu to finish
+  dismissing before saving and leaving gameplay.
 - **Restart and Start Over.** Restart, beside Close Game in the game menu, asks first, then starts
   the game again from its boot and plays. The cartridge keeps its save through a reset. A library
   game first keeps where the player was as an Auto State, so States can go back to it; Quick
@@ -1089,8 +1092,10 @@ Game's or Build's settings use:
   inheritable and needs Plus).
 - **App Icon** (Plus): the default icon and its colorways, each with a preview.
 - **Systems**: Game Boy and Game Boy Color, each a page with that system's settings.
-- **Library**: Regions and Languages, Recently Deleted, Check Library Files, Storage, and the
-  Suggest Names and Suggest Game Merges reviews.
+- **Library**: a page grouped into Preferences (Artwork and Regions and Languages), Organization
+  (Suggest Names and Suggest Game Merges), Files (Storage, Check Library Files and Recently
+  Deleted), and Backup and Restore (Back Up Library, Restore from Backup and Last Restore).
+  Artwork holds Find Artwork on Import and the Find Missing Artwork review.
 - **Press Any Plus**: the Plus screen, with Restore Purchases (see Pricing).
 - **About**: How Press Any Works, the Privacy Policy and Acknowledgements.
 
@@ -1360,16 +1365,53 @@ and Files. Replacing existing artwork asks first; Cancel leaves it intact. Quick
 added to the library before it can assign artwork. Library tiles and list thumbnails fit the
 whole image, with sharp pixels, so a 10:9 game frame is not cropped. The game stays paused.
 
-v1.1 adds automatic artwork on import, which a setting can turn off, through pluggable providers:
-included or imported files, the Community Catalog, Libretro thumbnails, OpenVGDB pending its license,
-optional SteamGridDB with the player's own key, and a fallback generated from the game's title
-screen, recorded as generated so anything chosen or more specific wins. Priority: the player's
-choice, then hack-specific, then inherited from the base game, then generated. Several typed
-images per Game (box front and back, cartridge, title screen, screenshots, logo, custom) with one
-primary, a Game default and Build overrides, and non-destructive crops. Only the chosen image is
-cached; nothing rechecks after a choice except Check for New Artwork. Provenance (provider, URL,
-date, rights, crop) is kept, and private artwork is never published. There's no paid artwork
-agreement.
+Import Review puts Artwork second, directly after Destination and before Match Game or Build
+Details. When Find Artwork on Import is enabled, it loads the proposed automatic image there,
+with its source and rights notice. Import assigns the displayed proposal after the ROM commits;
+Photos or Files takes priority, and Remove disables automatic artwork for this import. Changing
+the destination, confirmed base game or Preferred Build choice refreshes the proposal. Late
+results cannot replace a manual choice or revive canceled review.
+
+Find Artwork on Import in Settings > Library > Artwork is on by default and can be turned off.
+The preview never blocks import: if it is still loading, automatic lookup continues after import.
+Quick Play promotion starts lookup after the Build is added. A provider fills only an empty Game;
+manual artwork chosen in review skips automatic lookup even if saving it fails. Exact duplicate
+imports don't start a lookup. Existing artwork and deliberate removals stay, and choices made
+during a download win. A failed lookup leaves import intact and can be retried explicitly.
+
+The first online provider is Libretro box-art thumbnails. It uses the preferred Build's No-Intro
+release name, including region, then tries the same release without its revision/version tag if
+needed. If the preferred Build is unknown, it uses the imported Build or another recognized Build
+in that Game. A patched image or a player-confirmed base-game reference can inherit the recognized
+base's artwork, recorded as inherited. Unknown images and bad dumps get no guessed title search.
+Requests send only the system and canonical release name, never ROM bytes, hashes or edited names.
+The provider sees the request and the player's network address, as described in the privacy policy.
+Downloads are bounded by the artwork size limit, checked as images and downscaled through the
+same storage as manually chosen artwork.
+
+Check for New Artwork in a Game's Artwork menu works even with automatic lookups off. It shows
+the fetched image and any current artwork; Use Artwork assigns it, and Cancel discards it.
+Settings > Library > Artwork > Find Missing Artwork checks all Games without artwork, including
+those hidden by search and filters, even with import-time lookups off. It shows search progress,
+then previews each proposal with its Game title, source and rights notice. Players can accept or
+exclude each image before Use Artwork saves the accepted proposals. Searching changes no library
+artwork or choices; Cancel discards the proposals and their temporary files. Existing artwork
+stays. Previously removed artwork can be proposed again, but only explicit acceptance restores
+it. A new assignment or removal during search or review wins, including another removal of an
+already blank slot. A changed Preferred Build or deleted Game cannot receive a stale proposal. Games with no match or a declined proposal
+stay unchanged and can be checked again later.
+Only the selected image is stored, as user data. Nothing rechecks an assigned image automatically.
+Its provider, source URL, fetch date, rights notice and inherited base name stay with the managed
+asset through backup, restore and copying between Games. Private artwork is never published.
+Removing artwork keeps the placeholder until the player explicitly assigns another image.
+There's no paid artwork agreement, and the app bundles no Libretro game artwork.
+
+Remaining v1.1 artwork work adds included-file and Community Catalog providers, OpenVGDB pending
+its license, optional SteamGridDB with the player's own key, and a title-screen fallback recorded
+as generated. Priority will distinguish the player's choice, hack-specific art, inherited base
+art and generated art. Several typed images per Game (box front and back, cartridge, title screen,
+screenshots, logo, custom), a primary that follows the preferred region, Build overrides and
+non-destructive crops remain pending.
 
 ### External display (v1.1)
 
@@ -1458,9 +1500,10 @@ replacing the interface.
 
 Crash reports and anonymous usage counts (v1.1) are both opt-in. Usage counts are numbers only (Games,
 Builds per Game, profiles shared by Builds, Quick Play sessions promoted), never titles, hashes,
-filenames or library contents; where they go and the privacy copy are still open. Nothing
-automatic ever uploads ROM, save or state bytes, screenshots, memory, filenames, notes or library
-contents. Provider queries and catalog uploads describe their consent accurately. Service keys
+filenames or library contents; where they go and the privacy copy are still open. Artwork requests
+send canonical release names as described above. ROM, save and state bytes, screenshots, memory,
+imported filenames, notes and the library database are never uploaded automatically.
+Provider queries and catalog uploads describe their consent accurately. Service keys
 stay on servers and user keys in secure storage. Press Any Plus talks only to the App Store,
 through StoreKit, and needs nothing in the privacy manifest. The privacy manifest declares the
 required-reason APIs the app uses: User Defaults (CA92.1), file timestamps (C617.1) for cleaning
