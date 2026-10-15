@@ -17,7 +17,7 @@ final class MissingArtworkTests: XCTestCase {
         XCTAssertTrue(try library.container.repositories.assets.fetchAssets().filter { $0.kind == .artwork }.isEmpty)
     }
 
-    func testSearchChecksTheWholeLibraryAndPreservesExistingAndRemovedArtwork() async throws {
+    func testSearchChecksTheWholeLibraryAndProposesPreviouslyRemovedArtworkWithoutSaving() async throws {
         let png = ArtworkTestLibrary.png()
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: png))
         let library = try ArtworkTestLibrary(provider: provider)
@@ -38,10 +38,10 @@ final class MissingArtworkTests: XCTestCase {
 
         XCTAssertEqual(result.progress.total, 4)
         XCTAssertEqual(result.progress.checked, 4)
-        XCTAssertEqual(result.progress.found, 2)
+        XCTAssertEqual(result.progress.found, 3)
         XCTAssertEqual(result.progress.failed, 0)
         XCTAssertEqual(progress.map(\.checked), [0, 1, 2, 3, 4])
-        XCTAssertEqual(Set(result.proposals.map(\.id)), Set([first.id, second.id]))
+        XCTAssertEqual(Set(result.proposals.map(\.id)), Set([first.id, second.id, removed.id]))
         XCTAssertTrue(result.proposals.allSatisfy { FileManager.default.fileExists(atPath: $0.imageURL.path) })
         for game in [first, second] {
             XCTAssertNil(try container.repositories.games.fetchGame(id: game.id)?.artworkAssetID)
@@ -51,7 +51,7 @@ final class MissingArtworkTests: XCTestCase {
         XCTAssertNil(try container.repositories.games.fetchGame(id: unknown.id)?.artworkAssetID)
         let requests = await provider.requests
         XCTAssertEqual(Set(requests.compactMap { $0.releaseNames.first }), Set(library.dumps.map(\.name)))
-        XCTAssertEqual(requests.count, 2)
+        XCTAssertEqual(requests.count, 3)
         XCTAssertFalse(try AutomaticArtworkSetting(store: container.repositories.settings).load())
     }
 
@@ -176,6 +176,38 @@ final class MissingArtworkTests: XCTestCase {
 
         XCTAssertNotNil(model.errorMessage)
         XCTAssertTrue(model.items.isEmpty)
+        XCTAssertNil(try library.container.repositories.games.fetchGame(id: game.id)?.artworkAssetID)
+    }
+
+    func testReviewCanRestoreArtworkRemovedBeforeSearch() async throws {
+        let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
+        let library = try ArtworkTestLibrary(provider: provider)
+        defer { library.removeFiles() }
+        let game = try library.addGame(dump: library.dumps[0], marker: 1)
+        try library.container.gameArtwork.remove(gameID: game.id)
+        let model = MissingArtworkReviewViewModel(container: library.container)
+        defer { model.discard() }
+        await model.search()
+
+        XCTAssertEqual(model.items.map(\.id), [game.id])
+        XCTAssertNil(try library.container.repositories.games.fetchGame(id: game.id)?.artworkAssetID)
+        XCTAssertTrue(model.apply())
+        XCTAssertNotNil(try library.container.repositories.games.fetchGame(id: game.id)?.artworkAssetID)
+    }
+
+    func testReviewPreservesARemovalRepeatedWhileTheProposalIsOpen() async throws {
+        let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
+        let library = try ArtworkTestLibrary(provider: provider)
+        defer { library.removeFiles() }
+        let game = try library.addGame(dump: library.dumps[0], marker: 1)
+        try library.container.gameArtwork.remove(gameID: game.id)
+        let model = MissingArtworkReviewViewModel(container: library.container)
+        defer { model.discard() }
+        await model.search()
+        XCTAssertEqual(model.items.count, 1)
+        try library.container.gameArtwork.remove(gameID: game.id)
+
+        XCTAssertFalse(model.apply())
         XCTAssertNil(try library.container.repositories.games.fetchGame(id: game.id)?.artworkAssetID)
     }
 }

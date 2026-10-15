@@ -28,7 +28,7 @@ struct MissingArtworkReviewView: View {
                         }
                     }
                 } footer: {
-                    Text("Checks the whole library, including Games hidden by search and filters. Existing artwork stays, and deliberately removed artwork stays blank. Nothing is saved until you choose Use Artwork. Cancel discards all proposals.")
+                    Text("Checks the whole library, including Games hidden by search and filters. Existing artwork stays. Previously removed artwork is proposed again and stays blank unless you accept it. Use Artwork saves accepted proposals; Cancel discards them.")
                 }
                 ForEach($model.items) { $item in
                     Section(item.proposal.gameTitle) {

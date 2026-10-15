@@ -357,6 +357,47 @@ final class AppContainer {
         return try await artworkProvider.artwork(for: request.lookup)
     }
 
+    func proposeImportArtwork(_ plan: ROMImportPlan) async throws -> ImportArtworkProposal? {
+        guard let artworkProvider,
+              try AutomaticArtworkSetting(store: repositories.settings).load() else { return nil }
+        let gameID: UUID?
+        switch plan.disposition {
+        case .createGame: gameID = nil
+        case .addBuild(let id): gameID = id
+        case .duplicateExisting: return nil
+        }
+        let game = try gameID.flatMap { try repositories.games.fetchGame(id: $0) }
+        if gameID != nil, game == nil { return nil }
+        let incoming = Build(id: plan.analysis.transactionID, gameID: gameID ?? plan.analysis.transactionID,
+            system: plan.analysis.header.system, displayName: plan.buildDisplayName,
+            imageAssetID: plan.analysis.transactionID, imageSHA256: plan.analysis.sha256,
+            imageSHA1: plan.analysis.imageSHA1, sourceKind: .importedImage,
+            baseGameReference: plan.baseGameReference, createdAt: .distantPast, modifiedAt: .distantPast)
+        let builds = try gameID.map { try repositories.builds.fetchBuilds(gameID: $0) } ?? []
+        let incomingIsPreferred = gameID == nil || plan.markAsPreferred
+        let preferred = incomingIsPreferred ? incoming : builds.first { $0.id == game?.preferredBuildID }
+        let ordered = [preferred, incoming].compactMap { $0 } + builds
+        guard let lookup = artworkLookup(in: ordered) else { return nil }
+        let provided: ProvidedArtwork?
+        if let game {
+            provided = try await missingArtworkFinder.find(gameID: game.id, lookup: lookup,
+                expectedPreferredBuildID: game.preferredBuildID)
+        } else {
+            provided = try await artworkProvider.artwork(for: lookup)
+        }
+        try Task.checkCancellation()
+        guard let provided, try AutomaticArtworkSetting(store: repositories.settings).load() else { return nil }
+        return ImportArtworkProposal(artwork: provided, destinationGameID: gameID,
+            preferredBuildID: game?.preferredBuildID, incomingIsPreferred: incomingIsPreferred)
+    }
+
+    func applyImportArtworkProposal(_ result: ROMImportResult, _ proposal: ImportArtworkProposal) throws {
+        guard result.createdNewBuild,
+              proposal.destinationGameID.map({ $0 == result.build.gameID }) ?? result.createdNewGame else { return }
+        let preferred = proposal.incomingIsPreferred ? result.build.id : proposal.preferredBuildID
+        try missingArtworkFinder.apply(proposal.artwork, gameID: result.build.gameID, expectedPreferredBuildID: preferred)
+    }
+
     struct MissingArtworkProgress: Sendable {
         let total: Int
         var checked = 0
@@ -368,6 +409,7 @@ final class AppContainer {
         let id: UUID
         let gameTitle: String
         let preferredBuildID: UUID?
+        let artworkChoice: String?
         let imageURL: URL
         let provenance: ArtworkProvenance
     }
@@ -395,6 +437,7 @@ final class AppContainer {
             try Task.checkCancellation()
             if let request = artworkLookup(gameID: game.id) {
                 do {
+                    let choice = try gameArtwork.choiceToken(gameID: game.id)
                     if let provided = try await finder.find(gameID: game.id, lookup: request.lookup,
                         expectedPreferredBuildID: request.preferredBuildID, trigger: .userRequested) {
                         try Task.checkCancellation()
@@ -402,7 +445,8 @@ final class AppContainer {
                         let url = proposalDirectory.appendingPathComponent(game.id.uuidString).appendingPathExtension("png")
                         try image.data.write(to: url, options: .atomic)
                         proposals.append(MissingArtworkProposal(id: game.id, gameTitle: game.primaryTitle,
-                            preferredBuildID: request.preferredBuildID, imageURL: url, provenance: provided.provenance))
+                            preferredBuildID: request.preferredBuildID, artworkChoice: choice,
+                            imageURL: url, provenance: provided.provenance))
                         progress.found += 1
                     }
                 } catch is CancellationError {
@@ -423,18 +467,25 @@ final class AppContainer {
         let provided = ProvidedArtwork(data: try fileStore.readData(at: proposal.imageURL), fileExtension: "png",
             provenance: proposal.provenance)
         return try missingArtworkFinder.apply(provided, gameID: proposal.id,
-            expectedPreferredBuildID: proposal.preferredBuildID, trigger: .userRequested)
+            expectedPreferredBuildID: proposal.preferredBuildID, trigger: .userRequested,
+            expectedArtworkChoice: proposal.artworkChoice)
     }
 
     private func artworkLookup(gameID: UUID, importedBuild: Build? = nil) -> (lookup: ArtworkLookup, preferredBuildID: UUID?)? {
-        guard let knownDumps, let game = try? repositories.games.fetchGame(id: gameID),
+        guard let game = try? repositories.games.fetchGame(id: gameID),
               let builds = try? repositories.builds.fetchBuilds(gameID: gameID) else { return nil }
         let preferred = builds.first { $0.id == game.preferredBuildID }
         let ordered = [preferred, importedBuild].compactMap { $0 } + builds
+        guard let lookup = artworkLookup(in: ordered) else { return nil }
+        return (lookup, game.preferredBuildID)
+    }
+
+    private func artworkLookup(in builds: [Build]) -> ArtworkLookup? {
+        guard let knownDumps else { return nil }
         var visited: Set<UUID> = []
-        for build in ordered where visited.insert(build.id).inserted {
+        for build in builds where visited.insert(build.id).inserted {
             if let lookup = knownDumps.artworkLookup(for: build, lookup: { try? repositories.builds.fetchBuild(id: $0) }) {
-                return (lookup, game.preferredBuildID)
+                return lookup
             }
         }
         return nil

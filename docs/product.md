@@ -1365,12 +1365,19 @@ and Files. Replacing existing artwork asks first; Cancel leaves it intact. Quick
 added to the library before it can assign artwork. Library tiles and list thumbnails fit the
 whole image, with sharp pixels, so a 10:9 game frame is not cropped. The game stays paused.
 
-Automatic artwork runs after a library import, including Quick Play promotion, without waiting
-for it before the ROM can play. Find Artwork on Import in Settings > Library > Artwork is on by
-default and can be turned off. A provider fills only an empty Game; a manual image chosen during
-Import Review skips the lookup, even if saving that image fails. Exact duplicate imports don't
-start a lookup. Existing artwork stays, and a choice or removal made while a download is running
-wins. A failed lookup leaves import intact and can be retried explicitly.
+Import Review puts Artwork second, directly after Destination and before Match Game or Build
+Details. When Find Artwork on Import is enabled, it loads the proposed automatic image there,
+with its source and rights notice. Import assigns the displayed proposal after the ROM commits;
+Photos or Files takes priority, and Remove disables automatic artwork for this import. Changing
+the destination, confirmed base game or Preferred Build choice refreshes the proposal. Late
+results cannot replace a manual choice or revive canceled review.
+
+Find Artwork on Import in Settings > Library > Artwork is on by default and can be turned off.
+The preview never blocks import: if it is still loading, automatic lookup continues after import.
+Quick Play promotion starts lookup after the Build is added. A provider fills only an empty Game;
+manual artwork chosen in review skips automatic lookup even if saving it fails. Exact duplicate
+imports don't start a lookup. Existing artwork and deliberate removals stay, and choices made
+during a download win. A failed lookup leaves import intact and can be retried explicitly.
 
 The first online provider is Libretro box-art thumbnails. It uses the preferred Build's No-Intro
 release name, including region, then tries the same release without its revision/version tag if
@@ -1389,8 +1396,9 @@ those hidden by search and filters, even with import-time lookups off. It shows 
 then previews each proposal with its Game title, source and rights notice. Players can accept or
 exclude each image before Use Artwork saves the accepted proposals. Searching changes no library
 artwork or choices; Cancel discards the proposals and their temporary files. Existing artwork
-and deliberate removals stay unchanged, including choices made during review. A changed Preferred
-Build or deleted Game cannot receive a stale proposal. Games with no match or a declined proposal
+stays. Previously removed artwork can be proposed again, but only explicit acceptance restores
+it. A new assignment or removal during search or review wins, including another removal of an
+already blank slot. A changed Preferred Build or deleted Game cannot receive a stale proposal. Games with no match or a declined proposal
 stay unchanged and can be checked again later.
 Only the selected image is stored, as user data. Nothing rechecks an assigned image automatically.
 Its provider, source URL, fetch date, rights notice and inherited base name stay with the managed

@@ -210,13 +210,20 @@ These checks cover the Capture submenu and remain pending until run on a physica
 
 - [ ] With Find Artwork on Import off and search or Favorites Only hiding some Games, choose
   Settings > Library > Artwork > Find Missing Artwork. Recognized Games without artwork get
-  image proposals across the whole library; existing and deliberately removed artwork stay
-  unchanged. Inspect each image and its source, exclude one, then confirm Use Artwork: only
-  accepted proposals are saved. Cancel a completed review and a slow lookup: no artwork is
+  image proposals across the whole library, including Games whose artwork was removed;
+  existing artwork stays. Inspect each image and its source, exclude one, then confirm Use Artwork: only
+  accepted proposals are saved, including a removed image accepted again. Remove artwork
+  again while its proposal is open: acceptance must keep the new blank choice. Cancel a completed review and a slow lookup: no artwork is
   assigned, temporary previews are discarded, and a later search can retry. Progress, previews
   and acceptance controls are readable with VoiceOver and the largest text size. Change a
   Game's artwork, remove it, or change its Preferred Build while review is open: accepting the
   stale proposal keeps the later choice and reports the skipped change.
+- [ ] Import Review shows Artwork second, after Destination and before Match Game or Build
+  Details, for recognized and unknown ROMs. With automatic artwork on, wait for the proposed
+  image and inspect its source; Import saves that image. Replace it from Photos or Files:
+  the manual image wins. Remove the proposal: import stays blank without another lookup.
+  Change destination or base match during a slow lookup: its late result is discarded. Cancel:
+  no Game or artwork is saved. Import before the preview finishes: import does not wait.
 - [ ] With Find Artwork on Import on, import a recognized GB and GBC release without choosing
   artwork. Import closes without waiting for the network; the correct regional box art appears
   when available, remains after relaunch, and survives backup/restore. Import an exact duplicate:

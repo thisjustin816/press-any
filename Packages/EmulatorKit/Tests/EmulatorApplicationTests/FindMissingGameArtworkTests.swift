@@ -68,15 +68,44 @@ final class FindMissingGameArtworkTests: XCTestCase {
         XCTAssertTrue(wrote)
     }
 
-    func testUserRequestedSearchKeepsDeliberatelyRemovedArtworkBlank() async throws {
+    func testManualReviewCanProposeArtworkForRemovedSlotsWithoutSaving() async throws {
         let fixture = try ArtworkSearchFixture()
         defer { fixture.removeFiles() }
         try fixture.artwork.remove(gameID: fixture.game.id)
-        let wrote = try await fixture.finder([TestArtworkProvider {
-            XCTFail("A batch search must preserve deliberate removals")
+        let proposal = try await fixture.finder([TestArtworkProvider { fixture.download }])
+            .find(gameID: fixture.game.id, lookup: fixture.lookup, trigger: .userRequested)
+        XCTAssertNotNil(proposal)
+        XCTAssertNil(try fixture.games.fetchGame(id: fixture.game.id)?.artworkAssetID)
+    }
+
+    func testManualAcceptanceSupportsLegacyChoicesButPreservesANewerRemoval() async throws {
+        for removeAgain in [false, true] {
+            let fixture = try ArtworkSearchFixture()
+            defer { fixture.removeFiles() }
+            try fixture.settings.set(true, key: "artwork.chosen", scope: .game(fixture.game.id))
+            let choice = try fixture.artwork.choiceToken(gameID: fixture.game.id)
+            let finder = fixture.finder([TestArtworkProvider { fixture.download }])
+            let proposal = try await finder.find(gameID: fixture.game.id, lookup: fixture.lookup, trigger: .userRequested)
+            if removeAgain { try fixture.artwork.remove(gameID: fixture.game.id) }
+
+            let wrote = try finder.apply(XCTUnwrap(proposal), gameID: fixture.game.id,
+                trigger: .userRequested, expectedArtworkChoice: choice)
+
+            XCTAssertEqual(wrote, !removeAgain)
+            XCTAssertEqual(try fixture.games.fetchGame(id: fixture.game.id)?.artworkAssetID == nil, removeAgain)
+        }
+    }
+
+    func testManualDownloadDiscardsARepeatedRemovalWhileItIsRunning() async throws {
+        let fixture = try ArtworkSearchFixture()
+        defer { fixture.removeFiles() }
+        try fixture.artwork.remove(gameID: fixture.game.id)
+        let proposal = try await fixture.finder([TestArtworkProvider {
+            try fixture.artwork.remove(gameID: fixture.game.id)
             return fixture.download
-        }]).execute(gameID: fixture.game.id, lookup: fixture.lookup, trigger: .userRequested)
-        XCTAssertFalse(wrote)
+        }]).find(gameID: fixture.game.id, lookup: fixture.lookup, trigger: .userRequested)
+        XCTAssertNil(proposal)
+        XCTAssertNil(try fixture.games.fetchGame(id: fixture.game.id)?.artworkAssetID)
     }
 
     func testDownloadedArtworkAndProvenanceAreStoredOnce() async throws {

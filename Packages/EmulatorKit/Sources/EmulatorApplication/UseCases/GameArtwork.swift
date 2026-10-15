@@ -120,7 +120,7 @@ public struct GameArtwork: Sendable {
             game.artworkAssetID = asset.id
             game.modifiedAt = timestamp
             try games.updateGame(game)
-            try settings?.set(true, key: Self.choiceKey, scope: .game(gameID))
+            try settings?.set(UUID().uuidString, key: Self.choiceKey, scope: .game(gameID))
         } catch {
             try? assets.deleteAsset(id: asset.id)
             try? assetStore.removeIfExists(destination)
@@ -141,7 +141,7 @@ public struct GameArtwork: Sendable {
         guard var game = try games.fetchGame(id: gameID) else {
             throw GameArtworkError.gameNotFound(gameID)
         }
-        try settings?.set(true, key: Self.choiceKey, scope: .game(gameID))
+        try settings?.set(UUID().uuidString, key: Self.choiceKey, scope: .game(gameID))
         guard let assetID = game.artworkAssetID else { return (game, nil) }
         let previous = try assets.fetchAsset(id: assetID)
         game.artworkAssetID = nil
@@ -150,9 +150,9 @@ public struct GameArtwork: Sendable {
         return (game, previous)
     }
 
-    /// Removing a chosen image is also a choice, so a pending or later automatic lookup keeps
-    /// the placeholder until the player explicitly assigns artwork again.
-    func hasArtworkChoice(gameID: UUID) throws -> Bool {
-        try settings?.valueJSON(key: Self.choiceKey, scope: .game(gameID)) != nil
+    /// An opaque token that changes with each assignment or removal. Comparing the stored value
+    /// also preserves choices read from backups without changing their settings.
+    public func choiceToken(gameID: UUID) throws -> String? {
+        try settings?.valueJSON(key: Self.choiceKey, scope: .game(gameID))
     }
 }

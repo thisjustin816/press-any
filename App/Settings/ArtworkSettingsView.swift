@@ -20,7 +20,7 @@ struct ArtworkSettingsView: View {
                     Button("Find Missing Artwork") { showReview = true }
                         .accessibilityIdentifier("settings.artwork.findMissing")
                 } footer: {
-                    Text("Search the whole library and review proposed images before accepting them. Works with Find Artwork on Import off. Existing artwork and deliberate removals stay unchanged.")
+                    Text("Review proposed images for empty slots, including artwork you removed. Nothing is saved until you accept. Works with Find Artwork on Import off, and existing artwork stays.")
                 }
             }
             Section {

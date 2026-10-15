@@ -126,6 +126,7 @@ struct QuickPlayPromotionView: View {
     var body: some View {
         Form {
             ImportDestinationSection(model: model.review)
+            ImportBuildDetailsSections(model: model.review)
 
             ToolchainSection(reports: model.review.analysis.toolchainReports)
 

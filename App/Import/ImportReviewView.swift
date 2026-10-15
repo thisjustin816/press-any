@@ -23,6 +23,8 @@ struct ImportReviewView: View {
                     ImportArtworkSection(model: model)
                 }
 
+                ImportBuildDetailsSections(model: model)
+
                 Section {
                     LabeledContent("File", value: model.analysis.originalFilename)
                     LabeledContent("Suggested Filename", value: model.normalizedFilename)
@@ -97,8 +99,7 @@ struct ImportReviewView: View {
     }
 }
 
-/// Cover art for the Game the ROM lands in, from Photos or Files. It's set once the import
-/// succeeds; the Game's own artwork menu changes it later.
+/// Artwork is previewed before import and assigned only after the ROM is committed.
 struct ImportArtworkSection: View {
     @ObservedObject var model: ImportReviewViewModel
 
@@ -107,25 +108,43 @@ struct ImportArtworkSection: View {
 
     var body: some View {
         Section {
-            if let artwork = model.artwork, let image = UIImage(data: artwork.data) {
+            if let data = model.artworkPreview, let image = UIImage(data: data) {
                 HStack {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFit()
                         .frame(width: 72, height: 72)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .accessibilityLabel("Chosen artwork")
+                        .accessibilityLabel(model.artwork != nil ? "Chosen artwork" : "Proposed automatic artwork")
                     Spacer()
                     Button("Remove", role: .destructive) { model.removeArtwork() }
                 }
             }
+            if model.canPreviewAutomaticArtwork, model.artwork == nil {
+                Toggle("Find Artwork Automatically", isOn: $model.useAutomaticArtwork)
+                if model.findingArtwork {
+                    ProgressView("Finding Artwork...")
+                } else if let proposal = model.proposedAutomaticArtwork {
+                    if let base = proposal.provenance.inheritedFrom {
+                        Text("Artwork from the base game: \(base)")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Link("View Source", destination: proposal.provenance.sourceURL)
+                    Text(proposal.provenance.rights).font(.footnote).foregroundStyle(.secondary)
+                } else if model.useAutomaticArtwork, let error = model.automaticArtworkError {
+                    Text("Could not find artwork: \(error)").foregroundStyle(.secondary)
+                } else if model.useAutomaticArtwork {
+                    Text(model.replacesArtwork ? "This Game's current artwork will be kept." : "No automatic artwork proposed. You can choose an image.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
             PhotosPicker(selection: $photoItem, matching: .images) {
-                Label(model.artwork == nil ? "Choose from Photos" : "Replace from Photos", systemImage: "photo")
+                Label(model.artworkPreview == nil ? "Choose from Photos" : "Replace from Photos", systemImage: "photo")
             }
             Button {
                 showsFileImporter = true
             } label: {
-                Label(model.artwork == nil ? "Choose from Files" : "Replace from Files", systemImage: "folder")
+                Label(model.artworkPreview == nil ? "Choose from Files" : "Replace from Files", systemImage: "folder")
             }
         } header: {
             Text("Artwork")
@@ -133,9 +152,10 @@ struct ImportArtworkSection: View {
             if model.replacesArtwork, model.artwork != nil {
                 Text("Replaces this Game’s current artwork.")
             } else {
-                Text("Optional. Shown on the library tile and the Game.")
+                Text("Shown on the library tile and the Game. Automatic proposals follow Find Artwork on Import in Settings. Import saves the displayed proposal when automatic artwork is on; Photos or Files takes priority.")
             }
         }
+        .task(id: model.artworkRequest) { await model.loadAutomaticArtwork() }
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
             photoItem = nil
@@ -154,8 +174,6 @@ struct ImportArtworkSection: View {
 /// duplicate. Shared by import and Quick Play promotion.
 struct ImportDestinationSection: View {
     @ObservedObject var model: ImportReviewViewModel
-    @State private var showMatchGame = false
-
     var body: some View {
         if model.isExactDuplicate {
             Section {
@@ -204,6 +222,16 @@ struct ImportDestinationSection: View {
             } footer: {
                 Text("A Base Build is the clean, unmodified ROM that patches are applied to. Choosing it replaces this Game’s previous Base Build.")
             }
+        }
+    }
+}
+
+struct ImportBuildDetailsSections: View {
+    @ObservedObject var model: ImportReviewViewModel
+    @State private var showMatchGame = false
+
+    var body: some View {
+        if !model.isExactDuplicate {
             if model.analysis.knownDump == nil {
                 Section("Match Game") {
                     Button("Match Game…") { showMatchGame = true }

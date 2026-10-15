@@ -37,10 +37,13 @@ data, or the recognized base game for a modified Build. Libretro and its hosting
 providers receive that request and your network address. No ROM bytes, ROM hashes,
 saves, account information or player-edited names are sent.
 
+Import Review can show an automatic proposal before you import. It is saved only after
+the ROM is imported; if the preview is still loading, lookup can continue after import.
 Turn off Find Artwork on Import in Settings > Library > Artwork to stop automatic
 requests. Check for New Artwork in a Game's Artwork menu makes an explicit request
 even with automatic lookups off. Settings > Library > Artwork > Find Missing Artwork
-checks Games without artwork the same way, preserving existing and deliberately removed artwork.
+checks Games without artwork the same way, including artwork you removed. Existing artwork
+stays, and removed artwork stays blank unless you accept a proposal.
 It previews proposed images for you to accept or decline. Proposals use temporary files
 that are deleted when the review closes; searching saves no artwork to your library.
 Accepted images are saved in your local library, along with their source URL,

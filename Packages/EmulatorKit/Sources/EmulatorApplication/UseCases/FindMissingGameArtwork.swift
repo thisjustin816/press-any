@@ -25,15 +25,19 @@ public struct FindMissingGameArtwork: Sendable {
     @discardableResult
     public func execute(gameID: UUID, lookup: ArtworkLookup, expectedPreferredBuildID: UUID? = nil,
                         trigger: Trigger = .automatic) async throws -> Bool {
+        let choice = try artwork.choiceToken(gameID: gameID)
         guard let provided = try await find(gameID: gameID, lookup: lookup,
             expectedPreferredBuildID: expectedPreferredBuildID, trigger: trigger) else { return false }
-        return try apply(provided, gameID: gameID, expectedPreferredBuildID: expectedPreferredBuildID, trigger: trigger)
+        return try apply(provided, gameID: gameID, expectedPreferredBuildID: expectedPreferredBuildID,
+            trigger: trigger, expectedArtworkChoice: choice)
     }
 
     /// Finds a proposal without saving artwork or recording a player choice.
     public func find(gameID: UUID, lookup: ArtworkLookup, expectedPreferredBuildID: UUID? = nil,
                      trigger: Trigger = .automatic) async throws -> ProvidedArtwork? {
-        guard try canFill(gameID: gameID, expectedPreferredBuildID: expectedPreferredBuildID, trigger: trigger) else { return nil }
+        let choice = try artwork.choiceToken(gameID: gameID)
+        guard try canFill(gameID: gameID, expectedPreferredBuildID: expectedPreferredBuildID,
+            trigger: trigger, expectedArtworkChoice: choice) else { return nil }
         for provider in providers {
             try Task.checkCancellation()
             let provided: ProvidedArtwork?
@@ -47,7 +51,8 @@ public struct FindMissingGameArtwork: Sendable {
             }
             guard let provided else { continue }
             try Task.checkCancellation()
-            guard try canFill(gameID: gameID, expectedPreferredBuildID: expectedPreferredBuildID, trigger: trigger) else { return nil }
+            guard try canFill(gameID: gameID, expectedPreferredBuildID: expectedPreferredBuildID,
+                trigger: trigger, expectedArtworkChoice: choice) else { return nil }
             return provided
         }
         return nil
@@ -56,21 +61,26 @@ public struct FindMissingGameArtwork: Sendable {
     /// Rechecks the empty slot and player choices when a reviewed proposal is accepted.
     @discardableResult
     public func apply(_ provided: ProvidedArtwork, gameID: UUID, expectedPreferredBuildID: UUID? = nil,
-                      trigger: Trigger = .automatic) throws -> Bool {
+                      trigger: Trigger = .automatic, expectedArtworkChoice: String? = nil) throws -> Bool {
         try Task.checkCancellation()
         return try transactions.run {
-            guard try canFill(gameID: gameID, expectedPreferredBuildID: expectedPreferredBuildID, trigger: trigger) else { return false }
+            guard try canFill(gameID: gameID, expectedPreferredBuildID: expectedPreferredBuildID,
+                trigger: trigger, expectedArtworkChoice: expectedArtworkChoice) else { return false }
             try artwork.set(gameID: gameID, imageData: provided.data, fileExtension: provided.fileExtension,
                 provenance: provided.provenance)
             return true
         }
     }
 
-    private func canFill(gameID: UUID, expectedPreferredBuildID: UUID?, trigger: Trigger) throws -> Bool {
+    private func canFill(gameID: UUID, expectedPreferredBuildID: UUID?, trigger: Trigger,
+                         expectedArtworkChoice: String?) throws -> Bool {
         guard try isEnabled(for: trigger), let game = try games.fetchGame(id: gameID), game.artworkAssetID == nil,
-              game.preferredBuildID == expectedPreferredBuildID,
-              try !artwork.hasArtworkChoice(gameID: gameID) else { return false }
-        return true
+              game.preferredBuildID == expectedPreferredBuildID else { return false }
+        let choice = try artwork.choiceToken(gameID: gameID)
+        switch trigger {
+        case .automatic: return choice == nil
+        case .userRequested: return choice == expectedArtworkChoice
+        }
     }
 
     private func isEnabled(for trigger: Trigger) throws -> Bool {
