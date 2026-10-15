@@ -47,7 +47,7 @@ struct ArtworkTestLibrary {
         }
     }
 
-    static func download(data: Data) -> ProvidedArtwork {
+    nonisolated static func download(data: Data) -> ProvidedArtwork {
         ProvidedArtwork(data: data, fileExtension: "png", provenance: .init(provider: "test",
             sourceURL: URL(string: "https://example.com/art.png")!, fetchedAt: .distantPast, rights: "Synthetic test data"))
     }
