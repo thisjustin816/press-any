@@ -1239,7 +1239,8 @@ list shows no model numbers. App Settings has it on the Playing page.
   to Delete.
 - Sort By remembers Title (the default), Recently Played, Recently Added, Recently Changed,
   Playtime, System, Hack Author, Version or Manual. Recent play, added, changed and playtime sort
-  largest first; Games never played go last under Recently Played and Playtime. Recently Changed
+  largest first. Recently Played uses the later of the Game's date added and last played, so new
+  imports appear at the top. Games never played go last under Playtime. Recently Changed
   uses the newest Build added or edited in the Game. Hack Author sorts by the Preferred Build's
   author, A to Z, and Version by its version, newest first; Games without one go last. System groups Game Boy before Game Boy Color. Ties use title
   order. Search and Favorites Only filter the sorted list. List rows show the system under Title,

@@ -27,8 +27,9 @@ public enum LibrarySort: String, CaseIterable, Sendable {
             case .title:
                 break
             case .recentlyPlayed:
-                if left.hasBeenPlayed != right.hasBeenPlayed { return left.hasBeenPlayed }
-                if let order = Self.missingLast(left.lastPlayedAt, right.lastPlayedAt, Self.descending) { return order }
+                let leftActivity = max(left.addedAt, left.lastPlayedAt ?? left.addedAt)
+                let rightActivity = max(right.addedAt, right.lastPlayedAt ?? right.addedAt)
+                if leftActivity != rightActivity { return leftActivity > rightActivity }
             case .recentlyAdded:
                 if left.addedAt != right.addedAt { return left.addedAt > right.addedAt }
             case .recentlyChanged:

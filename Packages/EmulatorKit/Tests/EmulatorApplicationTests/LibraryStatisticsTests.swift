@@ -101,7 +101,8 @@ struct LibraryStatisticsTests {
         switch sort {
         // Without Build metadata or manual positions, those sorts fall back to titles.
         case .title, .hackAuthor, .version, .manual: expected = [never, alpha, beta, gamma]
-        case .recentlyPlayed, .playtime: expected = [beta, gamma, alpha, never]
+        case .recentlyPlayed: expected = [beta, gamma, never, alpha]
+        case .playtime: expected = [beta, gamma, alpha, never]
         case .recentlyAdded: expected = [beta, gamma, never, alpha]
         case .recentlyChanged: expected = [alpha, beta, gamma, never]
         case .system: expected = [beta, gamma, never, alpha]
@@ -109,7 +110,30 @@ struct LibraryStatisticsTests {
         #expect(sort.sorted(games: games, systems: systems, statistics: stats).map(\.id) == expected.map(\.id))
     }
 
-    @Test func playedZeroTimeSortsBeforeNeverPlayedAndUnplayedTiesUseTitle() throws {
+    @Test func recentlyPlayedIncludesNewImportsAndLaterPlayMovesAhead() throws {
+        let imported = makeGame("New Import", added: date.addingTimeInterval(120))
+        let played = makeGame("Played")
+        let olderImport = makeGame("Older Import", added: date.addingTimeInterval(-60))
+        let games = [olderImport, played, imported]
+        let profiles = InMemorySaveProfileRepository([makeProfile(played, sessions: 1, lastPlayed: date)])
+        let fetch = FetchGameStatistics(
+            games: InMemoryGameRepository(games), builds: InMemoryBuildRepository(), profiles: profiles
+        )
+        let stats = try fetch.execute()
+        #expect(LibrarySort.recentlyPlayed.sorted(games: games, systems: [:], statistics: stats).map(\.id)
+            == [imported.id, played.id, olderImport.id])
+        #expect(stats[imported.id]?.hasBeenPlayed == false)
+        #expect(stats[imported.id]?.lastPlayedAt == nil)
+        #expect(LibrarySort.playtime.sorted(games: games, systems: [:], statistics: stats).first?.id == played.id)
+        #expect(LibrarySort.recentlyPlayed.sorted(games: games, systems: [:], statistics: [:]).map(\.id)
+            == [imported.id, played.id, olderImport.id])
+
+        try profiles.insertSaveProfile(makeProfile(played, sessions: 1, lastPlayed: date.addingTimeInterval(180)))
+        #expect(try LibrarySort.recentlyPlayed.sorted(games: games, systems: [:], statistics: fetch.execute()).map(\.id)
+            == [played.id, imported.id, olderImport.id])
+    }
+
+    @Test func playedZeroTimeSortsFirstByPlaytimeAndRecentActivityTiesUseTitle() throws {
         let played = makeGame("Zulu")
         let alpha = makeGame("Alpha")
         let beta = makeGame("Beta")
@@ -118,9 +142,10 @@ struct LibraryStatisticsTests {
             games: InMemoryGameRepository(games), builds: InMemoryBuildRepository(),
             profiles: InMemorySaveProfileRepository([makeProfile(played, sessions: 1, lastPlayed: date)])
         ).execute()
-        for sort in [LibrarySort.recentlyPlayed, .playtime] {
-            #expect(sort.sorted(games: games, systems: [:], statistics: stats).map(\.id) == [played.id, alpha.id, beta.id])
-        }
+        #expect(LibrarySort.playtime.sorted(games: games, systems: [:], statistics: stats).map(\.id)
+            == [played.id, alpha.id, beta.id])
+        #expect(LibrarySort.recentlyPlayed.sorted(games: games, systems: [:], statistics: stats).map(\.id)
+            == [alpha.id, beta.id, played.id])
         #expect(LibrarySort.title.sorted(games: games, systems: [:], statistics: [:]).map(\.id) == [alpha.id, beta.id, played.id])
     }
 
@@ -134,9 +159,8 @@ struct LibraryStatisticsTests {
             profiles: InMemorySaveProfileRepository()
         ).execute()
         #expect(stats[played.id]?.lastPlayedAt == nil)
-        for sort in [LibrarySort.recentlyPlayed, .playtime] {
-            #expect(sort.sorted(games: games, systems: [:], statistics: stats).map(\.id) == [played.id, never.id])
-        }
+        #expect(LibrarySort.playtime.sorted(games: games, systems: [:], statistics: stats).map(\.id) == [played.id, never.id])
+        #expect(LibrarySort.recentlyPlayed.sorted(games: games, systems: [:], statistics: stats).map(\.id) == [never.id, played.id])
     }
 
     @Test func hackAuthorUsesThePreferredBuildAToZWithMissingAuthorsLast() {
