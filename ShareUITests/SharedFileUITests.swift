@@ -193,10 +193,9 @@ final class SharedFileUITests: XCTestCase {
         expect(app.keyboards.firstMatch, message: "the text field opens the keyboard")
         let existing = enteredText(in: field)
         if !existing.isEmpty {
-            // The edit menu doesn't appear for trailing-aligned fields inside LabeledContent, so clear
-            // with the keyboard. Opening the keyboard can reposition the form before the caret tap.
-            field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+            // Select the whole paragraph, including text scrolled out of view in a narrow field.
+            field.tap(withNumberOfTaps: 3, numberOfTouches: 1)
+            field.typeText(XCUIKeyboardKey.delete.rawValue)
         }
         XCTAssertEqual(enteredText(in: field), "", "the previous name is fully cleared")
         field.typeText(value)
