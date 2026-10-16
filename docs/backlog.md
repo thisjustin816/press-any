@@ -32,6 +32,8 @@ The rest of the v1 core is built: save state slots, naming and cleanup, crash re
 the last game, Restart and Start Over, the controller's Menu button, and per-Build Game Genie and
 GameShark cheats.
 
+Next up is the Game Boy Camera, ahead of the rest of v1.1 (see v1.1 targets).
+
 v1 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
 The first v1.1 artwork slice adds automatic Libretro lookup after import and a reviewed manual
 check. The rest waits for v1.1: 7z and multi-asset import, additional artwork providers and documents with the
@@ -640,7 +642,7 @@ build/tests).
 |---|---|---|---|
 | missing | Link cable, local dual-core first; nearby/SharePlay initiation; no Multipeer | v1.1 | no LinkCableCapability |
 | missing | GB Studio save migration with old/new variable maps | v1.1 |  |
-| missing | Game Boy Camera | v1.1 | no CameraCapability |
+| missing | Game Boy Camera (next up) | v1.1 | SameBoy emulates the camera cartridge and asks the host for each picture through `GB_set_camera_get_pixel_callback` and `GB_set_camera_update_request_callback`; SameBoy's own iOS app feeds them from the device camera. The bridge connects both hooks and takes a 128x112 grayscale frame from Swift, filling the `CameraCapability` placeholder. The app runs the iPhone camera only while a camera game is open and in the foreground, crops and scales to the sensor's shape, adds a front/back switch to the game menu, asks for camera permission (an `NSCameraUsageDescription` beside the Photos one) and sends a blank image when it's denied. Color photos: answer the RGB channel handshake in the README of thisjustin816/gb-photo, a fork of Photo! whose Game Boy Color build takes three exposures and shows them with HiColor. Bridge tests use a fixed image; the camera itself needs a device check, since the simulator has none |
 | missing | Game Boy Printer with preview/save/share | v1.1 | no PrinterCapability |
 | missing | RAR import (tentative) | v1.1 |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v1.1 |  |
