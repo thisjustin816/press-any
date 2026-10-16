@@ -155,7 +155,7 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 | missing | Manual collections/folders | v1.1 |  |
 | missing | Smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates) | v1.1 |  |
 | missing | Tags on Games/Builds via long-press/overflow | v1.1 |  |
-| done | Sorting | v1 | remembered Sort By in the More menu: title, recent play, added, last Build change, playtime, system, hack author, Build version and date, and manual order; list second lines follow the sort; Reorder drags Games in the list under Manual, positions survive Recently Deleted; release year/developer/publisher move to v1.1 with metadata providers |
+| done | Sorting | v1 | remembered Sort By in the More menu: title, recent play, added, last Build change, playtime, system, hack author, Build version and date, and manual order; Recently Played uses the later of date added and last played so new imports appear at the top; list second lines follow the sort; Reorder drags Games in the list under Manual, positions survive Recently Deleted; release year/developer/publisher move to v1.1 with metadata providers |
 | missing | Sorting by release year, developer and publisher | v1.1 | needs the metadata provider chain for its data |
 | done | Multi-select deletion | v1 | Select in library grid/list, Game Builds and Save Profiles, Save States, Quick Play Sessions and Recently Deleted; one confirmation with skipped counts and reasons, separate restorable entries, and dependency-ordered Restore |
 | done | Favorites | v1 | Game Details toolbar star and library long-press menu beside Rename; small star on tiles/list rows; Favorites Only works with search; merge keeps either favorite and promotion carries it |
