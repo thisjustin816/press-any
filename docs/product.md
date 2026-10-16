@@ -927,7 +927,8 @@ picture. A connected controller still hides the touch controls.
 - Opening the menu stops frames and audio and releases held input. A row of icons at the top
   holds Resume, Fast Forward (highlighted while on), Quick Save and Quick Load. Below it, States
   opens Save New State, Slots when enabled, and the remaining states, newest first, with their
-  pictures and dates; then Cheats, Capture, Sound, Settings, and Restart beside Close Game, in red, in
+  pictures and dates; then Cheats, Capture, Game Boy Camera for a camera cartridge, Sound,
+  Settings, and Restart beside Close Game, in red, in
   their own section. The game stays paused after the menu closes, after changing Fast Forward
   and after returning from another app, until the player chooses Resume. A paused game's Resume
   button sits centered on the game picture. With that overlay exposed, any fresh non-directional
@@ -941,6 +942,37 @@ picture. A connected controller still hides the touch controls.
 - The controller's Menu button opens the menu; pressing it again closes the menu and resumes.
   The Home button is reserved for the system. Button customization uses iOS Settings (see
   Controllers, haptics and rumble).
+
+### Game Boy Camera
+
+A camera cartridge adds Game Boy Camera to the game menu in library play and Quick Play.
+It starts Off on every launch. Choose Rear Camera or Front Camera, allow iOS camera access
+when asked, then Resume to use it. Choosing a camera while paused leaves capture stopped
+until gameplay resumes. Front Camera mirrors the image, and capture follows the gameplay
+orientation. No microphone or Photos access is requested.
+
+Frames are center-cropped to the sensor's 128 by 112 aspect ratio and supplied as RGB through
+`CameraCapability`. Ordinary exposures use their brightness. SameBoy handles the camera's
+exposure, gain and dithering. Each shot holds one sensor image while the cartridge reads it.
+Off supplies neutral gray;
+denied access, a missing camera or an interrupted capture leaves the game playable and explains
+how to try again. Other cartridges show no camera controls and never request access.
+
+Photo! DX's Game Boy Color ROM supports automatic RGB capture on Game Boy Color and Advance
+models. Turn on Color in the ROM's camera menu: it saves red, green and blue exposures as a
+single color group using three photo slots, without physical filters. Press Any implements
+the [version-1 SRAM handshake](https://github.com/thisjustin816/gb-photo/blob/38c346be573388d9c528b96c16954e8238ddcb74/README.md#rgb-camera-handshake).
+It acknowledges fresh requests for brightness or a color channel and leaves unsupported or
+stale requests unchanged. One source image stays frozen from red through blue, even as live
+frames change or gameplay pauses. The ROM handles color rendering and photo grouping.
+
+Capture hardware stops when gameplay pauses or becomes inactive. The last sensor image and
+any unfinished RGB group's frozen image stay in memory so resuming can finish that group.
+Off, choosing another camera, closing or a capture failure clears them. Resuming restarts an
+authorized camera choice; closing clears the choice.
+Raw frames stay in memory and are never uploaded or exported automatically. Photos saved by
+the game live in its cartridge RAM and follow normal Save Profile saves, exports and backups.
+Quick Play keeps them temporary until Add to Library.
 
 ### Picture
 
@@ -1504,6 +1536,9 @@ Builds per Game, profiles shared by Builds, Quick Play sessions promoted), never
 filenames or library contents; where they go and the privacy copy are still open. Artwork requests
 send canonical release names as described above. ROM, save and state bytes, screenshots, memory,
 imported filenames, notes and the library database are never uploaded automatically.
+Game Boy Camera access is requested only after a camera is chosen in the game menu. Capture
+stops whenever gameplay pauses, and frames are processed on the device. Photos the game saves
+remain in its normal save data.
 Provider queries and catalog uploads describe their consent accurately. Service keys
 stay on servers and user keys in secure storage. Press Any Plus talks only to the App Store,
 through StoreKit, and needs nothing in the privacy manifest. The privacy manifest declares the

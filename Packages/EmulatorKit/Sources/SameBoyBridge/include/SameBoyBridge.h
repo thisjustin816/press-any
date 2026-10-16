@@ -111,6 +111,15 @@ bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame);
 size_t SBDrainAudio(SBInstance *instance, SBStereoSample *output, size_t max_frames);
 double SBConsumeRumbleAmplitude(SBInstance *instance);
 
+bool SBHasCamera(SBInstance *instance);
+/// Copies 128*112 luminance bytes for the next shot; NULL with size zero clears sensor images.
+/// Invalid sizes leave the current image alone. Serialized with all other instance calls.
+bool SBSetCameraFrame(SBInstance *instance, const uint8_t *bytes, size_t size);
+/// Copies 128*112 interleaved RGB888 pixels. Ordinary shots use brightness; Photo! DX's
+/// version-1 SRAM handshake selects a channel from a source image held across red/green/blue.
+/// NULL with size zero clears sensor images and any held RGB sequence.
+bool SBSetCameraRGBFrame(SBInstance *instance, const uint8_t *bytes, size_t size);
+
 size_t SBBatterySize(SBInstance *instance);
 bool SBSaveBattery(SBInstance *instance, uint8_t *output, size_t size);
 void SBLoadBattery(SBInstance *instance, const uint8_t *bytes, size_t size);

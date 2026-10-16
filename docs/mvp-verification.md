@@ -29,6 +29,11 @@ Verify with a user-supplied legal ROM:
 - [x] With a Bluetooth controller, the D-pad and left thumbstick both move in all eight directions; slight stick drift does nothing. The controller's A and B are Game Boy A and B, X is START, Options or Y is SELECT, and the shoulders do nothing while the game runs. On a PlayStation controller, Circle is A, Cross is B, Triangle is START and Square is SELECT. With touch controls hidden, press Menu: the game menu opens without pressing START. Press Menu again: it closes and resumes. Hold Menu and press another button: the menu does not toggle again until Menu is released and pressed. Repeat after opening the menu by touch. Disconnect while holding a direction: no button sticks, the touch controls return and the game pauses with a notice. Repeat with a paused game: it stays paused.
 - [x] In iOS Settings > General > Game Controller, change a global button mapping and invert the left stick's vertical axis: the game follows both. Add a customization specifically for Press Any and verify it applies only here. Restore the default mapping after the check.
 - [x] Cartridge rumble routes correctly to controller/phone where supported.
+- [ ] With a legal camera-cartridge ROM in library play, verify Game Boy Camera appears in the menu and starts Off without a permission prompt. Choose Rear Camera: permission appears only then. Resume and check the live image and a saved in-game photo. Repeat with Front Camera and check mirroring. Rotate to both landscape orientations and verify an upright, correctly cropped picture without stretching. Repeat capture in Quick Play.
+- [ ] With a camera selected, open the game menu or Settings, open Control Center, background the app, and close the game. Camera capture stops in each case; returning restarts capture only when gameplay runs. Close and relaunch the game: Camera is Off. If permission is still being requested when the camera is turned Off or the game closes, a late reply must not start capture. No microphone or Photos permission is requested.
+- [ ] Deny camera permission, then select a camera again: the notice points to iPhone Settings and the game remains playable with a gray sensor image. Allow access in Settings, return and select a camera again. Check a simulator or unavailable camera, and an interruption: failure explains how to retry without ending gameplay. A normal cartridge has no Game Boy Camera menu and never requests camera access.
+- [ ] Save a photo in the camera game's album, close and reopen that Save Profile, and check it remains. Export/import its battery save and check the album. A second Save Profile keeps its own photos. In Quick Play, photos stay temporary until Add to Library; promotion preserves its album. Check save/load states and Restart with a selected camera, including changing the Model through Settings.
+- [ ] With the Photo! DX color ROM on Game Boy Color or Advance, turn Color on in the ROM's camera popup. Take a photo of a colorful scene: capture saves one color group using three slots without asking for physical filters. Move the phone during the sequence and confirm the channels share one frozen source. Open the gallery and thumbnails, then close/reopen the Save Profile: the color photo remains. Repeat with both lenses and in Quick Play. Pausing stops camera hardware while preserving an unfinished group's frozen image; Off, choosing another camera or closing clears sensor images.
 - [x] Backgrounding pauses emulation, flushes battery save, and writes lifecycle autosave.
 - [x] Play a disposable library Build for more than two minutes. Its Save States screen and the game menu's States show no crash checkpoint. Download the container and check that only one `crashRecovery` state exists for its Build and Save Profile, with its timestamp refreshed; no migration is required. A successful Auto State or clean close removes it.
 - [x] On a Debug build, play a library game for at least a minute and choose Crash App (Debug) from the game menu. Relaunch: the library offers Recover Session and Start Normally without opening a game. Recover Session returns to the checkpoint. Crash again during recovery or play: the next launch offers the choice again and never loops into gameplay. Confirm the crash menu item is absent in Release.
@@ -259,3 +264,46 @@ These checks cover the Capture submenu and remain pending until run on a physica
   front-facing button, sideways arch well and centered A. At home-screen size, the sidewall and
   contact shadow read as one raised button; the well continues off the left edge. The Default icon remains
   available without Plus.
+
+## Game Boy Camera headless evidence
+
+2026-10-16: Photo! DX from `thisjustin816/gb-photo`, commit
+`38c346be573388d9c528b96c16954e8238ddcb74`, was exercised through Press Any's actual
+SameBoyBridge and pinned SameBoy 1.0.3 core on Linux. The input was Actions artifact
+`12071714447` (`photo-dx`, archive SHA-256
+`ea75a203dee02e9f799525809322f447728f8f43ee5aa0b8bd043702809f379c`).
+No ROM or save is committed or bundled.
+
+| ROM | MD5 | SHA-256 |
+|---|---|---|
+| Photo! DX (World).gb | `4741146bc9170ba1b07ec90080e86590` | `2dee3081518cb2fe52f0261631fb5b218d73d0e37cbdf33d4b057f24afe4b4aa` |
+| Photo! DX (World).gbc | `a3f42cf6f5bd2387e30c47fa3ac5062e` | `e67deea08c870aeb4bcb2037ef20a10aa1f1e8953979838ed20268f464f09f8b` |
+
+The supplied starter save was copied into disposable memory with an empty, checksummed photo
+index. Actual open-source DMG, CGB and AGB boot ROMs were used. Inputs were held for three
+frames and released for 90. After 600 startup frames, Start dismissed initial settings repair,
+A entered the camera, and 120 more frames settled automatic exposure.
+
+- Ordinary capture on DMG, CGB and AGB: two A presses saved one photo. Changing the eight-bar
+  grayscale source changed the preview; Off produced a uniform sensor image. Every stock
+  metadata checksum and echo matched, and a new core instance restored the saved image pixels.
+- RGB on CGB and AGB: Select, Down four times, A, Down, A, Select, Down, A enabled Color through
+  the ROM's menus. A and 1,000 frames completed one group without filter-confirmation input.
+  All 43,008 stored channel pixels matched eight RGB color bars, and all three markers shared
+  one nonzero group ID. Stock checksums passed. B, Right, A opened the gallery; after 600
+  frames all 14,336 image pixels matched the expected eight colors. A fresh core loaded the
+  save and reproduced both the stored group and every gallery pixel.
+- The synthetic bridge test also changes the live RGB source between red and green, verifies
+  the frozen channels, preserves that sequence through a paused display preview, checks reset
+  and Off, and refuses stale replies, unsupported versions/channels and nonzero reserved bytes
+  without modifying their request bytes. It runs under AddressSanitizer via
+  `ASAN_OPTIONS=detect_leaks=0 make test-sameboy-bridge`; LeakSanitizer is disabled only for
+  this executor's ptrace restriction.
+- Camera policy/sampling and driver tests pass in a Linux harness with manual display
+  refreshes (11 tests). The Apple display thread and platform session conformances are
+  excluded. The driver retains a held image while no new frame is available and serializes
+  explicit clearing after frames already in flight.
+
+This is headless core evidence. It does not establish Apple SDK compilation, iPhone camera
+delivery, physical orientation/mirroring, microphone/audio-session behavior, or device lifecycle.
+Those checks remain unchecked above.

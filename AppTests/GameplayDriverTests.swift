@@ -6,6 +6,31 @@ import XCTest
 @testable import PressAny
 
 final class GameplayDriverTests: XCTestCase {
+    func testCameraSensorUpdatesLeaveAHeldCaptureUntilExplicitlyCleared() throws {
+        let runtime = BlockingSaveRuntime()
+        let refreshes = ManualRefreshes()
+        let driver = GameplayDriver(runtime: runtime, input: GameplayInputAccumulator(),
+            makeRefreshes: { refreshes.attach($0) })
+        let buffer = CameraFrameBuffer()
+        let generation = buffer.begin()
+        let frame = try CameraFrame(luminance: Data(repeating: 76, count: 128 * 112))
+        buffer.store(frame, generation: generation)
+        driver.cameraFrames = buffer
+        driver.start()
+        defer {
+            runtime.allowSaveToFinish.signal()
+            driver.stop()
+        }
+        XCTAssertTrue(refreshes.send(until: { runtime.sensorAtLastFrame == frame }))
+        let before = runtime.frameCount
+        buffer.clear()
+        XCTAssertTrue(refreshes.send(until: { runtime.frameCount > before }))
+        XCTAssertEqual(runtime.sensorAtLastFrame, frame, "a pause must not replace an RGB sequence's frozen source")
+        try driver.clearCameraFrame()
+        let clearedAt = runtime.frameCount
+        XCTAssertTrue(refreshes.send(until: { runtime.frameCount > clearedAt && runtime.sensorAtLastFrame == nil }))
+    }
+
     func testTimedStateUsesSaveQueueAndFramesContinueDuringTheWrite() throws {
         let runtime = BlockingTimedStateRuntime()
         let refreshes = ManualRefreshes()
@@ -88,13 +113,21 @@ private class BlockingSaveRuntime: GameplayRuntime, @unchecked Sendable {
     private let lock = NSLock()
     private var frames = 0
     private var hasBlockedSave = false
+    private var sensor: CameraFrame?
+    private var frameSensor: CameraFrame?
+    var sensorAtLastFrame: CameraFrame? { lock.withLock { frameSensor } }
+
+    func setCameraFrame(_ frame: CameraFrame?) throws { lock.withLock { sensor = frame } }
 
     var currentFrame: EmulatorVideoFrame?
     var playtimeSeconds: Double { 0 }
     var frameCount: Int { lock.withLock { frames } }
 
     func stepFrame(input: EmulatorInputState) throws -> EmulatorVideoFrame {
-        lock.withLock { frames += 1 }
+        lock.withLock {
+            frames += 1
+            frameSensor = sensor
+        }
         return EmulatorVideoFrame(width: 1, height: 1, bgra8888: Data(repeating: 0, count: 4), emulatedNanoseconds: 1)
     }
 

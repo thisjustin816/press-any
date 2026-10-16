@@ -53,6 +53,7 @@ targets:
         # Save Image in the share sheet, which Share Screenshot opens, needs this key. The app only
         # adds to Photos and never reads the library.
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Press Any adds a screenshot to your Photos when you choose Save Image in the share sheet."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Press Any uses the camera when you choose it in the game menu for a Game Boy Camera game. Images stay on your iPhone."
         # Document types and exempt encryption declaration, merged into the generated Info.plist.
         INFOPLIST_FILE: Config/PressAny-Info.plist
         # Without a launch screen, iOS runs the app letterboxed at an old iPhone's size.

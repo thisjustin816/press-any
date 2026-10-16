@@ -18,7 +18,7 @@ public enum SameBoyAdapterError: Error, Equatable {
 }
 
 public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability,
-    CheatCapability, HardwareModelCapability {
+    CheatCapability, HardwareModelCapability, CameraCapability {
     public let descriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
     public let supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
     public let stateSerializationVersion = "sameboy-bess-v1"
@@ -38,6 +38,22 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     public private(set) var cheatsEnabled = true
 
     public init() {}
+
+    public var hasCamera: Bool {
+        guard let instance, loadedImage != nil else { return false }
+        return SBHasCamera(instance)
+    }
+
+    public func setCameraFrame(_ frame: CameraFrame?) {
+        guard let instance else { return }
+        if let frame {
+            frame.rgb888.withUnsafeBytes { bytes in
+                _ = SBSetCameraRGBFrame(instance, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
+            }
+        } else {
+            _ = SBSetCameraFrame(instance, nil, 0)
+        }
+    }
 
     deinit {
         if let instance {

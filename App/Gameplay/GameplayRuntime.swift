@@ -21,6 +21,8 @@ protocol GameplayRuntime: AnyObject {
         advanceColors: AdvanceColors
     ) throws -> EmulatorVideoFrame?
     func consumeRumbleAmplitude() throws -> Double
+    var hasCamera: Bool { get }
+    func setCameraFrame(_ frame: CameraFrame?) throws
 
     func pause() throws
     func resume() throws
@@ -39,6 +41,9 @@ protocol GameplayRuntime: AnyObject {
 }
 
 extension GameplayRuntime {
+    var hasCamera: Bool { false }
+    func setCameraFrame(_ frame: CameraFrame?) throws {}
+
     /// Quick Play always runs on Automatic.
     func changedHardwareModel() -> HardwareModel? { nil }
 }

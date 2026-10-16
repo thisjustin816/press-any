@@ -11,6 +11,18 @@ import XCTest
 /// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
+    func testCameraMenuFollowsTheCartridgeWithoutLoadingTheGameplayView() throws {
+        let runtime = LifecycleRuntime()
+        let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: .always)
+        XCTAssertFalse(gameplay.prepareGameMenu().allMenus.contains { $0.title == "Game Boy Camera" })
+        XCTAssertFalse(gameplay.isViewLoaded)
+        runtime.cameraAvailable = true
+        let camera = try XCTUnwrap(gameplay.prepareGameMenu().allMenus.first { $0.title == "Game Boy Camera" })
+        XCTAssertEqual(camera.subtitle, "Off")
+        XCTAssertEqual(camera.children.map(\.title), ["Off", "Rear Camera", "Front Camera"])
+        XCTAssertFalse(gameplay.isViewLoaded)
+    }
+
     func testTheGameMenuButtonAsksForAFixedOrderSoCloseGameNeverMoves() {
         // The menu opens upward from the bottom of the screen; left to the system it is reversed there.
         let button = GameMenuButton(menu: UIMenu(children: []))
@@ -916,6 +928,8 @@ final class GameplayPauseReasonsTests: XCTestCase {
 
 /// Throws on a frame while paused, as the real sessions do, and counts lifecycle calls.
 private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
+    var cameraAvailable = false
+    var hasCamera: Bool { cameraAvailable }
     private let lock = NSLock()
     private var paused = false
     private var backgroundCount = 0

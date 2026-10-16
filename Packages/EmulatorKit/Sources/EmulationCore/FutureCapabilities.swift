@@ -1,8 +1,8 @@
 import Foundation
 
 // Capabilities a core may offer beyond EmulatorCore. The app checks for one with a cast
-// (`core as? RewindCapability`), so a core without it needs nothing. SameBoy implements cheats; no
-// core implements the others yet. Rewind's contract follows the spec, and the rest get theirs
+// (`core as? RewindCapability`), so a core without it needs nothing. SameBoy implements cheats
+// and camera input. Rewind's contract follows the spec, and the rest get theirs
 // when their feature is built, so none commits to one core's API.
 
 /// A core that can step back through recent frames.
@@ -35,9 +35,6 @@ public protocol RTCCapability: AnyObject {}
 
 /// A core that can connect to another over a link cable.
 public protocol LinkCableCapability: AnyObject {}
-
-/// A core that can emulate the Game Boy Camera.
-public protocol CameraCapability: AnyObject {}
 
 /// A core that can emulate the Game Boy Printer.
 public protocol PrinterCapability: AnyObject {}

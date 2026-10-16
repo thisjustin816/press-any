@@ -1,6 +1,6 @@
 # Press Any Privacy Policy
 
-Last updated: October 14, 2026
+Last updated: October 16, 2026
 
 Press Any is a Game Boy and Game Boy Color emulator for iPhone, developed by
 Justin Beeson. This policy describes the current app, including builds
@@ -27,6 +27,23 @@ Press Any uses local settings, file timestamps, and system timing information to
 save preferences, manage temporary files, and schedule gameplay. These uses are
 declared in the app's Apple privacy manifest and do not track you across apps or
 websites.
+
+## Game Boy Camera
+
+For a Game Boy Camera cartridge, the game menu offers Rear Camera, Front Camera and Off.
+Camera access starts Off for each game session. The app asks for iOS camera permission only
+when you choose a camera. Capture runs only while gameplay is active and stops when gameplay
+pauses, the app becomes inactive or the game closes. It never requests microphone access.
+
+Camera frames are processed on your device and held temporarily in memory. Ordinary photos
+use grayscale; compatible ROMs such as Photo! DX can request red, green and blue exposures.
+The last sensor image stays in memory while paused, and a color capture holds one image
+across its three exposures. Turning the camera Off, choosing another camera, closing the
+game or a capture failure clears these images.
+They are never sent to the developer or an online service. Photos you save inside the game
+are part of its cartridge save data and follow your normal Save Profiles, exports and backups.
+Quick Play keeps that data temporary unless you add it to your library. You can turn the
+camera Off in the game menu or revoke camera permission in iPhone Settings.
 
 ## Online artwork
 

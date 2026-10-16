@@ -10,6 +10,30 @@ import XCTest
 @testable import QuickPlay
 
 final class QuickPlayTests: XCTestCase {
+    func testQuickPlayCameraFramesStayWithTheTemporaryRuntime() throws {
+        let harness = try QuickPlayHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+        let session = try harness.workspace.start(romURL: harness.writeExternalROM(TestROM.make(title: "CAMERA")))
+        let factory = CapturingQuickPlayFactory()
+        let runtime = harness.makeRuntime(session, factory: factory)
+        XCTAssertFalse(runtime.hasCamera)
+        try runtime.start()
+        let core = try XCTUnwrap(factory.cores.last)
+        XCTAssertFalse(runtime.hasCamera)
+        core.hasCamera = true
+        XCTAssertTrue(runtime.hasCamera)
+        let frame = try CameraFrame(luminance: Data(repeating: 99, count: 128 * 112))
+        try runtime.setCameraFrame(frame)
+        XCTAssertEqual(core.cameraFrame, frame)
+        try runtime.pause()
+        try runtime.setCameraFrame(nil)
+        XCTAssertNil(core.cameraFrame)
+        try runtime.stop(createAutoState: false)
+        XCTAssertFalse(runtime.hasCamera)
+        XCTAssertThrowsError(try runtime.setCameraFrame(frame))
+        XCTAssertTrue(try harness.states.fetchSaveStates(saveProfileID: harness.profile.id).isEmpty)
+    }
+
     func testRunningQuickPlayNeverWritesTimedStates() throws {
         let harness = try QuickPlayHarness.make(seedBattery: Data([1]))
         defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }

@@ -15,6 +15,7 @@ final class GameplayViewController: UIViewController {
     private let audio = AudioOutputEngine()
     private let controllerMonitor: PhysicalControllerMonitor
     private let rumble = RumbleRouter()
+    private let camera: GameplayCamera
     private var renderer: MetalRenderer?
     private let autoResumePolicy: AutoResumePolicy
     var saveStateSlots: SaveStateSlots
@@ -102,9 +103,11 @@ final class GameplayViewController: UIViewController {
         soundMode: SoundMode = .followSilentSwitch,
         hidesTouchControlsWithController: Bool = true,
         touchHaptics: TouchHaptics = .light,
-        controllerMonitor: PhysicalControllerMonitor = PhysicalControllerMonitor()
+        controllerMonitor: PhysicalControllerMonitor = PhysicalControllerMonitor(),
+        cameraSource: any GameplayCameraSource = IPhoneCameraSource()
     ) {
         self.runtime = runtime
+        self.camera = GameplayCamera(source: cameraSource)
         self.saveStateSlots = saveStateSlots
         self.nameNewStates = nameNewStates
         self.controllerMonitor = controllerMonitor
@@ -151,6 +154,8 @@ final class GameplayViewController: UIViewController {
         coordinator.animate(alongsideTransition: { [weak self] _ in
             self?.view.setNeedsLayout()
             self?.view.layoutIfNeeded()
+        }, completion: { [weak self] _ in
+            self?.updateCameraCapture()
         })
     }
 
@@ -160,6 +165,12 @@ final class GameplayViewController: UIViewController {
         view.tintColor = AppBrand.Colors.accent
         installViews()
         configureRuntimeLoop()
+        if runtime.hasCamera { driver.cameraFrames = camera.frames }
+        camera.onError = { [weak self] message in
+            guard let self else { return }
+            try? self.driver.clearCameraFrame()
+            self.showTransientMessage(message)
+        }
         configureInput()
         observeLifecycle()
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: GameplayViewController, _: UITraitCollection) in
@@ -190,6 +201,7 @@ final class GameplayViewController: UIViewController {
         playScreenshotInput()
         // Nothing is paused yet. Starting directly keeps a failed audio start to the one message.
         driver.start()
+        updateCameraCapture()
         if let message { showTransientMessage(message) }
     }
 
@@ -319,6 +331,7 @@ final class GameplayViewController: UIViewController {
             ) { _ in })
         }
         elements.append(makeCaptureMenu())
+        if runtime.hasCamera { elements.append(makeCameraMenu()) }
         elements.append(UIMenu(
             title: "Sound",
             subtitle: soundMode.displayName,
@@ -368,6 +381,37 @@ final class GameplayViewController: UIViewController {
             attributes: hasFrame && artworkTarget != nil ? [] : .disabled
         ) { [weak self] _ in self?.useCurrentFrameAsArtwork() }
         return UIMenu(title: "Capture", image: UIImage(systemName: "camera"), children: [share, artwork])
+    }
+
+    private func makeCameraMenu() -> UIMenu {
+        let off = UIAction(title: "Off", state: camera.position == nil ? .on : .off) { [weak self] _ in
+            self?.selectCamera(nil)
+        }
+        let choices = GameplayCameraPosition.allCases.map { position in
+            UIAction(title: position.title, state: camera.position == position ? .on : .off) { [weak self] _ in
+                self?.selectCamera(position)
+            }
+        }
+        return UIMenu(
+            title: "Game Boy Camera", subtitle: camera.position?.title ?? "Off",
+            image: UIImage(systemName: "camera.fill"), options: .singleSelection, children: [off] + choices
+        )
+    }
+
+    private func selectCamera(_ position: GameplayCameraPosition?) {
+        camera.select(position)
+        try? driver.clearCameraFrame()
+    }
+
+    private func updateCameraCapture() {
+        let angle: Double
+        switch viewIfLoaded?.window?.windowScene?.interfaceOrientation {
+        case .landscapeLeft: angle = 0
+        case .landscapeRight: angle = 180
+        case .portraitUpsideDown: angle = 270
+        default: angle = 90
+        }
+        camera.setRunning(driver.isRunning && !stopped && !halted, rotationAngle: angle)
     }
 
     private func currentFramePNG() throws -> Data {
@@ -953,6 +997,7 @@ final class GameplayViewController: UIViewController {
     /// through here.
     private func applyPauseReasons() {
         guard !stopped, !halted else { return }
+        defer { updateCameraCapture() }
         pausedOverlay.isHidden = !pauseReasons.showsPausedOverlay
         if pauseReasons.shouldRun {
             guard !driver.isRunning else { return }
@@ -1137,6 +1182,8 @@ final class GameplayViewController: UIViewController {
     private func stopRuntime() throws {
         guard !stopped else { return }
         driver.stop()
+        camera.close()
+        if runtime.hasCamera { try? runtime.setCameraFrame(nil) }
         audio.stop()
         try runtime.stop(createAutoState: true)
         stopped = true
@@ -1145,6 +1192,8 @@ final class GameplayViewController: UIViewController {
     private func presentRuntimeError(_ error: Error) {
         halted = true
         driver.stop()
+        camera.close()
+        if runtime.hasCamera { try? runtime.setCameraFrame(nil) }
         audio.pause()
         guard presentedViewController == nil else { return }
         let alert = UIAlertController(
