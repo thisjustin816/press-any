@@ -166,6 +166,13 @@ struct RootView: View {
                 onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true },
                 onOpenCheats: presentation.cheatsBuildID == nil ? nil : { showsGameplayCheats = true },
                 onSoundModeChange: { try bootstrap.container?.setSoundMode($0) },
+                onCameraChange: presentation.settings.map { target in
+                    { (camera: GameBoyCamera) throws in
+                        guard let container = bootstrap.container else { return }
+                        try container.setGameBoyCamera(camera, for: target)
+                        gameplay?.display = container.gameplayDisplay(for: target)
+                    }
+                },
                 artworkTarget: gameplayArtworkTarget(presentation)
             )
             .ignoresSafeArea()
@@ -346,7 +353,8 @@ struct RootView: View {
                     // The cover's item keeps its identity, so the game updates in place.
                     gameplay?.display = container.gameplayDisplay(for: target)
                 },
-                marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: target.gameID, buildID: target.buildID)
+                marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: target.gameID, buildID: target.buildID),
+                hasCamera: presentation.runtime.hasCamera
             )
             .presentationDetents([.medium, .large])
         }
@@ -616,7 +624,8 @@ struct RootView: View {
                     advanceColors: container.advanceColors(for: launch.context),
                     frameBlending: container.frameBlending(for: launch.context),
                     fastForwardSpeed: container.fastForwardSpeed(for: launch.context),
-                    fastForwardAudio: container.fastForwardAudio(for: launch.context)
+                    fastForwardAudio: container.fastForwardAudio(for: launch.context),
+                    camera: container.gameBoyCamera(for: launch.context)
                 )
             )
         } catch PersistentSaveServiceError.hashMismatch {

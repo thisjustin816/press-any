@@ -288,7 +288,8 @@ struct LibraryView: View {
                     buildID: nil,
                     store: container.repositories.settings,
                     plus: container.plus,
-                    marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: game.id, buildID: nil)
+                    marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: game.id, buildID: nil),
+                    hasCamera: container.hasCameraCartridge(gameID: game.id, buildID: nil)
                 )
             }
             .sheet(isPresented: $showSettings) {

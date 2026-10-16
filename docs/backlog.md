@@ -653,8 +653,9 @@ build/tests).
 | missing | Better ROM comparison + BPS generation | v1.1 |  |
 | missing | iPad side-by-side manual/game | v1.1 |  |
 
-Done: Game Boy Camera (v1.1): opt-in rear/front capture in the game menu, for camera cartridges
-in library play and Quick Play; permission on selection, neutral-gray fallback, orientation and
+Done: Game Boy Camera (v1.1): rear camera by default for camera cartridges in library play and
+Quick Play, with a scoped Game Boy Camera setting (Rear, Front, Off) and a game-menu switch that
+saves to the Game; permission when a camera game opens, neutral-gray fallback, orientation and
 front mirroring, capture stopped on pause/inactivity/close, and photos kept by the normal save
 path. Photo! DX's version-1 RGB handshake provides automatic color with a frozen source across
 the three exposures. Synthetic cartridge, adapter, session, camera-policy and sampling tests

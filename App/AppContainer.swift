@@ -690,6 +690,18 @@ final class AppContainer {
     /// Whether a game's header marks it for a Game Boy Color only (CGB flag 0xC0). With no Build
     /// given, every Build of the Game must be marked. A Build without a stored header counts as no.
     func marksGameBoyColorOnly(gameID: UUID?, buildID: UUID?) -> Bool {
+        let headers = buildHeaders(gameID: gameID, buildID: buildID)
+        return !headers.isEmpty && headers.allSatisfy { $0?.cgbFlag == 0xC0 }
+    }
+
+    /// Whether a game is a Game Boy Camera cartridge (type 0xFC), so its settings show Game Boy
+    /// Camera. With no Build given, any Build of the Game counts.
+    func hasCameraCartridge(gameID: UUID?, buildID: UUID?) -> Bool {
+        buildHeaders(gameID: gameID, buildID: buildID).contains { $0?.cartridgeType == 0xFC }
+    }
+
+    /// The stored header of the Build, or of each Build of the Game, nil where none is stored.
+    private func buildHeaders(gameID: UUID?, buildID: UUID?) -> [ImageFingerprint?] {
         let builds: [Build]
         if let buildID {
             builds = (try? repositories.builds.fetchBuild(id: buildID)).map { [$0] } ?? []
@@ -700,8 +712,8 @@ final class AppContainer {
         }
         guard !builds.isEmpty,
               let fingerprints = try? repositories.fingerprints.fetchFingerprints(imageSHA256s: builds.map(\.imageSHA256))
-        else { return false }
-        return builds.allSatisfy { fingerprints[$0.imageSHA256]?.cgbFlag == 0xC0 }
+        else { return [] }
+        return builds.map { fingerprints[$0.imageSHA256] }
     }
 
     /// The display settings for an open game, resolved down to its Build.
@@ -716,8 +728,24 @@ final class AppContainer {
             advanceColors: advanceColors(system: target.system, gameID: target.gameID, buildID: target.buildID),
             frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID),
             fastForwardSpeed: fastForwardSpeed(system: target.system, gameID: target.gameID, buildID: target.buildID),
-            fastForwardAudio: fastForwardAudio(system: target.system, gameID: target.gameID, buildID: target.buildID)
+            fastForwardAudio: fastForwardAudio(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            camera: gameBoyCamera(system: target.system, gameID: target.gameID, buildID: target.buildID)
         )
+    }
+
+    /// Unset or unreadable means the rear camera.
+    func gameBoyCamera(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> GameBoyCamera {
+        launchSetting(GameBoyCamera.self, .gameBoyCamera, system: system, gameID: gameID, buildID: buildID) ?? .defaultValue
+    }
+
+    func gameBoyCamera(for context: LaunchContext) -> GameBoyCamera {
+        launchSetting(GameBoyCamera.self, .gameBoyCamera, for: context) ?? .defaultValue
+    }
+
+    /// Saves the game menu's camera choice where its Settings saves: the Game, or the system in
+    /// Quick Play.
+    func setGameBoyCamera(_ camera: GameBoyCamera, for target: GameplaySettingsTarget) throws {
+        try repositories.settings.set(camera, key: SettingKey.gameBoyCamera.rawValue, scope: target.scope)
     }
 
     func saveStateSlots() -> SaveStateSlots { appSetting(SaveStateSlots.self, .saveStateSlots) ?? .off }
@@ -818,6 +846,8 @@ struct GameplayDisplaySettings: Equatable {
     var frameBlending: FrameBlending
     var fastForwardSpeed: FastForwardSpeed
     var fastForwardAudio: FastForwardAudio
+    /// Only camera cartridges read it.
+    var camera: GameBoyCamera = .defaultValue
 }
 
 struct PreparedLaunch {

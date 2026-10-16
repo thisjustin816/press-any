@@ -945,18 +945,25 @@ picture. A connected controller still hides the touch controls.
 
 ### Game Boy Camera
 
-A camera cartridge adds Game Boy Camera to the game menu in library play and Quick Play.
-It starts Off on every launch. Choose Rear Camera or Front Camera, allow iOS camera access
-when asked, then Resume to use it. Choosing a camera while paused leaves capture stopped
-until gameplay resumes. Front Camera mirrors the image, and capture follows the gameplay
-orientation. No microphone or Photos access is requested.
+A camera cartridge sees through the iPhone camera as soon as it opens. **Game Boy Camera**
+(App, System, Game or Build; Rear by default) chooses Rear, Front or Off. It is on App
+Settings' Playing page, on each system's page, and in the settings of a Game or Build whose
+cartridge is a camera; other games don't show it. The first camera game opened with a camera
+chosen brings up iOS's camera permission, and only then does iPhone Settings list Camera for
+Press Any. The game menu adds Game Boy Camera in library play and Quick Play, with Rear
+Camera, Front Camera and Off. A choice there applies at once and saves where the menu's
+Settings saves: the Game, or the system in Quick Play. Choosing the current camera again
+retries it after access was turned on or capture failed. Choosing a camera while paused
+leaves capture stopped until gameplay resumes. Front Camera mirrors the image, and capture
+follows the gameplay orientation. No microphone or Photos access is requested.
 
 Frames are center-cropped to the sensor's 128 by 112 aspect ratio and supplied as RGB through
 `CameraCapability`. Ordinary exposures use their brightness. SameBoy handles the camera's
 exposure, gain and dithering. Each shot holds one sensor image while the cartridge reads it.
 Off supplies neutral gray;
 denied access, a missing camera or an interrupted capture leaves the game playable and explains
-how to try again. Other cartridges show no camera controls and never request access.
+how to try again. With access denied, each camera game that opens with a camera chosen says
+so, until access is allowed or the setting is Off. Other cartridges show no camera controls and never request access.
 
 Photo! DX's Game Boy Color ROM supports automatic RGB capture on Game Boy Color and Advance
 models. Turn on Color in the ROM's camera menu: it saves red, green and blue exposures as a
@@ -969,7 +976,7 @@ frames change or gameplay pauses. The ROM handles color rendering and photo grou
 Capture hardware stops when gameplay pauses or becomes inactive. The last sensor image and
 any unfinished RGB group's frozen image stay in memory so resuming can finish that group.
 Off, choosing another camera, closing or a capture failure clears them. Resuming restarts an
-authorized camera choice; closing clears the choice.
+authorized camera choice.
 Raw frames stay in memory and are never uploaded or exported automatically. Photos saved by
 the game live in its cartridge RAM and follow normal Save Profile saves, exports and backups.
 Quick Play keeps them temporary until Add to Library.
@@ -1536,7 +1543,7 @@ Builds per Game, profiles shared by Builds, Quick Play sessions promoted), never
 filenames or library contents; where they go and the privacy copy are still open. Artwork requests
 send canonical release names as described above. ROM, save and state bytes, screenshots, memory,
 imported filenames, notes and the library database are never uploaded automatically.
-Game Boy Camera access is requested only after a camera is chosen in the game menu. Capture
+Game Boy Camera access is requested only when a camera cartridge opens with a camera chosen. Capture
 stops whenever gameplay pauses, and frames are processed on the device. Photos the game saves
 remain in its normal save data.
 Provider queries and catalog uploads describe their consent accurately. Service keys

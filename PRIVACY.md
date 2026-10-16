@@ -30,9 +30,9 @@ websites.
 
 ## Game Boy Camera
 
-For a Game Boy Camera cartridge, the game menu offers Rear Camera, Front Camera and Off.
-Camera access starts Off for each game session. The app asks for iOS camera permission only
-when you choose a camera. Capture runs only while gameplay is active and stops when gameplay
+A Game Boy Camera cartridge sees through your iPhone's rear camera by default. You can choose
+Rear, Front or Off in Settings or the game menu. The app asks for iOS camera permission the
+first time a Game Boy Camera game opens with a camera chosen, and never for other games. Capture runs only while gameplay is active and stops when gameplay
 pauses, the app becomes inactive or the game closes. It never requests microphone access.
 
 Camera frames are processed on your device and held temporarily in memory. Ordinary photos
@@ -43,7 +43,7 @@ game or a capture failure clears these images.
 They are never sent to the developer or an online service. Photos you save inside the game
 are part of its cartridge save data and follow your normal Save Profiles, exports and backups.
 Quick Play keeps that data temporary unless you add it to your library. You can turn the
-camera Off in the game menu or revoke camera permission in iPhone Settings.
+camera Off in Settings or the game menu, or revoke camera permission in iPhone Settings.
 
 ## Online artwork
 

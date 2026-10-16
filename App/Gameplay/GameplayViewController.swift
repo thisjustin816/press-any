@@ -79,6 +79,10 @@ final class GameplayViewController: UIViewController {
     var onOpenCheats: (() -> Void)?
     /// Saves a Sound choice made from the game menu, which applies it to the game at once.
     var onSoundModeChange: ((SoundMode) throws -> Void)?
+    /// Saves a Game Boy Camera choice made from the game menu, which applies it at once.
+    var onCameraChange: ((GameBoyCamera) throws -> Void)?
+    /// The Game Boy Camera setting. A camera cartridge starts with it and asks for access then.
+    private var cameraChoice: GameBoyCamera
     var artworkTarget: GameplayArtworkTarget?
 
     init(
@@ -104,10 +108,12 @@ final class GameplayViewController: UIViewController {
         hidesTouchControlsWithController: Bool = true,
         touchHaptics: TouchHaptics = .light,
         controllerMonitor: PhysicalControllerMonitor = PhysicalControllerMonitor(),
+        camera cameraChoice: GameBoyCamera = .defaultValue,
         cameraSource: any GameplayCameraSource = IPhoneCameraSource()
     ) {
         self.runtime = runtime
         self.camera = GameplayCamera(source: cameraSource)
+        self.cameraChoice = cameraChoice
         self.saveStateSlots = saveStateSlots
         self.nameNewStates = nameNewStates
         self.controllerMonitor = controllerMonitor
@@ -201,6 +207,7 @@ final class GameplayViewController: UIViewController {
         playScreenshotInput()
         // Nothing is paused yet. Starting directly keeps a failed audio start to the one message.
         driver.start()
+        selectCamera()
         updateCameraCapture()
         if let message { showTransientMessage(message) }
     }
@@ -383,23 +390,41 @@ final class GameplayViewController: UIViewController {
         return UIMenu(title: "Capture", image: UIImage(systemName: "camera"), children: [share, artwork])
     }
 
+    /// Shows the setting, which stays chosen while access is off, so the menu matches Settings.
     private func makeCameraMenu() -> UIMenu {
-        let off = UIAction(title: "Off", state: camera.position == nil ? .on : .off) { [weak self] _ in
-            self?.selectCamera(nil)
-        }
-        let choices = GameplayCameraPosition.allCases.map { position in
-            UIAction(title: position.title, state: camera.position == position ? .on : .off) { [weak self] _ in
-                self?.selectCamera(position)
+        let choices = GameBoyCamera.allCases.map { choice in
+            UIAction(title: choice.menuTitle, state: cameraChoice == choice ? .on : .off) { [weak self] _ in
+                self?.chooseCamera(choice)
             }
         }
         return UIMenu(
-            title: "Game Boy Camera", subtitle: camera.position?.title ?? "Off",
-            image: UIImage(systemName: "camera.fill"), options: .singleSelection, children: [off] + choices
+            title: "Game Boy Camera", subtitle: cameraChoice.menuTitle,
+            image: UIImage(systemName: "camera.fill"), options: .singleSelection, children: choices
         )
     }
 
-    private func selectCamera(_ position: GameplayCameraPosition?) {
-        camera.select(position)
+    /// Choosing the current camera again retries it, after access was turned on or it failed.
+    private func chooseCamera(_ choice: GameBoyCamera) {
+        cameraChoice = choice
+        selectCamera()
+        do {
+            try onCameraChange?(choice)
+        } catch {
+            showTransientMessage("Could not save the setting: \(error.localizedDescription)")
+        }
+    }
+
+    /// Applies a Game Boy Camera setting changed in the Settings sheet. The same choice again,
+    /// as each update repeats it, leaves capture alone.
+    func applyCameraChoice(_ choice: GameBoyCamera) {
+        guard choice != cameraChoice else { return }
+        cameraChoice = choice
+        selectCamera()
+    }
+
+    private func selectCamera() {
+        guard runtime.hasCamera, !stopped, !halted else { return }
+        camera.select(cameraChoice.position)
         try? driver.clearCameraFrame()
     }
 

@@ -1,10 +1,28 @@
 import EmulationCore
+import EmulatorDomain
 import Foundation
 
 enum GameplayCameraPosition: CaseIterable, Sendable {
     case rear, front
+}
 
-    var title: String { self == .rear ? "Rear Camera" : "Front Camera" }
+extension GameBoyCamera {
+    /// Nil for Off.
+    var position: GameplayCameraPosition? {
+        switch self {
+        case .rear: .rear
+        case .front: .front
+        case .off: nil
+        }
+    }
+
+    var menuTitle: String {
+        switch self {
+        case .rear: "Rear Camera"
+        case .front: "Front Camera"
+        case .off: "Off"
+        }
+    }
 }
 
 @MainActor
@@ -69,7 +87,7 @@ final class GameplayCamera {
             let allowed = await source.requestAccess()
             guard request == pending else { return }
             guard allowed else {
-                onError?("Camera access is off. You can allow access in iPhone Settings.")
+                onError?("Camera access is off for \(AppBrand.displayName). Allow it in iPhone Settings, or set Game Boy Camera to Off.")
                 return
             }
             self.position = position
@@ -107,7 +125,7 @@ final class GameplayCamera {
                 guard let self, self.request == pending, self.capturing,
                       self.frames.isCurrent(generation) else { return }
                 self.select(nil)
-                self.onError?("The camera is unavailable. Choose a camera in the game menu to try again.")
+                self.onError?("The camera is unavailable. Choose it again under Game Boy Camera in the game menu to try again.")
             }
         })
     }

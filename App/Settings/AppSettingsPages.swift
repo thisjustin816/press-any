@@ -216,6 +216,7 @@ struct PlayingSettingsPage: View {
     @State private var keepAutoStates: KeepAutoStates
     @State private var timedStates: TimedStates
     @State private var hardwareModel: HardwareModel
+    @State private var gameBoyCamera: GameBoyCamera
     @State private var errorMessage: String?
 
     init(storage: AppSettingsStorage, plus: PlusStore) {
@@ -232,6 +233,7 @@ struct PlayingSettingsPage: View {
         _autoResumePolicy = State(initialValue: storage.value(AutoResumePolicy.self, .autoResumePolicy) ?? .always)
         _skipBootAnimation = State(initialValue: storage.value(Bool.self, .skipBootAnimation) ?? false)
         _hardwareModel = State(initialValue: storage.value(HardwareModel.self, .hardwareModel) ?? .automatic)
+        _gameBoyCamera = State(initialValue: storage.value(GameBoyCamera.self, .gameBoyCamera) ?? .defaultValue)
     }
 
     var body: some View {
@@ -281,6 +283,16 @@ struct PlayingSettingsPage: View {
             }
 
             Section {
+                Picker("Camera", selection: $gameBoyCamera) {
+                    ForEach(GameBoyCamera.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                }
+            } header: {
+                Text("Game Boy Camera")
+            } footer: {
+                Text(GameBoyCamera.explanation + " The game menu sets it for one game.")
+            }
+
+            Section {
                 Picker("Slots", selection: $saveStateSlots) {
                     ForEach(SaveStateSlots.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
@@ -314,6 +326,7 @@ struct PlayingSettingsPage: View {
         .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
         .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
         .onChange(of: hardwareModel) { _, newValue in save(newValue, .hardwareModel) }
+        .onChange(of: gameBoyCamera) { _, newValue in save(newValue, .gameBoyCamera) }
     }
 
     /// Without Plus the row shows Automatic, which games play on, and each other model is marked
