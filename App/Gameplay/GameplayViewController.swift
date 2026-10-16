@@ -79,10 +79,12 @@ final class GameplayViewController: UIViewController {
     var onOpenCheats: (() -> Void)?
     /// Saves a Sound choice made from the game menu, which applies it to the game at once.
     var onSoundModeChange: ((SoundMode) throws -> Void)?
-    /// Saves a Game Boy Camera choice made from the game menu, which applies it at once.
-    var onCameraChange: ((GameBoyCamera) throws -> Void)?
-    /// The Game Boy Camera setting. A camera cartridge starts with it and asks for access then.
+    /// The camera in use. A camera cartridge starts with the Game Boy Camera setting and asks for
+    /// access then; the game menu changes it until the game closes.
     private var cameraChoice: GameBoyCamera
+    /// The Game Boy Camera setting last applied, so only a change in Settings replaces the
+    /// game menu's choice.
+    private var cameraSetting: GameBoyCamera
     var artworkTarget: GameplayArtworkTarget?
 
     init(
@@ -114,6 +116,7 @@ final class GameplayViewController: UIViewController {
         self.runtime = runtime
         self.camera = GameplayCamera(source: cameraSource)
         self.cameraChoice = cameraChoice
+        self.cameraSetting = cameraChoice
         self.saveStateSlots = saveStateSlots
         self.nameNewStates = nameNewStates
         self.controllerMonitor = controllerMonitor
@@ -390,7 +393,7 @@ final class GameplayViewController: UIViewController {
         return UIMenu(title: "Capture", image: UIImage(systemName: "camera"), children: [share, artwork])
     }
 
-    /// Shows the setting, which stays chosen while access is off, so the menu matches Settings.
+    /// Shows the camera in use, which stays chosen while access is off.
     private func makeCameraMenu() -> UIMenu {
         let choices = GameBoyCamera.allCases.map { choice in
             UIAction(title: choice.menuTitle, state: cameraChoice == choice ? .on : .off) { [weak self] _ in
@@ -403,23 +406,19 @@ final class GameplayViewController: UIViewController {
         )
     }
 
-    /// Choosing the current camera again retries it, after access was turned on or it failed.
-    private func chooseCamera(_ choice: GameBoyCamera) {
+    /// Lasts until the game closes; the setting decides the next launch. Choosing the current
+    /// camera again retries it, after access was turned on or it failed.
+    func chooseCamera(_ choice: GameBoyCamera) {
         cameraChoice = choice
         selectCamera()
-        do {
-            try onCameraChange?(choice)
-        } catch {
-            showTransientMessage("Could not save the setting: \(error.localizedDescription)")
-        }
     }
 
-    /// Applies a Game Boy Camera setting changed in the Settings sheet. The same choice again,
-    /// as each update repeats it, leaves capture alone.
-    func applyCameraChoice(_ choice: GameBoyCamera) {
-        guard choice != cameraChoice else { return }
-        cameraChoice = choice
-        selectCamera()
+    /// Applies the Game Boy Camera setting when Settings changes it. Each update repeats the
+    /// setting, which leaves the game menu's choice alone.
+    func applyCameraSetting(_ setting: GameBoyCamera) {
+        guard setting != cameraSetting else { return }
+        cameraSetting = setting
+        chooseCamera(setting)
     }
 
     private func selectCamera() {

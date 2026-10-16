@@ -25,7 +25,6 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     var onOpenSettings: (() -> Void)?
     var onOpenCheats: (() -> Void)?
     var onSoundModeChange: ((SoundMode) throws -> Void)?
-    var onCameraChange: ((GameBoyCamera) throws -> Void)?
     var artworkTarget: GameplayArtworkTarget?
 
     func makeUIViewController(context: Context) -> GameplayViewController {
@@ -59,7 +58,6 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
         controller.onOpenSettings = onOpenSettings
         controller.onOpenCheats = onOpenCheats
         controller.onSoundModeChange = onSoundModeChange
-        controller.onCameraChange = onCameraChange
         controller.artworkTarget = artworkTarget
         return controller
     }
@@ -80,7 +78,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             fastForwardSpeed: display.fastForwardSpeed,
             fastForwardAudio: display.fastForwardAudio
         )
-        uiViewController.applyCameraChoice(display.camera)
+        uiViewController.applyCameraSetting(display.camera)
         // Updates repeat, and a close that fails to save waits on the player, so ask only once.
         if closeRequested, !context.coordinator.closeSent {
             context.coordinator.closeSent = true

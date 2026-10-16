@@ -90,8 +90,9 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case hardwareModel
     /// `AdvanceColors`, unset means `.gameBoyAdvance`.
     case advanceColors
-    /// `GameBoyCamera`, unset means `.rear`. Only camera cartridges read it.
-    case gameBoyCamera
+    /// `GameBoyCamera`, unset means `.rear`. Only camera cartridges read it. Test builds saved the
+    /// game menu's choice under `gameBoyCamera`; this key leaves those behind.
+    case gameBoyCamera = "gameBoyCameraSetting"
 
     public var isAppOnly: Bool {
         switch self {

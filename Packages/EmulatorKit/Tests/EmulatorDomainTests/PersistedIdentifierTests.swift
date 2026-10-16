@@ -45,7 +45,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(SettingKey.fastForwardAudio.rawValue, "fastForwardAudio")
         XCTAssertEqual(SettingKey.hardwareModel.rawValue, "hardwareModel")
         XCTAssertEqual(SettingKey.advanceColors.rawValue, "advanceColors")
-        XCTAssertEqual(SettingKey.gameBoyCamera.rawValue, "gameBoyCamera")
+        XCTAssertEqual(SettingKey.gameBoyCamera.rawValue, "gameBoyCameraSetting")
     }
 
     func testHardwareModelValuesAreStableAndAutomaticFollowsTheSystem() {

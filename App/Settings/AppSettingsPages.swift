@@ -289,7 +289,7 @@ struct PlayingSettingsPage: View {
             } header: {
                 Text("Game Boy Camera")
             } footer: {
-                Text(GameBoyCamera.explanation + " The game menu sets it for one game.")
+                Text(GameBoyCamera.explanation + " The game menu changes it until the game closes.")
             }
 
             Section {

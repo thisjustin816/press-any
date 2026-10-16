@@ -50,6 +50,23 @@ final class GameplayLifecycleTests: XCTestCase {
         }
     }
 
+    func testTheGameMenuCameraLastsForTheSessionUntilSettingsChangeIt() {
+        let runtime = LifecycleRuntime()
+        runtime.cameraAvailable = true
+        let gameplay = GameplayViewController(
+            runtime: runtime, autoResumePolicy: .always, camera: .rear, cameraSource: LaunchCameraSource()
+        )
+        func shown() -> String? {
+            gameplay.prepareGameMenu().allMenus.first { $0.title == "Game Boy Camera" }?.subtitle
+        }
+        gameplay.chooseCamera(.off)
+        XCTAssertEqual(shown(), "Off")
+        gameplay.applyCameraSetting(.rear)
+        XCTAssertEqual(shown(), "Off", "an update repeating the setting keeps the menu's choice")
+        gameplay.applyCameraSetting(.front)
+        XCTAssertEqual(shown(), "Front Camera", "a change in Settings applies at once")
+    }
+
     func testTheGameMenuButtonAsksForAFixedOrderSoCloseGameNeverMoves() {
         // The menu opens upward from the bottom of the screen; left to the system it is reversed there.
         let button = GameMenuButton(menu: UIMenu(children: []))

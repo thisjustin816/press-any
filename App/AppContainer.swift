@@ -742,12 +742,6 @@ final class AppContainer {
         launchSetting(GameBoyCamera.self, .gameBoyCamera, for: context) ?? .defaultValue
     }
 
-    /// Saves the game menu's camera choice where its Settings saves: the Game, or the system in
-    /// Quick Play.
-    func setGameBoyCamera(_ camera: GameBoyCamera, for target: GameplaySettingsTarget) throws {
-        try repositories.settings.set(camera, key: SettingKey.gameBoyCamera.rawValue, scope: target.scope)
-    }
-
     func saveStateSlots() -> SaveStateSlots { appSetting(SaveStateSlots.self, .saveStateSlots) ?? .off }
     func nameNewStates() -> Bool { appSetting(Bool.self, .nameNewStates) ?? false }
 

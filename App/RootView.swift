@@ -166,13 +166,6 @@ struct RootView: View {
                 onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true },
                 onOpenCheats: presentation.cheatsBuildID == nil ? nil : { showsGameplayCheats = true },
                 onSoundModeChange: { try bootstrap.container?.setSoundMode($0) },
-                onCameraChange: presentation.settings.map { target in
-                    { (camera: GameBoyCamera) throws in
-                        guard let container = bootstrap.container else { return }
-                        try container.setGameBoyCamera(camera, for: target)
-                        gameplay?.display = container.gameplayDisplay(for: target)
-                    }
-                },
                 artworkTarget: gameplayArtworkTarget(presentation)
             )
             .ignoresSafeArea()

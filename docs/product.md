@@ -951,9 +951,10 @@ Settings' Playing page, on each system's page, and in the settings of a Game or 
 cartridge is a camera; other games don't show it. The first camera game opened with a camera
 chosen brings up iOS's camera permission, and only then does iPhone Settings list Camera for
 Press Any. The game menu adds Game Boy Camera in library play and Quick Play, with Rear
-Camera, Front Camera and Off. A choice there applies at once and saves where the menu's
-Settings saves: the Game, or the system in Quick Play. Choosing the current camera again
-retries it after access was turned on or capture failed. Choosing a camera while paused
+Camera, Front Camera and Off. A choice there applies at once and lasts until the game closes;
+the next launch starts from the setting again. A change to the setting in the game menu's
+Settings applies at once and replaces it. Choosing the current camera again retries it after
+access was turned on or capture failed. Choosing a camera while paused
 leaves capture stopped until gameplay resumes. Front Camera mirrors the image, and capture
 follows the gameplay orientation. No microphone or Photos access is requested.
 

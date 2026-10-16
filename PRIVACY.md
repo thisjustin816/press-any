@@ -31,7 +31,7 @@ websites.
 ## Game Boy Camera
 
 A Game Boy Camera cartridge sees through your iPhone's rear camera by default. You can choose
-Rear, Front or Off in Settings or the game menu. The app asks for iOS camera permission the
+Rear, Front or Off in Settings, or in the game menu until the game closes. The app asks for iOS camera permission the
 first time a Game Boy Camera game opens with a camera chosen, and never for other games. Capture runs only while gameplay is active and stops when gameplay
 pauses, the app becomes inactive or the game closes. It never requests microphone access.
 
