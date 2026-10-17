@@ -346,7 +346,8 @@ struct RootView: View {
                     // The cover's item keeps its identity, so the game updates in place.
                     gameplay?.display = container.gameplayDisplay(for: target)
                 },
-                marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: target.gameID, buildID: target.buildID)
+                marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: target.gameID, buildID: target.buildID),
+                hasCamera: presentation.runtime.hasCamera
             )
             .presentationDetents([.medium, .large])
         }
@@ -616,7 +617,8 @@ struct RootView: View {
                     advanceColors: container.advanceColors(for: launch.context),
                     frameBlending: container.frameBlending(for: launch.context),
                     fastForwardSpeed: container.fastForwardSpeed(for: launch.context),
-                    fastForwardAudio: container.fastForwardAudio(for: launch.context)
+                    fastForwardAudio: container.fastForwardAudio(for: launch.context),
+                    camera: container.gameBoyCamera(for: launch.context)
                 )
             )
         } catch PersistentSaveServiceError.hashMismatch {

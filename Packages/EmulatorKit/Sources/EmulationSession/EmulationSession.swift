@@ -431,6 +431,16 @@ public final class EmulationSession: @unchecked Sendable {
         }
     }
 
+    public var hasCamera: Bool {
+        guard let (worker, _, _) = try? snapshotActive() else { return false }
+        return (try? worker.perform { ($0 as? any CameraCapability)?.hasCamera ?? false }) ?? false
+    }
+
+    public func setCameraFrame(_ frame: CameraFrame?) throws {
+        let (worker, _, _) = try snapshotActive()
+        try worker.perform { ($0 as? any CameraCapability)?.setCameraFrame(frame) }
+    }
+
     public func consumeRumbleAmplitude() throws -> Double {
         let (worker, _, _) = try snapshotActive()
         return try worker.perform { core in

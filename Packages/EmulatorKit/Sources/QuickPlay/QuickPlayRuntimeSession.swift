@@ -160,6 +160,16 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         return frame
     }
 
+    public var hasCamera: Bool {
+        guard let worker = try? activeWorker(requireRunning: false) else { return false }
+        return (try? worker.perform { ($0 as? any CameraCapability)?.hasCamera ?? false }) ?? false
+    }
+
+    public func setCameraFrame(_ frame: CameraFrame?) throws {
+        let worker = try activeWorker(requireRunning: false)
+        try worker.perform { ($0 as? any CameraCapability)?.setCameraFrame(frame) }
+    }
+
     public func consumeRumbleAmplitude() throws -> Double {
         let worker = try activeWorker(requireRunning: false)
         return try worker.perform { core in

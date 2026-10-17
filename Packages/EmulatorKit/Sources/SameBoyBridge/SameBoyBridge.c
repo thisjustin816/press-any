@@ -34,6 +34,13 @@
 #define SB_SERIAL_CAPACITY 4096u
 // Every RGB555 color.
 #define SB_RGB555_COLORS 32768u
+#define SB_CAMERA_PIXELS (128u * 112u)
+
+typedef struct {
+    uint8_t shot[SB_CAMERA_PIXELS];
+    uint8_t sequence[SB_CAMERA_PIXELS * 3];
+    uint8_t next_channel;
+} SBCameraCapture;
 
 struct SBInstance {
     GB_gameboy_t *gb;
@@ -59,7 +66,89 @@ struct SBInstance {
     size_t serial_count;
     uint8_t serial_byte;
     uint8_t serial_bits;
+    uint8_t camera_frame[SB_CAMERA_PIXELS * 3];
+    SBCameraCapture camera;
+    bool camera_pending;
 };
+
+static uint8_t sb_camera_pixel(GB_gameboy_t *gb, uint8_t x, uint8_t y)
+{
+    SBInstance *instance = GB_get_user_data(gb);
+    if (!instance || x >= 128 || y >= 112) return 128;
+    return instance->camera.shot[y * 128u + x];
+}
+
+static void sb_camera_requested(GB_gameboy_t *gb)
+{
+    SBInstance *instance = GB_get_user_data(gb);
+    size_t ram_size = 0;
+    uint8_t *ram = GB_get_direct_access(gb, GB_DIRECT_ACCESS_CART_RAM, &ram_size, NULL);
+    uint8_t *request = ram && ram_size >= 0x100 ? ram + 0xf0 : NULL;
+    bool valid = request && !memcmp(request, "RGB?", 4) && request[4] == 1 && request[5] <= 3;
+    // A new request clears the entire reply and reserved area. A leftover HOST reply cannot
+    // select a channel for a legacy exposure or reuse an earlier sequence.
+    for (unsigned i = 6; valid && i < 16; i++) valid = request[i] == 0;
+    uint8_t channel = valid ? request[5] : 0;
+    const uint8_t *source = instance->camera_frame;
+    if (channel) {
+        if (channel == 1 || channel != instance->camera.next_channel) {
+            memcpy(instance->camera.sequence, instance->camera_frame, sizeof(instance->camera.sequence));
+        }
+        source = instance->camera.sequence;
+        instance->camera.next_channel = channel == 3 ? 0 : channel + 1;
+    } else {
+        instance->camera.next_channel = 0;
+    }
+    for (size_t i = 0; i < SB_CAMERA_PIXELS; i++) {
+        const uint8_t *rgb = source + i * 3;
+        instance->camera.shot[i] = channel ? rgb[channel - 1]
+            : (77u * rgb[0] + 150u * rgb[1] + 29u * rgb[2] + 128u) >> 8;
+    }
+    if (valid) memcpy(request + 6, "HOST\x01\x00", 6);
+    instance->camera_pending = true;
+}
+
+static unsigned sb_run(SBInstance *instance)
+{
+    unsigned ticks = GB_run(instance->gb);
+    // SameBoy sets the busy bit after calling the request callback, so completion must wait
+    // until that CPU step returns. The shot stays fixed while the cartridge reads its tiles.
+    if (instance->camera_pending) {
+        instance->camera_pending = false;
+        GB_camera_updated(instance->gb);
+    }
+    return ticks;
+}
+
+bool SBHasCamera(SBInstance *instance)
+{
+    return instance && instance->gb && instance->gb->cartridge_type->mbc_type == GB_CAMERA;
+}
+
+bool SBSetCameraFrame(SBInstance *instance, const uint8_t *bytes, size_t size)
+{
+    if (!instance) return false;
+    if (!bytes && size == 0) {
+        memset(instance->camera_frame, 128, sizeof(instance->camera_frame));
+        memset(instance->camera.shot, 128, sizeof(instance->camera.shot));
+        memset(instance->camera.sequence, 128, sizeof(instance->camera.sequence));
+        instance->camera.next_channel = 0;
+        return true;
+    }
+    if (!bytes || size != SB_CAMERA_PIXELS) return false;
+    for (size_t i = 0; i < SB_CAMERA_PIXELS; i++) {
+        memset(instance->camera_frame + i * 3, bytes[i], 3);
+    }
+    return true;
+}
+
+bool SBSetCameraRGBFrame(SBInstance *instance, const uint8_t *bytes, size_t size)
+{
+    if (!bytes && size == 0) return SBSetCameraFrame(instance, NULL, 0);
+    if (!instance || !bytes || size != sizeof(instance->camera_frame)) return false;
+    memcpy(instance->camera_frame, bytes, size);
+    return true;
+}
 
 static void sb_apply_dmg_palette(SBInstance *instance)
 {
@@ -248,6 +337,9 @@ SBInstance *SBCreate(SBModel model)
         return NULL;
     }
     GB_set_user_data(instance->gb, instance);
+    SBSetCameraFrame(instance, NULL, 0);
+    GB_set_camera_get_pixel_callback(instance->gb, sb_camera_pixel);
+    GB_set_camera_update_request_callback(instance->gb, sb_camera_requested);
     GB_set_rgb_encode_callback(instance->gb, sb_encode_bgra);
     GB_set_pixels_output(instance->gb, instance->pixels);
     GB_set_sample_rate(instance->gb, SB_SAMPLE_RATE);
@@ -296,6 +388,8 @@ bool SBLoadROM(SBInstance *instance, const uint8_t *bytes, size_t size)
     if (!probe) return false;
     free(probe);
     GB_load_rom_from_buffer(instance->gb, bytes, size);
+    SBSetCameraFrame(instance, NULL, 0);
+    instance->camera_pending = false;
     GB_reset(instance->gb);
     sb_apply_dmg_palette(instance);
     instance->has_run = false;
@@ -318,7 +412,7 @@ bool SBSkipBootROM(SBInstance *instance, const uint8_t *fast_boot_rom, size_t fa
     uint64_t ticks = 0;
     bool finished = GB_safe_read_memory(gb, SB_IO_BOOT_ROM_DISABLE) & 1;
     while (!finished && ticks < SB_BOOT_SKIP_TICK_LIMIT) {
-        ticks += GB_run(gb);
+        ticks += sb_run(instance);
         finished = GB_safe_read_memory(gb, SB_IO_BOOT_ROM_DISABLE) & 1;
     }
     GB_set_rendering_disabled(gb, false);
@@ -351,7 +445,7 @@ SBFrameView SBRunFrame(SBInstance *instance)
     instance->has_run = true;
     instance->vblank = false;
     while (!instance->vblank) {
-        ticks += GB_run(instance->gb);
+        ticks += sb_run(instance);
     }
     // Uncorrected channels are a 5-bit value repeated into 8 bits, so the top 5 bits are the
     // value. The core's buffer is left as drawn, since it isn't redrawn while the LCD is off.
@@ -404,10 +498,14 @@ bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame)
         return false;
     }
     bool has_run = instance->has_run;
+    // Sensor input is external to SameBoy's serialized state. A preview may trigger a shot,
+    // so preserve its latched image alongside the core state.
+    SBCameraCapture camera = instance->camera;
     instance->previewing = true;
     *frame = SBRunFrame(instance);
     instance->previewing = false;
     bool restored = SBLoadState(instance, state, size);
+    instance->camera = camera;
     instance->has_run = has_run;
     free(state);
     frame->emulated_nanoseconds = 0;
@@ -487,6 +585,7 @@ bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size)
     if (!instance || !instance->gb || !bytes || size == 0) return false;
     instance->has_run = true;
     if (GB_load_state_from_buffer(instance->gb, bytes, size) != 0) return false;
+    instance->camera.next_channel = 0;
     sb_apply_dmg_palette(instance);
     return true;
 }
@@ -544,6 +643,7 @@ void SBReset(SBInstance *instance)
 {
     if (!instance || !instance->gb) return;
     GB_reset(instance->gb);
+    instance->camera.next_channel = 0;
     sb_apply_dmg_palette(instance);
     instance->has_run = false;
 }

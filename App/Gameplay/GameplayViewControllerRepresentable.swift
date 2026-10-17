@@ -50,7 +50,8 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             soundMode: soundMode,
             hidesTouchControlsWithController: hidesTouchControlsWithController,
             touchHaptics: touchHaptics,
-            controllerMonitor: controllerMonitor
+            controllerMonitor: controllerMonitor,
+            camera: display.camera
         )
         controller.onClose = onClose
         controller.onAddToLibrary = onAddToLibrary
@@ -77,6 +78,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             fastForwardSpeed: display.fastForwardSpeed,
             fastForwardAudio: display.fastForwardAudio
         )
+        uiViewController.applyCameraSetting(display.camera)
         // Updates repeat, and a close that fails to save waits on the player, so ask only once.
         if closeRequested, !context.coordinator.closeSent {
             context.coordinator.closeSent = true

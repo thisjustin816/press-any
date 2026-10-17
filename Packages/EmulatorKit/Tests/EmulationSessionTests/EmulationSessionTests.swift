@@ -9,6 +9,27 @@ import Testing
 @testable import EmulationSession
 
 final class EmulationSessionTests: XCTestCase {
+    func testCameraFramesReachTheActiveCoreWhileRunningOrPaused() throws {
+        let harness = try SessionHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+        let session = harness.makeSession()
+        XCTAssertFalse(session.hasCamera)
+        try session.start(context: harness.contextA)
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        XCTAssertFalse(session.hasCamera)
+        core.hasCamera = true
+        XCTAssertTrue(session.hasCamera)
+        let frame = try CameraFrame(luminance: Data(repeating: 99, count: 128 * 112))
+        try session.setCameraFrame(frame)
+        XCTAssertEqual(core.cameraFrame, frame)
+        try session.pause()
+        try session.setCameraFrame(nil)
+        XCTAssertNil(core.cameraFrame)
+        try session.stop(createAutoState: false)
+        XCTAssertFalse(session.hasCamera)
+        XCTAssertThrowsError(try session.setCameraFrame(frame))
+    }
+
     func testTimedStatesHandleClockChangesWithoutCatchUpWrites() throws {
         let h = try SessionHarness.make()
         defer { try? FileManager.default.removeItem(at: h.store.rootURL) }

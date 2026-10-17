@@ -11,6 +11,62 @@ import XCTest
 /// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
+    func testCameraMenuFollowsTheCartridgeWithoutLoadingTheGameplayView() throws {
+        let runtime = LifecycleRuntime()
+        let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: .always)
+        XCTAssertFalse(gameplay.prepareGameMenu().allMenus.contains { $0.title == "Game Boy Camera" })
+        XCTAssertFalse(gameplay.isViewLoaded)
+        runtime.cameraAvailable = true
+        let camera = try XCTUnwrap(gameplay.prepareGameMenu().allMenus.first { $0.title == "Game Boy Camera" })
+        XCTAssertEqual(camera.subtitle, "Rear Camera", "the rear camera is the default")
+        XCTAssertEqual(camera.children.map(\.title), ["Rear Camera", "Front Camera", "Off"])
+        XCTAssertFalse(gameplay.isViewLoaded)
+        let front = GameplayViewController(runtime: runtime, autoResumePolicy: .always, camera: .front)
+        XCTAssertEqual(front.prepareGameMenu().allMenus.first { $0.title == "Game Boy Camera" }?.subtitle, "Front Camera")
+    }
+
+    func testACameraCartridgeAsksForItsCameraWhenItOpens() async throws {
+        let cases: [(GameBoyCamera, Bool, GameplayCameraPosition?)] = [
+            (.rear, true, .rear), (.front, true, .front), (.off, true, nil), (.rear, false, nil),
+        ]
+        for (choice, cartridgeHasCamera, expected) in cases {
+            let runtime = LifecycleRuntime()
+            runtime.cameraAvailable = cartridgeHasCamera
+            let source = LaunchCameraSource()
+            let gameplay = GameplayViewController(
+                runtime: runtime, autoResumePolicy: .always,
+                controllerMonitor: PhysicalControllerMonitor(connectedControllers: { [] }),
+                camera: choice, cameraSource: source
+            )
+            gameplay.loadViewIfNeeded()
+            if expected != nil {
+                let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+                while source.starts.isEmpty, ContinuousClock.now < deadline {
+                    try await Task.sleep(for: .milliseconds(1))
+                }
+            }
+            XCTAssertEqual(source.requests, expected == nil ? 0 : 1, "\(choice), camera cartridge: \(cartridgeHasCamera)")
+            XCTAssertEqual(source.starts, expected.map { [$0] } ?? [], "\(choice), camera cartridge: \(cartridgeHasCamera)")
+        }
+    }
+
+    func testTheGameMenuCameraLastsForTheSessionUntilSettingsChangeIt() {
+        let runtime = LifecycleRuntime()
+        runtime.cameraAvailable = true
+        let gameplay = GameplayViewController(
+            runtime: runtime, autoResumePolicy: .always, camera: .rear, cameraSource: LaunchCameraSource()
+        )
+        func shown() -> String? {
+            gameplay.prepareGameMenu().allMenus.first { $0.title == "Game Boy Camera" }?.subtitle
+        }
+        gameplay.chooseCamera(.off)
+        XCTAssertEqual(shown(), "Off")
+        gameplay.applyCameraSetting(.rear)
+        XCTAssertEqual(shown(), "Off", "an update repeating the setting keeps the menu's choice")
+        gameplay.applyCameraSetting(.front)
+        XCTAssertEqual(shown(), "Front Camera", "a change in Settings applies at once")
+    }
+
     func testTheGameMenuButtonAsksForAFixedOrderSoCloseGameNeverMoves() {
         // The menu opens upward from the bottom of the screen; left to the system it is reversed there.
         let button = GameMenuButton(menu: UIMenu(children: []))
@@ -914,8 +970,32 @@ final class GameplayPauseReasonsTests: XCTestCase {
     }
 }
 
+/// Allows access at once and records each request and start.
+@MainActor
+private final class LaunchCameraSource: GameplayCameraSource {
+    var requests = 0
+    var starts: [GameplayCameraPosition] = []
+
+    func requestAccess() async -> Bool {
+        requests += 1
+        return true
+    }
+
+    func start(
+        position: GameplayCameraPosition, rotationAngle: Double,
+        receive: @escaping @Sendable (CameraFrame) -> Void,
+        failure: @escaping @Sendable () -> Void
+    ) {
+        starts.append(position)
+    }
+
+    func stop() {}
+}
+
 /// Throws on a frame while paused, as the real sessions do, and counts lifecycle calls.
 private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
+    var cameraAvailable = false
+    var hasCamera: Bool { cameraAvailable }
     private let lock = NSLock()
     private var paused = false
     private var backgroundCount = 0

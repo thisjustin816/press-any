@@ -28,7 +28,7 @@ public struct FakeCoreFactory: EmulatorCoreFactory {
     }
 }
 
-public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability {
+public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability, CameraCapability {
     public let descriptor: CoreDescriptor
     public let supportedSystems: Set<GameSystem>
     public let stateSerializationVersion = "fake-json-v1"
@@ -49,6 +49,10 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
     /// Makes the next state load write the state's cartridge RAM and then fail, as SameBoy does
     /// with a state that ends early.
     public var failsNextStateLoadPartway = false
+    public var hasCamera = false
+    public private(set) var cameraFrame: CameraFrame?
+
+    public func setCameraFrame(_ frame: CameraFrame?) { cameraFrame = frame }
 
     public init(
         descriptor: CoreDescriptor = .init(identifier: "fake", version: "1.0.0"),

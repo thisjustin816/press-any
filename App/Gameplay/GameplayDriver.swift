@@ -36,6 +36,8 @@ final class GameplayDriver: @unchecked Sendable {
     /// Called on the driver's queue just before each emulated frame. A screenshot scene's button
     /// script sets that frame's buttons here.
     var willRunFrame: (@Sendable () -> Void)?
+    /// Set before starting the driver, only for cartridges with a camera.
+    var cameraFrames: CameraFrameBuffer?
     var onFrame: FrameHandler?
     var onAudio: AudioHandler?
     var onRumble: RumbleHandler?
@@ -118,6 +120,12 @@ final class GameplayDriver: @unchecked Sendable {
         }
     }
 
+    /// Clear capture after any frame already in flight has supplied its sensor image.
+    /// Call off the driver queue, after invalidating the capture's frame buffer.
+    func clearCameraFrame() throws {
+        try queue.sync { try runtime.setCameraFrame(nil) }
+    }
+
     /// Runs the frames due since the last display refresh, then shows the newest, so every frame is
     /// presented on a refresh.
     private func refresh(elapsed: UInt64, interval: UInt64) {
@@ -160,6 +168,7 @@ final class GameplayDriver: @unchecked Sendable {
 
     private func runFrame() throws -> EmulatorVideoFrame {
         willRunFrame?()
+        if let frame = cameraFrames?.current { try runtime.setCameraFrame(frame) }
         let frame = try runtime.stepFrame(input: input.current())
         emulatedNanosecondsSinceSavePoll &+= frame.emulatedNanoseconds
         if emulatedNanosecondsSinceSavePoll >= savePollNanoseconds {

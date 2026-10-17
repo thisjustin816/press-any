@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+void test_camera_rgb(void);
+
 static void make_test_rom(uint8_t *rom, size_t size)
 {
     memset(rom, 0, size);
@@ -209,6 +211,104 @@ static void test_cheats(const uint8_t *rom, size_t rom_size)
     SBDestroy(instance);
 }
 
+// A synthetic camera cartridge exposes its first sensor tile in WRAM. It waits for the
+// camera's busy bit before reading, so a missing completion leaves the marker unset.
+static void test_camera(void)
+{
+    uint8_t rom[32768];
+    make_test_rom(rom, sizeof(rom));
+    rom[0x147] = 0xfc;
+    rom[0x149] = 0x04;
+    rom[0x100] = 0xc3; rom[0x101] = 0x50; rom[0x102] = 0x01;
+    const uint8_t setup[] = {
+        0x3e, 0x0a, 0xea, 0x00, 0x00, // enable RAM
+        0x3e, 0x10, 0xea, 0x00, 0x40, // camera registers
+        0x3e, 0x04, 0xea, 0x01, 0xa0, // unit gain
+        0x3e, 0x10, 0xea, 0x02, 0xa0, // exposure $1000
+        0xaf, 0xea, 0x03, 0xa0,
+    };
+    size_t pc = 0x150;
+    memcpy(rom + pc, setup, sizeof(setup)); pc += sizeof(setup);
+    for (unsigned i = 0; i < 48; i++) {
+        const uint8_t threshold[] = {0x3e, (uint8_t)(64 * (i % 3 + 1)), 0xea, (uint8_t)(6 + i), 0xa0};
+        memcpy(rom + pc, threshold, sizeof(threshold)); pc += sizeof(threshold);
+    }
+    const uint8_t shoot[] = {
+        0x3e, 0x01, 0xea, 0x00, 0xa0,
+        0xfa, 0x00, 0xa0, 0xe6, 0x01, 0x20, 0xf9, // wait for sensor
+        0xaf, 0xea, 0x00, 0x40, // RAM bank 0
+        0xfa, 0x00, 0xa1, 0xea, 0x00, 0xc0,
+        0xfa, 0x01, 0xa1, 0xea, 0x01, 0xc0,
+        0x3e, 0x01, 0xea, 0x00, 0x40, // save the tile in battery RAM bank 1
+        0xfa, 0x00, 0xc0, 0xea, 0x00, 0xa0,
+        0xfa, 0x01, 0xc0, 0xea, 0x01, 0xa0,
+        0xaf, 0xea, 0x00, 0x40, // return to the sensor image
+        0x3e, 0x42, 0xea, 0x02, 0xc0,
+        0x18, 0xfe,
+    };
+    memcpy(rom + pc, shoot, sizeof(shoot));
+    uint8_t boot[256];
+    make_finishing_boot_rom(boot);
+    SBInstance *instance = SBCreate(SB_MODEL_DMG);
+    assert(!SBHasCamera(instance));
+    assert(SBLoadBootROM(instance, boot, sizeof(boot)));
+    assert(SBLoadROM(instance, rom, sizeof(rom)));
+    assert(SBHasCamera(instance));
+    uint8_t sensor[128 * 112];
+    const uint8_t values[] = {255, 0, 128};
+    const uint8_t low[] = {0x00, 0xff, 0xff};
+    const uint8_t high[] = {0x00, 0xff, 0x00};
+    for (unsigned test = 0; test < 3; test++) {
+        SBReset(instance);
+        assert(SBSkipBootROM(instance, NULL, 0));
+        memset(sensor, test == 2 ? 0 : values[test], sizeof(sensor));
+        assert(SBSetCameraFrame(instance, sensor, sizeof(sensor)));
+        assert(!SBSetCameraFrame(instance, sensor, sizeof(sensor) - 1));
+        assert(!SBSetCameraFrame(instance, sensor, sizeof(sensor) + 1));
+        if (test == 2) assert(SBSetCameraFrame(instance, NULL, 0));
+        size_t state_size = SBStateSize(instance);
+        uint8_t *before_shot = malloc(state_size);
+        uint8_t *after_shot = malloc(state_size);
+        assert(before_shot && after_shot);
+        assert(SBSaveState(instance, before_shot, state_size));
+        (void)SBRunFrame(instance);
+        (void)SBRunFrame(instance);
+        assert(SBReadMemory(instance, 0xc002) == 0x42);
+        assert(SBReadMemory(instance, 0xc000) == low[test]);
+        assert(SBReadMemory(instance, 0xc001) == high[test]);
+        // The exposed image belongs to that shot, even when a new sensor frame arrives.
+        memset(sensor, 255 - values[test], sizeof(sensor));
+        assert(SBSetCameraFrame(instance, sensor, sizeof(sensor)));
+        assert(SBReadMemory(instance, 0xa100) == low[test]);
+        assert(SBReadMemory(instance, 0xa101) == high[test]);
+        assert(SBSaveState(instance, after_shot, state_size));
+        assert(SBLoadState(instance, before_shot, state_size));
+        SBFrameView preview;
+        assert(SBRefreshFrame(instance, &preview));
+        assert(preview.emulated_nanoseconds == 0);
+        assert(SBLoadState(instance, after_shot, state_size));
+        assert(SBReadMemory(instance, 0xa100) == low[test]);
+        assert(SBReadMemory(instance, 0xa101) == high[test]);
+        free(before_shot);
+        free(after_shot);
+        size_t size = SBBatterySize(instance);
+        assert(size > 0x2001);
+        uint8_t *battery = malloc(size);
+        assert(battery && SBSaveBattery(instance, battery, size));
+        assert(battery[0x2000] == low[test] && battery[0x2001] == high[test]);
+        SBInstance *restored = SBCreate(SB_MODEL_DMG);
+        assert(SBLoadROM(restored, rom, sizeof(rom)));
+        SBLoadBattery(restored, battery, size);
+        memset(battery, 0, size);
+        assert(SBSaveBattery(restored, battery, size));
+        assert(battery[0x2000] == low[test] && battery[0x2001] == high[test]);
+        free(battery);
+        SBDestroy(restored);
+    }
+    assert(SBLoadROM(instance, rom, sizeof(rom)));
+    SBDestroy(instance);
+}
+
 int main(void)
 {
     SBInstance *instance = SBCreate(SB_MODEL_DMG);
@@ -248,6 +348,8 @@ int main(void)
     test_oversized_battery();
     test_rom_size_limit();
     test_cheats(rom, sizeof(rom));
+    test_camera();
+    test_camera_rgb();
     puts("sameboy bridge smoke: ok");
     return 0;
 }

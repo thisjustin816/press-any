@@ -23,6 +23,9 @@ struct ScopedSettingsView: View {
     /// A game whose header marks it for a Game Boy Color only, which the Model picker notes under
     /// Game Boy. Some such games still play on a Game Boy, so the note doesn't say they can't.
     var marksGameBoyColorOnly = false
+    /// A Game Boy Camera cartridge, which shows the Game Boy Camera setting. System pages always
+    /// show it, since they set it for every camera game.
+    var hasCamera = false
 
     @Environment(\.dismiss) private var dismiss
     @State private var showsPlus = false
@@ -50,6 +53,7 @@ struct ScopedSettingsView: View {
             controlsSection
             fastForwardSection
             playingSection
+            if hasCamera || gameID == nil { cameraSection }
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -200,6 +204,20 @@ struct ScopedSettingsView: View {
             Text("Playing")
         } footer: {
             Text(HardwareModel.settingSummary)
+        }
+    }
+
+    private var cameraSection: some View {
+        Section("Game Boy Camera") {
+            InheritableSettingRow(
+                title: "Camera",
+                key: .gameBoyCamera,
+                defaultValue: GameBoyCamera.defaultValue,
+                options: GameBoyCamera.allCases.map { ($0, $0.displayName) },
+                listSections: [SettingOptionSection(title: "Camera", values: GameBoyCamera.allCases)],
+                explanation: GameBoyCamera.explanation,
+                context: context
+            )
         }
     }
 

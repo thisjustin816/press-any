@@ -90,6 +90,9 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case hardwareModel
     /// `AdvanceColors`, unset means `.gameBoyAdvance`.
     case advanceColors
+    /// `GameBoyCamera`, unset means `.rear`. Only camera cartridges read it. Test builds saved the
+    /// game menu's choice under `gameBoyCamera`; this key leaves those behind.
+    case gameBoyCamera = "gameBoyCameraSetting"
 
     public var isAppOnly: Bool {
         switch self {
@@ -121,6 +124,24 @@ public enum SoundMode: String, Codable, Sendable, CaseIterable {
         case .followSilentSwitch: "Follow Silent Switch"
         case .alwaysOn: "Always On"
         case .alwaysOff: "Always Off"
+        }
+    }
+}
+
+/// Which iPhone camera a Game Boy Camera cartridge sees. Raw values are stored in settings.
+public enum GameBoyCamera: String, Codable, Sendable, CaseIterable {
+    case rear
+    case front
+    case off
+
+    public static let defaultValue: Self = .rear
+    public static let explanation = "The camera a Game Boy Camera game sees. Press Any asks for camera access when one of these games opens with a camera chosen."
+
+    public var displayName: String {
+        switch self {
+        case .rear: "Rear"
+        case .front: "Front"
+        case .off: "Off"
         }
     }
 }

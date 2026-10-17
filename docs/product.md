@@ -927,7 +927,8 @@ picture. A connected controller still hides the touch controls.
 - Opening the menu stops frames and audio and releases held input. A row of icons at the top
   holds Resume, Fast Forward (highlighted while on), Quick Save and Quick Load. Below it, States
   opens Save New State, Slots when enabled, and the remaining states, newest first, with their
-  pictures and dates; then Cheats, Capture, Sound, Settings, and Restart beside Close Game, in red, in
+  pictures and dates; then Cheats, Capture, Game Boy Camera for a camera cartridge, Sound,
+  Settings, and Restart beside Close Game, in red, in
   their own section. The game stays paused after the menu closes, after changing Fast Forward
   and after returning from another app, until the player chooses Resume. A paused game's Resume
   button sits centered on the game picture. With that overlay exposed, any fresh non-directional
@@ -941,6 +942,45 @@ picture. A connected controller still hides the touch controls.
 - The controller's Menu button opens the menu; pressing it again closes the menu and resumes.
   The Home button is reserved for the system. Button customization uses iOS Settings (see
   Controllers, haptics and rumble).
+
+### Game Boy Camera
+
+A camera cartridge sees through the iPhone camera as soon as it opens. **Game Boy Camera**
+(App, System, Game or Build; Rear by default) chooses Rear, Front or Off. It is on App
+Settings' Playing page, on each system's page, and in the settings of a Game or Build whose
+cartridge is a camera; other games don't show it. The first camera game opened with a camera
+chosen brings up iOS's camera permission, and only then does iPhone Settings list Camera for
+Press Any. The game menu adds Game Boy Camera in library play and Quick Play, with Rear
+Camera, Front Camera and Off. A choice there applies at once and lasts until the game closes;
+the next launch starts from the setting again. A change to the setting in the game menu's
+Settings applies at once and replaces it. Choosing the current camera again retries it after
+access was turned on or capture failed. Choosing a camera while paused
+leaves capture stopped until gameplay resumes. Front Camera mirrors the image, and capture
+follows the gameplay orientation. No microphone or Photos access is requested.
+
+Frames are center-cropped to the sensor's 128 by 112 aspect ratio and supplied as RGB through
+`CameraCapability`. Ordinary exposures use their brightness. SameBoy handles the camera's
+exposure, gain and dithering. Each shot holds one sensor image while the cartridge reads it.
+Off supplies neutral gray;
+denied access, a missing camera or an interrupted capture leaves the game playable and explains
+how to try again. With access denied, each camera game that opens with a camera chosen says
+so, until access is allowed or the setting is Off. Other cartridges show no camera controls and never request access.
+
+Photo! DX's Game Boy Color ROM supports automatic RGB capture on Game Boy Color and Advance
+models. Turn on Color in the ROM's camera menu: it saves red, green and blue exposures as a
+single color group using three photo slots, without physical filters. Press Any implements
+the [version-1 SRAM handshake](https://github.com/thisjustin816/gb-photo/blob/38c346be573388d9c528b96c16954e8238ddcb74/README.md#rgb-camera-handshake).
+It acknowledges fresh requests for brightness or a color channel and leaves unsupported or
+stale requests unchanged. One source image stays frozen from red through blue, even as live
+frames change or gameplay pauses. The ROM handles color rendering and photo grouping.
+
+Capture hardware stops when gameplay pauses or becomes inactive. The last sensor image and
+any unfinished RGB group's frozen image stay in memory so resuming can finish that group.
+Off, choosing another camera, closing or a capture failure clears them. Resuming restarts an
+authorized camera choice.
+Raw frames stay in memory and are never uploaded or exported automatically. Photos saved by
+the game live in its cartridge RAM and follow normal Save Profile saves, exports and backups.
+Quick Play keeps them temporary until Add to Library.
 
 ### Picture
 
@@ -1252,7 +1292,8 @@ list shows no model numbers. App Settings has it on the Playing page.
   visible ones move. Games never placed, new ones included, follow the placed Games in title order.
   A deleted Game keeps its position in Recently Deleted and takes it back when restored.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
-  preferred save. The toolbar has a Favorite star, Select and More (Game Settings, Rename Game,
+  preferred save. Builds list the Base first, then newest first: higher versions, then Builds
+  without a version, most recently added first. The toolbar has a Favorite star, Select and More (Game Settings, Rename Game,
   Artwork, Merge Into Another Game, Delete Game). Select edits the Builds and Save Profiles
   sections with one selection across both and Delete (n) in the bottom bar. Build taps select
   instead of playing.
@@ -1504,6 +1545,9 @@ Builds per Game, profiles shared by Builds, Quick Play sessions promoted), never
 filenames or library contents; where they go and the privacy copy are still open. Artwork requests
 send canonical release names as described above. ROM, save and state bytes, screenshots, memory,
 imported filenames, notes and the library database are never uploaded automatically.
+Game Boy Camera access is requested only when a camera cartridge opens with a camera chosen. Capture
+stops whenever gameplay pauses, and frames are processed on the device. Photos the game saves
+remain in its normal save data.
 Provider queries and catalog uploads describe their consent accurately. Service keys
 stay on servers and user keys in secure storage. Press Any Plus talks only to the App Store,
 through StoreKit, and needs nothing in the privacy manifest. The privacy manifest declares the
