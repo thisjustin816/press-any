@@ -1292,7 +1292,8 @@ list shows no model numbers. App Settings has it on the Playing page.
   visible ones move. Games never placed, new ones included, follow the placed Games in title order.
   A deleted Game keeps its position in Recently Deleted and takes it back when restored.
 - Game Details lists Builds and Save Profiles, and Play starts the preferred Build with its
-  preferred save. The toolbar has a Favorite star, Select and More (Game Settings, Rename Game,
+  preferred save. Builds list the Base first, then newest first: higher versions, then Builds
+  without a version, most recently added first. The toolbar has a Favorite star, Select and More (Game Settings, Rename Game,
   Artwork, Merge Into Another Game, Delete Game). Select edits the Builds and Save Profiles
   sections with one selection across both and Delete (n) in the bottom bar. Build taps select
   instead of playing.

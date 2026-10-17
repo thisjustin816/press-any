@@ -488,11 +488,15 @@ final class GameDetailViewModel: ObservableObject {
         }
     }
 
-    private static func buildSort(_ lhs: Build, _ rhs: Build) -> Bool {
-        if lhs.isBase != rhs.isBase { return lhs.isBase && !rhs.isBase }
-        if lhs.versionSortKey != rhs.versionSortKey {
-            return (lhs.versionSortKey ?? "") < (rhs.versionSortKey ?? "")
+    /// The Base first, then newest first: higher versions, then Builds without a version, most
+    /// recently added first.
+    static func buildSort(_ lhs: Build, _ rhs: Build) -> Bool {
+        if lhs.isBase != rhs.isBase { return lhs.isBase }
+        switch (lhs.versionSortKey, rhs.versionSortKey) {
+        case let (left?, right?) where left != right: return left > right
+        case (_?, nil): return true
+        case (nil, _?): return false
+        default: return lhs.createdAt > rhs.createdAt
         }
-        return lhs.createdAt < rhs.createdAt
     }
 }
