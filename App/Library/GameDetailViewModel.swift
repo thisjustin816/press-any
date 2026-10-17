@@ -490,7 +490,7 @@ final class GameDetailViewModel: ObservableObject {
 
     /// The Base first, then newest first: higher versions, then Builds without a version, most
     /// recently added first.
-    static func buildSort(_ lhs: Build, _ rhs: Build) -> Bool {
+    nonisolated static func buildSort(_ lhs: Build, _ rhs: Build) -> Bool {
         if lhs.isBase != rhs.isBase { return lhs.isBase }
         switch (lhs.versionSortKey, rhs.versionSortKey) {
         case let (left?, right?) where left != right: return left > right
