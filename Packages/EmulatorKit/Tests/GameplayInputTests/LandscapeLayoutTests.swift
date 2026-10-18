@@ -36,8 +36,7 @@ final class LandscapeLayoutTests: XCTestCase {
                     let menu = layout.menuAreas[0]
                     XCTAssertGreaterThanOrEqual(menu.x - (bezel.x + bezel.width), 24 - 0.001)
                     XCTAssertEqual(menu.center.x, (bezel.x + bezel.width + phone.width - right) / 2, accuracy: 0.001)
-                    XCTAssertGreaterThan(phone.height - phone.bottom - menu.y - menu.height, 32)
-                    XCTAssertLessThan(menu.center.y, phone.height - phone.bottom - 64)
+                    XCTAssertEqual(menu.y + menu.height, phone.height - phone.bottom, accuracy: 0.001)
                     XCTAssertLessThan(layout.dpad.center.y, phone.height / 2)
                     XCTAssertLessThan(layout.dpadHitArea.x + layout.dpadHitArea.width, bezel.x)
                     XCTAssertGreaterThan(layout.b.x, bezel.x + bezel.width)
