@@ -911,7 +911,8 @@ is the chosen layout.
 
 The Game Boy layout uses the Game Boy Advance (AGB-001) arrangement in landscape: the
 picture centered in its bezel at Screen Scaling's size, the D-pad on the left, A and B on the right,
-and the Press Any button at the lower right, below A and B. The picture uses the full available
+and the Press Any button centered in the open area below A and B, with space from the bezel
+and the lower safe edge. Its tap area clears the bezel by at least 24 points. The picture uses the full available
 height between the safe areas and bezel margins. START and
 SELECT are the Game Boy Advance's small round buttons, START above SELECT, right of the D-pad's
 center and below it, each named on a recessed plate slanting down to the right beside it, placed
@@ -932,7 +933,7 @@ clear of both overlays.
 
 ### Game menu
 
-- The Press Any wordmark at the bottom is a raised button with the wordmark pressed into it, on
+- The Press Any wordmark is a raised button with the wordmark pressed into it, on
   both layouts and themes, with or without a controller. Its tap area is 44 points tall. Settings
   > Tap Game for Menu (off by default) lets a tap on the picture open it too, but only for a touch
   that lands there, so a sliding thumb doesn't. VoiceOver finds it as the Game Menu button. The
