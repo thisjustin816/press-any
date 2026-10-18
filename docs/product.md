@@ -852,20 +852,22 @@ disconnect.
   bezel and the logo, and touch areas reach 10 to 12 points past the drawn controls without
   overlapping.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
-  START and SELECT in Game Boy order. A is larger than B, as in the skin, and controls respond
-  across both the frame and the artwork. A raised alignment guide marks where the physical overlay
-  sits. The skin's artwork isn't used.
+  START and SELECT in Game Boy order in portrait. In portrait, A is larger than B, as in the skin,
+  and controls respond across both the frame and the artwork. A raised alignment guide marks where the physical overlay
+  sits. Landscape fits two sideways tiles with their D-pads at the top, each with its own guide.
+  The skin's artwork isn't used.
 
 The controls are drawn in code on a controller body behind them. Every control is raised like
 the menu button: a face lit from above, light along the inside of its top edge and shade along its
 bottom (deeper on bigger controls, up to 3 points), a thin rim and a shadow below. Pressed, it
-goes flat, sinks a point, its shadow shrinks and its top edge shades the face. SELECT and START
-are rubber pills, so they shade more from top to bottom, and Playtiles presses their labels into
+goes flat, sinks a point, its shadow shrinks and its top edge shades the face. In portrait, SELECT
+and START are rubber pills, so they shade more from top to bottom, and Playtiles presses their labels into
 them. The Game Boy D-pad never sinks: as in SameBoy's iOS app, it tips, so the held arm's end goes
 into shade that fades out toward the center with no hard edge. Each arm has an arrow pressed into
 it, and the dip at the center is lit as a hollow. The Game Boy layout prints "A" and "B" below the
-buttons along their tilt and "SELECT" and "START" level below their pills; Playtiles keeps
-unlabeled buttons and labeled pills.
+buttons along their tilt and "SELECT" and "START" level below their pills; portrait Playtiles keeps
+unlabeled buttons and labeled pills. Landscape Playtiles labels each remapped button with the
+input it sends.
 
 **Controller Theme** (app-wide, Match System by default): Classic uses an original Game Boy's
 form with the app's colors (warm gray body, gray lens, pink A and B, dark
@@ -898,24 +900,35 @@ its buttons move a focus through them, so the app can be used without taking the
 
 ### Landscape
 
-Gameplay with the Game Boy layout turns to landscape, following Settings > Display > Orientation:
+Gameplay with either layout turns to landscape, following Settings > Display > Orientation:
 Automatic (the default, turning with the phone within its rotation lock), Portrait, or Landscape,
 which turns the game at once even with the phone held upright and follows it between the two
 sideways directions. Orientation inherits App, System, Game and Build, and a change from the game's
-Settings sheet applies when the sheet closes. Playtiles without a connected controller, the library
+Settings sheet applies when the sheet closes. The library
 and every sheet stay portrait whatever it says; closing a game held sideways returns to a portrait
 library. With a controller connected, the Game Boy layout follows Orientation even if Playtiles
 is the chosen layout.
 
-Landscape uses the Game Boy Advance (AGB-001) arrangement whichever portrait layout is chosen: the
+The Game Boy layout uses the Game Boy Advance (AGB-001) arrangement in landscape: the
 picture centered in its bezel at Screen Scaling's size, the D-pad on the left, A and B on the right,
-and the Press Any button below the picture, where the Game Boy Advance prints its name. START and
+and the Press Any button at the lower right, below A and B. The picture uses the full available
+height between the safe areas and bezel margins. START and
 SELECT are the Game Boy Advance's small round buttons, START above SELECT, right of the D-pad's
 center and below it, each named on a recessed plate slanting down to the right beside it, placed
 from a front photograph of an AGB-001; a tap on the plate counts. The D-pad and A and B keep the
 Game Boy layout's sizes and drawing, and every control clears the phone's safe areas. Rotating
 releases held input and keeps the game running or paused as it was, with Resume centered on the
 picture. A connected controller still hides the touch controls.
+
+Playtiles landscape uses two copies of the measured portrait control band, turned clockwise with
+both D-pads at the top. A raised guide marks each tile's position, with the game picture between
+the tiles. The tiles use their blank edge margins to sit farther apart while their buttons stay
+within the safe areas. The left D-pad sends directions. On the right D-pad, Up and Right send A;
+Left and Down send B.
+The physical A button on each tile sends START, and each physical B button sends SELECT. The
+portrait layout's software START and SELECT pills are omitted. Duplicate buttons combine with
+other touches and release independently. The menu is centered beneath the game picture,
+clear of both overlays.
 
 ### Game menu
 

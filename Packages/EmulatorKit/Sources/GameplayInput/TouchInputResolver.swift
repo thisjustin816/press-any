@@ -48,6 +48,15 @@ public final class TouchInputResolver {
             if layout.b.contains(point) { next.b = true }
             if layout.start.contains(point) { next.start = true }
             if layout.select.contains(point) { next.select = true }
+            for button in layout.additionalButtons where button.area.contains(point) {
+                switch button.control {
+                case .a: next.a = true
+                case .b: next.b = true
+                case .start: next.start = true
+                case .select: next.select = true
+                case .dpad: break
+                }
+            }
         }
         input = next
     }

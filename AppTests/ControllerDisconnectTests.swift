@@ -40,7 +40,7 @@ final class ControllerDisconnectTests: XCTestCase {
         XCTAssertEqual(runtime.stopCount, 0)
         XCTAssertEqual(gameplay.heldInput, .init())
         XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
-        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .landscape)
         XCTAssertTrue(gameplay.showsTouchControls)
     }
 

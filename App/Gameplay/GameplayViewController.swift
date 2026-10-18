@@ -1384,12 +1384,13 @@ final class GameMenuButton: UIButton {
         }
     }
 
-    /// The wordmark at 28 points, or down to 80% of that to fit `width`, pressed into the face. Lit
+    /// The wordmark at up to 28 points, scaled to fit `width`, pressed into the face. Lit
     /// from above, each letter's top edge shades the floor of its recess, which shows as a band
     /// in the recess colors, and its bottom edge catches the light, which shows as a line below.
     private static func debossedWordmark(fitting width: CGFloat, palette: ControllerPalette) -> UIImage {
+        guard width > 0 else { return UIImage() }
         let natural = AppBrand.Wordmark.artwork(size: 28, appearance: palette.wordmarkAppearance).size
-        let size = 28 * min(1, max(0.8, width / max(natural.width, 1)))
+        let size = 28 * min(1, width / max(natural.width, 1))
         let fill = AppBrand.Wordmark.artwork(size: size, appearance: palette.wordmarkAppearance)
         let recess = AppBrand.Wordmark.artwork(size: size, appearance: palette.wordmarkAppearance, recessed: true)
         let highlight = fill.withTintColor(palette.logoHighlight, renderingMode: .alwaysOriginal)
