@@ -7,7 +7,7 @@ final class LandscapeLayoutTests: XCTestCase {
         (874, 402, 62, 21, 3), (956, 440, 62, 21, 3),
     ]
 
-    func testLandscapeControlsPictureAndMenuFitSafeAreasWithoutOverlapping() throws {
+    func testLandscapeControlsClearSafeAreasAndMenuCentersBesideTheBezelWithoutOverlapping() throws {
         for phone in phones {
             for scaling in ScreenScaling.allCases {
                 for (left, right) in [(phone.side, phone.side), (phone.side, 0), (0, phone.side)] {
@@ -17,15 +17,20 @@ final class LandscapeLayoutTests: XCTestCase {
                     )
                     let bezel = try XCTUnwrap(layout.bezel)
                     let logo = try XCTUnwrap(layout.logo)
-                    let touches = [layout.dpadHitArea, layout.a, layout.b, layout.start, layout.select] + layout.menuAreas
+                    let controls = [layout.dpadHitArea, layout.a, layout.b, layout.start, layout.select]
+                    let touches = controls + layout.menuAreas
                     let rects = touches + Array(layout.artwork.values) + [layout.screen, bezel, logo]
                     for rect in rects {
                         XCTAssertGreaterThan(rect.width, 0)
                         XCTAssertGreaterThan(rect.height, 0)
-                        XCTAssertGreaterThanOrEqual(rect.x, left - 0.001)
+                        XCTAssertGreaterThanOrEqual(rect.x, 0)
                         XCTAssertGreaterThanOrEqual(rect.y, 0)
-                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width - right + 0.001)
+                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width + 0.001)
                         XCTAssertLessThanOrEqual(rect.y + rect.height, phone.height - phone.bottom + 0.001)
+                    }
+                    for rect in controls + Array(layout.artwork.values) + [layout.screen, bezel] {
+                        XCTAssertGreaterThanOrEqual(rect.x, left - 0.001)
+                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width - right + 0.001)
                     }
                     for (index, rect) in touches.enumerated() {
                         XCTAssertFalse(overlaps(rect, layout.screen))
@@ -35,8 +40,8 @@ final class LandscapeLayoutTests: XCTestCase {
                     XCTAssertEqual(bezel.center.x, layout.screen.center.x, accuracy: 0.001)
                     let menu = layout.menuAreas[0]
                     XCTAssertGreaterThanOrEqual(menu.x - (bezel.x + bezel.width), 24 - 0.001)
-                    XCTAssertEqual(menu.center.x, (bezel.x + bezel.width + phone.width - right) / 2, accuracy: 0.001)
-                    XCTAssertEqual(menu.y + menu.height, phone.height - phone.bottom, accuracy: 0.001)
+                    XCTAssertEqual(menu.x - (bezel.x + bezel.width), phone.width - menu.x - menu.width, accuracy: 0.001)
+                    XCTAssertEqual(menu.y + menu.height, bezel.y + bezel.height, accuracy: 0.001)
                     XCTAssertLessThan(layout.dpad.center.y, phone.height / 2)
                     XCTAssertLessThan(layout.dpadHitArea.x + layout.dpadHitArea.width, bezel.x)
                     XCTAssertGreaterThan(layout.b.x, bezel.x + bezel.width)

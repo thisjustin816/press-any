@@ -912,13 +912,13 @@ is the chosen layout.
 The Game Boy layout uses the Game Boy Advance (AGB-001) arrangement in landscape: the
 picture centered in its bezel at Screen Scaling's size, the D-pad on the left, A and B on the right,
 and the Press Any button near the bottom, centered horizontally in the space between the bezel
-and the right safe edge. Its tap area clears the bezel by at least 24 points and ends at the lower
-safe edge. The picture uses the full available
+and the screen's right edge, including the space inside the side safe-area inset. Its bottom aligns
+with the bezel's bottom, and it clears the bezel by at least 24 points. The picture uses the full available
 height between the safe areas and bezel margins. START and
 SELECT are the Game Boy Advance's small round buttons, START above SELECT, right of the D-pad's
 center and below it, each named on a recessed plate slanting down to the right beside it, placed
 from a front photograph of an AGB-001; a tap on the plate counts. The D-pad and A and B keep the
-Game Boy layout's sizes and drawing, and every control clears the phone's safe areas. Rotating
+Game Boy layout's sizes and drawing, and the game controls clear the phone's safe areas. Rotating
 releases held input and keeps the game running or paused as it was, with Resume centered on the
 picture. A connected controller still hides the touch controls.
 

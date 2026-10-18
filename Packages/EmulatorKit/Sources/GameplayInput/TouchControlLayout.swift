@@ -355,8 +355,8 @@ extension TouchControlLayout {
         let b = TouchPoint(x: a.x - aToBX, y: a.y + aToBY)
         let buttonReach = min(buttonSize + 14, aToBX - 4)
         let menuWidth = min(180, rightEnd - rightEdge - 32)
-        let menuCenterX = (rightEdge + rightEnd) / 2
-        let logo = TouchRect(x: menuCenterX - (menuWidth - 20) / 2, y: bottom - 28,
+        let menuCenterX = (bezel.x + bezel.width + width) / 2
+        let logo = TouchRect(x: menuCenterX - (menuWidth - 20) / 2, y: bezel.y + bezel.height - 28,
                              width: menuWidth - 20, height: 24)
         // Right of the D-pad's center, toward the picture, but never into the bezel.
         let smallX = min(dpad.x + advance.start.x * mm, leftEnd - smallButton / 2 - 6)
