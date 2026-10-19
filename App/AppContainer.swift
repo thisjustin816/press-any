@@ -338,15 +338,22 @@ final class AppContainer {
     /// The import is already committed. Artwork failure leaves it playable and retryable from
     /// the Game's artwork menu; a chosen image is never rechecked automatically.
     func fetchArtworkAfterImport(_ build: Build) {
+        print("ARTWORK TRACE schedule \(build.id) \(Date())")
         guard let artworkProvider, artworkTasks[build.id] == nil,
               let request = artworkLookup(gameID: build.gameID, importedBuild: build) else { return }
+        print("ARTWORK TRACE lookup \(build.id) \(Date())")
         let automatic = FindMissingGameArtwork(games: repositories.games, artwork: gameArtwork,
             settings: repositories.settings, providers: [artworkProvider], transactions: repositories.transactions)
         artworkTasks[build.id] = Task(priority: .utility) { [weak self] in
+            print("ARTWORK TRACE begin \(build.id) \(Date())")
             defer { self?.artworkTasks[build.id] = nil }
-            if (try? await automatic.execute(gameID: build.gameID, lookup: request.lookup,
-                expectedPreferredBuildID: request.preferredBuildID)) == true {
-                NotificationCenter.default.post(name: .libraryDidChange, object: nil)
+            do {
+                let changed = try await automatic.execute(gameID: build.gameID, lookup: request.lookup,
+                    expectedPreferredBuildID: request.preferredBuildID)
+                print("ARTWORK TRACE complete \(build.id) \(changed) \(Date())")
+                if changed { NotificationCenter.default.post(name: .libraryDidChange, object: nil) }
+            } catch {
+                print("ARTWORK TRACE error \(build.id) \(error) \(Date())")
             }
         }
     }
