@@ -419,8 +419,18 @@ changes the library; review shows what will happen; commit is all or nothing.
   once the ROM is in the library, replacing an existing Game's artwork only when the player
   chose one. An exact duplicate doesn't offer it.
 - **Duplicates.** An exact duplicate image never makes a second file or Build. Its existing Build
-  keeps its metadata. In v1.1, a duplicate import still inspects anything new that came with it
+  keeps its metadata. A matching GB Studio globals file in its ZIP can attach to that existing
+  Build. In v1.1, a duplicate import also inspects other files that came with it
   (saves, artwork, documents, patches).
+- **GB Studio globals in ZIPs.** A folder containing exactly one ROM and one `globals.i` or
+  `game_globals.i` (case insensitive) offers Attach Variable Map in Import Review, on by default.
+  It attaches through the same action as Build Details after the ROM import succeeds. The file
+  belongs to that exact Build, including an existing duplicate. Different folders never share
+  a map; multiple ROMs or maps in one folder leave attachment to the player. Unrelated include
+  and symbol files are ignored. Globals count toward the ZIP's 32 matching-file cap and keep
+  the 4 MB variable-map limit. A failed attachment reports that the ROM is in the library and
+  explains how to attach the map manually. Canceling review removes its temporary files. Quick
+  Play does not attach maps to the library.
 - A file shared while another sheet is open, such as Import Review mid-edit or the Resume prompt,
   waits until that sheet closes.
 
@@ -683,7 +693,9 @@ declaration to remove it and return to inferred checks. Declarations work in bot
 
 A Build can keep variable maps (Attach Variable Map): GB Studio's `game_globals.i` or `globals.i`,
 an RGBDS `.sym` or a GBDK `.noi`, stored immutably on that exact Build and listed in Technical
-Info. They're kept for the GB Studio save migration in v1.1, which must be version gated and never
+Info. ZIP imports can offer a GB Studio globals file beside its ROM in Import Review. Standalone
+maps use Attach Variable Map on a chosen Build; their filenames do not identify a Build.
+They're kept for the GB Studio save migration in v1.1, which must be version gated and never
 claims reliability from just an old ROM, old save and new ROM.
 
 ## Save states and lifecycle
@@ -1237,13 +1249,14 @@ list shows no model numbers. App Settings has it on the Playing page.
 | [RetroArch](https://github.com/libretro/RetroArch/blob/2a515ab854de947bd3dad625c66e145a9d1a400b/pkg/apple/iOS/Info.plist) | `com.retroarch.gb` | `com.retroarch.gbc` |
 
 - A shared zip, the way ROM hacks and homebrew are downloaded, opens each ROM, patch and save
-  inside it in turn, as if each were shared on its own; readmes, folders, links and macOS
+  inside it in turn. One ROM and one GB Studio globals file in a folder offer a variable-map
+  attachment in Import Review. Readmes, folders, links and macOS
   metadata are skipped unread, even when the zip tool stored them in a form this app can't open. Zip is registered at Alternate rank, so other zips keep opening where they did. It lists
   `com.pkware.zip-archive`, the type Files gives a .zip, as well as `public.zip-archive`. The
   zip is read in memory and never kept: at most 32 MB, its entries stored or deflated, each held
   to its own kind's size limit before it's inflated and checked against its CRC32. An encrypted,
-  Zip64 or damaged ROM, patch or save is refused. A zip with a root `backup-manifest.json` is a
-  Library Backup instead and opens Restore Review.
+  Zip64 or damaged selected game file or globals file is refused. A zip with a root
+  `backup-manifest.json` is a Library Backup instead and opens Restore Review.
 - A shared ROM offers Quick Play or Import to Library. A shared patch opens Open Patch, which
   needs a Game and a base Build. A BPS patch records its base ROM's size and CRC32, so Open Patch
   preselects the Build whose image matches, checking only images of that size. Without one, a

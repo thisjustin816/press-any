@@ -10,8 +10,8 @@ struct ImportReviewView: View {
     let onCancel: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    /// The import that succeeded while its artwork couldn't be saved, held until the alert is read.
-    @State private var importedWithoutArtwork: ROMImportResult?
+    /// Holds a successful ROM import until any attachment failure has been read.
+    @State private var importedWithWarning: ROMImportResult?
 
     var body: some View {
         NavigationStack {
@@ -24,6 +24,15 @@ struct ImportReviewView: View {
                 }
 
                 ImportBuildDetailsSections(model: model)
+
+                if let url = model.variableMapURL {
+                    Section {
+                        Toggle("Attach Variable Map", isOn: $model.includeVariableMap)
+                        Text(url.lastPathComponent).foregroundStyle(.secondary)
+                    } footer: {
+                        Text("Found beside this ROM in the ZIP. Kept on this exact Build, including when the ROM is already in your library.")
+                    }
+                }
 
                 Section {
                     LabeledContent("File", value: model.analysis.originalFilename)
@@ -66,11 +75,11 @@ struct ImportReviewView: View {
                     Button("Import") {
                         do {
                             let result = try model.commit()
-                            if model.artworkFailure == nil {
+                            if model.importWarning == nil {
                                 onImported(result)
                                 dismiss()
                             } else {
-                                importedWithoutArtwork = result
+                                importedWithWarning = result
                             }
                         } catch {
                             // The model owns the visible error message.
@@ -82,18 +91,18 @@ struct ImportReviewView: View {
         }
         .interactiveDismissDisabled()
         .alert(
-            "Imported Without Artwork",
-            isPresented: Binding(get: { importedWithoutArtwork != nil }, set: { if !$0 { finishWithoutArtwork() } })
+            "ROM Imported",
+            isPresented: Binding(get: { importedWithWarning != nil }, set: { if !$0 { finishWithWarning() } })
         ) {
-            Button("OK") { finishWithoutArtwork() }
+            Button("OK") { finishWithWarning() }
         } message: {
-            Text("The ROM is in your library, but its artwork couldn’t be saved: \(model.artworkFailure ?? ""). You can add it from the Game.")
+            Text(model.importWarning ?? "")
         }
     }
 
-    private func finishWithoutArtwork() {
-        guard let result = importedWithoutArtwork else { return }
-        importedWithoutArtwork = nil
+    private func finishWithWarning() {
+        guard let result = importedWithWarning else { return }
+        importedWithWarning = nil
         onImported(result)
         dismiss()
     }

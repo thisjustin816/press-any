@@ -99,6 +99,11 @@ targets:
     platform: iOS
     sources:
       - path: AppTests
+      - path: TestROMs/roms
+        includes: [gbstudio-dmg.gb, gbstudio-gbc.gbc]
+        buildPhase: resources
+      - path: TestROMs/globals
+        buildPhase: resources
       - path: Packages/EmulatorKit/Sources/EmulatorKitTestSupport
         includes: [InMemoryRepositories.swift, InMemoryImageFingerprintRepository.swift, TestROM.swift]
     dependencies:
