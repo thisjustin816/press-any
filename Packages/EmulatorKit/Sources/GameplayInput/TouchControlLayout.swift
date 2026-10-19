@@ -81,14 +81,11 @@ public struct TouchAlignmentGuide: Equatable, Sendable {
     public let tab: TouchRect
     /// Clockwise rotation of the guide about the band's center, in radians.
     public let rotation: Double
-    /// Whether the band is drawn along with the tab.
-    public let showsBar: Bool
 
-    public init(bar: TouchRect, tab: TouchRect, rotation: Double = 0, showsBar: Bool = true) {
+    public init(bar: TouchRect, tab: TouchRect, rotation: Double = 0) {
         self.bar = bar
         self.tab = tab
         self.rotation = rotation
-        self.showsBar = showsBar
     }
 }
 

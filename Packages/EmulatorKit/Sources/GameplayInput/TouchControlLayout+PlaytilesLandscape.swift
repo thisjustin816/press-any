@@ -40,7 +40,7 @@ extension TouchControlLayout {
             let tab = TouchRect(x: center.x + source.tab.x - source.bar.center.x,
                                 y: bar.y + source.tab.y - source.bar.y,
                                 width: source.tab.width, height: source.tab.height)
-            return TouchAlignmentGuide(bar: bar, tab: tab, rotation: .pi / 2, showsBar: false)
+            return TouchAlignmentGuide(bar: bar, tab: tab, rotation: .pi / 2)
         }
 
         let rightPad = art(.dpad, at: right)

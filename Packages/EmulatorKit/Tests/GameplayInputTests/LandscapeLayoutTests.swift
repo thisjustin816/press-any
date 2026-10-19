@@ -141,8 +141,6 @@ final class LandscapeLayoutTests: XCTestCase {
                     let guides = [try XCTUnwrap(layout.alignmentGuide)] + layout.additionalAlignmentGuides
                     XCTAssertEqual(guides.count, 2)
                     XCTAssertTrue(guides.allSatisfy { $0.rotation == .pi / 2 })
-                    XCTAssertTrue(guides.allSatisfy { !$0.showsBar })
-                    XCTAssertTrue(try XCTUnwrap(portrait.alignmentGuide).showsBar)
                     XCTAssertEqual(guides[0].bar.width, portrait.alignmentGuide!.bar.width, accuracy: 0.001)
                     XCTAssertGreaterThan(guides[1].bar.center.x, layout.screen.x + layout.screen.width)
                     XCTAssertLessThan(guides[0].bar.center.x, layout.screen.x)
