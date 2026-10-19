@@ -52,7 +52,14 @@ struct ArtworkTestLibrary {
             sourceURL: URL(string: "https://example.com/art.png")!, fetchedAt: .distantPast, rights: "Synthetic test data"))
     }
 
-    func removeFiles() { try? FileManager.default.removeItem(at: root) }
+    func removeFiles() {
+        do {
+            try container.database.writer.close()
+            try FileManager.default.removeItem(at: root)
+        } catch {
+            XCTFail("Artwork fixture cleanup failed: \(error)")
+        }
+    }
 }
 
 actor PendingArtworkProvider: ArtworkProvider {

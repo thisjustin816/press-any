@@ -135,6 +135,13 @@ final class ImportReviewTests: XCTestCase {
     }
 
     func testASecondImportedBuildCanFindArtworkWhileTheFirstLookupIsPending() async throws {
+        // Fresh libraries exercise startup work and teardown without sharing a warmed database.
+        for _ in 0..<30 {
+            try await checkConcurrentArtworkLookups()
+        }
+    }
+
+    private func checkConcurrentArtworkLookups() async throws {
         let firstRequest = expectation(description: "First lookup starts")
         let secondRequest = expectation(description: "Second lookup starts before the first completes")
         let provider = PendingArtworkProvider { _, number in
@@ -144,6 +151,7 @@ final class ImportReviewTests: XCTestCase {
         let library = try ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let container = library.container
+        try await XCTUnwrap(container.backgroundMaintenance).value
         var game = Game(id: UUID(), primaryTitle: "Example", systemFamily: "gameboy", createdAt: .distantPast, modifiedAt: .distantPast)
         try container.repositories.games.insertGame(game)
         let first = try library.addBuild(to: game, dump: library.dumps[0], marker: 1)

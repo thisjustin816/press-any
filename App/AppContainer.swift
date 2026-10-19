@@ -49,6 +49,7 @@ final class AppContainer {
     let gameArtwork: GameArtwork
     private let artworkProvider: (any ArtworkProvider)?
     private var artworkTasks: [UUID: Task<Void, Never>] = [:]
+    private(set) var backgroundMaintenance: Task<Void, Error>?
     let quickPlayWorkspace: QuickPlayWorkspace
     let quickPlayPromoter: PromoteQuickPlay
     let coreRegistry: CoreRegistry
@@ -302,7 +303,7 @@ final class AppContainer {
             RefreshKnownDumpMetadata(builds: repositories.builds, settings: repositories.settings,
                 index: $0, transactions: repositories.transactions)
         }
-        Task.detached(priority: .utility) {
+        backgroundMaintenance = Task.detached(priority: .utility) {
             _ = try? trimCache.execute()
             _ = try? fillSHA1.execute()
             _ = try? fillFingerprints.execute()
