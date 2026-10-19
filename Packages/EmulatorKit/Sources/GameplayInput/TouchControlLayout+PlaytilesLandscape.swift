@@ -48,7 +48,7 @@ extension TouchControlLayout {
         func guide(at x: Double) -> TouchAlignmentGuide {
             let source = portrait.alignmentGuide!
             let center = rotated(source.bar, at: x).center
-            let barWidth = source.tab.width * 3
+            let barWidth = source.tab.width * 6
             let bar = TouchRect(x: center.x - barWidth / 2, y: center.y - source.bar.height / 2,
                                 width: barWidth, height: source.bar.height)
             let tab = TouchRect(x: center.x + source.tab.x - source.bar.center.x,

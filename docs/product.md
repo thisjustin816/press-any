@@ -938,7 +938,7 @@ across the phone when turned sideways. The game picture fits above the menu and 
 tile bodies and their guides, with at least eight points of clearance. The tiles sit close to the
 picture, with both bodies inside the phone's edges; smaller phones may need a smaller picture.
 Each tile has one compact raised T-shaped guide. The center nub keeps the measured shape of the
-controller's indent. A short rounded shoulder joins it on each side, extending one nub-width
+controller's indent. Rounded shoulders join it on each side and extend past the Dynamic Island,
 above and below it in landscape, independent of the phone's edges. The controller meets the
 shoulders' flat faces while the center nub extends into its notch. The menu fits between the
 tiles, clear of both bodies.

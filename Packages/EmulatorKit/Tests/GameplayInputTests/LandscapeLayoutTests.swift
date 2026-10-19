@@ -161,7 +161,6 @@ final class LandscapeLayoutTests: XCTestCase {
                         XCTAssertEqual(guide.bar.center.x, guide.tab.center.x, accuracy: 0.001)
                         let shoulder = guide.tab.x - guide.bar.x
                         XCTAssertGreaterThan(shoulder, guide.barCornerRadius)
-                        XCTAssertLessThanOrEqual(shoulder, guide.tab.width + 0.001)
                         XCTAssertGreaterThan(guide.bar.y + guide.bar.height, guide.tab.y)
                         XCTAssertLessThan(guide.bar.y + guide.bar.height, guide.tab.y + guide.tab.height)
                         for rect in [guide.bar, guide.tab] {
@@ -206,6 +205,16 @@ final class LandscapeLayoutTests: XCTestCase {
                     }
                 }
             }
+        }
+    }
+
+    func testPlaytilesStraightGuideExtendsBeyondTheDynamicIslandOn16ProMax() throws {
+        let layout = TouchControlLayout.make(.playtiles, width: 956, height: 440,
+                                             safeBottom: 21, safeLeft: 62, safeRight: 62, displayScale: 3)
+        let guides = [try XCTUnwrap(layout.alignmentGuide)] + layout.additionalAlignmentGuides
+        for guide in guides {
+            // A 126-point island centered on the display must leave 24 points of straight edge.
+            XCTAssertGreaterThan(guide.bar.width / 2 - guide.barCornerRadius, 126 / 2 + 24)
         }
     }
 
