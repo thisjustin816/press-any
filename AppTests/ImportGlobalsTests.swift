@@ -17,10 +17,10 @@ struct ImportGlobalsTests {
         fixture.container.sharedFileInbox.discard(fixture.file)
 
         let reopened = try AppContainer(rootURL: fixture.library)
-        let map = try #require(reopened.repositories.variableMaps.fetchVariableMaps(buildID: result.build.id).first)
+        let map = try #require(try reopened.repositories.variableMaps.fetchVariableMaps(buildID: result.build.id).first)
         #expect(map.format == .gbStudioGlobals)
         #expect(map.originalFilename == "globals.i")
-        let asset = try #require(reopened.repositories.assets.fetchAsset(id: map.assetID))
+        let asset = try #require(try reopened.repositories.assets.fetchAsset(id: map.assetID))
         #expect(try reopened.fileStore.readData(at: reopened.fileStore.rootURL.appendingPathComponent(asset.relativePath)) == fixture.mapData)
         #expect(review.importWarning == nil)
     }
