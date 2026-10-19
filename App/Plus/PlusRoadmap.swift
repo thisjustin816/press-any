@@ -1,6 +1,6 @@
 import Foundation
 
-/// Features on the Plus screen. The roadmap follows the v1.1 scope in docs/product.md,
+/// Features on the Plus screen. The roadmap follows docs/product.md,
 /// excluding crash reporting and usage counts.
 enum PlusRoadmap {
     struct Item: Identifiable, Equatable {

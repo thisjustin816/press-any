@@ -5,7 +5,7 @@ and it's strongest for the people who make and test homebrew and ROM hacks: a Ga
 identity while its ROM changes, saves stay safe across versions, and patches keep their sources.
 
 This document says what the app is and how it behaves. Where something isn't built yet, it
-carries its target release (v1, v1.1 or later); `docs/backlog.md` tracks what's done and what's
+carries its target release (v1.0, v1.1, v2.0 or later); `docs/backlog.md` tracks what's done and what's
 left. When a decision changes how the app behaves, update the section it touches in the same
 change. There is no separate decision log.
 
@@ -21,12 +21,16 @@ change. There is no separate decision log.
 
 ## Platform and releases
 
+The submitted v1.0 App Store candidate is build 110, identified by
+`app-store-review/1.0-build-110`. Development after that candidate targets v1.1. The larger
+unfinished roadmap targets v2.0 tentatively; `docs/backlog.md` separates these scopes.
+
 - iOS 17.4 or later, iPhone first. iPad keeps working but gets no special design until later.
 - SameBoy 1.0.3 for GB and GBC, built from its `Core/` only. SameBoy's `iOS/` directory needs
   its author's written permission to ship on the App Store, so none of its code, artwork or
   layouts are used.
-- GBA comes through an mGBA adapter in 1.2 or 2.0, once GB/GBC is feature complete through v1
-  and v1.1. Other systems aren't planned, but the library, storage, input and core abstractions
+- GBA comes through an mGBA adapter in a later release, once GB/GBC is feature complete. Other
+  systems aren't planned, but the library, storage, input and core abstractions
   mustn't rule them out.
 - Light and Dark appearance. Pink actions, navy brand lettering and warm gray controller and
   icon bodies share the named colors described in `docs/NAMING.md`; native text, surfaces and
@@ -39,8 +43,9 @@ change. There is no separate decision log.
 v1 is a good core experience: the library model with search, sorting and favorites, saves and
 states with Library Backup, patching, cheats, Quick Play, Fast Forward, rumble, Bluetooth controllers,
 landscape, the built-in layouts, clean screenshot sharing and artwork from a chosen game frame.
-Everything else waits for v1.1: iCloud sync, the Community Catalog and metadata providers, tags and collections, archive and multi-asset imports, automatic
-artwork and documents, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
+The larger roadmap tentatively targets v2.0: iCloud sync, the Community Catalog and metadata providers,
+tags and collections, broader archive and multi-asset imports, additional artwork providers and
+documents, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
 curated shaders, the layout editor and skin import, a capture gallery and gameplay notes, external displays,
 crash reporting and usage counts, and Developer Mode. The Plus screen's roadmap lists these
 features, so change it with this paragraph (see Pricing).
@@ -52,7 +57,7 @@ product ID `com.thisjustin816.PressAny.plus`, with Family Sharing on. It costs $
 $2.99 once v1.1 ships. The price lives in App Store Connect, never in code: the app shows the App
 Store's localized price.
 
-In v1, Plus includes:
+In the v1.1 development build, Plus includes:
 
 - **LCD filters**: LCD 1× and LCD 3× (see Picture).
 - **App icons**: Berry, Grape, Teal, Kiwi and Dandelion colorways of the home-screen icon, in
@@ -72,7 +77,7 @@ States, Library Backup and every export, patches, cheats, controllers, landscape
 Fast Forward, Frame Blending, Screen Colors and the layouts.
 
 Plus also includes everything on its roadmap and anything added later, at no extra cost. Some of
-it will be free for everyone, too. The roadmap on the Plus screen is the v1.1 list above, without
+it will be free for everyone, too. The roadmap on the Plus screen is the v2.0 list above, without
 crash reporting and usage counts. Playing GBA games isn't on it, and is separate from the Game Boy
 Advance Model, which runs GB and GBC games. The Plus screen lists GBA games under Also Planned, as
 planned for a later version, with no promise that they're free or part of Plus.
@@ -139,7 +144,7 @@ suggests keeps the suggestion as an alias the same way, unless it's a generic na
 
 A Game stores whether it is a favorite. Merging Games keeps the survivor a favorite if either
 was, and Make Separate Game carries the source Game's favorite state. Game titles and Build
-metadata keep provenance. Tags, collections, documents and typed artwork follow in v1.1.
+metadata keep provenance. Tags, collections, documents and typed artwork follow in v2.0.
 
 A Game's statistics sum playtime across its live Builds and session counts across its live Save
 Profiles. Last Played is the latest profile's last-played date; Added is the Game's creation date.
@@ -167,7 +172,7 @@ adds the same played time to its Build and Save Profile on background and close,
 time since the last write. Game Details shows the Game's combined statistics. A separate
 statistics screen comes later.
 
-v1.1 adds a lightweight timeline (versions, hashes, parents, notes, import and activation history)
+v2.0 adds a lightweight timeline (versions, hashes, parents, notes, import and activation history)
 and a Build comparison screen. The comparison engine (changed bytes and ranges, size, banks,
 header) exists; the screen doesn't yet.
 
@@ -188,7 +193,7 @@ They leave save states scoped to their exact Build.
 
 There is no rolling battery-save history. Isolation comes from duplicating profiles. A profile
 can carry only narrow playthrough settings (cheats, RTC offset, rewind where it makes sense; all
-v1.1), never a full fifth settings layer.
+v2.0), never a full fifth settings layer.
 
 ### Save state
 
@@ -347,7 +352,7 @@ changes the library; review shows what will happen; commit is all or nothing.
   something to play?" two links that open the browser: Homebrew Hub (hh.gbdev.io) and itch.io's
   Game Boy ROM tag. The app downloads nothing from them. They show only when the library is
   empty, not for a search or Favorites Only with no match. The in-app browse and download
-  described under v1.1 is separate, and takes on Guideline 4.7's index, filtering and age rules.
+  described under v2.0 is separate, and takes on Guideline 4.7's index, filtering and age rules.
 - Every picked or shared file is untrusted. Its size is checked before it's read, against a limit
   for its kind: 8 MB for a ROM (the most a header can declare), 16 MB for a patch, 4 MB for a
   battery save (TPP1 cartridges can declare 2 MB of RAM), 20 MB for artwork and 4 MB for a
@@ -419,12 +424,12 @@ changes the library; review shows what will happen; commit is all or nothing.
   once the ROM is in the library, replacing an existing Game's artwork only when the player
   chose one. An exact duplicate doesn't offer it.
 - **Duplicates.** An exact duplicate image never makes a second file or Build. Its existing Build
-  keeps its metadata. In v1.1, a duplicate import still inspects anything new that came with it
+  keeps its metadata. In v2.0, a duplicate import still inspects anything new that came with it
   (saves, artwork, documents, patches).
 - A file shared while another sheet is open, such as Import Review mid-edit or the Resume prompt,
   waits until that sheet closes.
 
-### Planned (v1.1 unless noted)
+### Planned (v2.0 unless noted)
 
 - 7z through libarchive, as a temporary container that isn't kept, with the same limits as zip.
   RAR is tentative.
@@ -577,10 +582,10 @@ isn't stored.
 
 - Richer ROM-hack metadata (hack title, author, version from bracket conventions) and a
   normalized filename suggestion, without inventing fields.
-- v1.1: Rename File to Canonical Name as an explicit action; bulk rename later.
-- v1.1: artwork by region and patch review offering the Game's other regional Build when a patch
+- v2.0: Rename File to Canonical Name as an explicit action; bulk rename later.
+- v2.0: artwork by region and patch review offering the Game's other regional Build when a patch
   expects it.
-- v1.1: quiet metadata refreshes from providers beyond the bundled No-Intro data, preserving the
+- v2.0: quiet metadata refreshes from providers beyond the bundled No-Intro data, preserving the
   player's values. Build version ordering from semantic versions, build numbers and dates is also
   planned.
 
@@ -633,7 +638,7 @@ isn't stored.
   hashes still rebuild and check the final result.
 - Build Technical Info lists the ordered patch filenames, Enabled or Disabled, and each expected
   input SHA-256 (touch and hold to copy), or Not recorded.
-- v1.1: editable stacks (reorder, enable, disable, add, remove), each edit making a new Build;
+- v2.0: editable stacks (reorder, enable, disable, add, remove), each edit making a new Build;
   patch metadata with confidence, catalog over README over filename; BPS generation from a base
   and a modified Build. Future: Quick Play a patch without making a Build.
 
@@ -651,7 +656,7 @@ isn't stored.
   than any Auto State, the next launch boots from it.
 - A Game's default profile is starred, as its preferred Build is, and Play names the Build and
   save it will start, reading "New Save" when it will make one.
-- The cartridge clock lives inside SameBoy's save, so games with a clock work. v1.1 adds
+- The cartridge clock lives inside SameBoy's save, so games with a clock work. v2.0 adds
   a per-profile RTC offset and Developer Mode RTC controls.
 
 ### Build switching and compatibility
@@ -683,7 +688,7 @@ declaration to remove it and return to inferred checks. Declarations work in bot
 
 A Build can keep variable maps (Attach Variable Map): GB Studio's `game_globals.i` or `globals.i`,
 an RGBDS `.sym` or a GBDK `.noi`, stored immutably on that exact Build and listed in Technical
-Info. They're kept for the GB Studio save migration in v1.1, which must be version gated and never
+Info. They're kept for the GB Studio save migration in v2.0, which must be version gated and never
 claims reliability from just an old ROM, old save and new ROM.
 
 ## Save states and lifecycle
@@ -792,7 +797,7 @@ claims reliability from just an old ROM, old save and new ROM.
   the checkpoint until the next launch of that Build, when it is removed. A crash never launches
   a game automatically, including a crash while recovering. Quick Play sessions are not recovered.
 - One emulator session at a time.
-- v1.1: switching Build or profile from the game through the compatibility check and a relaunch.
+- v2.0: switching Build or profile from the game through the compatibility check and a relaunch.
 
 ## Quick Play
 
@@ -812,7 +817,7 @@ fresh build.
   Library to save states", and Cheats grayed out with "Add to Library to use cheats". A promoted
   session's Build starts with no cheats. Add to Library closes the game and opens promotion. The session
   screen opens the ROM's Technical Info.
-- Closing offers Keep for Later. Sessions expire after 24 hours; v1.1 makes that Immediately,
+- Closing offers Keep for Later. Sessions expire after 24 hours; v2.0 makes that Immediately,
   24 hours or 7 days.
 - Quick Play Sessions has Select, checkboxes and Discard (n) in the bottom bar. One confirmation
   discards the selected sessions and warns that it can't be undone. Tapping a row while selecting
@@ -828,7 +833,7 @@ fresh build.
   a session with only a resume point can keep it in a new profile. Keeping the existing profile
   brings no state, since the state holds the discarded save. If the resume point can't move, the
   Build and save are still added and the session is kept.
-- v1.1: a screenshot gallery, notes and debug captures in a session, moved over transactionally on
+- v2.0: a screenshot gallery, notes and debug captures in a session, moved over transactionally on
   promotion.
 
 ## Gameplay
@@ -881,7 +886,7 @@ The center dead zone stays at 16% of the pad's half-width on each axis.
 The controller layout keeps the name Game Boy because it describes the hardware it recreates; the
 App Store name, keywords and icon carry no Nintendo trademarks.
 
-v1.1: a lightweight layout editor (screen and control position and size,
+v2.0: a lightweight layout editor (screen and control position and size,
 opacity, touch areas, separate portrait and landscape, a few control styles, saved presets),
 opened from the game with the frame frozen for alignment and offering Save for This Game or Update
 Shared Preset; Minimal, Fullscreen and one-handed presets; Delta and Manic skin import into the
@@ -891,7 +896,7 @@ accessories such as Playtiles and GameBaby, which are chosen by hand (an identif
 may suggest a preset, never switch to it); optional gestures, off by default; optional Turbo A
 and B, not in the default layout.
 
-v1.1: when the chosen layout fits a physical controller over the bottom of the screen, as Playtiles
+v2.0: when the chosen layout fits a physical controller over the bottom of the screen, as Playtiles
 does (and any later layout like it), the whole app moves into the top part of the screen that
 stays visible: the library, Game Details, Settings, sheets and menus fit above the controller, and
 its buttons move a focus through them, so the app can be used without taking the controller off.
@@ -1036,7 +1041,7 @@ Quick Play keeps them temporary until Add to Library.
   screen refreshes at up to 120 Hz, but while Low Power Mode is on or the device's thermal state
   is serious or critical it's held to 60 Hz, and returns to 120 Hz when that ends, with no restart.
   The game's speed is the same either way.
-- v1.1: a curated, RetroArch-compatible shader library chosen after a community survey and device
+- v2.0: a curated, RetroArch-compatible shader library chosen after a community survey and device
   comparison (LCD1x, LCD3x and pixel-transparency variants are candidates; PT-SkyWalker541 is a
   candidate to audit), downloaded from pinned, license-checked sources with hashes and preserved
   licenses; independent inheritance of pipeline components and parameters; named presets; live
@@ -1067,7 +1072,7 @@ Quick Play keeps them temporary until Add to Library.
   Unlimited, inheritable, applied at once when changed from the game's Settings.
 - **Fast Forward Audio**: Muted by default; Accelerated plays the sound sped up, pitch rising, up
   to 4×, and stays muted beyond.
-- v1.1: Fast Forward from layouts, controller buttons and gestures through Quick Actions, hold or
+- v2.0: Fast Forward from layouts, controller buttons and gestures through Quick Actions, hold or
   toggle; slow motion at 0.25×, 0.5× and 0.75×; rewind with 5 s, 15 s, 30 s, 1 min, 2 min and 5 min
   presets, memory-budgeted so the effective length can shrink on smaller devices, muted by
   default, surviving a brief trip to the background but never saved as a timeline; frame advance
@@ -1098,10 +1103,10 @@ Quick Play keeps them temporary until Add to Library.
   touch layout and shows a notice.
 - Touch Haptics: Off, Light (default) or Medium, off while a controller is in use.
 - Cartridge rumble goes to the controller when it can, the phone otherwise.
-- v1.1: choosing Player 1 among several controllers (Player 2 is reserved for link play); Phone,
+- v2.0: choosing Player 1 among several controllers (Player 2 is reserved for link play); Phone,
   Controller, Both or Off rumble routing with separate intensities.
 
-### Quick Actions (v1.1)
+### Quick Actions (v2.0)
 
 One action registry powers the in-game menu, controller hotkeys and skin buttons: save and load
 state, rewind, Fast Forward, slow motion, screenshot, note, manual, cheats, shader, Build and
@@ -1215,7 +1220,7 @@ list shows no model numbers. App Settings has it on the Playing page.
   profile or Build for good takes all its states, including ones waiting in another deletion.
 - Purging writes a permanent tombstone so a deleted record can't come back from another device;
   tombstone expiry never counts as safe removal from an arbitrarily offline device.
-- v1.1: lightweight Undo for recent structural changes.
+- v2.0: lightweight Undo for recent structural changes.
 
 ## Shared files
 
@@ -1329,10 +1334,10 @@ list shows no model numbers. App Settings has it on the Playing page.
   menu, exports, and that the app comes with no games. It shows once, again only when its
   content version rises, never in automated runs, and never ahead of a shared file or game.
   Settings > How Press Any Works reopens it, and the first game shows "Tap Press Any for the
-  menu" once. v1 has nothing to opt into; the v1.1 opt-ins (crash reports, usage counts) and
+  menu" once. v1 has nothing to opt into; the v2.0 opt-ins (crash reports, usage counts) and
   Developer Mode bring their own introductions.
 - v1: a separate statistics screen (no permanent session log).
-- v1.1: sorting by release year, developer and publisher, which metadata providers supply; SQLite
+- v2.0: sorting by release year, developer and publisher, which metadata providers supply; SQLite
   FTS5 live search across titles, aliases, filenames, hack title, author, version,
   system, region, Build names, tags and document titles, title matches ranked first; manual and
   smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with
@@ -1350,7 +1355,8 @@ or groups a Game and never proves two saves compatible.
 
 ## Planned areas
 
-Areas marked v1.1 wait for it; the rest target v1.
+Areas marked v2.0 are tentative roadmap work. The backlog records which existing features
+belong to v1.0 and v1.1.
 
 ### Cheats and memory tools
 
@@ -1367,7 +1373,7 @@ Save states don't record cheats, so loading one keeps the cheats that are on now
 statistics count as usual. Quick Play has no cheats. SameBoy's own cheat file format isn't
 imported.
 
-v1.1 adds a pluggable cheat database keyed to verified ROMs, adding selectively and never enabling
+v2.0 adds a pluggable cheat database keyed to verified ROMs, adding selectively and never enabling
 anything on its own; optional groups and search; and states that record their cheat configuration.
 It also adds memory search: exact, unknown, changed, unchanged, increased, decreased, by an
 amount, greater or less, in signed or unsigned 8 and 16-bit and hex; results can be edited,
@@ -1385,14 +1391,14 @@ The temporary PNG remains available until the system share sheet closes, then is
 share sheet's Save Image adds the screenshot to Photos; the app declares add-only access and never
 reads the photo library. Sharing and setting artwork are free.
 
-v1.1 adds an in-app gallery where every capture belongs to its exact Build, exported clean,
+v2.0 adds an in-app gallery where every capture belongs to its exact Build, exported clean,
 with metadata, or with a rendered Build Info or Bug Report strip. An optional capture context records selected
 watches, named variables when maps exist, memory ranges, registers, frame and time, Build, hash
 and patches, RTC, cheats, profile, core and settings; a full RAM snapshot is opt-in in Developer
 Mode. Bug-report exports preview a checklist, and memory, saves and notes need explicit inclusion.
 Game notes and timestamped gameplay notes; each Build already has a plain-text note in Build Details.
 
-### Documents (v1.1)
+### Documents (v2.0)
 
 Manuals, READMEs, changelogs, guides and maps as managed copies (PDF, CBZ, PNG, JPEG, WebP image
 sets, TXT, Markdown), belonging to a Game, a Build or both. A reader opens over the paused game,
@@ -1448,20 +1454,20 @@ asset through backup, restore and copying between Games. Private artwork is neve
 Removing artwork keeps the placeholder until the player explicitly assigns another image.
 There's no paid artwork agreement, and the app bundles no Libretro game artwork.
 
-Remaining v1.1 artwork work adds included-file and Community Catalog providers, OpenVGDB pending
+Remaining v2.0 artwork work adds included-file and Community Catalog providers, OpenVGDB pending
 its license, optional SteamGridDB with the player's own key, and a title-screen fallback recorded
 as generated. Priority will distinguish the player's choice, hack-specific art, inherited base
 art and generated art. Several typed images per Game (box front and back, cartridge, title screen,
 screenshots, logo, custom), a primary that follows the preferred region, Build overrides and
 non-destructive crops remain pending.
 
-### External display (v1.1)
+### External display (v2.0)
 
 AirPlay and wired displays show the game as an independent render target with its own scaling,
 aspect and shader, while the phone becomes a controller with Quick Actions, the manual, states and
 Build switching. Chromecast is out of scope.
 
-### iCloud (v1.1)
+### iCloud (v2.0)
 
 Syncs everything except ROMs: metadata, profiles and saves, states, cheats, settings, tags,
 artwork and document overrides, patches, layouts, notes, captures and statistics. Field-level
@@ -1469,9 +1475,9 @@ merges where safe; divergent `.sav` files are both kept for the player to choose
 separate profiles, or duplicate first. Deletions sync as tombstones. iCloud is sync, not hidden
 save history.
 
-### Community Catalog (v1.1)
+### Community Catalog (v2.0)
 
-v1.1 reads a signed catalog file offline: Game and Build metadata, expected hashes, lineage and
+v2.0 reads a signed catalog file offline: Game and Build metadata, expected hashes, lineage and
 where to download patches, never ROMs. Playing, importing and patching never depend on it. The
 hosted service follows: anonymous reading, an account to contribute, optional attribution,
 moderation with reasons for rejections, field-level corrections with evidence, Suggest This
@@ -1532,7 +1538,7 @@ a package holding such records is refused. Backups have no password, and none is
 archive marked encrypted is refused before changes. Adapters for Delta, Manic, Afterplay and
 Playtiles exports come later and report what they cannot carry over.
 
-### Developer Mode (v1.1)
+### Developer Mode (v2.0)
 
 An Advanced toggle with an explanation. Its tools (memory search and editing, watches, hashes,
 patch provenance, frame advance, RTC controls, save details) appear in context rather than
@@ -1540,7 +1546,7 @@ replacing the interface.
 
 ### Privacy and telemetry
 
-Crash reports and anonymous usage counts (v1.1) are both opt-in. Usage counts are numbers only (Games,
+Crash reports and anonymous usage counts (v2.0) are both opt-in. Usage counts are numbers only (Games,
 Builds per Game, profiles shared by Builds, Quick Play sessions promoted), never titles, hashes,
 filenames or library contents; where they go and the privacy copy are still open. Artwork requests
 send canonical release names as described above. ROM, save and state bytes, screenshots, memory,
@@ -1561,14 +1567,14 @@ doesn't declare its category.
 
 v1 has Dynamic Type in the normal interface, good contrast and status that doesn't rely on color,
 controller remapping through iOS's Game Controller settings, VoiceOver labels for the library and
-the game menu, and haptics never as the only feedback. v1.1 adds Reduce Motion, large and
+the game menu, and haptics never as the only feedback. v2.0 adds Reduce Motion, large and
 configurable touch targets, Dynamic Type for the on-screen controls, controller navigation of
 the app's screens, one-handed layouts with the layout editor, and a fuller VoiceOver pass.
 Narrated gameplay isn't planned.
 
 ### Performance
 
-Correct timing comes first. Under thermal pressure (v1.1, with the wider shader set and rewind), optional shaders, rewind
+Correct timing comes first. Under thermal pressure (v2.0, with the wider shader set and rewind), optional shaders, rewind
 length and background work give way before gameplay, audio or input do; emulation speed and save behavior never change
 silently. The default shader must hold full speed on the slowest supported device.
 
@@ -1579,8 +1585,8 @@ silently. The default shader must hold full speed on the slowest supported devic
   concepts; core compatibility isn't hardware compatibility.
 - Contracts say `GameImage` and `PersistentSave` rather than ROM and battery; GB-specific UI still
   says ROM and .sav. Cores and toolchain detectors have registries; platforms, image analyzers and
-  patch formats get theirs in v1.1, with input and memory descriptors.
-- A Build pins the core version it first launched with. v1.1 shows a quiet notice when a newer core
+  patch formats get theirs in v2.0, with input and memory descriptors.
+- A Build pins the core version it first launched with. v2.0 shows a quiet notice when a newer core
   is available and makes migration an explicit, reversible checkpoint that starts a new state
   lineage; rolling back is offered only when the old core can actually run.
 - `FeatureEntitlementProvider` keeps StoreKit in the app target, out of the domain, core, storage
@@ -1589,9 +1595,9 @@ silently. The default shader must hold full speed on the slowest supported devic
 - Optional Included Games: a small set of rights-cleared homebrew, imported through the normal
   path from a manifest with permission records; a release fails if it packages an unapproved ROM.
 
-## v1.1 and later
+## v2.0 and later
 
-- **v1.1:** full-text search and the accessibility work above; the cheat database, cheat search
+- **v2.0:** full-text search and the accessibility work above; the cheat database, cheat search
   and memory tools (above), with states recording their cheat configuration and offering to
   restore it; the app's screens fitting above a controller that covers the bottom of the screen, as
   with Playtiles, and navigable with its buttons; link cable (local first, then nearby; not built on Multipeer Connectivity), GB Studio
@@ -1616,7 +1622,7 @@ silently. The default shader must hold full speed on the slowest supported devic
 - No commercial ROMs or saves as fixtures. `TestROMs/` holds original, redistributable ROMs built
   from source beside them, each listed in `TestROMs/manifest.json`.
 - App Store screenshots and previews show homebrew and the original test ROMs only.
-- v1.1 adds CONTRIBUTING, SECURITY, a code of conduct and a trademark policy, with DCO sign-off and
+- v2.0 adds CONTRIBUTING, SECURITY, a code of conduct and a trademark policy, with DCO sign-off and
   no copyright-assignment CLA.
 
 ## Automation

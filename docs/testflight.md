@@ -199,10 +199,38 @@ before its commit, and an empty description gets one written for it. A release w
 on `main` is refused, since it would run that commit's scripts with the API key.
 
 Choosing **stable** tags the newest upload `v<version>`, such as `v1.0.0`, with the changes since
-the previous stable release as its description, and names the build to submit. A version is
-released as stable once; raise `MARKETING_VERSION` for the next. Submitting it to the App Store is
-still done by hand in App Store Connect. The earlier `v0.1.0-beta.N` tags stay; beta numbering
-starts again at 1 for each version.
+the previous stable release as its description. Use it after App Store publication, when that
+newest upload is the published candidate. If development has advanced, publish the stable GitHub
+release at the submitted candidate's exact commit instead. A version is released as stable once;
+raise `MARKETING_VERSION` for the next. App Store submission remains manual. The earlier
+`v0.1.0-beta.N` tags stay; beta numbering starts again at 1 for each version.
+
+### App Store submission tags
+
+For every candidate actually submitted to App Store review, create and push an annotated tag:
+`app-store-review/<marketing-version>-build-<build-number>`. Confirm the version and build in App
+Store Connect, then resolve its existing `testflight/<build-number>` tag to the exact uploaded
+commit. Tag that commit after submission. A successful upload alone does not mean it was submitted.
+
+For example, the submitted 1.0 (110) candidate is commit `3c4a76f`:
+
+```sh
+git fetch origin --tags
+git rev-parse 'testflight/110^{commit}'
+git tag -a app-store-review/1.0-build-110 'testflight/110^{commit}' -m 'Submitted for App Store review: 1.0 (110)'
+git push origin refs/tags/app-store-review/1.0-build-110
+```
+
+The annotation records the submitted version and build. A replacement candidate gets a new tag
+for its new build number; retain earlier submission tags and never move them. If a tag already
+exists, check its commit rather than recreating it. Creating this tag triggers neither Release
+nor TestFlight and does not publish a GitHub release.
+
+After the owner confirms App Store publication, create the stable version tag and GitHub release
+at that same candidate commit, such as `v1.0.0` for 1.0 (110). Check the peeled commit of the stable
+and submission tags matches before publishing. A GitHub release at the exact candidate commit
+uses the existing Release workflow, even if `main` has newer TestFlight builds. The backlog uses
+the submitted candidate as the boundary between that release and subsequent development.
 
 ## 8. Download screenshots for App Store Connect
 

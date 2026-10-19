@@ -75,6 +75,15 @@ The owner accepted the working MVP on 2026-10-06, so v1 work may proceed. Keep t
 - Quick Play isolation and promotion;
 - Build promotion/merge preserving lineage and data.
 
+## App Store submissions
+
+Follow the submission-tag convention in `docs/testflight.md` under App Store submission tags.
+After an actual submission, create and push `app-store-review/<version>-build-<build>` at the
+exact uploaded commit identified by its `testflight/<build>` tag. Keep submission tags immutable.
+Create the stable release only after the owner confirms App Store publication, at that same
+candidate commit even when `main` has advanced. Use the submitted candidate as the backlog's
+release boundary.
+
 ## Product UX principle
 
 Press Any has a high customization ceiling but must remain simple by default. Use progressive disclosure: presets first, then Customize/overflow/Advanced/Developer Mode. Do not expose a setting simply because an implementation knob exists.
