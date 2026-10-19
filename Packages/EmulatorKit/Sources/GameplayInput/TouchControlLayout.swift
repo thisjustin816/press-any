@@ -8,8 +8,14 @@ public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
     /// The Playtiles GBC skin's portrait layout, or two sideways tiles in landscape.
     case playtiles
 
-    public func forGameplay(controllerConnected: Bool) -> Self {
-        controllerConnected ? .gameBoy : self
+    /// The 1242-pixel iPhone display class is the narrowest with at least 68 mm of screen width
+    /// (1242 pixels at 458 ppi). Native dimensions keep availability independent of Display Zoom.
+    public func isAvailable(nativeWidth: Double, nativeHeight: Double) -> Bool {
+        self != .playtiles || min(nativeWidth, nativeHeight) >= 1242
+    }
+
+    public func forGameplay(controllerConnected: Bool, playtilesSupported: Bool = true) -> Self {
+        controllerConnected || !playtilesSupported ? .gameBoy : self
     }
 }
 
@@ -75,20 +81,19 @@ public enum TouchControl: Hashable, Sendable {
 
 /// Marks where a physical controller overlay sits on the screen. Drawn only; it takes no touches.
 public struct TouchAlignmentGuide: Equatable, Sendable {
-    /// The guide's band before rotation.
+    /// The guide's band before rotation. Its bottom edge meets the physical controller.
     public let bar: TouchRect
     /// A tab hanging from the bar, its bottom fully rounded.
     public let tab: TouchRect
     /// Clockwise rotation of the guide about the band's center, in radians.
     public let rotation: Double
-    /// Whether the band is drawn along with the tab.
-    public let showsBar: Bool
+    public let barCornerRadius: Double
 
-    public init(bar: TouchRect, tab: TouchRect, rotation: Double = 0, showsBar: Bool = true) {
+    public init(bar: TouchRect, tab: TouchRect, rotation: Double = 0, barCornerRadius: Double = 0) {
         self.bar = bar
         self.tab = tab
         self.rotation = rotation
-        self.showsBar = showsBar
+        self.barCornerRadius = barCornerRadius
     }
 }
 
@@ -204,7 +209,7 @@ public struct TouchControlLayout: Equatable, Sendable {
 extension TouchControlLayout {
     /// The layout for `style` and the view's orientation, in points.
     /// Safe-area insets keep the picture and controls clear of screen cutouts and the home indicator;
-    /// physical Playtiles in landscape use the full width to line up with the phone's edges.
+    /// physical Playtiles in landscape use the full width to accommodate their bodies.
     /// `displayScale` lets the layouts size the picture to whole device pixels under
     /// `scaling`. `pictureOpensMenu` makes a tap on the game picture open the menu as well as one
     /// on the logo.

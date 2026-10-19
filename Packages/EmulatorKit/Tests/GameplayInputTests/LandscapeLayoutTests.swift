@@ -141,22 +141,29 @@ final class LandscapeLayoutTests: XCTestCase {
                     let guides = [try XCTUnwrap(layout.alignmentGuide)] + layout.additionalAlignmentGuides
                     XCTAssertEqual(guides.count, 2)
                     XCTAssertTrue(guides.allSatisfy { $0.rotation == .pi / 2 })
-                    XCTAssertTrue(guides[0].showsBar)
-                    XCTAssertFalse(guides[1].showsBar)
-                    XCTAssertTrue(try XCTUnwrap(portrait.alignmentGuide).showsBar)
-                    XCTAssertEqual(guides[0].bar.width, portrait.alignmentGuide!.bar.width, accuracy: 0.001)
+                    XCTAssertEqual(try XCTUnwrap(portrait.alignmentGuide).barCornerRadius, 0)
+                    XCTAssertLessThan(guides[0].bar.width, portrait.alignmentGuide!.bar.width)
                     XCTAssertGreaterThan(guides[1].bar.center.x, layout.screen.x + layout.screen.width)
                     XCTAssertLessThan(guides[0].bar.center.x, layout.screen.x)
                     let physicalTileWidth = 40 * 6.1
-                    let leftTileEnd = guides[0].bar.center.x + guides[0].bar.height / 2
-                    let rightTileStart = guides[1].bar.center.x + guides[1].bar.height / 2 - physicalTileWidth
-                    XCTAssertEqual(leftTileEnd - physicalTileWidth, 0, accuracy: 0.001)
-                    XCTAssertEqual(rightTileStart + physicalTileWidth, phone.width, accuracy: 0.001)
-                    XCTAssertGreaterThanOrEqual(layout.screen.x, leftTileEnd + 8 - 0.001)
-                    XCTAssertLessThanOrEqual(layout.screen.x + layout.screen.width, rightTileStart - 8 + 0.001)
+                    let leftTileEnd = guides[0].bar.center.x - guides[0].bar.height / 2
+                    let rightTileStart = guides[1].bar.center.x - guides[1].bar.height / 2 - physicalTileWidth
+                    XCTAssertGreaterThanOrEqual(leftTileEnd - physicalTileWidth, -0.001)
+                    XCTAssertLessThanOrEqual(rightTileStart + physicalTileWidth, phone.width + 0.001)
+                    XCTAssertEqual(layout.screen.x - leftTileEnd - guides[0].bar.height, 8, accuracy: 0.001)
+                    XCTAssertEqual(rightTileStart - layout.screen.x - layout.screen.width, 8, accuracy: 0.001)
                     XCTAssertGreaterThanOrEqual(layout.menuAreas[0].x, leftTileEnd + 8 - 0.001)
                     XCTAssertLessThanOrEqual(layout.menuAreas[0].x + layout.menuAreas[0].width, rightTileStart - 8 + 0.001)
                     for guide in guides {
+                        XCTAssertEqual(guide.tab.width, portrait.alignmentGuide!.tab.width, accuracy: 0.001)
+                        XCTAssertEqual(guide.tab.height, portrait.alignmentGuide!.tab.height, accuracy: 0.001)
+                        XCTAssertEqual(guide.tab.y, guide.bar.y, accuracy: 0.001)
+                        XCTAssertEqual(guide.bar.center.x, guide.tab.center.x, accuracy: 0.001)
+                        let shoulder = guide.tab.x - guide.bar.x
+                        XCTAssertGreaterThan(shoulder, guide.barCornerRadius)
+                        XCTAssertLessThanOrEqual(shoulder, guide.tab.width + 0.001)
+                        XCTAssertGreaterThan(guide.bar.y + guide.bar.height, guide.tab.y)
+                        XCTAssertLessThan(guide.bar.y + guide.bar.height, guide.tab.y + guide.tab.height)
                         for rect in [guide.bar, guide.tab] {
                             let center = guide.bar.center
                             let rotated = TouchRect(x: center.x - (rect.y + rect.height - center.y),
@@ -202,15 +209,18 @@ final class LandscapeLayoutTests: XCTestCase {
         }
     }
 
-    func testPlaytilesSpreadTowardTheEdgesToEnlargeThePicture() {
-        let fill = TouchControlLayout.make(.playtiles, width: 874, height: 402,
+    func testPlaytilesKeepTheIntegerPictureSizeWhenBothFullTilesFit() throws {
+        let fill = TouchControlLayout.make(.playtiles, width: 956, height: 440,
                                            safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .fill)
-        let integer = TouchControlLayout.make(.playtiles, width: 874, height: 402,
+        let integer = TouchControlLayout.make(.playtiles, width: 956, height: 440,
                                               safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .integer)
-        XCTAssertGreaterThan(fill.screen.width, 350)
-        XCTAssertGreaterThanOrEqual(integer.screen.width, 320)
-        XCTAssertLessThan(fill.dpadHitArea.x, 70)
-        XCTAssertGreaterThan(fill.additionalButtons.last!.area.center.x, 750)
+        XCTAssertGreaterThan(fill.screen.width, 380)
+        XCTAssertEqual(integer.screen.width, 160 * 7 / 3.0, accuracy: 0.001)
+        let leftGuide = try XCTUnwrap(integer.alignmentGuide)
+        let rightGuide = try XCTUnwrap(integer.additionalAlignmentGuides.first)
+        let physicalTileWidth = 40 * 6.1
+        XCTAssertGreaterThan(leftGuide.bar.center.x - leftGuide.bar.height / 2 - physicalTileWidth, 0)
+        XCTAssertLessThan(rightGuide.bar.center.x + rightGuide.bar.height / 2, 956)
     }
 
     func testPlaytilesMenuCentersBelowTheGamePicture() throws {

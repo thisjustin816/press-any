@@ -14,9 +14,27 @@ extension TouchControlLayout {
         // Include the extended D-pad hit area, down to the skin's y=1719 line.
         let bandBottom = 1719 * scale
         let bandWidth = (1719 - 1129) * scale
+        // A tile is 40 mm tall in portrait; that becomes its horizontal depth when turned.
         let physicalTileWidth = 40 * pointsPerMillimeter
-        let left = max(0, physicalTileWidth - bandWidth)
-        let right = width - bandWidth
+        // The controller seats below the portrait guide's band; the nub enters its notch.
+        let tileAndGuideWidth = physicalTileWidth + portrait.alignmentGuide!.bar.height
+        let pictureLeft = max(tileAndGuideWidth, bandWidth) + 8
+        let pictureRight = width - max(tileAndGuideWidth, bandWidth) - 8
+        let pictureWidth = max(1, pictureRight - pictureLeft)
+        let bottom = height - safeBottom
+        let logoWidth = min(180, max(1, pictureWidth - 20))
+        let proposedLogo = TouchRect(x: pictureLeft + (pictureWidth - logoWidth) / 2, y: bottom - 28,
+                                     width: logoWidth, height: 24)
+        let menuTop = menuAreas(logo: proposedLogo, screen: portrait.screen, pictureOpensMenu: false)[0].y
+        let frame = TouchRect(x: pictureLeft, y: safeTop + 8, width: pictureWidth,
+                              height: max(1, menuTop - 8 - safeTop - 8))
+        let screen = scaling.picture(sourceWidth: 160, sourceHeight: 144, in: frame, pixelsPerPoint: displayScale)
+        let fittedLogoWidth = min(logoWidth, max(1, screen.width - 20))
+        let logo = TouchRect(x: screen.center.x - fittedLogoWidth / 2, y: proposedLogo.y,
+                             width: fittedLogoWidth, height: proposedLogo.height)
+        let left = screen.x - 8 - bandWidth
+        // Clockwise rotation puts the tile's alignment edge on its right. Its 40 mm body extends left.
+        let right = screen.x + screen.width + 8 + tileAndGuideWidth - bandWidth
 
         func rotated(_ rect: TouchRect, at x: Double) -> TouchRect {
             TouchRect(x: x + bandBottom - rect.y - rect.height, y: rect.x,
@@ -30,13 +48,14 @@ extension TouchControlLayout {
         func guide(at x: Double) -> TouchAlignmentGuide {
             let source = portrait.alignmentGuide!
             let center = rotated(source.bar, at: x).center
-            let bar = TouchRect(x: center.x - source.bar.width / 2, y: center.y - source.bar.height / 2,
-                                width: source.bar.width, height: source.bar.height)
+            let barWidth = source.tab.width * 3
+            let bar = TouchRect(x: center.x - barWidth / 2, y: center.y - source.bar.height / 2,
+                                width: barWidth, height: source.bar.height)
             let tab = TouchRect(x: center.x + source.tab.x - source.bar.center.x,
                                 y: bar.y + source.tab.y - source.bar.y,
                                 width: source.tab.width, height: source.tab.height)
-            let showsBar = center.x + bar.height / 2 < width - 0.001
-            return TouchAlignmentGuide(bar: bar, tab: tab, rotation: .pi / 2, showsBar: showsBar)
+            return TouchAlignmentGuide(bar: bar, tab: tab, rotation: .pi / 2,
+                                       barCornerRadius: bar.height / 2)
         }
 
         let rightPad = art(.dpad, at: right)
@@ -52,20 +71,6 @@ extension TouchControlLayout {
             TouchRect(x: rect.x - 10 * scale, y: rect.y - 10 * scale,
                       width: rect.width + 20 * scale, height: rect.height + 20 * scale)
         }
-
-        let pictureLeft = left + bandWidth + 8
-        // Clockwise rotation puts the tile's alignment edge on its right. Its 40 mm body extends left.
-        let rightTileStart = min(right, right + bandWidth - physicalTileWidth)
-        let pictureRight = rightTileStart - 8
-        let pictureWidth = max(1, pictureRight - pictureLeft)
-        let bottom = height - safeBottom
-        let logoWidth = min(180, max(1, pictureWidth - 20))
-        let logo = TouchRect(x: pictureLeft + (pictureWidth - logoWidth) / 2, y: bottom - 28,
-                             width: logoWidth, height: 24)
-        let menuTop = menuAreas(logo: logo, screen: portrait.screen, pictureOpensMenu: false)[0].y
-        let frame = TouchRect(x: pictureLeft, y: safeTop + 8, width: pictureWidth,
-                              height: max(1, menuTop - 8 - safeTop - 8))
-        let screen = scaling.picture(sourceWidth: 160, sourceHeight: 144, in: frame, pixelsPerPoint: displayScale)
 
         return TouchControlLayout(
             dpad: rotated(portrait.dpad, at: left),

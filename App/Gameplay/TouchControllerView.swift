@@ -228,12 +228,11 @@ final class TouchControllerView: UIView {
         context.restoreGState()
     }
 
-    /// Where the physical controller lines up: a rounded tab and optional band, lit from above
+    /// Where the physical controller lines up: a band joined to a rounded tab, lit from above
     /// with a shadow below.
     private func drawAlignmentGuide(_ guide: TouchAlignmentGuide, palette: ControllerPalette, in context: CGContext) {
         let tab = cgRect(guide.tab)
-        let path = UIBezierPath()
-        if guide.showsBar { path.append(UIBezierPath(rect: cgRect(guide.bar))) }
+        let path = UIBezierPath(roundedRect: cgRect(guide.bar), cornerRadius: guide.barCornerRadius)
         path.append(UIBezierPath(
             roundedRect: tab,
             byRoundingCorners: [.bottomLeft, .bottomRight],

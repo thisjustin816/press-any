@@ -49,9 +49,13 @@ struct ControlsSettingsPage: View {
     var body: some View {
         Form {
             Section {
-                Picker("Controller Layout", selection: $controllerLayout) {
+                Picker("Controller Layout", selection: Binding(get: { controllerLayout }, set: { value in
+                    guard ControllerLayoutAvailability.isAvailable(value) else { return }
+                    controllerLayout = value
+                })) {
                     Text("Game Boy").tag(TouchControlStyle.gameBoy)
                     Text("Playtiles").tag(TouchControlStyle.playtiles)
+                        .disabled(!ControllerLayoutAvailability.supportsPlaytiles)
                 }
                 Picker("Controller Theme", selection: $controllerTheme) {
                     Text("Match System").tag(ControllerTheme.matchSystem)
@@ -60,6 +64,9 @@ struct ControlsSettingsPage: View {
                 }
             } footer: {
                 Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits one tile in portrait or two sideways tiles in landscape, with both D-pads at the top. Match System uses Classic in Light Mode and Dark in Dark Mode.")
+                if !ControllerLayoutAvailability.supportsPlaytiles {
+                    Text(ControllerLayoutAvailability.unavailableMessage)
+                }
             }
 
             Section {

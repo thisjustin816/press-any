@@ -117,6 +117,9 @@ final class MenuScreenshots: XCTestCase {
     func testPlaytilesUsesTwoTilesInBothLandscapeOrientations() throws {
         defer { XCUIDevice.shared.orientation = .portrait }
         let settings = try settings()
+        let image = try XCTUnwrap(XCUIScreen.main.screenshot().image.cgImage)
+        try XCTSkipIf(min(image.width, image.height) < 1242,
+                      "Playtiles requires a 68 mm-wide screen. Capture this layout on a qualifying Plus/Max simulator.")
         let app = try launch("play:\(settings.playROM)", arguments: ["-ScreenshotLayout", "playtiles"])
         let menu = app.buttons["Game Menu"]
         XCTAssertTrue(menu.waitForExistence(timeout: 10))

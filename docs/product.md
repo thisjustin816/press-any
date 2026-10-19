@@ -57,8 +57,8 @@ In v1, Plus includes:
 - **LCD filters**: LCD 1× and LCD 3× (see Picture).
 - **App icons**: Berry, Grape, Teal, Kiwi and Dandelion colorways of the home-screen icon, in
   Settings > App Icon. All six use a smooth, nearly front-facing button with an A printed below
-  it, with Light, Dark and Tinted variants and matching settings previews. The default icon is
-  always available.
+  it and a closed oval well around it, with Light, Dark and Tinted variants and matching settings
+  previews. The default icon is always available.
 - **Auto State history**: Keep Auto States at 3, 5 or 10 (see Save states and lifecycle). Without
   Plus a game keeps its latest Auto State.
 - **Timed States**: an Auto State every 1, 2, 5 or 10 minutes of library play, with Off as the
@@ -838,10 +838,20 @@ fresh build.
 Settings > Controller Layout (App, System, Game or Build; Game Boy by default) picks one of two
 built-in layouts. Each also decides where the game picture goes.
 
+Playtiles requires an active screen at least 68 mm wide, as specified in the
+[manufacturer's FAQ](https://get.playtil.es/faq.html). App, System, Game and Build settings show
+Playtiles disabled with an explanation on narrower phones. A saved or inherited Playtiles choice
+uses Game Boy controls there without rewriting the preference. The compatibility check uses native
+screen classes, independent of rotation and Display Zoom: the shorter native edge must be at least
+1242 pixels. This is the narrowest qualifying iPhone display class, at approximately 68.9 mm
+([iPhone XS Max: 1242 pixels at 458 ppi](https://support.apple.com/en-us/111880)). SE, mini and
+regular-size iPhones below that class remain supported with Game Boy controls. Native pixel width
+identifies the supported iPhone screen classes; it is not a direct physical measurement.
+
 A connected controller uses Game Boy while it drives the game, even when Playtiles is chosen,
 so the picture and Orientation setting fit playing without the physical overlay. Disconnecting
-restores the chosen layout without restarting the game, which pauses as for any unexpected
-disconnect.
+restores the chosen layout when it fits the phone, without restarting the game, which pauses as
+for any unexpected disconnect.
 
 - **Game Boy** follows an original DMG-01's front panel, measured from Evan-Amos's public-domain
   photograph (`File:Game-Boy-FL.jpg` on Wikimedia Commons) and scaled to its 90 mm width. The
@@ -923,10 +933,15 @@ releases held input and keeps the game running or paused as it was, with Resume 
 picture. A connected controller still hides the touch controls.
 
 Playtiles landscape uses two copies of the measured portrait control band, turned clockwise with
-both D-pads at the top. The full 40 mm bodies of the turned tiles sit flush with the phone's outer
-edges, using the full width across the side safe-area insets. The left tile has a raised alignment
-line and nub. The right tile uses the screen edge as its alignment line and has just a nub.
-The game picture and menu fill the space between the tiles with an eight-point gap from each body.
+both D-pads at the top. Each physical tile is 40 mm tall in portrait, so its full body takes 40 mm
+across the phone when turned sideways. The game picture fits above the menu and between the full
+tile bodies and their guides, with at least eight points of clearance. The tiles sit close to the
+picture, with both bodies inside the phone's edges; smaller phones may need a smaller picture.
+Each tile has one compact raised T-shaped guide. The center nub keeps the measured shape of the
+controller's indent. A short rounded shoulder joins it on each side, extending one nub-width
+above and below it in landscape, independent of the phone's edges. The controller meets the
+shoulders' flat faces while the center nub extends into its notch. The menu fits between the
+tiles, clear of both bodies.
 The left D-pad sends directions. On the right D-pad, Up and Right send A;
 Left and Down send B.
 The physical A button on each tile sends START, and each physical B button sends SELECT. The
