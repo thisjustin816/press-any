@@ -205,8 +205,8 @@ altering a ROM.
 |---|---|---|---|
 | done | Files default-open handling with another emulator installed | v1 | Owner/Viewer declarations for .gb/.gbc/.ips/.bps; cited Delta, Provenance, SameBoy and RetroArch ROM identifiers accepted (see product.md, Shared files); hosted app test covers rank, role, extensions and identifiers; the Files tap and Share > Press Any checks passed on device alongside another emulator; iOS chooses the default between claiming apps |
 | partial | ZIP + 7z with archive safety (size limits, traversal, password detect) | v1.1 | shared zips open each ROM, patch and save inside, read in memory with the system zlib (stored and deflate, per-kind size limits, CRC checked, encrypted and Zip64 refused; other entries and links skipped); 7z remains |
-| missing | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 |  |
-| partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path only repairs the blob |
+| partial | Multi-asset analysis/grouping (ROMs, patches, saves, art, manuals, README/changelog, variable maps, skins) | v1.1 | ZIP folders with one ROM and one `globals.i` or `game_globals.i` offer an exact-Build variable-map attachment in Import Review; ambiguous folders stay manual; broader grouping remains |
+| partial | Duplicate ROM still inspects new saves/art/manuals/patches | v1.1 | duplicate path repairs the blob and can attach a matching ZIP globals file; other companions remain |
 | partial | Visual artwork comparison (existing/fetched/packaged) in review | v1.1 | manual Check for New Artwork shows current and fetched images; Import Review shows the automatic proposal in its second section; packaged comparison remains |
 | missing | Import while playing -> "New Build Ready" Switch Now/Later; Developer "Restart into New Build" | v1.1 |  |
 | missing | Multiple ROMs attached to one Game in one flow | v1.1 |  |

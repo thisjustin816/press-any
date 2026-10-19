@@ -5,6 +5,34 @@ import XCTest
 final class ZipArchiveReaderTests: XCTestCase {
     private let romsAndPatches: Set<String> = ["gb", "gbc", "ips", "bps", "sav", "srm"]
 
+    func testGameFilesKeepTheirArchivePathsForCompanionMatching() throws {
+        let archive = try ZipArchiveWriter.archive(entries: [
+            .init(relativePath: "Release/Example.gb", data: Data([1])),
+        ])
+        let entries = try ZipArchiveReader.entries(in: archive, extensions: romsAndPatches) { _ in 8 << 20 }
+        XCTAssertEqual(entries.first?.filename, "Example.gb")
+        XCTAssertEqual(entries.first?.relativePath, "Release/Example.gb")
+    }
+
+    func testExactFilenamesSelectGlobalsWithoutReadingUnrelatedIncludes() throws {
+        let archive = try ZipArchiveWriter.archive(entries: [
+            .init(relativePath: "Release/GLOBALS.I", data: Data([1])),
+            .init(relativePath: "engine.i", data: Data(repeating: 0, count: 32)),
+        ])
+        let entries = try ZipArchiveReader.entries(in: archive, extensions: [], filenames: ["globals.i"]) { _ in 1 }
+        XCTAssertEqual(entries.map(\.relativePath), ["Release/GLOBALS.I"])
+        XCTAssertEqual(entries.first?.data, Data([1]))
+    }
+
+    func testGlobalsCountTowardTheMatchingEntryCap() throws {
+        let archive = try ZipArchiveWriter.archive(entries: (0..<33).map {
+            .init(relativePath: "\($0)/globals.i", data: Data([1]))
+        })
+        XCTAssertThrowsError(try ZipArchiveReader.entries(in: archive, extensions: [], filenames: ["globals.i"]) { _ in 4 << 20 }) {
+            XCTAssertEqual($0 as? ZipArchiveError, .tooManyEntries)
+        }
+    }
+
     func testReadsStoredAndDeflatedEntriesAndSkipsReadmesFoldersAndMacMetadata() throws {
         let archive = try XCTUnwrap(Data(base64Encoded: hackDownload.joined()))
         let entries = try ZipArchiveReader.entries(in: archive, extensions: romsAndPatches) { _ in 8 << 20 }

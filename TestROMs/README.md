@@ -16,6 +16,7 @@ everything in `roms/` and `patches/` (`sha256sum -c SHA256SUMS` from this direct
 | --- | --- |
 | `roms/` | the built `.gb` / `.gbc` files, flat |
 | `patches/` | `.ips` and `.bps` patches |
+| `globals/` | GB Studio 4.3.2 globals exports for the original DMG and GBC projects, bundled only in app tests |
 | `src/<rom-name>/` | source, `build.sh` and `LICENSE` (plus `NOTICE` and any third-party license text) for each ROM |
 | `src/patch-tools/` | builds and self-checks the IPS and BPS patches |
 | `src/release-tools/` | `roms.json` (tags, heroes, SDK names) and `make_manifest.py` |
@@ -100,6 +101,16 @@ was not listened to.
 
 Text is small on the GBDK, RGBDS, hUGEDriver and ZGB ROMs (8x8 tile fonts at 20 columns). The GB Studio
 ROMs use scaled background art and have the largest text.
+
+## GB Studio globals regression
+
+The `globals/gbstudio-dmg.i` and `globals/gbstudio-gbc.i` fixtures are captured from
+`$TMPDIR/_gbsbuild/build/rom/globals.i` immediately after each project's `build.sh` runs.
+Capture each before building the next project, which replaces that temporary directory.
+They exercise the real compiler's format, including engine constants and `MAX_GLOBAL_VARS`.
+The iOS app tests package each with its original ROM in a generated ZIP, import it, and check
+the exact-Build attachment. The fixtures contain no game variables; small generated maps test
+named variables separately. The existing CI iOS app-test job runs both cases on every code PR.
 
 ## Licenses
 

@@ -44,6 +44,8 @@ final class ImportReviewViewModel: ObservableObject {
     @Published private(set) var artwork: (data: Data, fileExtension: String)?
     /// Set when the ROM imported but its chosen artwork couldn't be saved.
     @Published private(set) var artworkFailure: String?
+    @Published var includeVariableMap = true
+    @Published private(set) var variableMapFailure: String?
     @Published var useAutomaticArtwork = true
     @Published private(set) var findingArtwork = false
     @Published private(set) var automaticArtworkError: String?
@@ -51,6 +53,7 @@ final class ImportReviewViewModel: ObservableObject {
 
     let analysis: ROMImportAnalysis
     let games: [Game]
+    let variableMapURL: URL?
 
     private let coordinator: ImportCoordinator
     let knownDumps: KnownDumpIndex?
@@ -63,6 +66,7 @@ final class ImportReviewViewModel: ObservableObject {
     /// Sets a Game's artwork. Without it, review doesn't offer artwork.
     private let setArtwork: ((UUID, Data, String) throws -> Void)?
     private let fetchArtwork: ((Build) -> Void)?
+    private let attachVariableMap: ((UUID, URL) throws -> Void)?
     private let proposeArtwork: (@MainActor (ROMImportPlan) async throws -> ImportArtworkProposal?)?
     private let applyArtworkProposal: (@MainActor (ROMImportResult, ImportArtworkProposal) throws -> Void)?
     private var automaticArtworkRequest: ArtworkRequest?
@@ -80,6 +84,8 @@ final class ImportReviewViewModel: ObservableObject {
         fetchArtwork: ((Build) -> Void)? = nil,
         proposeArtwork: (@MainActor (ROMImportPlan) async throws -> ImportArtworkProposal?)? = nil,
         applyArtworkProposal: (@MainActor (ROMImportResult, ImportArtworkProposal) throws -> Void)? = nil,
+        variableMapURL: URL? = nil,
+        attachVariableMap: ((UUID, URL) throws -> Void)? = nil,
         knownDumps: KnownDumpIndex? = nil,
         releasePreference: ReleasePreference = ReleasePreference()
     ) {
@@ -99,6 +105,8 @@ final class ImportReviewViewModel: ObservableObject {
         self.fetchArtwork = fetchArtwork
         self.proposeArtwork = proposeArtwork
         self.applyArtworkProposal = applyArtworkProposal
+        self.variableMapURL = variableMapURL
+        self.attachVariableMap = attachVariableMap
         let metadata = BuildImportMetadata(analysis: analysis)
         region = metadata.region ?? ""
         language = metadata.language ?? ""
@@ -362,6 +370,14 @@ final class ImportReviewViewModel: ObservableObject {
         }
         finished = true
         // The ROM is in the library now, so a failure here is reported without undoing the import.
+        if includeVariableMap, let variableMapURL, let attachVariableMap {
+            do { try attachVariableMap(result.build.id, variableMapURL) }
+            catch AttachVariableMapError.unrecognizedFormat {
+                variableMapFailure = "\(variableMapURL.lastPathComponent) isn't a GB Studio globals file or a symbol file."
+            } catch {
+                variableMapFailure = error.localizedDescription
+            }
+        }
         if canChooseArtwork, let artwork, let setArtwork {
             do {
                 try setArtwork(result.build.gameID, artwork.data, artwork.fileExtension)
@@ -375,6 +391,17 @@ final class ImportReviewViewModel: ObservableObject {
             fetchArtwork?(result.build)
         }
         return result
+    }
+
+    var importWarning: String? {
+        var warnings: [String] = []
+        if let variableMapFailure {
+            warnings.append("The variable map couldn't be attached: \(variableMapFailure) You can attach it from Build Details.")
+        }
+        if let artworkFailure {
+            warnings.append("The artwork couldn't be saved: \(artworkFailure). You can add it from the Game.")
+        }
+        return warnings.isEmpty ? nil : "The ROM is in your library.\n\n" + warnings.joined(separator: "\n\n")
     }
 
     var artworkRequest: ArtworkRequest {

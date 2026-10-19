@@ -37,6 +37,13 @@ final class SaveCompatibilityTests: XCTestCase {
         }
     }
 
+    func testRecognizesTheRealGBStudioGlobalsExports() throws {
+        for name in ["gbstudio-dmg", "gbstudio-gbc"] {
+            let file = TestROMFixtures.directory.appendingPathComponent("globals/\(name).i")
+            XCTAssertEqual(AttachVariableMap.format(of: try Data(contentsOf: file)), .gbStudioGlobals, name)
+        }
+    }
+
     func testAnOversizedMapIsRefusedBeforeItIsStaged() throws {
         let fixture = try Fixture()
         let build = try fixture.addBuild(title: "MAPS")

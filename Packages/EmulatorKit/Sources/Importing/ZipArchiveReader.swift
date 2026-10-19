@@ -99,17 +99,22 @@ public enum ZipArchiveReader {
         }
     }
 
-    /// ROM imports keep only basenames, skip folders and macOS metadata, and apply extension limits.
+    /// Game-file imports keep archive paths for companion matching, skip folders and macOS metadata,
+    /// and apply extension limits. Exact filenames can select companions without accepting their
+    /// entire file type. Filename and extension selectors must be lowercase.
     /// Entries they don't want are skipped unread, along with links and anything this reader
     /// can't open, so a download's odd readme doesn't stop its ROM from importing.
     public static func entries(
         in archive: Data,
         extensions: Set<String>,
+        filenames: Set<String> = [],
         limit: (String) -> Int64
     ) throws -> [ZipArchiveEntry] {
         let archive = Data(archive)
         func wanted(_ path: String) -> Bool {
-            filename(of: path).map { extensions.contains(($0 as NSString).pathExtension.lowercased()) } ?? false
+            filename(of: path).map {
+                extensions.contains(($0 as NSString).pathExtension.lowercased()) || filenames.contains($0.lowercased())
+            } ?? false
         }
         let directory = try directory(in: archive, limit: maximumArchiveBytes, wanted: wanted)
         var entries: [ZipArchiveEntry] = []
@@ -119,7 +124,7 @@ public enum ZipArchiveReader {
             guard Int64(entry.size) <= limit((filename as NSString).pathExtension.lowercased()) else {
                 throw ZipArchiveError.entryTooLarge(filename)
             }
-            entries.append(ZipArchiveEntry(filename: filename, data: try extract(entry, from: archive)))
+            entries.append(ZipArchiveEntry(filename: filename, relativePath: entry.path, data: try extract(entry, from: archive)))
         }
         return entries
     }

@@ -18,7 +18,7 @@ import Testing
         #expect(try ZipArchiveReader.backupEntries(in: backup).count == 41)
         let rom = try ZipArchiveWriter.archive(entries: [ZipArchiveEntry(relativePath: "folder/game.gb", data: Data([1]))])
         #expect(try !ZipArchiveReader.isLibraryBackup(rom))
-        #expect(try ZipArchiveReader.entries(in: rom, extensions: ["gb"]) { _ in 10 } == [ZipArchiveEntry(filename: "game.gb", data: Data([1]))])
+        #expect(try ZipArchiveReader.entries(in: rom, extensions: ["gb"]) { _ in 10 } == [ZipArchiveEntry(relativePath: "folder/game.gb", data: Data([1]))])
         let nested = try ZipArchiveWriter.archive(entries: [ZipArchiveEntry(relativePath: "folder/backup-manifest.json", data: Data())])
         #expect(try !ZipArchiveReader.isLibraryBackup(nested))
     }
