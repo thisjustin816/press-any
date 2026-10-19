@@ -93,7 +93,7 @@ final class TouchControllerView: UIView {
         if let bezel = layout.bezel { drawBezel(bezel, around: layout.screen, palette: palette, in: context) }
         guard showsControls else { return }
 
-        switch bounds.width > bounds.height ? .gameBoy : style {
+        switch style {
         case .gameBoy:
             if let dpad = layout.drawnRect(.dpad) { drawCrossDPad(dpad, input: lastInput, palette: palette, in: context) }
             drawButtonGroove(palette: palette, in: context)
@@ -108,7 +108,19 @@ final class TouchControllerView: UIView {
             }
         case .playtiles:
             if let guide = layout.alignmentGuide { drawAlignmentGuide(guide, palette: palette, in: context) }
+            for guide in layout.additionalAlignmentGuides { drawAlignmentGuide(guide, palette: palette, in: context) }
             if let dpad = layout.drawnRect(.dpad) { drawCircleDPad(dpad, input: lastInput, palette: palette, in: context) }
+            if bounds.width > bounds.height {
+                for control in [TouchControl.a, .b, .start, .select] {
+                    if let rect = layout.drawnRect(control) {
+                        drawMappedButton(control, rect: rect, palette: palette, in: context)
+                    }
+                }
+                for button in layout.additionalButtons {
+                    drawMappedButton(button.control, rect: button.artwork, palette: palette, in: context)
+                }
+                break
+            }
             drawRoundButton(.a, label: nil, active: lastInput.a, palette: palette, in: context)
             drawRoundButton(.b, label: nil, active: lastInput.b, palette: palette, in: context)
             drawPill(layout.drawnRect(.select), label: "SELECT", active: lastInput.select, palette: palette, in: context)
@@ -216,17 +228,20 @@ final class TouchControllerView: UIView {
         context.restoreGState()
     }
 
-    /// Where the physical controller lines up: a band with a U-shaped tab, raised from the body as a
-    /// ledge the controller fits against. Lit from above, its top edge catches the light and it
-    /// casts a shadow below.
+    /// Where the physical controller lines up: a band joined to a rounded tab, lit from above
+    /// with a shadow below.
     private func drawAlignmentGuide(_ guide: TouchAlignmentGuide, palette: ControllerPalette, in context: CGContext) {
         let tab = cgRect(guide.tab)
-        let path = UIBezierPath(rect: cgRect(guide.bar))
+        let path = UIBezierPath(roundedRect: cgRect(guide.bar), cornerRadius: guide.barCornerRadius)
         path.append(UIBezierPath(
             roundedRect: tab,
             byRoundingCorners: [.bottomLeft, .bottomRight],
             cornerRadii: CGSize(width: tab.width / 2, height: tab.width / 2)
         ))
+        let center = guide.bar.center
+        path.apply(CGAffineTransform(translationX: -center.x, y: -center.y))
+        path.apply(CGAffineTransform(rotationAngle: guide.rotation))
+        path.apply(CGAffineTransform(translationX: center.x, y: center.y))
         func fill(_ color: UIColor, offsetBy dy: CGFloat) {
             context.saveGState()
             context.translateBy(x: 0, y: dy)
@@ -316,7 +331,7 @@ final class TouchControllerView: UIView {
     /// The Playtiles D-pad: four circles, each about a third of the pad across.
     private func drawCircleDPad(_ touchRect: TouchRect, input: EmulatorInputState, palette: ControllerPalette, in context: CGContext) {
         let rect = cgRect(touchRect)
-        let diameter = rect.width * 121 / 347
+        let diameter = min(rect.width, rect.height) * 121 / 347
         let centers: [(CGPoint, Bool)] = [
             (CGPoint(x: rect.midX, y: rect.minY + diameter / 2), input.up),
             (CGPoint(x: rect.midX, y: rect.maxY - diameter / 2), input.down),
@@ -328,6 +343,32 @@ final class TouchControllerView: UIView {
                 .offsetBy(dx: 0, dy: pressed ? Self.pressDepth : 0)
             drawRaised(UIBezierPath(ovalIn: circle), top: lighter(palette.dpad), bottom: palette.dpad, pressedFace: palette.dpadPressed, pressed: pressed, palette: palette, in: context)
         }
+    }
+
+    /// Labels identify the remapped inputs under each sideways tile's physical buttons.
+    private func drawMappedButton(_ control: TouchControl, rect: TouchRect, palette: ControllerPalette, in context: CGContext) {
+        let label: String
+        let active: Bool
+        switch control {
+        case .a: label = "A"; active = lastInput.a
+        case .b: label = "B"; active = lastInput.b
+        case .start: label = "START"; active = lastInput.start
+        case .select: label = "SELECT"; active = lastInput.select
+        case .dpad: return
+        }
+        let face = cgRect(rect).offsetBy(dx: 0, dy: active ? Self.pressDepth : 0)
+        let isFaceButton = control == .a || control == .b
+        drawRaised(UIBezierPath(ovalIn: face),
+                   top: isFaceButton ? palette.buttonTop : lighter(palette.pill),
+                   bottom: isFaceButton ? palette.buttonBottom : palette.pill,
+                   pressedFace: isFaceButton ? palette.buttonPressed : palette.pillPressed,
+                   pressed: active, palette: palette, in: context)
+        let text = NSAttributedString(string: label, attributes: [
+            .font: UIFont.systemFont(ofSize: min(14, face.width / CGFloat(label.count + 1)), weight: .bold),
+            .foregroundColor: palette.pillText,
+        ])
+        let size = text.size()
+        text.draw(at: CGPoint(x: face.midX - size.width / 2, y: face.midY - size.height / 2))
     }
 
     /// START or SELECT as the Game Boy Advance has them: a small round button, with its name on a

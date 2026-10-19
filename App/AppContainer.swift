@@ -571,16 +571,19 @@ final class AppContainer {
         try launchHistory.closed()
     }
 
-    /// The controller layout for a launch. Unset or unreadable means the Game Boy layout.
+    /// Unset, unreadable or incompatible layouts use Game Boy without changing stored settings.
     func controllerStyle(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> TouchControlStyle {
         let style = launchSetting(
             TouchControlStyle.self, .controllerLayout, system: system, gameID: gameID, buildID: buildID
         )
-        return ScreenshotScene.layoutOverride ?? style ?? .gameBoy
+        return (ScreenshotScene.layoutOverride ?? style ?? .gameBoy).forGameplay(
+            controllerConnected: false, playtilesSupported: ControllerLayoutAvailability.supportsPlaytiles
+        )
     }
 
     func controllerStyle(for context: LaunchContext) -> TouchControlStyle {
-        ScreenshotScene.layoutOverride ?? launchSetting(TouchControlStyle.self, .controllerLayout, for: context) ?? .gameBoy
+        (ScreenshotScene.layoutOverride ?? launchSetting(TouchControlStyle.self, .controllerLayout, for: context) ?? .gameBoy)
+            .forGameplay(controllerConnected: false, playtilesSupported: ControllerLayoutAvailability.supportsPlaytiles)
     }
 
     /// The game picture's scaling for a launch. Unset or unreadable means integer scaling.

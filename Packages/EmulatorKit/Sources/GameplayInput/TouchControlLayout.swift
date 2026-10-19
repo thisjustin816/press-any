@@ -5,16 +5,21 @@ public enum TouchControlStyle: String, Codable, Sendable, CaseIterable {
     /// The original Game Boy's front panel: the screen on top, the D-pad left, A above and right
     /// of B, and SELECT and START side by side below them, at the hardware's sizes and angles.
     case gameBoy
-    /// The Playtiles GBC skin's layout, with START and SELECT swapped into Game Boy order.
+    /// The Playtiles GBC skin's portrait layout, or two sideways tiles in landscape.
     case playtiles
 
-    public func forGameplay(controllerConnected: Bool) -> Self {
-        controllerConnected ? .gameBoy : self
+    /// The 1242-pixel iPhone display class is the narrowest with at least 68 mm of screen width
+    /// (1242 pixels at 458 ppi). Native dimensions keep availability independent of Display Zoom.
+    public func isAvailable(nativeWidth: Double, nativeHeight: Double) -> Bool {
+        self != .playtiles || min(nativeWidth, nativeHeight) >= 1242
+    }
+
+    public func forGameplay(controllerConnected: Bool, playtilesSupported: Bool = true) -> Self {
+        controllerConnected || !playtilesSupported ? .gameBoy : self
     }
 }
 
-/// Which way gameplay may face. Raw values are stored in settings. Layouts made for a portrait
-/// phone, such as Playtiles, stay portrait whatever this says.
+/// Which way gameplay may face. Raw values are stored in settings.
 public enum ScreenOrientation: String, Codable, Sendable, CaseIterable {
     /// Follows the phone as it turns, within iOS's rotation lock.
     case automatic
@@ -76,14 +81,32 @@ public enum TouchControl: Hashable, Sendable {
 
 /// Marks where a physical controller overlay sits on the screen. Drawn only; it takes no touches.
 public struct TouchAlignmentGuide: Equatable, Sendable {
-    /// A band across the screen.
+    /// The guide's band before rotation. Its bottom edge meets the physical controller.
     public let bar: TouchRect
     /// A tab hanging from the bar, its bottom fully rounded.
     public let tab: TouchRect
+    /// Clockwise rotation of the guide about the band's center, in radians.
+    public let rotation: Double
+    public let barCornerRadius: Double
 
-    public init(bar: TouchRect, tab: TouchRect) {
+    public init(bar: TouchRect, tab: TouchRect, rotation: Double = 0, barCornerRadius: Double = 0) {
         self.bar = bar
         self.tab = tab
+        self.rotation = rotation
+        self.barCornerRadius = barCornerRadius
+    }
+}
+
+/// Another physical button sending the same input as a primary control.
+public struct TouchButtonTarget: Equatable, Sendable {
+    public let control: TouchControl
+    public let area: TouchRect
+    public let artwork: TouchRect
+
+    public init(control: TouchControl, area: TouchRect, artwork: TouchRect) {
+        self.control = control
+        self.area = area
+        self.artwork = artwork
     }
 }
 
@@ -108,6 +131,8 @@ public struct TouchControlLayout: Equatable, Sendable {
     /// Where a control is drawn, when that differs from where it responds to touches.
     public let artwork: [TouchControl: TouchRect]
     public let alignmentGuide: TouchAlignmentGuide?
+    public let additionalAlignmentGuides: [TouchAlignmentGuide]
+    public let additionalButtons: [TouchButtonTarget]
     /// Where the Press Any logo is printed. Drawn only; it takes no touches.
     public let logo: TouchRect?
     /// Recessed plates carrying a control's name beside it, as the Game Boy Advance prints START
@@ -131,6 +156,8 @@ public struct TouchControlLayout: Equatable, Sendable {
         selectStartTilt: Double = 0,
         artwork: [TouchControl: TouchRect] = [:],
         alignmentGuide: TouchAlignmentGuide? = nil,
+        additionalAlignmentGuides: [TouchAlignmentGuide] = [],
+        additionalButtons: [TouchButtonTarget] = [],
         logo: TouchRect? = nil,
         labelPlates: [TouchControl: TouchRect] = [:],
         labelPlateTilt: Double = 0,
@@ -149,6 +176,8 @@ public struct TouchControlLayout: Equatable, Sendable {
         self.selectStartTilt = selectStartTilt
         self.artwork = artwork
         self.alignmentGuide = alignmentGuide
+        self.additionalAlignmentGuides = additionalAlignmentGuides
+        self.additionalButtons = additionalButtons
         self.logo = logo
         self.labelPlates = labelPlates
         self.labelPlateTilt = labelPlateTilt
@@ -159,7 +188,8 @@ public struct TouchControlLayout: Equatable, Sendable {
     /// Whether a tap at `point` opens the menu: it's in a menu area and not on a control, which
     /// takes precedence where they overlap.
     public func opensMenu(at point: TouchPoint) -> Bool {
-        guard ![dpadHitArea, a, b, start, select].contains(where: { $0.contains(point) }) else { return false }
+        guard !([dpadHitArea, a, b, start, select] + additionalButtons.map(\.area))
+            .contains(where: { $0.contains(point) }) else { return false }
         return menuAreas.contains { $0.contains(point) }
     }
 
@@ -177,9 +207,10 @@ public struct TouchControlLayout: Equatable, Sendable {
 }
 
 extension TouchControlLayout {
-    /// The layout for `style` in portrait, or a Game Boy Advance layout in landscape, in points.
-    /// Safe-area insets keep the picture and controls clear of screen cutouts and the home indicator.
-    /// `displayScale` lets the Game Boy layout size the picture to whole device pixels under
+    /// The layout for `style` and the view's orientation, in points.
+    /// Safe-area insets keep the picture and controls clear of screen cutouts and the home indicator;
+    /// physical Playtiles in landscape use the full width to accommodate their bodies.
+    /// `displayScale` lets the layouts size the picture to whole device pixels under
     /// `scaling`. `pictureOpensMenu` makes a tap on the game picture open the menu as well as one
     /// on the logo.
     public static func make(
@@ -195,6 +226,13 @@ extension TouchControlLayout {
         pictureOpensMenu: Bool = false
     ) -> TouchControlLayout {
         if width > height {
+            if style == .playtiles {
+                return playtilesLandscape(
+                    width: width, height: height,
+                    safeTop: safeTop, safeBottom: safeBottom,
+                    displayScale: displayScale, scaling: scaling, pictureOpensMenu: pictureOpensMenu
+                )
+            }
             return gameBoyAdvance(
                 width: width, height: height,
                 safeTop: safeTop, safeBottom: safeBottom, safeLeft: safeLeft, safeRight: safeRight,
@@ -286,13 +324,11 @@ extension TouchControlLayout {
         let margin = 8.0
         let bezelPadding = 12.0
         let bottom = height - safeBottom
-        let logo = TouchRect(x: width / 2 - 90, y: bottom - 28, width: 180, height: 24)
-        let logoAreas = menuAreas(logo: logo, screen: .init(x: 0, y: 0, width: 0, height: 0), pictureOpensMenu: false)
         // A centered picture reserves equal space for both sides, including the larger cutout inset.
         let sideSpace = max(safeLeft, safeRight) + margin + dpadSize + bezelPadding
         let pictureWidth = max(1, width - 2 * (sideSpace + margin))
         let pictureTop = safeTop + 4 + bezelPadding
-        let pictureBottom = logoAreas[0].y - 4 - bezelPadding
+        let pictureBottom = bottom - 4 - bezelPadding
         let frame = TouchRect(x: (width - pictureWidth) / 2, y: pictureTop,
                               width: pictureWidth, height: max(1, pictureBottom - pictureTop))
         let screen = scaling.picture(sourceWidth: 160, sourceHeight: 144, in: frame, pixelsPerPoint: displayScale)
@@ -327,6 +363,10 @@ extension TouchControlLayout {
         let a = TouchPoint(x: rightEnd - buttonSize / 2, y: dpadY + (panel.a.y - panel.dpad.y) * mm)
         let b = TouchPoint(x: a.x - aToBX, y: a.y + aToBY)
         let buttonReach = min(buttonSize + 14, aToBX - 4)
+        let menuWidth = min(180, rightEnd - rightEdge - 32)
+        let menuCenterX = (bezel.x + bezel.width + width) / 2
+        let logo = TouchRect(x: menuCenterX - (menuWidth - 20) / 2, y: bezel.y + bezel.height - 28,
+                             width: menuWidth - 20, height: 24)
         // Right of the D-pad's center, toward the picture, but never into the bezel.
         let smallX = min(dpad.x + advance.start.x * mm, leftEnd - smallButton / 2 - 6)
         let start = TouchPoint(x: smallX, y: dpadY + startBelow)

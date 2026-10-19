@@ -49,9 +49,13 @@ struct ControlsSettingsPage: View {
     var body: some View {
         Form {
             Section {
-                Picker("Controller Layout", selection: $controllerLayout) {
+                Picker("Controller Layout", selection: Binding(get: { controllerLayout }, set: { value in
+                    guard ControllerLayoutAvailability.isAvailable(value) else { return }
+                    controllerLayout = value
+                })) {
                     Text("Game Boy").tag(TouchControlStyle.gameBoy)
                     Text("Playtiles").tag(TouchControlStyle.playtiles)
+                        .disabled(!ControllerLayoutAvailability.supportsPlaytiles)
                 }
                 Picker("Controller Theme", selection: $controllerTheme) {
                     Text("Match System").tag(ControllerTheme.matchSystem)
@@ -59,7 +63,10 @@ struct ControlsSettingsPage: View {
                     Text("Dark").tag(ControllerTheme.dark)
                 }
             } footer: {
-                Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits the Playtiles controller. Match System uses Classic in Light Mode and Dark in Dark Mode.")
+                Text("Game Boy puts the controls where they are on an original Game Boy, at its size. Playtiles fits one tile in portrait or two sideways tiles in landscape, with both D-pads at the top. Match System uses Classic in Light Mode and Dark in Dark Mode.")
+                if !ControllerLayoutAvailability.supportsPlaytiles {
+                    Text(ControllerLayoutAvailability.unavailableMessage)
+                }
             }
 
             Section {
@@ -131,7 +138,7 @@ struct DisplaySettingsPage: View {
                     Text("Landscape").tag(ScreenOrientation.landscape)
                 }
             } footer: {
-                Text("Automatic turns games with the phone, within its rotation lock. Playtiles always plays in portrait, and the library stays in portrait.")
+                Text("Automatic turns games with the phone, within its rotation lock. Playtiles uses two sideways tiles in landscape. The library and sheets stay in portrait.")
             }
 
             Section {

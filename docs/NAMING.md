@@ -52,8 +52,8 @@ placeholder cartridges press the capitalized name into their plaque.
 ## App icon
 
 The app icon is a smooth pink Game Boy-style button viewed nearly straight on, with a shallow
-crown, lit rounded bevel and dark sidewall. A recessed well extends off the left edge and closes
-with a rounded arch on the right. A navy A is centered below the button on the warm gray surface.
+crown, lit rounded bevel and dark sidewall. A closed oval well surrounds the button.
+A navy A is centered below the button on the warm gray surface.
 The Dark icon uses the dark body and lighter
 lettering; the Tinted icon has grayscale artwork on a transparent background for iOS 18.
 
