@@ -75,7 +75,7 @@ struct ImportGlobalsTests {
         let bundle = Bundle(for: GlobalsFixtureBundle.self)
         for (name, suffix) in [("gbstudio-dmg", "gb"), ("gbstudio-gbc", "gbc")] {
             let rom = try Data(contentsOf: #require(bundle.url(forResource: name, withExtension: suffix)))
-            let map = try Data(contentsOf: #require(bundle.url(forResource: name, withExtension: "i")))
+            let map = try Data(contentsOf: #require(bundle.url(forResource: name, withExtension: "i", subdirectory: "globals")))
             let fixture = try Fixture(romData: rom, romFilename: "\(name).\(suffix)", mapData: map)
             defer { fixture.removeFiles() }
             let review = try fixture.review()

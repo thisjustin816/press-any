@@ -103,6 +103,8 @@ targets:
         includes: [gbstudio-dmg.gb, gbstudio-gbc.gbc]
         buildPhase: resources
       - path: TestROMs/globals
+        # A folder reference avoids Xcode preprocessing the .i fixture files.
+        type: folder
         buildPhase: resources
       - path: Packages/EmulatorKit/Sources/EmulatorKitTestSupport
         includes: [InMemoryRepositories.swift, InMemoryImageFingerprintRepository.swift, TestROM.swift]
