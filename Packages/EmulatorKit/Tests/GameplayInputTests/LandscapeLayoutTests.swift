@@ -141,9 +141,18 @@ final class LandscapeLayoutTests: XCTestCase {
                     let guides = [try XCTUnwrap(layout.alignmentGuide)] + layout.additionalAlignmentGuides
                     XCTAssertEqual(guides.count, 2)
                     XCTAssertTrue(guides.allSatisfy { $0.rotation == .pi / 2 })
+                    XCTAssertTrue(guides.allSatisfy { !$0.showsBar })
+                    XCTAssertTrue(try XCTUnwrap(portrait.alignmentGuide).showsBar)
                     XCTAssertEqual(guides[0].bar.width, portrait.alignmentGuide!.bar.width, accuracy: 0.001)
                     XCTAssertGreaterThan(guides[1].bar.center.x, layout.screen.x + layout.screen.width)
                     XCTAssertLessThan(guides[0].bar.center.x, layout.screen.x)
+                    let physicalTileWidth = 40 * 6.1
+                    let leftTileEnd = guides[0].bar.center.x + guides[0].bar.height / 2
+                    let rightTileStart = guides[1].bar.center.x + guides[1].bar.height / 2 - physicalTileWidth
+                    XCTAssertGreaterThanOrEqual(layout.screen.x, leftTileEnd + 8 - 0.001)
+                    XCTAssertLessThanOrEqual(layout.screen.x + layout.screen.width, rightTileStart - 8 + 0.001)
+                    XCTAssertGreaterThanOrEqual(layout.menuAreas[0].x, leftTileEnd + 8 - 0.001)
+                    XCTAssertLessThanOrEqual(layout.menuAreas[0].x + layout.menuAreas[0].width, rightTileStart - 8 + 0.001)
                     for guide in guides {
                         for rect in [guide.bar, guide.tab] {
                             let center = guide.bar.center
@@ -195,7 +204,7 @@ final class LandscapeLayoutTests: XCTestCase {
                                            safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .fill)
         let integer = TouchControlLayout.make(.playtiles, width: 874, height: 402,
                                               safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .integer)
-        XCTAssertGreaterThan(fill.screen.width, 350)
+        XCTAssertGreaterThan(fill.screen.width, 325)
         XCTAssertGreaterThanOrEqual(integer.screen.width, 320)
         XCTAssertLessThan(fill.dpadHitArea.x, 70)
         XCTAssertGreaterThan(fill.additionalButtons.last!.area.center.x, 750)

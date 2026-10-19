@@ -854,7 +854,7 @@ disconnect.
 - **Playtiles** uses the Playtiles GBC Delta skin's control frames, scaled to the screen, with
   START and SELECT in Game Boy order in portrait. In portrait, A is larger than B, as in the skin,
   and controls respond across both the frame and the artwork. A raised alignment guide marks where the physical overlay
-  sits. Landscape fits two sideways tiles with their D-pads at the top, each with its own guide.
+  sits. Landscape fits two sideways tiles with their D-pads at the top, each with its own alignment nub.
   The skin's artwork isn't used.
 
 The controls are drawn in code on a controller body behind them. Every control is raised like
@@ -923,9 +923,10 @@ releases held input and keeps the game running or paused as it was, with Resume 
 picture. A connected controller still hides the touch controls.
 
 Playtiles landscape uses two copies of the measured portrait control band, turned clockwise with
-both D-pads at the top. A raised guide marks each tile's position, with the game picture between
-the tiles. The tiles use their blank edge margins to sit farther apart while their buttons stay
-within the safe areas. The left D-pad sends directions. On the right D-pad, Up and Right send A;
+both D-pads at the top. A raised nub marks each tile's alignment edge. The game picture and menu
+clear the full 40 mm body width of the turned tiles, including their blank margins. The tiles use
+their blank edge margins to sit farther apart while their buttons stay within the safe areas.
+The left D-pad sends directions. On the right D-pad, Up and Right send A;
 Left and Down send B.
 The physical A button on each tile sends START, and each physical B button sends SELECT. The
 portrait layout's software START and SELECT pills are omitted. Duplicate buttons combine with

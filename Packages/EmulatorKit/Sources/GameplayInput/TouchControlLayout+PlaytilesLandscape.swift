@@ -13,14 +13,15 @@ extension TouchControlLayout {
         let scale = min(height / 1080, width / 2340)
         // Include the extended D-pad hit area, down to the skin's y=1719 line.
         let bandBottom = 1719 * scale
-        let tileWidth = (1719 - 1129) * scale
+        let bandWidth = (1719 - 1129) * scale
+        let physicalTileWidth = 40 * pointsPerMillimeter
         let padArtwork = portrait.drawnRect(.dpad)!
         let firstControlX = bandBottom - max(portrait.a.y + portrait.a.height,
                                              max(portrait.b.y + portrait.b.height, padArtwork.y + padArtwork.height))
         let lastControlX = bandBottom - min(portrait.a.y, min(portrait.b.y, padArtwork.y - 10 * scale))
         // Blank tile margins can occupy the cutout inset; buttons keep an eight-point margin.
         let left = max(8, safeLeft + 8 - firstControlX)
-        let right = min(width - 8 - tileWidth, width - safeRight - 8 - lastControlX)
+        let right = min(width - 8 - bandWidth, width - safeRight - 8 - lastControlX)
 
         func rotated(_ rect: TouchRect, at x: Double) -> TouchRect {
             TouchRect(x: x + bandBottom - rect.y - rect.height, y: rect.x,
@@ -39,7 +40,7 @@ extension TouchControlLayout {
             let tab = TouchRect(x: center.x + source.tab.x - source.bar.center.x,
                                 y: bar.y + source.tab.y - source.bar.y,
                                 width: source.tab.width, height: source.tab.height)
-            return TouchAlignmentGuide(bar: bar, tab: tab, rotation: .pi / 2)
+            return TouchAlignmentGuide(bar: bar, tab: tab, rotation: .pi / 2, showsBar: false)
         }
 
         let rightPad = art(.dpad, at: right)
@@ -56,8 +57,10 @@ extension TouchControlLayout {
                       width: rect.width + 20 * scale, height: rect.height + 20 * scale)
         }
 
-        let pictureLeft = left + tileWidth + 8
-        let pictureRight = right - 8
+        let pictureLeft = left + bandWidth + 8
+        // Clockwise rotation puts the tile's alignment edge on its right. Its 40 mm body extends left.
+        let rightTileStart = min(right, right + bandWidth - physicalTileWidth)
+        let pictureRight = rightTileStart - 8
         let pictureWidth = max(1, pictureRight - pictureLeft)
         let bottom = height - safeBottom
         let logoWidth = min(180, max(1, pictureWidth - 20))
