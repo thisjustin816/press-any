@@ -923,9 +923,10 @@ releases held input and keeps the game running or paused as it was, with Resume 
 picture. A connected controller still hides the touch controls.
 
 Playtiles landscape uses two copies of the measured portrait control band, turned clockwise with
-both D-pads at the top. A raised line and nub mark each tile's alignment edge. The game picture and menu
-clear the full 40 mm body width of the turned tiles, including their blank margins. The tiles use
-their blank edge margins to sit farther apart while their buttons stay within the safe areas.
+both D-pads at the top. The full 40 mm bodies of the turned tiles sit flush with the phone's outer
+edges, using the full width across the side safe-area insets. The left tile has a raised alignment
+line and nub. The right tile uses the screen edge as its alignment line and has just a nub.
+The game picture and menu fill the space between the tiles with an eight-point gap from each body.
 The left D-pad sends directions. On the right D-pad, Up and Right send A;
 Left and Down send B.
 The physical A button on each tile sends START, and each physical B button sends SELECT. The

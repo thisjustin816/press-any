@@ -141,12 +141,17 @@ final class LandscapeLayoutTests: XCTestCase {
                     let guides = [try XCTUnwrap(layout.alignmentGuide)] + layout.additionalAlignmentGuides
                     XCTAssertEqual(guides.count, 2)
                     XCTAssertTrue(guides.allSatisfy { $0.rotation == .pi / 2 })
+                    XCTAssertTrue(guides[0].showsBar)
+                    XCTAssertFalse(guides[1].showsBar)
+                    XCTAssertTrue(try XCTUnwrap(portrait.alignmentGuide).showsBar)
                     XCTAssertEqual(guides[0].bar.width, portrait.alignmentGuide!.bar.width, accuracy: 0.001)
                     XCTAssertGreaterThan(guides[1].bar.center.x, layout.screen.x + layout.screen.width)
                     XCTAssertLessThan(guides[0].bar.center.x, layout.screen.x)
                     let physicalTileWidth = 40 * 6.1
                     let leftTileEnd = guides[0].bar.center.x + guides[0].bar.height / 2
                     let rightTileStart = guides[1].bar.center.x + guides[1].bar.height / 2 - physicalTileWidth
+                    XCTAssertEqual(leftTileEnd - physicalTileWidth, 0, accuracy: 0.001)
+                    XCTAssertEqual(rightTileStart + physicalTileWidth, phone.width, accuracy: 0.001)
                     XCTAssertGreaterThanOrEqual(layout.screen.x, leftTileEnd + 8 - 0.001)
                     XCTAssertLessThanOrEqual(layout.screen.x + layout.screen.width, rightTileStart - 8 + 0.001)
                     XCTAssertGreaterThanOrEqual(layout.menuAreas[0].x, leftTileEnd + 8 - 0.001)
@@ -173,9 +178,9 @@ final class LandscapeLayoutTests: XCTestCase {
                     for (index, rect) in targets.enumerated() {
                         XCTAssertGreaterThan(rect.width, 0)
                         XCTAssertGreaterThan(rect.height, 0)
-                        XCTAssertGreaterThanOrEqual(rect.x, left - 0.001)
+                        XCTAssertGreaterThanOrEqual(rect.x, -0.001)
                         XCTAssertGreaterThanOrEqual(rect.y, 0)
-                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width - right + 0.001)
+                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width + 0.001)
                         XCTAssertLessThanOrEqual(rect.y + rect.height, phone.height - phone.bottom + 0.001)
                         XCTAssertFalse(overlaps(rect, layout.screen))
                         for other in targets.dropFirst(index + 1) {
@@ -202,7 +207,7 @@ final class LandscapeLayoutTests: XCTestCase {
                                            safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .fill)
         let integer = TouchControlLayout.make(.playtiles, width: 874, height: 402,
                                               safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .integer)
-        XCTAssertGreaterThan(fill.screen.width, 325)
+        XCTAssertGreaterThan(fill.screen.width, 350)
         XCTAssertGreaterThanOrEqual(integer.screen.width, 320)
         XCTAssertLessThan(fill.dpadHitArea.x, 70)
         XCTAssertGreaterThan(fill.additionalButtons.last!.area.center.x, 750)

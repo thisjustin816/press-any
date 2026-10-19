@@ -5,7 +5,7 @@ extension TouchControlLayout {
     /// its face buttons. The software-only portrait START and SELECT pills are outside this band.
     static func playtilesLandscape(
         width: Double, height: Double,
-        safeTop: Double, safeBottom: Double, safeLeft: Double, safeRight: Double,
+        safeTop: Double, safeBottom: Double,
         displayScale: Double, scaling: ScreenScaling, pictureOpensMenu: Bool
     ) -> TouchControlLayout {
         let portrait = playtiles(width: height, height: width, safeBottom: 0,
@@ -15,13 +15,8 @@ extension TouchControlLayout {
         let bandBottom = 1719 * scale
         let bandWidth = (1719 - 1129) * scale
         let physicalTileWidth = 40 * pointsPerMillimeter
-        let padArtwork = portrait.drawnRect(.dpad)!
-        let firstControlX = bandBottom - max(portrait.a.y + portrait.a.height,
-                                             max(portrait.b.y + portrait.b.height, padArtwork.y + padArtwork.height))
-        let lastControlX = bandBottom - min(portrait.a.y, min(portrait.b.y, padArtwork.y - 10 * scale))
-        // Blank tile margins can occupy the cutout inset; buttons keep an eight-point margin.
-        let left = max(8, safeLeft + 8 - firstControlX)
-        let right = min(width - 8 - bandWidth, width - safeRight - 8 - lastControlX)
+        let left = max(0, physicalTileWidth - bandWidth)
+        let right = width - bandWidth
 
         func rotated(_ rect: TouchRect, at x: Double) -> TouchRect {
             TouchRect(x: x + bandBottom - rect.y - rect.height, y: rect.x,
@@ -31,7 +26,7 @@ extension TouchControlLayout {
             rotated(portrait.drawnRect(control)!, at: x)
         }
         let dpadHit = rotated(portrait.dpadHitArea, at: left)
-        let dpadHitLeft = max(safeLeft, dpadHit.x)
+        let dpadHitLeft = max(0, dpadHit.x)
         func guide(at x: Double) -> TouchAlignmentGuide {
             let source = portrait.alignmentGuide!
             let center = rotated(source.bar, at: x).center
@@ -40,7 +35,8 @@ extension TouchControlLayout {
             let tab = TouchRect(x: center.x + source.tab.x - source.bar.center.x,
                                 y: bar.y + source.tab.y - source.bar.y,
                                 width: source.tab.width, height: source.tab.height)
-            return TouchAlignmentGuide(bar: bar, tab: tab, rotation: .pi / 2)
+            let showsBar = center.x + bar.height / 2 < width - 0.001
+            return TouchAlignmentGuide(bar: bar, tab: tab, rotation: .pi / 2, showsBar: showsBar)
         }
 
         let rightPad = art(.dpad, at: right)

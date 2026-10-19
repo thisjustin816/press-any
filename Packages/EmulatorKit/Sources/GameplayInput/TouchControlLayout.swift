@@ -81,11 +81,14 @@ public struct TouchAlignmentGuide: Equatable, Sendable {
     public let tab: TouchRect
     /// Clockwise rotation of the guide about the band's center, in radians.
     public let rotation: Double
+    /// Whether the band is drawn along with the tab.
+    public let showsBar: Bool
 
-    public init(bar: TouchRect, tab: TouchRect, rotation: Double = 0) {
+    public init(bar: TouchRect, tab: TouchRect, rotation: Double = 0, showsBar: Bool = true) {
         self.bar = bar
         self.tab = tab
         self.rotation = rotation
+        self.showsBar = showsBar
     }
 }
 
@@ -200,7 +203,8 @@ public struct TouchControlLayout: Equatable, Sendable {
 
 extension TouchControlLayout {
     /// The layout for `style` and the view's orientation, in points.
-    /// Safe-area insets keep the picture and controls clear of screen cutouts and the home indicator.
+    /// Safe-area insets keep the picture and controls clear of screen cutouts and the home indicator;
+    /// physical Playtiles in landscape use the full width to line up with the phone's edges.
     /// `displayScale` lets the layouts size the picture to whole device pixels under
     /// `scaling`. `pictureOpensMenu` makes a tap on the game picture open the menu as well as one
     /// on the logo.
@@ -220,7 +224,7 @@ extension TouchControlLayout {
             if style == .playtiles {
                 return playtilesLandscape(
                     width: width, height: height,
-                    safeTop: safeTop, safeBottom: safeBottom, safeLeft: safeLeft, safeRight: safeRight,
+                    safeTop: safeTop, safeBottom: safeBottom,
                     displayScale: displayScale, scaling: scaling, pictureOpensMenu: pictureOpensMenu
                 )
             }
