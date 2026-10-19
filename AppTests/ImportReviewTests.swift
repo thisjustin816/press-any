@@ -135,6 +135,13 @@ final class ImportReviewTests: XCTestCase {
     }
 
     func testASecondImportedBuildCanFindArtworkWhileTheFirstLookupIsPending() async throws {
+        for iteration in 0..<30 {
+            print("ARTWORK TRACE iteration \(iteration)")
+            try await checkConcurrentArtworkLookups()
+        }
+    }
+
+    private func checkConcurrentArtworkLookups() async throws {
         let firstRequest = expectation(description: "First lookup starts")
         let secondRequest = expectation(description: "Second lookup starts before the first completes")
         let provider = PendingArtworkProvider { _, number in
