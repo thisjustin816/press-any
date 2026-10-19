@@ -30,8 +30,8 @@ enum ScreenshotScene: Equatable {
     /// touch controls hide, whatever controllers the simulator has.
     static let simulatesGamepad = flag("ScreenshotGamepad")
 
-    /// Set with `-ScreenshotLayout <layout>`, such as `playtiles`: gameplay uses that controller
-    /// layout instead of the one in Settings, which stays as it is.
+    /// Set with `-ScreenshotLayout <layout>`, such as `playtiles`: requests that layout without
+    /// changing Settings. The physical screen fit requirement still applies.
     static let layoutOverride: TouchControlStyle? = {
         #if DEBUG
         guard current != nil else { return nil }

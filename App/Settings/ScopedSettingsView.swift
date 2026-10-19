@@ -134,14 +134,21 @@ struct ScopedSettingsView: View {
     }
 
     private var controlsSection: some View {
-        Section("Controls") {
+        Section {
             InheritableSettingRow(
                 title: "Controller Layout",
                 key: .controllerLayout,
                 defaultValue: TouchControlStyle.gameBoy,
                 options: [(.gameBoy, "Game Boy"), (.playtiles, "Playtiles")],
+                isAvailable: ControllerLayoutAvailability.isAvailable,
                 context: context
             )
+        } header: {
+            Text("Controls")
+        } footer: {
+            if !ControllerLayoutAvailability.supportsPlaytiles {
+                Text(ControllerLayoutAvailability.unavailableMessage)
+            }
         }
     }
 
@@ -359,6 +366,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     var normalizeValue: (Value) -> Value = { $0 }
     /// Values that need Plus. Without it they're marked Plus, and choosing one opens the Plus screen.
     var needsPlus: (Value) -> Bool = { _ in false }
+    var isAvailable: @MainActor (Value) -> Bool = { _ in true }
     let context: InheritableSettingContext
 
     @State private var choice: Choice = .inherit
@@ -382,6 +390,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                         ForEach(options.indices, id: \.self) { index in
                             Text(context.plus.label(options[index].1, needsPlus: needsPlus(options[index].0)))
                                 .tag(Choice.value(options[index].0))
+                                .disabled(!isAvailable(options[index].0))
                         }
                     }
                 } label: {
@@ -493,6 +502,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(choice == selection ? .isSelected : [])
+        .disabled(selection != .inherit && !isAvailable(value))
     }
 
     private var inheritedValue: Value {
@@ -518,6 +528,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
 
     /// A Plus value without Plus opens the Plus screen and leaves the choice as it was.
     private func choose(_ newChoice: Choice) {
+        if case .value(let value) = newChoice, !isAvailable(value) { return }
         if case .value(let value) = newChoice, context.plus.isLocked(needsPlus(value)) {
             context.openPlus()
         } else {

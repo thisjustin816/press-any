@@ -114,14 +114,25 @@ final class MenuScreenshots: XCTestCase {
         try expect(app.buttons["Add to Library…"], then: "menu-quick-play-landscape")
     }
 
-    func testPlaytilesStaysPortrait() throws {
+    func testPlaytilesUsesTwoTilesInBothLandscapeOrientations() throws {
         defer { XCUIDevice.shared.orientation = .portrait }
         let settings = try settings()
+        let image = try XCTUnwrap(XCUIScreen.main.screenshot().image.cgImage)
+        try XCTSkipIf(min(image.width, image.height) < 1242,
+                      "Playtiles requires a 68 mm-wide screen. Capture this layout on a qualifying Plus/Max simulator.")
         let app = try launch("play:\(settings.playROM)", arguments: ["-ScreenshotLayout", "playtiles"])
-        XCTAssertTrue(app.buttons["Game Menu"].waitForExistence(timeout: 10))
-        XCUIDevice.shared.orientation = .landscapeLeft
-        sleep(2)
-        XCTAssertLessThan(app.frame.width, app.frame.height)
+        let menu = app.buttons["Game Menu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 10))
+        for orientation in [UIDeviceOrientation.landscapeLeft, .landscapeRight] {
+            XCUIDevice.shared.orientation = .portrait
+            waitForOrientation(in: app, landscape: false)
+            XCUIDevice.shared.orientation = orientation
+            waitForOrientation(in: app, landscape: true)
+            try expect(menu, then: orientation == .landscapeLeft ? "playtiles-landscape-left" : "playtiles-landscape-right")
+        }
+        menu.tap()
+        app.buttons["Close Game"].tap()
+        waitForOrientation(in: app, landscape: false)
     }
 
     func testSettingsOverLandscapeGameplayStaysPortrait() throws {

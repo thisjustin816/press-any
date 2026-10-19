@@ -61,7 +61,7 @@ Open items in each area are in the table, finished ones on the line under it.
 | done | Timed States, a Plus feature | v1 | Off or every 1/2/5/10 minutes of running wall time, inherited at App/System/Game/Build; shares Auto State history and pinned retention, stops without Plus, and excludes Quick Play. Clock, persistence, backup and app tests cover it; device check in docs/mvp-verification.md |
 | done | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; the first game shows "Tap Press Any for the menu" once. v1 has nothing to opt into: crash reports and usage counts (v1.1) bring their own opt-in screens, and Developer Mode its introductions |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v1.1 | none |
-| done | Landscape gameplay | v1 | Gameplay-only rotation, a safe-area-aware GBA layout and the inheritable Orientation setting (Automatic, Portrait, Landscape) are implemented; Playtiles without a connected controller and sheets stay portrait. Rotation lock, cutout and controller checks passed on device |
+| done | Landscape gameplay | v1 | Gameplay-only rotation and the inheritable Orientation setting (Automatic, Portrait, Landscape); Game Boy uses a safe-area-aware GBA layout with the menu centered horizontally between the bezel and screen edge, its bottom aligned with the bezel, and a taller viewport. Playtiles fits two clockwise-turned 40 mm bodies and their guides close to the game picture, with at least eight points of clearance. Each compact T-shaped guide joins the original center indent nub to rounded shoulders above and below it, long enough to extend past the Dynamic Island. Both bodies stay inside the phone's edges, reducing the picture when needed, with the menu centered beneath it and remapped buttons (right D-pad Up/Right = A, Left/Down = B). Library and sheets stay portrait. Geometry and input regressions cover both layouts; updated device checks are pending |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v1.1 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
 | partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1 | Screenshots are uploaded for the initial submission. The manual workflow defaults to the 6.3-inch iPhone 17 Pro and verifies its App Store Connect dimensions; 6.9-inch and 6.5-inch sets are also available (docs/testflight.md). An app preview is optional |
 
@@ -72,7 +72,7 @@ Plus; A Press Any folder in Files holding Exports, with the library kept in Appl
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
 Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (rounded
 Corporatus artwork, pink "A" and navy lettering) in library toolbar and controller body; Shared pink/navy/gray
-app colors; App icon (smooth front-facing button in a sideways arch well with a centered A below; six colorways,
+app colors; App icon (smooth front-facing button in a closed oval well with a centered A below; six colorways,
 light/dark/tinted and matching previews);
 Acknowledgements screen listing code, artwork and data with credits and license notices.
 
@@ -399,6 +399,7 @@ the open picture from Settings, and survive reset and state loads.
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | done | Consistent touch D-pad diagonal sectors | v1 | Game Boy portrait and landscape and Playtiles share a 0.67 weaker/stronger axis ratio, about 22.5° per diagonal and 67.5° per cardinal; dead zones and hit areas stay unchanged. Angle regression tests cover both styles and orientations; the thumb-sliding check passed on device |
+| done | Playtiles physical fit requirement | v1 | Requires a 68 mm-wide screen, checked by native iPhone screen class (short edge at least 1242 pixels), independent of rotation and Display Zoom. App and scoped pickers disable it on narrower phones; saved choices use Game Boy without being rewritten. Package compatibility regressions pass; settings and launch integration checks await macOS/device verification |
 | missing | Minimal / Fullscreen / one-handed presets | v1.1 |  |
 | missing | GameBaby preset; per-accessory/device calibration screen | v1.1 |  |
 | missing | Lightweight editor: screen/control position+size, opacity, hitboxes, portrait/landscape, control styles, save preset | v1.1 |  |
@@ -412,7 +413,8 @@ the open picture from Settings, and survive reset and state loads.
 | missing | Full skin artwork authoring; community layout gallery | v1.1 / later |  |
 
 Done: Built-in "Game Boy" layout measured from DMG-01, default, inheritable; Built-in "Playtiles"
-layout from the Delta skin frames, START/SELECT swapped, alignment guide; Controller themes Classic
+from the Delta skin frames, portrait START/SELECT swapped, alignment guide, and two sideways tiles
+with separate guides and duplicate button inputs in landscape; Controller themes Classic
 / Dark / Match System (app-wide), status bar follows; Tap wordmark opens the game menu, with or
 without a controller (44 pt), optional Tap Game for Menu (off), one-time hint, VoiceOver Game Menu
 button; Touch Haptics Off / Light / Medium (Light), off while a controller hides the controls; Sliding D-pad with

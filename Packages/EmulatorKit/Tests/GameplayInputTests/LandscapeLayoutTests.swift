@@ -7,7 +7,7 @@ final class LandscapeLayoutTests: XCTestCase {
         (874, 402, 62, 21, 3), (956, 440, 62, 21, 3),
     ]
 
-    func testLandscapeControlsPictureAndMenuFitSafeAreasWithoutOverlapping() throws {
+    func testLandscapeControlsClearSafeAreasAndMenuCentersBesideTheBezelWithoutOverlapping() throws {
         for phone in phones {
             for scaling in ScreenScaling.allCases {
                 for (left, right) in [(phone.side, phone.side), (phone.side, 0), (0, phone.side)] {
@@ -17,24 +17,31 @@ final class LandscapeLayoutTests: XCTestCase {
                     )
                     let bezel = try XCTUnwrap(layout.bezel)
                     let logo = try XCTUnwrap(layout.logo)
-                    let touches = [layout.dpadHitArea, layout.a, layout.b, layout.start, layout.select] + layout.menuAreas
+                    let controls = [layout.dpadHitArea, layout.a, layout.b, layout.start, layout.select]
+                    let touches = controls + layout.menuAreas
                     let rects = touches + Array(layout.artwork.values) + [layout.screen, bezel, logo]
                     for rect in rects {
                         XCTAssertGreaterThan(rect.width, 0)
                         XCTAssertGreaterThan(rect.height, 0)
-                        XCTAssertGreaterThanOrEqual(rect.x, left - 0.001)
+                        XCTAssertGreaterThanOrEqual(rect.x, 0)
                         XCTAssertGreaterThanOrEqual(rect.y, 0)
-                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width - right + 0.001)
+                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width + 0.001)
                         XCTAssertLessThanOrEqual(rect.y + rect.height, phone.height - phone.bottom + 0.001)
+                    }
+                    for rect in controls + Array(layout.artwork.values) + [layout.screen, bezel] {
+                        XCTAssertGreaterThanOrEqual(rect.x, left - 0.001)
+                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width - right + 0.001)
                     }
                     for (index, rect) in touches.enumerated() {
                         XCTAssertFalse(overlaps(rect, layout.screen))
                         for other in touches.dropFirst(index + 1) { XCTAssertFalse(overlaps(rect, other)) }
                     }
-                    XCTAssertEqual(layout.screen.center.x, phone.width / 2, accuracy: 1 / phone.scale)
+                    XCTAssertEqual(layout.screen.center.x, phone.width / 2, accuracy: 1 / phone.scale + 0.001)
                     XCTAssertEqual(bezel.center.x, layout.screen.center.x, accuracy: 0.001)
-                    XCTAssertEqual(logo.center.x, phone.width / 2, accuracy: 0.001)
-                    XCTAssertLessThan(layout.screen.center.y, phone.height / 2)
+                    let menu = layout.menuAreas[0]
+                    XCTAssertGreaterThanOrEqual(menu.x - (bezel.x + bezel.width), 24 - 0.001)
+                    XCTAssertEqual(menu.x - (bezel.x + bezel.width), phone.width - menu.x - menu.width, accuracy: 0.001)
+                    XCTAssertEqual(menu.y + menu.height, bezel.y + bezel.height, accuracy: 0.001)
                     XCTAssertLessThan(layout.dpad.center.y, phone.height / 2)
                     XCTAssertLessThan(layout.dpadHitArea.x + layout.dpadHitArea.width, bezel.x)
                     XCTAssertGreaterThan(layout.b.x, bezel.x + bezel.width)
@@ -94,14 +101,150 @@ final class LandscapeLayoutTests: XCTestCase {
         }
     }
 
-    func testLandscapeUsesTheSameLayoutRegardlessOfPortraitStyleAndKeepsMenuTargets() throws {
+    func testLandscapePictureUsesTheHeightFreedByTheMenu() {
+        for scaling in ScreenScaling.allCases {
+            let layout = TouchControlLayout.make(.gameBoy, width: 956, height: 440,
+                                                safeBottom: 21, safeLeft: 62, safeRight: 62,
+                                                scaling: scaling)
+            XCTAssertGreaterThan(layout.screen.height, 336)
+            XCTAssertEqual(layout.screen.center.y, 209.5, accuracy: 1 / 3.0)
+            XCTAssertGreaterThanOrEqual(layout.menuAreas[0].height, 44)
+        }
+    }
+
+    func testLandscapeKeepsTheChosenStyleAndMenuTargets() throws {
         let gameBoy = TouchControlLayout.make(.gameBoy, width: 874, height: 402, safeLeft: 62, safeRight: 62)
-        XCTAssertEqual(gameBoy, .make(.playtiles, width: 874, height: 402, safeLeft: 62, safeRight: 62))
+        XCTAssertNotEqual(gameBoy, .make(.playtiles, width: 874, height: 402, safeLeft: 62, safeRight: 62))
         XCTAssertTrue(gameBoy.opensMenu(at: try XCTUnwrap(gameBoy.logo).center))
         XCTAssertFalse(gameBoy.opensMenu(at: gameBoy.screen.center))
         let pictureMenu = TouchControlLayout.make(.gameBoy, width: 874, height: 402, pictureOpensMenu: true)
         XCTAssertTrue(pictureMenu.opensMenu(at: pictureMenu.screen.center))
         XCTAssertFalse(pictureMenu.opensMenu(at: pictureMenu.a.center))
+    }
+
+    func testTwoSidewaysPlaytilesKeepTheMeasuredSizesAndClearThePictureAndMenu() throws {
+        for phone in phones {
+            for scaling in ScreenScaling.allCases {
+                for (left, right) in [(phone.side, phone.side), (phone.side, 0), (0, phone.side)] {
+                    let layout = TouchControlLayout.make(.playtiles, width: phone.width, height: phone.height,
+                                                        safeBottom: phone.bottom, safeLeft: left, safeRight: right,
+                                                        displayScale: phone.scale, scaling: scaling)
+                    let portrait = TouchControlLayout.make(.playtiles, width: phone.height, height: phone.width)
+                    XCTAssertEqual(layout.dpad.width, portrait.dpad.height, accuracy: 0.001)
+                    XCTAssertEqual(layout.dpad.height, portrait.dpad.width, accuracy: 0.001)
+                    XCTAssertEqual(layout.start.width, portrait.a.height, accuracy: 0.001)
+                    XCTAssertEqual(layout.select.height, portrait.b.width, accuracy: 0.001)
+                    XCTAssertLessThan(layout.dpad.center.y, layout.select.center.y)
+                    XCTAssertLessThan(layout.select.center.y, layout.start.center.y)
+                    XCTAssertGreaterThan(layout.a.center.x, layout.b.center.x)
+                    XCTAssertLessThan(layout.a.center.y, layout.b.center.y)
+                    let guides = [try XCTUnwrap(layout.alignmentGuide)] + layout.additionalAlignmentGuides
+                    XCTAssertEqual(guides.count, 2)
+                    XCTAssertTrue(guides.allSatisfy { $0.rotation == .pi / 2 })
+                    XCTAssertEqual(try XCTUnwrap(portrait.alignmentGuide).barCornerRadius, 0)
+                    XCTAssertLessThan(guides[0].bar.width, portrait.alignmentGuide!.bar.width)
+                    XCTAssertGreaterThan(guides[1].bar.center.x, layout.screen.x + layout.screen.width)
+                    XCTAssertLessThan(guides[0].bar.center.x, layout.screen.x)
+                    let physicalTileWidth = 40 * 6.1
+                    let leftTileEnd = guides[0].bar.center.x - guides[0].bar.height / 2
+                    let rightTileStart = guides[1].bar.center.x - guides[1].bar.height / 2 - physicalTileWidth
+                    XCTAssertGreaterThanOrEqual(leftTileEnd - physicalTileWidth, -0.001)
+                    XCTAssertLessThanOrEqual(rightTileStart + physicalTileWidth, phone.width + 0.001)
+                    XCTAssertEqual(layout.screen.x - leftTileEnd - guides[0].bar.height, 8, accuracy: 0.001)
+                    XCTAssertEqual(rightTileStart - layout.screen.x - layout.screen.width, 8, accuracy: 0.001)
+                    XCTAssertGreaterThanOrEqual(layout.menuAreas[0].x, leftTileEnd + 8 - 0.001)
+                    XCTAssertLessThanOrEqual(layout.menuAreas[0].x + layout.menuAreas[0].width, rightTileStart - 8 + 0.001)
+                    for guide in guides {
+                        XCTAssertEqual(guide.tab.width, portrait.alignmentGuide!.tab.width, accuracy: 0.001)
+                        XCTAssertEqual(guide.tab.height, portrait.alignmentGuide!.tab.height, accuracy: 0.001)
+                        XCTAssertEqual(guide.tab.y, guide.bar.y, accuracy: 0.001)
+                        XCTAssertEqual(guide.bar.center.x, guide.tab.center.x, accuracy: 0.001)
+                        let shoulder = guide.tab.x - guide.bar.x
+                        XCTAssertGreaterThan(shoulder, guide.barCornerRadius)
+                        XCTAssertGreaterThan(guide.bar.y + guide.bar.height, guide.tab.y)
+                        XCTAssertLessThan(guide.bar.y + guide.bar.height, guide.tab.y + guide.tab.height)
+                        for rect in [guide.bar, guide.tab] {
+                            let center = guide.bar.center
+                            let rotated = TouchRect(x: center.x - (rect.y + rect.height - center.y),
+                                                    y: center.y + rect.x - center.x,
+                                                    width: rect.height, height: rect.width)
+                            XCTAssertGreaterThanOrEqual(rotated.x, -0.001)
+                            XCTAssertGreaterThanOrEqual(rotated.y, -0.001)
+                            XCTAssertLessThanOrEqual(rotated.x + rotated.width, phone.width + 0.001)
+                            XCTAssertLessThanOrEqual(rotated.y + rotated.height, phone.height + 0.001)
+                            XCTAssertFalse(overlaps(rotated, layout.screen))
+                            XCTAssertFalse(overlaps(rotated, layout.menuAreas[0]))
+                        }
+                    }
+
+                    let targets = [layout.dpadHitArea, layout.a, layout.b, layout.start, layout.select]
+                        + layout.additionalButtons.map(\.area) + layout.menuAreas
+                    let rightPadButtons = [layout.a, layout.b]
+                        + layout.additionalButtons.filter { $0.control == .a || $0.control == .b }.map(\.area)
+                    for (index, rect) in targets.enumerated() {
+                        XCTAssertGreaterThan(rect.width, 0)
+                        XCTAssertGreaterThan(rect.height, 0)
+                        XCTAssertGreaterThanOrEqual(rect.x, -0.001)
+                        XCTAssertGreaterThanOrEqual(rect.y, 0)
+                        XCTAssertLessThanOrEqual(rect.x + rect.width, phone.width + 0.001)
+                        XCTAssertLessThanOrEqual(rect.y + rect.height, phone.height - phone.bottom + 0.001)
+                        XCTAssertFalse(overlaps(rect, layout.screen))
+                        for other in targets.dropFirst(index + 1) {
+                            // Adjacent right-pad targets can send A+B, like a directional diagonal.
+                            if rightPadButtons.contains(rect), rightPadButtons.contains(other) { continue }
+                            XCTAssertFalse(overlaps(rect, other))
+                        }
+                    }
+                    XCTAssertEqual(layout.screen.width / layout.screen.height, 160 / 144.0, accuracy: 0.001)
+                    XCTAssertTrue(layout.opensMenu(at: try XCTUnwrap(layout.logo).center))
+                    XCTAssertFalse(layout.opensMenu(at: layout.screen.center))
+                    for button in layout.additionalButtons { XCTAssertFalse(layout.opensMenu(at: button.area.center)) }
+                    if scaling == .integer {
+                        let multiple = layout.screen.width * phone.scale / 160
+                        XCTAssertEqual(multiple, multiple.rounded(), accuracy: 0.001)
+                    }
+                }
+            }
+        }
+    }
+
+    func testPlaytilesStraightGuideExtendsBeyondTheDynamicIslandOn16ProMax() throws {
+        let layout = TouchControlLayout.make(.playtiles, width: 956, height: 440,
+                                             safeBottom: 21, safeLeft: 62, safeRight: 62, displayScale: 3)
+        let guides = [try XCTUnwrap(layout.alignmentGuide)] + layout.additionalAlignmentGuides
+        for guide in guides {
+            // A 126-point island centered on the display must leave 24 points of straight edge.
+            XCTAssertGreaterThan(guide.bar.width / 2 - guide.barCornerRadius, 126 / 2 + 24)
+        }
+    }
+
+    func testPlaytilesKeepTheIntegerPictureSizeWhenBothFullTilesFit() throws {
+        let fill = TouchControlLayout.make(.playtiles, width: 956, height: 440,
+                                           safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .fill)
+        let integer = TouchControlLayout.make(.playtiles, width: 956, height: 440,
+                                              safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .integer)
+        XCTAssertGreaterThan(fill.screen.width, 380)
+        XCTAssertEqual(integer.screen.width, 160 * 7 / 3.0, accuracy: 0.001)
+        let leftGuide = try XCTUnwrap(integer.alignmentGuide)
+        let rightGuide = try XCTUnwrap(integer.additionalAlignmentGuides.first)
+        let physicalTileWidth = 40 * 6.1
+        XCTAssertGreaterThan(leftGuide.bar.center.x - leftGuide.bar.height / 2 - physicalTileWidth, 0)
+        XCTAssertLessThan(rightGuide.bar.center.x + rightGuide.bar.height / 2, 956)
+    }
+
+    func testPlaytilesMenuCentersBelowTheGamePicture() throws {
+        for phone in phones {
+            for scaling in ScreenScaling.allCases {
+                for (left, right) in [(phone.side, phone.side), (phone.side, 0), (0, phone.side)] {
+                    let layout = TouchControlLayout.make(.playtiles, width: phone.width, height: phone.height,
+                                                        safeBottom: phone.bottom, safeLeft: left, safeRight: right,
+                                                        displayScale: phone.scale, scaling: scaling)
+                    let logo = try XCTUnwrap(layout.logo)
+                    XCTAssertEqual(logo.center.x, layout.screen.center.x, accuracy: 1 / phone.scale + 0.001)
+                    XCTAssertGreaterThan(layout.menuAreas[0].y, layout.screen.y + layout.screen.height)
+                }
+            }
+        }
     }
 
     func testSideInsetsDoNotChangePortraitLayouts() {

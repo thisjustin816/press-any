@@ -74,6 +74,22 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertTrue(button.showsMenuAsPrimaryAction)
     }
 
+    func testLandscapeMenuWordmarkFitsInsideTheNarrowerButton() throws {
+        for style in TouchControlStyle.allCases {
+            let layout = TouchControlLayout.make(style, width: 874, height: 402,
+                                                safeBottom: 21, safeLeft: 62, safeRight: 62, scaling: .fill)
+            let area = try XCTUnwrap(layout.menuAreas.first)
+            let button = GameMenuButton(menu: UIMenu(children: []))
+            button.frame = CGRect(x: area.x, y: area.y, width: area.width, height: area.height)
+            button.configureWordmark(palette: .classic)
+            button.layoutIfNeeded()
+            let image = try XCTUnwrap(button.subviews.compactMap { ($0 as? UIImageView)?.image }.first)
+            XCTAssertGreaterThan(image.size.width, 0)
+            // The recessed image includes two points of canvas beyond its fitted lettering.
+            XCTAssertLessThanOrEqual(image.size.width, button.bounds.width - 14 + 1)
+        }
+    }
+
     func testCloseGameWaitsForTheMenuDismissalAnimationToFinish() throws {
         let (gameplay, runtime, _) = makeGameplay()
         var closes = 0
@@ -421,17 +437,17 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertFalse(gameplay.isRunningFrames)
     }
 
-    func testOnlyGameBoyGameplayAllowsBothLandscapeOrientations() {
+    func testBothGameplayLayoutsFollowOrientationWhileLibraryAndSheetsStayPortrait() {
         let gameplayMask: UIInterfaceOrientationMask = [.portrait, .landscapeLeft, .landscapeRight]
         XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, coveredBySheet: false), gameplayMask)
-        XCTAssertEqual(GameplayOrientation.mask(style: .playtiles, coveredBySheet: false), .portrait)
+        XCTAssertEqual(GameplayOrientation.mask(style: .playtiles, coveredBySheet: false), gameplayMask)
         XCTAssertEqual(GameplayOrientation.mask(style: nil, coveredBySheet: false), .portrait, "the library")
         XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, coveredBySheet: true), .portrait)
         XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, orientation: .portrait, coveredBySheet: false), .portrait)
         XCTAssertEqual(GameplayOrientation.mask(style: .gameBoy, orientation: .landscape, coveredBySheet: false), .landscape)
         XCTAssertEqual(
-            GameplayOrientation.mask(style: .playtiles, orientation: .landscape, coveredBySheet: false), .portrait,
-            "Playtiles fits a portrait phone whatever the setting says"
+            GameplayOrientation.mask(style: .playtiles, orientation: .landscape, coveredBySheet: false), .landscape,
+            "Playtiles has a two-tile landscape layout"
         )
         XCTAssertEqual(
             GameplayOrientation.mask(style: .gameBoy, orientation: .landscape, coveredBySheet: true), .portrait,
@@ -469,7 +485,11 @@ final class GameplayLifecycleTests: XCTestCase {
         gameplay.applyDisplaySettings(controlStyle: .gameBoy, orientation: .portrait, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
         XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
         gameplay.applyDisplaySettings(controlStyle: .playtiles, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, [.portrait, .landscapeLeft, .landscapeRight])
+        gameplay.applyDisplaySettings(controlStyle: .playtiles, orientation: .portrait, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
         XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+        gameplay.applyDisplaySettings(controlStyle: .playtiles, orientation: .landscape, screenScaling: .integer, lcdFilter: .off, frameBlending: .off)
+        XCTAssertEqual(gameplay.supportedInterfaceOrientations, .landscape)
     }
 
     func testAControllerOverridesPlaytilesAndFollowsOrientationWithoutInterruptingPlay() {
@@ -480,7 +500,8 @@ final class GameplayLifecycleTests: XCTestCase {
                 lcdFilter: .off, frameBlending: .off
             )
             XCTAssertEqual(gameplay.touchControlStyle, .playtiles)
-            XCTAssertEqual(gameplay.supportedInterfaceOrientations, .portrait)
+            XCTAssertEqual(gameplay.supportedInterfaceOrientations,
+                           GameplayOrientation.mask(style: .playtiles, orientation: orientation, coveredBySheet: false))
             monitor.selectPlayerOne(GCController.withExtendedGamepad())
 
             XCTAssertEqual(gameplay.touchControlStyle, .gameBoy)
