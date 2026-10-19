@@ -15,6 +15,7 @@ struct SharedFile: Identifiable {
     let url: URL
     let originalFilename: String
     let kind: Kind
+    var variableMapURL: URL? = nil
     /// Chosen with Import Files, so a ROM goes straight to Import Review instead of offering Quick
     /// Play first.
     var opensImportReview = false
@@ -82,22 +83,44 @@ final class SharedFileInbox {
         let data = try Data(contentsOf: staged)
         let entries = try ZipArchiveReader.entries(
             in: data,
-            extensions: Set(Self.extensions.keys)
-        ) { Self.kind(forExtension: $0)?.limit.bytes ?? 0 }
-        guard !entries.isEmpty else { throw SharedFileError.emptyArchive }
+            extensions: Set(Self.extensions.keys),
+            filenames: Self.variableMapFilenames
+        ) { $0 == "i" ? ImportSizeLimit.variableMap.bytes : Self.kind(forExtension: $0)?.limit.bytes ?? 0 }
+        let roms = Dictionary(grouping: entries.filter {
+            Self.kind(forExtension: ($0.filename as NSString).pathExtension)?.kind == .rom
+        }, by: Self.archiveFolder)
+        let maps = Dictionary(grouping: entries.filter {
+            Self.variableMapFilenames.contains($0.filename.lowercased())
+        }, by: Self.archiveFolder)
         var files: [SharedFile] = []
         do {
             for entry in entries {
                 guard let accepted = Self.kind(forExtension: (entry.filename as NSString).pathExtension) else { continue }
                 let extracted = directory.appendingPathComponent(UUID().uuidString)
                 try entry.data.write(to: extracted)
-                files.append(try stage(extracted, filename: entry.filename, kind: accepted.kind, limit: accepted.limit))
+                let file = try stage(extracted, filename: entry.filename, kind: accepted.kind, limit: accepted.limit)
+                files.append(file)
+                let folder = Self.archiveFolder(entry)
+                if accepted.kind == .rom, roms[folder]?.count == 1,
+                   let companions = maps[folder], companions.count == 1, let companion = companions.first {
+                    let destination = file.url.deletingLastPathComponent().appendingPathComponent(companion.filename)
+                    try companion.data.write(to: destination)
+                    files[files.count - 1].variableMapURL = destination
+                }
             }
         } catch {
             files.forEach(discard)
             throw error
         }
+        guard !files.isEmpty else { throw SharedFileError.emptyArchive }
         return files
+    }
+
+    private static let variableMapFilenames: Set<String> = ["globals.i", "game_globals.i"]
+
+    private static func archiveFolder(_ entry: ZipArchiveEntry) -> String {
+        entry.relativePath.replacingOccurrences(of: "\\", with: "/")
+            .split(separator: "/").dropLast().joined(separator: "/")
     }
 
     private static let extensions: [String: (kind: SharedFile.Kind, limit: ImportSizeLimit)] = [

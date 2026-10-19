@@ -82,6 +82,8 @@ struct SharedFileView: View {
                 fetchArtwork: container.fetchArtworkAfterImport,
                 proposeArtwork: container.proposeImportArtwork,
                 applyArtworkProposal: container.applyImportArtworkProposal,
+                variableMapURL: file.variableMapURL,
+                attachVariableMap: { _ = try container.attachVariableMap.execute(buildID: $0, sourceURL: $1) },
                 knownDumps: container.knownDumps,
                 releasePreference: (try? ReleasePreferenceStore(store: container.repositories.settings).load()) ?? ReleasePreference()
             )
