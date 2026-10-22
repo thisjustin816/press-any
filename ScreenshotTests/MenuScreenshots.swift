@@ -170,9 +170,11 @@ final class MenuScreenshots: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         waitForOrientation(in: app, landscape: true)
         menu.tap()
-        let settingsButton = app.buttons["Settings"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
-        settingsButton.tap()
+        let settingsButtons = app.buttons.matching(identifier: "Settings")
+        XCTAssertTrue(settingsButtons.firstMatch.waitForExistence(timeout: 5))
+        let visibleSettings = settingsButtons.allElementsBoundByIndex.filter(\.isHittable)
+        XCTAssertEqual(visibleSettings.count, 1, "only the open game menu's Settings is available")
+        try XCTUnwrap(visibleSettings.first).tap()
         waitForOrientation(in: app, landscape: false)
         try expect(app.navigationBars["Game Settings"], then: "settings-over-game-portrait")
     }

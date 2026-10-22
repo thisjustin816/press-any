@@ -35,7 +35,8 @@
 - [x] Reconcile the inventory with all modifier sites, including inline forms and shared settings pickers.
 - [x] Update product, backlog and device checks to describe the implemented behavior and outstanding evidence.
 - [x] Run portable calculation tests, Swift syntax parsing and repository hygiene/whitespace checks.
-- [ ] Compile and run UIKit tests and screenshots on macOS when available.
+- [x] Compile and run UIKit tests on the macOS CI runner.
+- [ ] Complete the screenshot suite, including the landscape Settings selector regression.
 
 ## Review evidence
 
@@ -46,4 +47,5 @@ The generated mockup is a concept, not a running app. The owner approved its gro
 - Syntax-tree inspection found the modifier directly on all 49 scrollable bodies. Removing one nested form's modifier from the inspection input reported exactly one omission.
 - `make test-core` passed: 551 XCTest cases with 33 skipped, plus 231 Swift Testing cases.
 - Repository hygiene and whitespace checks passed.
-- UIKit observation tests and menu screenshots were added for the existing Xcode suites and have not run here.
+- Xcode app compilation, app tests, package tests and the unsigned Release archive passed. All three observation tests and five calculation tests passed on the simulator.
+- All five Build menu screenshot cases passed. The Settings screenshot shows the fade and chevron. The screenshot suite exposed a landscape Settings query matching multiple elements; it now requires one tappable match, and the full suite must pass before upload.

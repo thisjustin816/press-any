@@ -183,7 +183,7 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 | missing | Sorting by release year, developer and publisher | v2.0 | needs the metadata provider chain for its data |
 | done | Multi-select deletion | v1.0 | Select in library grid/list, Game Builds and Save Profiles, Save States, Quick Play Sessions and Recently Deleted; one confirmation with skipped counts and reasons, separate restorable entries, and dependency-ordered Restore |
 | done | Favorites | v1.0 | Game Details toolbar star and library long-press menu beside Rename; small star on tiles/list rows; Favorites Only works with search; merge keeps either favorite and promotion carries it |
-| done | Grouped Build context menu | v1.0 | eight entries: Play, Play Options, Build Info, Cheats, Build Preferences, ROM and Patches, Organize and Delete Build; specific submenus preserve all commands, and Play with Save is hidden without profiles; grouping approved from a concept mockup, implementation screenshots and device checks pending |
+| done | Grouped Build context menu | v1.0 | eight entries: Play, Play Options, Build Info, Cheats, Build Preferences, ROM and Patches, Organize and Delete Build; specific submenus preserve all commands, and Play with Save is hidden without profiles; grouping approved from a concept mockup, simulator menu checks passed; device checks pending |
 | done | Play statistics | v1.0 | Game rollups of Build playtime and profile session counts/latest last played in Game Details; played profiles show playtime and last played; Recently Deleted rows excluded; refresh on library changes and game close; a separate statistics screen remains later work |
 
 Done: Box-art grid and compact list; Game detail with Builds and Save Profiles; Preferred Build
@@ -610,7 +610,7 @@ send canonical release names, with disclosures in Settings and the privacy polic
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | missing | Expanded VoiceOver pass | v2.0 | Baseline library and game-menu labels are built and device-checked; narrated gameplay is not planned |
-| done | Visible scroll overflow | v1.0 | shared bottom fade and passive down chevron on all 49 app-owned lists, forms and vertical scroll views; hidden at the end or when content fits, follows viewport/inset/content changes, skips fading under Reduce Transparency; native geometry on iOS 18+, UIKit observation on iOS 17.4; five portable calculation tests pass, Apple UI compilation, observation tests and device checks pending |
+| done | Visible scroll overflow | v1.0 | shared bottom fade and passive down chevron on all 49 app-owned lists, forms and vertical scroll views; hidden at the end or when content fits, follows viewport/inset/content changes, skips fading under Reduce Transparency; native geometry on iOS 18+, UIKit observation on iOS 17.4; calculation and observation tests passed on the simulator, along with Apple UI compilation and Release archive; device checks pending |
 | missing | Dynamic Type for on-screen controls | v2.0 | Normal management UI supports Dynamic Type and passed device checks; controller drawing remains fixed size |
 | missing | Reduce Motion support | v2.0 | none |
 | partial | Large/configurable touch targets | v2.0 | hit areas extend 10-12 pt beyond drawn controls; not configurable |
