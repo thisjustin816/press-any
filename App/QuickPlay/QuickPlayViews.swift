@@ -75,6 +75,7 @@ struct QuickPlaySessionView: View {
                 }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Quick Play")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $promotion) { model in
@@ -169,6 +170,7 @@ struct QuickPlayPromotionView: View {
                 }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Add to Library")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
@@ -237,6 +239,7 @@ struct QuickPlaySessionsView: View {
                             .tag(session.id)
                         }
                     }
+                    .scrollOverflowCue()
                 }
             }
             .navigationTitle("Quick Play Sessions")
@@ -365,6 +368,7 @@ struct QuickPlaySaveChooser: View {
                     }
                 }
             }
+            .scrollOverflowCue()
             .overlay {
                 if games.isEmpty {
                     ContentUnavailableView(

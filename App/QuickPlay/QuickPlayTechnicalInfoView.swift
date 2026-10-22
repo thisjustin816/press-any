@@ -35,6 +35,7 @@ struct QuickPlayTechnicalInfoView: View {
                     }
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Technical Info")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

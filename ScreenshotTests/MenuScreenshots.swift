@@ -50,6 +50,32 @@ final class MenuScreenshots: XCTestCase {
         try expect(app.buttons["Build Info"], then: "menu-build")
     }
 
+    func test4BuildPlayOptions() throws {
+        try buildSubmenu("Play Options", expecting: "Start Over", then: "menu-build-play-options")
+    }
+
+    func test4BuildPreferences() throws {
+        try buildSubmenu("Build Preferences", expecting: "Build Settings", then: "menu-build-preferences")
+    }
+
+    func test4BuildROMAndPatches() throws {
+        try buildSubmenu("ROM and Patches", expecting: "Export ROM", then: "menu-build-rom-and-patches")
+    }
+
+    func test4BuildOrganize() throws {
+        try buildSubmenu("Organize", expecting: "Rename Build…", then: "menu-build-organize")
+    }
+
+    private func buildSubmenu(_ title: String, expecting item: String, then name: String) throws {
+        let settings = try settings()
+        let app = try launch("game:\(settings.gameROM)")
+        app.staticTexts["Original"].firstMatch.press(forDuration: 1)
+        let submenu = app.buttons[title]
+        scrollTo(submenu, in: app)
+        submenu.tap()
+        try expect(app.buttons[item], then: name)
+    }
+
     func test5SaveProfileMenu() throws {
         let settings = try settings()
         let app = try launch("game:\(settings.gameROM)")

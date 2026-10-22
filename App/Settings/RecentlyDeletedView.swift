@@ -66,6 +66,7 @@ struct RecentlyDeletedView: View {
                 }
             }
         }
+        .scrollOverflowCue()
         .overlay {
             if deletions.isEmpty {
                 ContentUnavailableView(

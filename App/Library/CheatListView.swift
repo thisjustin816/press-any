@@ -43,6 +43,7 @@ struct CheatListView: View {
                     Text("Cheats can change a game’s save. A backup, or a second Save Profile for playing with cheats, keeps the save safe.")
                 }
             }
+            .scrollOverflowCue()
             .environment(\.editMode, .constant(isReordering ? .active : .inactive))
             .navigationTitle("Cheats")
             .navigationBarTitleDisplayMode(.inline)
@@ -134,6 +135,7 @@ struct CheatListView: View {
                     Text("One code per line: Game Genie (ABC-DEF or ABC-DEF-GHI) or GameShark (01VVAAAA). They apply together.")
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle(model.editingCheatID == nil ? "Add Cheat" : "Edit Cheat")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

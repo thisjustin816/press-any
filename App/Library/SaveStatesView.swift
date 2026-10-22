@@ -28,6 +28,7 @@ struct SaveStatesView: View {
                     row(state).tag(state.id)
                 }
             }
+            .scrollOverflowCue()
             .overlay {
                 if model.states.isEmpty {
                     ContentUnavailableView(

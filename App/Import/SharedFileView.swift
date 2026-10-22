@@ -51,6 +51,7 @@ struct SharedFileView: View {
                             Section { Text(errorMessage).foregroundStyle(.red) }
                         }
                     }
+                    .scrollOverflowCue()
                     .navigationTitle("Open ROM")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {

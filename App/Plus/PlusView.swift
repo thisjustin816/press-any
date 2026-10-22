@@ -60,6 +60,7 @@ struct PlusView: View {
                 Text("This isn’t part of the Plus list above. Whether it’s free or part of Plus isn’t decided.")
             }
         }
+        .scrollOverflowCue()
         .navigationTitle(PlusProduct.name)
         .navigationBarTitleDisplayMode(.inline)
         .task {

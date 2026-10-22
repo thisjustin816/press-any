@@ -72,6 +72,7 @@ struct NameReviewView: View {
                     Section { Text(error).foregroundStyle(.red) }
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Suggest Names")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

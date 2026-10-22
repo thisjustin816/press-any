@@ -112,6 +112,7 @@ struct GameDetailView: View {
                 statisticsSection
             }
         }
+        .scrollOverflowCue()
     }
 
     @ViewBuilder
@@ -525,42 +526,44 @@ struct GameDetailView: View {
     private func buildMenu(_ build: Build) -> some View {
         Section {
             Button("Play", systemImage: "play.fill") { launch(build: build) }
-            Button("Start Over", systemImage: "arrow.counterclockwise") { launch(build: build, start: .startOver) }
             Menu {
-                ForEach(model.saveProfiles) { profile in
-                    Button(profile.title) { launch(build: build, profile: profile) }
+                Button("Start Over", systemImage: "arrow.counterclockwise") { launch(build: build, start: .startOver) }
+                if !model.saveProfiles.isEmpty {
+                    Menu {
+                        ForEach(model.saveProfiles) { profile in
+                            Button(profile.title) { launch(build: build, profile: profile) }
+                        }
+                    } label: {
+                        Label("Play with Save", systemImage: "play.circle")
+                    }
                 }
             } label: {
-                Label("Play with Save", systemImage: "play.circle")
+                Label("Play Options", systemImage: "play.circle")
             }
         }
         Section {
-            Button("Set as Preferred Build", systemImage: "star") { model.setPreferredBuild(build) }
-                .disabled(model.preferredBuild?.id == build.id)
-            preferredSaveMenu(build)
-            if build.sourceKind != .patchRecipe {
-                Button(build.isBase ? "Unmark as Base Build" : "Mark as Base Build", systemImage: "square.stack.3d.down.right") {
-                    model.setBase(build, isBase: !build.isBase)
-                }
-            }
-        }
-        Section {
-            Button("Rename Build…", systemImage: "pencil") {
-                buildName = build.displayName
-                renamingBuild = build
-            }
             Button("Build Info", systemImage: "info.circle") { buildDetails = build }
             Button("Cheats", systemImage: "wand.and.stars") { cheatsBuild = build }
-            Button("Build Settings", systemImage: "gearshape") {
-                settingsTarget = SettingsTarget(
-                    title: "\(build.displayName) Settings",
-                    scope: .build(build.id),
-                    system: build.system,
-                    buildID: build.id
-                )
+            Menu {
+                Button("Set as Preferred Build", systemImage: "star") { model.setPreferredBuild(build) }
+                    .disabled(model.preferredBuild?.id == build.id)
+                preferredSaveMenu(build)
+                if build.sourceKind != .patchRecipe {
+                    Button(build.isBase ? "Unmark as Base Build" : "Mark as Base Build", systemImage: "square.stack.3d.down.right") {
+                        model.setBase(build, isBase: !build.isBase)
+                    }
+                }
+                Button("Build Settings", systemImage: "gearshape") {
+                    settingsTarget = SettingsTarget(
+                        title: "\(build.displayName) Settings",
+                        scope: .build(build.id),
+                        system: build.system,
+                        buildID: build.id
+                    )
+                }
+            } label: {
+                Label("Build Preferences", systemImage: "slider.horizontal.3")
             }
-        }
-        Section {
             Menu {
                 Button("Apply Patch…", systemImage: "bandage") { request(.patch(build)) }
                 Button("Attach Variable Map…", systemImage: "list.bullet.rectangle") { request(.variableMap(build)) }
@@ -571,9 +574,17 @@ struct GameDetailView: View {
             } label: {
                 Label("ROM and Patches", systemImage: "doc.badge.gearshape")
             }
+            Menu {
+                Button("Rename Build…", systemImage: "pencil") {
+                    buildName = build.displayName
+                    renamingBuild = build
+                }
+                Button("Make Separate Game…", systemImage: "rectangle.portrait.and.arrow.right") { promotion = build }
+            } label: {
+                Label("Organize", systemImage: "folder")
+            }
         }
         Section {
-            Button("Make Separate Game…", systemImage: "rectangle.portrait.and.arrow.right") { promotion = build }
             Button(role: .destructive) { model.requestDeletion(of: build) } label: { Label("Delete Build", systemImage: "trash") }
         }
     }
@@ -755,6 +766,7 @@ private struct PromoteBuildSheet: View {
                     footer: "Chosen Save Profiles are copied; the originals stay here."
                 )
             }
+            .scrollOverflowCue()
             .navigationTitle("Make Separate Game")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -845,6 +857,7 @@ private struct MergeGameSheet: View {
                     }
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Merge \(sourceTitle)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

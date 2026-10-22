@@ -55,6 +55,7 @@ struct ScopedSettingsView: View {
             playingSection
             if hasCamera || gameID == nil { cameraSection }
         }
+        .scrollOverflowCue()
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .plusSheet(isPresented: $showsPlus, store: plus)
@@ -460,6 +461,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                 Section { Text(errorMessage).foregroundStyle(.red) }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
     }

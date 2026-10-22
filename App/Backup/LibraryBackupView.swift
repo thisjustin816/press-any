@@ -35,6 +35,7 @@ struct LibraryBackupView: View {
                 }
                 if model.isLoading { ProgressView("Reading library...") }
             }
+            .scrollOverflowCue()
             // The outcome sits outside the list, so it is on screen however far the list is scrolled.
             .safeAreaInset(edge: .bottom) { statusCard }
             .sensoryFeedback(.success, trigger: model.exportedURL) { _, new in new != nil }

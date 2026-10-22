@@ -109,6 +109,7 @@ struct AcknowledgementsView: View {
                 }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Acknowledgements")
     }
 }
@@ -124,6 +125,7 @@ private struct LicenseTextView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
         }
+        .scrollOverflowCue()
         .navigationTitle(component.name)
         .navigationBarTitleDisplayMode(.inline)
     }

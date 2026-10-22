@@ -74,6 +74,7 @@ struct AppIconSettingsPage: View {
                 Section { Text(errorMessage).foregroundStyle(.red) }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("App Icon")
         .navigationBarTitleDisplayMode(.inline)
         .plusSheet(isPresented: $showsPlus, store: plus)

@@ -44,6 +44,7 @@ struct WelcomeView: View {
             }
             .padding(24)
         }
+        .scrollOverflowCue()
         .safeAreaInset(edge: .bottom) {
             if let onDone {
                 Button {
