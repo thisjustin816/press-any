@@ -61,6 +61,7 @@ struct ImportReviewView: View {
                     }
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Import Review")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

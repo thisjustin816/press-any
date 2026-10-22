@@ -622,7 +622,8 @@ isn't stored.
   available source artwork fills it. Duplicate images are refused before moving a family group.
   Merely opening the review changes nothing. A failed operation refreshes the remaining list;
   completed groups stay merged and can be reviewed in the library.
-- A Build's menu has Mark as Base Build and Unmark as Base Build, beside Set as Preferred Build.
+- Build Preferences in a Build's menu has Mark as Base Build and Unmark as Base Build, beside
+  Set as Preferred Build.
 - Save compatibility declarations follow the original Build IDs through Move in Make Separate
   Game and Merge into Another Game, including when the pair ends up in separate Games. A Copy
   gets no declarations. Deleting either Build hides its declarations; restoring it from Recently
@@ -789,9 +790,9 @@ claims reliability from just an old ROM, old save and new ROM.
 - **Restart and Start Over.** Restart, beside Close Game in the game menu, asks first, then starts
   the game again from its boot and plays. The cartridge keeps its save through a reset. A library
   game first keeps where the player was as an Auto State, so States can go back to it; Quick
-  Play keeps only what the game itself saved. Start Over, beside Play in a Game's and a Build's
-  menus and on a long press of a Game's Play button, boots from the save whatever Resume Games
-  says and keeps the resume point, as the Ask prompt's Start Over does.
+  Play keeps only what the game itself saved. Start Over, beside Play in a Game's menu, under
+  Play Options in a Build's menu and on a long press of a Game's Play button, boots from the save
+  whatever Resume Games says and keeps the resume point, as the Ask prompt's Start Over does.
 - **Pausing.** The game pauses whenever its scene goes inactive and lets go of every held button.
   After only an overlay (Control Center, Notification Center, a call banner) it resumes on its own
   unless the player had paused it; after the background, Resume Games decides. Backgrounding
@@ -1347,11 +1348,14 @@ list shows no model numbers. App Settings has it on the Playing page.
   Artwork, Merge Into Another Game, Delete Game). Select edits the Builds and Save Profiles
   sections with one selection across both and Delete (n) in the bottom bar. Build taps select
   instead of playing.
-- A Build's menu, with an icon on each item, groups Play, Start Over and Play with Save; Set as
-  Preferred Build, Preferred Save and Mark as Base Build; Rename Build, Build Info, Cheats and
-  Build Settings; ROM and Patches (Apply Patch, Attach Variable Map, Export ROM, Remove Generated Image);
-  then Make Separate Game and Delete Build. Preferred Save picks which save this Build plays: the
-  Game's preferred save, named, or one of its own.
+- A Build's menu has eight entries, with an icon on each: Play, Play Options, Build Info, Cheats,
+  Build Preferences, ROM and Patches, Organize and Delete Build. Play Options groups Start Over
+  and Play with Save; Play with Save appears only when the Game has Save Profiles. Build
+  Preferences groups Set as Preferred Build, Preferred Save, Mark as Base Build and Build
+  Settings. Preferred Save picks which save this Build plays: the Game's preferred save, named,
+  or one of its own. ROM and Patches groups Apply Patch, Attach Variable Map, Export ROM and,
+  for patched Builds, Remove Generated Image. Organize groups Rename Build and Make Separate
+  Game. Play, Build Info, Cheats and Delete Build remain directly available.
 - A Save Profile's menu has Play with This Save; Save States, Set as Preferred Save, Badge and
   Duplicate; Replace from File and Export Save; then Delete Save Profile. A star marks the Game's
   preferred save, which Play uses unless a Build picks its own.
@@ -1616,6 +1620,13 @@ the game menu, and haptics never as the only feedback. v2.0 adds Reduce Motion, 
 configurable touch targets, Dynamic Type for the on-screen controls, controller navigation of
 the app's screens, one-handed layouts with the layout editor, and a fuller VoiceOver pass.
 Narrated gameplay isn't planned.
+
+App-owned lists, forms and vertical scroll views show a bottom fade and down chevron while more
+content remains below, including the library grid, review sheets, onboarding and license text.
+The cue disappears at the end and stays hidden when everything fits. It follows content, viewport
+and inset changes, including the keyboard and bottom bars. It does not intercept row taps or
+scroll gestures, animate, or add a VoiceOver focus stop. Reduce Transparency keeps an opaque
+chevron badge and skips the fade. Text editors and system-owned menus retain their own scrolling.
 
 ### Performance
 

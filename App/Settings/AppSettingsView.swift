@@ -106,6 +106,7 @@ struct AppSettingsView: View {
                     NavigationLink("Acknowledgements") { AcknowledgementsView() }
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

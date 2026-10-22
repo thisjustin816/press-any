@@ -30,6 +30,7 @@ struct ArtworkSettingsView: View {
             }
             if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
         }
+        .scrollOverflowCue()
         .navigationTitle("Artwork")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showReview) {

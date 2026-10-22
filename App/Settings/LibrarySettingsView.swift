@@ -44,6 +44,7 @@ struct LibrarySettingsView: View {
                 if let integrityChecker {
                     NavigationLink("Check Library Files") {
                         Form { LibraryCheckSection(checker: integrityChecker) }
+                            .scrollOverflowCue()
                             .navigationTitle("Check Library Files")
                             .navigationBarTitleDisplayMode(.inline)
                     }
@@ -64,6 +65,7 @@ struct LibrarySettingsView: View {
                 }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Library")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showBackup) {

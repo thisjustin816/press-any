@@ -45,6 +45,7 @@ struct FamilyMergeReviewView: View {
                 }
                 if let error = model.errorMessage { Text(error).foregroundStyle(.red) }
             }
+            .scrollOverflowCue()
             .navigationTitle("Suggest Game Merges")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -49,6 +49,7 @@ struct ArtworkReviewView: View {
                 }
                 if let errorMessage { Section { Text(errorMessage).foregroundStyle(.red) } }
             }
+            .scrollOverflowCue()
             .navigationTitle("Check for New Artwork")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

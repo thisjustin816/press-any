@@ -52,6 +52,7 @@ struct MissingArtworkReviewView: View {
                     Section { Text(error).foregroundStyle(.red) }
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Find Missing Artwork")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

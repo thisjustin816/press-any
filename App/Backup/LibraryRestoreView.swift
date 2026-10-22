@@ -40,6 +40,7 @@ struct LibraryRestoreView: View {
                     }
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle(model.report == nil ? "Restore Review" : "Migration Report")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -129,6 +130,7 @@ struct RestoreReportView: View {
     let report: RestoreReport
     var body: some View {
         Form { RestoreReportSections(report: report) }
+            .scrollOverflowCue()
             .navigationTitle("Last Restore")
             .navigationBarTitleDisplayMode(.inline)
     }

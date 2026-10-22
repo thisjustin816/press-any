@@ -35,6 +35,7 @@ struct MatchGameView: View {
                     if query.isEmpty { Text("Search for a base game, including games you haven't imported.") }
                 }
             }
+            .scrollOverflowCue()
             .searchable(text: $query, prompt: "Search base games")
             .navigationTitle("Match Game")
             .navigationBarTitleDisplayMode(.inline)

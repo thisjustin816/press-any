@@ -94,6 +94,7 @@ struct ControlsSettingsPage: View {
                 Section { Text(errorMessage).foregroundStyle(.red) }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Controls")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: controllerLayout) { _, newValue in save(newValue, .controllerLayout) }
@@ -176,6 +177,7 @@ struct DisplaySettingsPage: View {
                 Section { Text(errorMessage).foregroundStyle(.red) }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Display")
         .navigationBarTitleDisplayMode(.inline)
         .plusSheet(isPresented: $showsPlus, store: plus)
@@ -319,6 +321,7 @@ struct PlayingSettingsPage: View {
                 Section { Text(errorMessage).foregroundStyle(.red) }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Playing")
         .navigationBarTitleDisplayMode(.inline)
         .plusSheet(isPresented: $showsPlus, store: plus)
@@ -378,6 +381,7 @@ struct PlayingSettingsPage: View {
                 }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Model")
         .navigationBarTitleDisplayMode(.inline)
     }

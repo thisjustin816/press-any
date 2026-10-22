@@ -34,6 +34,7 @@ struct ReleasePreferenceView: View {
             Button("Restore Defaults") { preference = ReleasePreference(); save() }
             if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
         }
+        .scrollOverflowCue()
         .environment(\.editMode, .constant(.active))
         .navigationTitle("Regions and Languages")
         .navigationBarTitleDisplayMode(.inline)

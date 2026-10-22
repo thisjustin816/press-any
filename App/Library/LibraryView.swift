@@ -354,6 +354,7 @@ struct LibraryView: View {
             }
             .padding()
         }
+        .scrollOverflowCue()
     }
 
     private func gameTile(_ game: Game) -> some View {
@@ -381,6 +382,7 @@ struct LibraryView: View {
             }
             .onMove(perform: moveAction)
         }
+        .scrollOverflowCue()
         .listStyle(.plain)
         // Drag handles show only in edit mode, which Select also turns on for its checkboxes.
         .environment(\.editMode, .constant(model.selection.isSelecting || isReordering ? .active : .inactive))

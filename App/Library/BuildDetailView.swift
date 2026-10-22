@@ -48,6 +48,7 @@ struct BuildDetailView: View {
                     }
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle(model.build?.displayName ?? "Build Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -89,6 +90,7 @@ struct BuildDetailView: View {
                 .pickerStyle(.segmented)
                 if let error = model.errorMessage { Text(error).foregroundStyle(.red) }
             }
+            .scrollOverflowCue()
             .navigationTitle("Save Compatibility")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -114,6 +116,7 @@ struct BuildDetailView: View {
                     Text(error).foregroundStyle(.red)
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Edit Notes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

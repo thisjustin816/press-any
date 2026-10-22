@@ -46,6 +46,7 @@ struct SharedSaveView: View {
                         .disabled(gameID == nil || profileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Open Save")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

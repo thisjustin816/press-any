@@ -88,6 +88,7 @@ struct SharedPatchView: View {
                         .disabled(buildID == nil || displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .scrollOverflowCue()
             .navigationTitle("Open Patch")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

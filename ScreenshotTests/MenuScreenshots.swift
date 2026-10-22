@@ -50,6 +50,32 @@ final class MenuScreenshots: XCTestCase {
         try expect(app.buttons["Build Info"], then: "menu-build")
     }
 
+    func test4BuildPlayOptions() throws {
+        try buildSubmenu("Play Options", expecting: "Start Over", then: "menu-build-play-options")
+    }
+
+    func test4BuildPreferences() throws {
+        try buildSubmenu("Build Preferences", expecting: "Build Settings", then: "menu-build-preferences")
+    }
+
+    func test4BuildROMAndPatches() throws {
+        try buildSubmenu("ROM and Patches", expecting: "Export ROM", then: "menu-build-rom-and-patches")
+    }
+
+    func test4BuildOrganize() throws {
+        try buildSubmenu("Organize", expecting: "Rename Build…", then: "menu-build-organize")
+    }
+
+    private func buildSubmenu(_ title: String, expecting item: String, then name: String) throws {
+        let settings = try settings()
+        let app = try launch("game:\(settings.gameROM)")
+        app.staticTexts["Original"].firstMatch.press(forDuration: 1)
+        let submenu = app.buttons[title]
+        scrollTo(submenu, in: app)
+        submenu.tap()
+        try expect(app.buttons[item], then: name)
+    }
+
     func test5SaveProfileMenu() throws {
         let settings = try settings()
         let app = try launch("game:\(settings.gameROM)")
@@ -144,9 +170,11 @@ final class MenuScreenshots: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         waitForOrientation(in: app, landscape: true)
         menu.tap()
-        let settingsButton = app.buttons["Settings"]
-        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
-        settingsButton.tap()
+        let settingsButtons = app.buttons.matching(identifier: "Settings")
+        XCTAssertTrue(settingsButtons.firstMatch.waitForExistence(timeout: 5))
+        let visibleSettings = settingsButtons.allElementsBoundByIndex.filter(\.isHittable)
+        XCTAssertEqual(visibleSettings.count, 1, "only the open game menu's Settings is available")
+        try XCTUnwrap(visibleSettings.first).tap()
         waitForOrientation(in: app, landscape: false)
         try expect(app.navigationBars["Game Settings"], then: "settings-over-game-portrait")
     }

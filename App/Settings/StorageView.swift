@@ -60,6 +60,7 @@ struct StorageView: View {
                 Section { Text(errorMessage).foregroundStyle(.red) }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Storage")
         .navigationBarTitleDisplayMode(.inline)
         .task { await refresh() }

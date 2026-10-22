@@ -55,6 +55,7 @@ struct MetadataDetailsView: View {
                 }
             }
         }
+        .scrollOverflowCue()
         .navigationTitle("Metadata Details")
         .navigationBarTitleDisplayMode(.inline)
         .task { reload() }
@@ -76,6 +77,7 @@ struct MetadataDetailsView: View {
                     .accessibilityIdentifier("metadata.editor")
                 if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
             }
+            .scrollOverflowCue()
             .navigationTitle("Edit \(editingField.label)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
