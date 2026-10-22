@@ -36,7 +36,7 @@
 - [x] Update product, backlog and device checks to describe the implemented behavior and outstanding evidence.
 - [x] Run portable calculation tests, Swift syntax parsing and repository hygiene/whitespace checks.
 - [x] Compile and run UIKit tests on the macOS CI runner.
-- [ ] Complete the screenshot suite, including the landscape Settings selector regression.
+- [x] Complete the screenshot suite, including the landscape Settings selector regression.
 
 ## Review evidence
 
@@ -48,4 +48,5 @@ The generated mockup is a concept, not a running app. The owner approved its gro
 - `make test-core` passed: 551 XCTest cases with 33 skipped, plus 231 Swift Testing cases.
 - Repository hygiene and whitespace checks passed.
 - Xcode app compilation, app tests, package tests and the unsigned Release archive passed. All three observation tests and five calculation tests passed on the simulator.
-- All five Build menu screenshot cases passed. The Settings screenshot shows the fade and chevron. The screenshot suite exposed a landscape Settings query matching multiple elements; it now requires one tappable match, and the full suite must pass before upload.
+- All five Build menu screenshot cases and the landscape Settings case passed in the full screenshot suite. The Settings capture shows the fade and chevron. The landscape Settings query requires one tappable match to exclude background controls.
+- [CI](https://github.com/thisjustin816/press-any/actions/runs/39705952651), [iOS build and shared-file UI flows](https://github.com/thisjustin816/press-any/actions/runs/39705952540), and [simulator screenshots](https://github.com/thisjustin816/press-any/actions/runs/39705948781) passed on `6f21a32`.
