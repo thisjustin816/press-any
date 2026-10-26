@@ -15,6 +15,7 @@ roadmap; its final scope and timing are not fixed.
   review, provenance and grouped Library settings; Game Boy Camera with Photo! DX color
   capture; Playtiles landscape controls and compatibility checks; and the fixes listed below.
   ZIP globals attachment, grouped Build menus and list overflow cues are built for this release.
+  Game Boy Printer emulation with printed-slip preview and image export is planned for v1.1.
 - **v2.0:** the larger unfinished roadmap, including save migration, broader multi-asset
   import, documents, rewind, skins, sync and catalog services. Partial rows describe what
   is already built and what remains for this target.
@@ -55,6 +56,11 @@ GameShark cheats.
 
 Game Boy Camera, including Photo! DX color capture, is built for v1.1. Its physical-camera checks
 remain pending in `docs/mvp-verification.md`.
+
+Game Boy Printer emulation is the next prioritized play feature for v1.1, with preview, save and
+share. The default exported PNG resembles a physical printer slip: narrow thermal paper,
+printer margins and feed spacing, and monochrome print tones. Preserve the printed pixel grid
+and contrast so fine details remain usable for testing; paper styling must not obscure them.
 
 v1.0 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
 The v1.1 artwork work adds automatic Libretro lookup after import and a reviewed manual
@@ -661,14 +667,14 @@ Add to Library, never before the first frame; Feeds the save compatibility check
 Done: ci.yml (L1/L2/L3, gbtoolsid differential, test-coverage, hygiene) and ios-build.yml (simulator
 build/tests).
 
-### v2.0 targets
+### Peripheral and other release targets
 
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | missing | Link cable, local dual-core first; nearby/SharePlay initiation; no Multipeer | v2.0 | no LinkCableCapability |
 | missing | GB Studio save migration with old/new variable maps | v2.0 |  |
-| missing | Game Boy Printer with preview/save/share | v2.0 | no PrinterCapability |
+| missing | Game Boy Printer emulation with printed-slip preview/save/share | v1.1 | Prioritized next play feature; PNG export with thermal-paper appearance, printer margins and feed spacing; preserve printed pixels and contrast. PrinterCapability is declared but has no implementation |
 | missing | RAR import (tentative) | v2.0 |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v2.0 |  |
 | missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v2.0 | saved recordings also land in the Files folder |

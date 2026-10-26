@@ -24,6 +24,7 @@ change. There is no separate decision log.
 The submitted v1.0 App Store candidate is build 110, identified by
 `app-store-review/1.0-build-110`. Development after that candidate targets v1.1. The larger
 unfinished roadmap targets v2.0 tentatively; `docs/backlog.md` separates these scopes.
+Game Boy Printer emulation with printed-slip image export is prioritized for v1.1.
 
 - iOS 17.4 or later, iPhone first. iPad keeps working but gets no special design until later.
 - SameBoy 1.0.3 for GB and GBC, built from its `Core/` only. SameBoy's `iOS/` directory needs
@@ -1447,6 +1448,21 @@ and patches, RTC, cheats, profile, core and settings; a full RAM snapshot is opt
 Mode. Bug-report exports preview a checklist, and memory, saves and notes need explicit inclusion.
 Game notes and timestamped gameplay notes; each Build already has a plain-text note in Build Details.
 
+### Game Boy Printer (planned for v1.1)
+
+Game Boy Printer emulation is prioritized for v1.1 to support playing and testing games that
+print through the link port. The core integration belongs behind `PrinterCapability` and
+supports library play and Quick Play. Completed print output can be previewed, saved and shared.
+
+The default preview and exported PNG resemble a physical Game Boy Printer slip: a narrow strip
+of thermal paper with off-white paper tones, monochrome ink, side margins and the print job's
+feed spacing. Paper texture stays subtle and clear of the printed content. Preserve the original
+printed pixel grid, proportions and contrast, using integer scaling without smoothing, blur,
+random ink loss or distortion. Fine patterns must remain legible for testing. The slip appearance
+is part of the exported image, so saving or sharing preserves it.
+
+Printer emulation and export are planned; the current capability declaration has no implementation.
+
 ### Documents (v2.0)
 
 Manuals, READMEs, changelogs, guides and maps as managed copies (PDF, CBZ, PNG, JPEG, WebP image
@@ -1657,7 +1673,7 @@ silently. The default shader must hold full speed on the slowest supported devic
   and memory tools (above), with states recording their cheat configuration and offering to
   restore it; the app's screens fitting above a controller that covers the bottom of the screen, as
   with Playtiles, and navigable with its buttons; link cable (local first, then nearby; not built on Multipeer Connectivity), GB Studio
-  save migration, Game Boy Camera and Printer, RAR, skin authoring beyond the editor, video and GIF
+  save migration, RAR, skin authoring beyond the editor, video and GIF
   capture framed like a Game Boy, `.gbproject` import and export, better ROM comparison and BPS
   generation, side-by-side manuals on iPad, itch.io and Homebrew Hub browsing and shared game pages.
 - **Later:** mGBA for GBA (1.2 or 2.0), network link play, RetroAchievements, a full debugger,
