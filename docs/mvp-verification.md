@@ -356,8 +356,8 @@ behavior or Apple SDK compilation.
 ### Printer backgrounds
 
 - [ ] Choose the bundled Wood background offline and verify the photograph and credit in Settings.
-- [ ] Tap Add Custom Background, then choose Photo Library and Choose File: each opens its picker
-  over the preview.
+- [ ] Open the Custom Background menu and choose From Photos… and From Files…: each opens its
+  picker over the preview.
   Import a custom image from Photos, then Files. Cancel each picker and verify the previous
   background remains available. Export Custom and confirm the image fills the area behind paper.
 - [ ] Close and reopen the preview and relaunch the app: Custom remains available, while the

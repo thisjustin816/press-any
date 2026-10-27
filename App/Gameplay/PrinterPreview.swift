@@ -55,7 +55,6 @@ struct PrinterPreview: View {
     @State private var photo: PhotosPickerItem?
     @State private var showImageImporter = false
     @State private var showPhotoPicker = false
-    @State private var showSourceChoice = false
     @State private var importing = false
     @State private var loadedCustom = false
     @State private var customImage: PrinterBackgroundImage?
@@ -87,20 +86,20 @@ struct PrinterPreview: View {
                 }
                 .pickerStyle(.menu)
                 .disabled(png == nil && error == nil)
-                // One entry point. The source choice is a dialog, and each system picker hangs off its
-                // own view: a menu dismisses its presenter before a picker can appear.
-                Button(customImage == nil ? "Add Custom Background" : "Change Custom Background", systemImage: "photo.badge.plus") {
-                    showSourceChoice = true
-                }
-                .buttonStyle(.bordered)
-                .disabled(importing || !loadedCustom)
-                .confirmationDialog("Custom Background", isPresented: $showSourceChoice) {
-                    Button("Photo Library") { present { showPhotoPicker = true } }
-                    Button("Choose File") { present { showImageImporter = true } }
+                // Laid out like the Game's Artwork menu. Each picker hangs off its own view and opens
+                // once the menu has closed, since the menu took the pickers down with it before.
+                Menu {
+                    Button { present { showPhotoPicker = true } } label: { Label("From Photos…", systemImage: "photo") }
+                    Button { present { showImageImporter = true } } label: { Label("From Files…", systemImage: "folder") }
                     if customImage != nil {
-                        Button("Remove Custom Background", role: .destructive) { removeCustom() }
+                        Button(role: .destructive) { removeCustom() } label: {
+                            Label("Remove Custom Background", systemImage: "trash")
+                        }
                     }
+                } label: {
+                    Label("Custom Background", systemImage: "photo.on.rectangle")
                 }
+                .disabled(importing || !loadedCustom)
                 .photosPicker(isPresented: $showPhotoPicker, selection: $photo, matching: .images)
                 .background(Color.clear.fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image], onCompletion: importFile))
                 if importing { ProgressView("Loading background") }
@@ -163,7 +162,7 @@ struct PrinterPreview: View {
         }
     }
 
-    /// Lets the dialog finish dismissing before a system picker takes its place.
+    /// Lets the menu finish closing before a system picker takes its place.
     private func present(_ show: @escaping @MainActor () -> Void) {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(350))

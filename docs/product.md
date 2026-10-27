@@ -1489,7 +1489,7 @@ page 2...**, and ends with **Print ready**, since pages without a feed margin be
 so no total is shown.
 **Game Artwork** uses the Game's library artwork as the background when it has any; it is offered
 in library play and not in Quick Play. It is cropped like Custom and is not copied or stored.
-**Add Custom Background** asks for Photo Library or Choose File, then opens that picker. One custom image is kept on-device
+The **Custom Background** menu offers **From Photos…** and **From Files…**, as the Game's Artwork menu does, and **Remove Custom Background** once one is saved. One custom image is kept on-device
 and remains available in later previews, with replace and remove actions. Import accepts images
 up to 25 MB and 100 million source pixels, downsamples to 1,536 pixels on the longest edge,
 flattens transparency onto white and stores a JPEG without the original metadata. The original
