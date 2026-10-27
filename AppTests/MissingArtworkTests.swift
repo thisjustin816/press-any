@@ -7,7 +7,7 @@ import XCTest
 final class MissingArtworkTests: XCTestCase {
     func testSearchDoesNotStoreArtworkBeforeApproval() async throws {
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let game = try library.addGame(dump: library.dumps[0], marker: 1)
 
@@ -20,7 +20,7 @@ final class MissingArtworkTests: XCTestCase {
     func testSearchChecksTheWholeLibraryAndProposesPreviouslyRemovedArtworkWithoutSaving() async throws {
         let png = ArtworkTestLibrary.png()
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: png))
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let container = library.container
         let first = try library.addGame(dump: library.dumps[0], marker: 1)
@@ -58,7 +58,7 @@ final class MissingArtworkTests: XCTestCase {
     func testCancellationStopsTheBatchAndDiscardsALateDownload() async throws {
         let requested = expectation(description: "First download starts")
         let provider = PendingArtworkProvider { _, _ in requested.fulfill() }
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let first = try library.addGame(dump: library.dumps[0], marker: 1)
         let second = try library.addGame(dump: library.dumps[1], marker: 2)
@@ -79,7 +79,7 @@ final class MissingArtworkTests: XCTestCase {
 
     func testAnUnreadableImageDoesNotStopTheRestOfTheBatch() async throws {
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: Data([1, 2])))
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         _ = try library.addGame(dump: library.dumps[0], marker: 1)
         _ = try library.addGame(dump: library.dumps[1], marker: 2)
@@ -93,7 +93,7 @@ final class MissingArtworkTests: XCTestCase {
 
     func testReviewSavesOnlyAcceptedImagesAndTheirProvenance() async throws {
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let accepted = try library.addGame(dump: library.dumps[0], marker: 1)
         let denied = try library.addGame(dump: library.dumps[1], marker: 2)
@@ -122,7 +122,7 @@ final class MissingArtworkTests: XCTestCase {
             if number == 1 { firstRequest.fulfill() }
             if number == 2 { secondRequest.fulfill() }
         }
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let first = try library.addGame(dump: library.dumps[0], marker: 1)
         let second = try library.addGame(dump: library.dumps[1], marker: 2)
@@ -146,7 +146,7 @@ final class MissingArtworkTests: XCTestCase {
 
     func testDiscardingReviewDeletesPreviewsAndLeavesTheLibraryUnchanged() async throws {
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let game = try library.addGame(dump: library.dumps[0], marker: 1)
         let model = MissingArtworkReviewViewModel(container: library.container)
@@ -164,7 +164,7 @@ final class MissingArtworkTests: XCTestCase {
 
     func testReviewPreservesArtworkRemovedAfterSearchAndReportsTheChange() async throws {
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let game = try library.addGame(dump: library.dumps[0], marker: 1)
         let model = MissingArtworkReviewViewModel(container: library.container)
@@ -181,7 +181,7 @@ final class MissingArtworkTests: XCTestCase {
 
     func testReviewCanRestoreArtworkRemovedBeforeSearch() async throws {
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let game = try library.addGame(dump: library.dumps[0], marker: 1)
         try library.container.gameArtwork.remove(gameID: game.id)
@@ -197,7 +197,7 @@ final class MissingArtworkTests: XCTestCase {
 
     func testReviewPreservesARemovalRepeatedWhileTheProposalIsOpen() async throws {
         let provider = RecordingArtworkProvider(result: ArtworkTestLibrary.download(data: ArtworkTestLibrary.png()))
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let game = try library.addGame(dump: library.dumps[0], marker: 1)
         try library.container.gameArtwork.remove(gameID: game.id)

@@ -148,10 +148,9 @@ final class ImportReviewTests: XCTestCase {
             if number == 1 { firstRequest.fulfill() }
             if number == 2 { secondRequest.fulfill() }
         }
-        let library = try ArtworkTestLibrary(provider: provider)
+        let library = try await ArtworkTestLibrary(provider: provider)
         defer { library.removeFiles() }
         let container = library.container
-        try await XCTUnwrap(container.backgroundMaintenance).value
         var game = Game(id: UUID(), primaryTitle: "Example", systemFamily: "gameboy", createdAt: .distantPast, modifiedAt: .distantPast)
         try container.repositories.games.insertGame(game)
         let first = try library.addBuild(to: game, dump: library.dumps[0], marker: 1)
