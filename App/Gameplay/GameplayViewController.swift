@@ -729,7 +729,7 @@ final class GameplayViewController: UIViewController {
                 do {
                     try feed.receive(outputs)
                     DispatchQueue.main.async {
-                        self?.printerStatus.printReceived()
+                        self?.printerStatus.printReceived(pages: outputs.count)
                     }
                 } catch {
                     DispatchQueue.main.async {

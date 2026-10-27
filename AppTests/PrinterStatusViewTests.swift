@@ -47,12 +47,16 @@ final class PrinterStatusViewTests: XCTestCase {
         status.showActivity(.receiving)
         try await Task.sleep(for: .milliseconds(120))
         XCTAssertTrue(status.viewPrint.isHidden)
-        XCTAssertEqual(status.message.text, "Receiving print...")
+        XCTAssertEqual(status.message.text, "Receiving page 2...")
         status.printReceived()
+        status.showActivity(.printing)
+        XCTAssertEqual(status.message.text, "Printing page 3...")
         status.showActivity(.idle)
         try await Task.sleep(for: .milliseconds(120))
         XCTAssertFalse(status.viewPrint.isHidden)
-        XCTAssertEqual(status.message.text, "Print ready")
+        XCTAssertEqual(status.message.text, "2 pages ready")
+        status.showActivity(.receiving)
+        XCTAssertEqual(status.message.text, "Receiving print...")
     }
 
     func testOpeningThePrintsCancelsAPendingReadyBanner() async throws {

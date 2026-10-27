@@ -331,7 +331,7 @@ Those checks remain unchecked above.
   the game; output from another run starts new paper. Closing and reopening clears the feed.
 - [ ] While receiving and printing, verify the progress banner is visible. When output arrives,
   tap View Print directly, without opening the game menu. With a multi-page print (PictoCode),
-  confirm the banner stays on Receiving/Printing until the last page, then shows View Print once. Dismiss a ready banner and print again;
+  confirm the banner stays on Receiving/Printing until the last page, then shows View Print once, with page numbers from the second page. Dismiss a ready banner and print again;
   the new progress and View Print action appear. Repeat after pausing and resuming, and in landscape.
 - [ ] Generate more than 10 separate prints and confirm the oldest leaves the session feed.
 
@@ -356,7 +356,8 @@ behavior or Apple SDK compilation.
 ### Printer backgrounds
 
 - [ ] Choose the bundled Wood background offline and verify the photograph and credit in Settings.
-- [ ] Tap Custom from Photos and Custom from Files: each opens its picker over the preview.
+- [ ] Tap Add Custom Background, then choose Photo Library and Choose File: each opens its picker
+  over the preview.
   Import a custom image from Photos, then Files. Cancel each picker and verify the previous
   background remains available. Export Custom and confirm the image fills the area behind paper.
 - [ ] Close and reopen the preview and relaunch the app: Custom remains available, while the

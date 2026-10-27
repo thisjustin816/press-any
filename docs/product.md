@@ -1484,10 +1484,12 @@ the slip renderer preserves the decoded print tones.
 The core reports idle, receiving and printing activity for an indeterminate progress display.
 Games that print several pages go idle between them, so the banner changes to **View Print** only
 after the printer stays idle for about a second and a half; more data in that time keeps the
-progress display.
+progress display. From the second page the banner reads **Receiving page 2...** and **Printing
+page 2...**, and ends with **2 pages ready**. A game does not announce how many pages it will send,
+so no total is shown.
 **Game Artwork** uses the Game's library artwork as the background when it has any; it is offered
 in library play and not in Quick Play. It is cropped like Custom and is not copied or stored.
-**Custom from Photos** and **Custom from Files** import an image. One custom image is kept on-device
+**Add Custom Background** asks for Photo Library or Choose File, then opens that picker. One custom image is kept on-device
 and remains available in later previews, with replace and remove actions. Import accepts images
 up to 25 MB and 100 million source pixels, downsamples to 1,536 pixels on the longest edge,
 flattens transparency onto white and stores a JPEG without the original metadata. The original

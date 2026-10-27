@@ -13,6 +13,9 @@ final class PrinterStatusView: UIView {
     private var hasReadyPrint = false
     private var hasUnseenPrint = false
     private var activity = PrinterActivity.idle
+    /// Pages finished since the last job was shown as ready or viewed. The game never says how
+    /// many pages a job has, so only the current page number is shown.
+    private var pagesReceived = 0
     private var settleTask: Task<Void, Never>?
 
     override init(frame: CGRect) {
@@ -56,7 +59,8 @@ final class PrinterStatusView: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     /// A finished page arrived. The banner turns to View Print once no more pages follow.
-    func printReceived() {
+    func printReceived(pages: Int = 1) {
+        pagesReceived += pages
         hasUnseenPrint = true
         if activity == .idle { scheduleReady() }
     }
@@ -71,7 +75,9 @@ final class PrinterStatusView: UIView {
         settleTask?.cancel()
         hasReadyPrint = false
         isHidden = false
-        message.text = activity == .receiving ? "Receiving print..." : "Printing..."
+        let verb = activity == .receiving ? "Receiving" : "Printing"
+        message.text = pagesReceived == 0 ? (activity == .receiving ? "Receiving print..." : "Printing...")
+            : "\(verb) page \(pagesReceived + 1)..."
         viewPrint.isHidden = true
         dismissButton.isHidden = true
         spinner.isHidden = false
@@ -92,7 +98,8 @@ final class PrinterStatusView: UIView {
         hasUnseenPrint = false
         hasReadyPrint = true
         isHidden = false
-        message.text = "Print ready"
+        message.text = pagesReceived > 1 ? "\(pagesReceived) pages ready" : "Print ready"
+        pagesReceived = 0
         UIAccessibility.post(notification: .announcement, argument: "Print ready")
         spinner.stopAnimating()
         spinner.isHidden = true
@@ -104,6 +111,7 @@ final class PrinterStatusView: UIView {
         settleTask?.cancel()
         hasUnseenPrint = false
         hasReadyPrint = false
+        pagesReceived = 0
         isHidden = true
     }
 }

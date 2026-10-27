@@ -54,6 +54,8 @@ struct PrinterPreview: View {
     @State private var retry = 0
     @State private var photo: PhotosPickerItem?
     @State private var showImageImporter = false
+    @State private var showPhotoPicker = false
+    @State private var showSourceChoice = false
     @State private var importing = false
     @State private var loadedCustom = false
     @State private var customImage: PrinterBackgroundImage?
@@ -85,18 +87,22 @@ struct PrinterPreview: View {
                 }
                 .pickerStyle(.menu)
                 .disabled(png == nil && error == nil)
-                // Pickers present from plain buttons: a menu dismisses its own presenter before they appear.
-                HStack {
-                    PhotosPicker(selection: $photo, matching: .images) { Label("Custom from Photos", systemImage: "photo") }
-                    Button("Custom from Files", systemImage: "folder") { showImageImporter = true }
-                        .fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image], onCompletion: importFile)
+                // One entry point. The source choice is a dialog, and each system picker hangs off its
+                // own view: a menu dismisses its presenter before a picker can appear.
+                Button(customImage == nil ? "Add Custom Background" : "Change Custom Background", systemImage: "photo.badge.plus") {
+                    showSourceChoice = true
                 }
                 .buttonStyle(.bordered)
                 .disabled(importing || !loadedCustom)
-                if customImage != nil {
-                    Button("Remove Custom Background", systemImage: "trash", role: .destructive) { removeCustom() }
-                        .disabled(importing)
+                .confirmationDialog("Custom Background", isPresented: $showSourceChoice) {
+                    Button("Photo Library") { present { showPhotoPicker = true } }
+                    Button("Choose File") { present { showImageImporter = true } }
+                    if customImage != nil {
+                        Button("Remove Custom Background", role: .destructive) { removeCustom() }
+                    }
                 }
+                .photosPicker(isPresented: $showPhotoPicker, selection: $photo, matching: .images)
+                .background(Color.clear.fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image], onCompletion: importFile))
                 if importing { ProgressView("Loading background") }
                 ScrollView {
                     if let png, let image = UIImage(data: png) {
@@ -154,6 +160,14 @@ struct PrinterPreview: View {
                 Text("The image could not be saved for sharing. Check available storage and try again.")
             }
             .sheet(item: $shared) { image in PrinterShareSheet(image: image) }
+        }
+    }
+
+    /// Lets the dialog finish dismissing before a system picker takes its place.
+    private func present(_ show: @escaping @MainActor () -> Void) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            show()
         }
     }
 
