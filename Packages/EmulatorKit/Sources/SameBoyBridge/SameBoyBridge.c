@@ -42,6 +42,11 @@ typedef struct {
     uint8_t next_channel;
 } SBCameraCapture;
 
+typedef struct {
+    uint8_t luminance[SB_PRINTER_MAX_PIXELS];
+    uint8_t height, top_margin, bottom_margin, exposure;
+} SBPrinterBuffer;
+
 struct SBInstance {
     GB_gameboy_t *gb;
     uint32_t *pixels;
@@ -69,7 +74,72 @@ struct SBInstance {
     uint8_t camera_frame[SB_CAMERA_PIXELS * 3];
     SBCameraCapture camera;
     bool camera_pending;
+    bool printer_connected;
+    bool printer_overflow;
+    bool printer_pending;
+    SBPrinterBuffer printer_staging;
+    SBPrinterBuffer printer_readout;
+    SBPrinterBuffer printer_queue[16];
+    size_t printer_count;
 };
+
+static void sb_printer_image(GB_gameboy_t *gb, uint32_t *image, uint8_t height,
+                             uint8_t top, uint8_t bottom, uint8_t exposure)
+{
+    SBInstance *instance = GB_get_user_data(gb);
+    if (!instance || instance->previewing || !height || height > 200) return;
+    SBPrinterBuffer *output = &instance->printer_staging;
+    output->height = height;
+    output->top_margin = top;
+    output->bottom_margin = bottom;
+    output->exposure = exposure;
+    for (size_t i = 0; i < 160u * height; i++) output->luminance[i] = image[i] & 0xff;
+    instance->printer_pending = true;
+}
+
+static void sb_printer_done(GB_gameboy_t *gb)
+{
+    SBInstance *instance = GB_get_user_data(gb);
+    if (!instance || instance->previewing || !instance->printer_pending) return;
+    instance->printer_pending = false;
+    if (instance->printer_count == 16) {
+        instance->printer_overflow = true;
+        return;
+    }
+    instance->printer_queue[instance->printer_count++] = instance->printer_staging;
+}
+
+void SBSetPrinterConnected(SBInstance *instance, bool connected)
+{
+    if (!instance || !instance->gb) return;
+    GB_disconnect_serial(instance->gb);
+    instance->printer_connected = connected;
+    instance->printer_count = 0;
+    instance->printer_pending = false;
+    instance->printer_overflow = false;
+    if (connected) GB_connect_printer(instance->gb, sb_printer_image, sb_printer_done);
+}
+
+bool SBPopPrinterOutput(SBInstance *instance, SBPrinterOutput *output)
+{
+    if (!instance || !output || !instance->printer_count) return false;
+    instance->printer_readout = instance->printer_queue[0];
+    SBPrinterBuffer *readout = &instance->printer_readout;
+    *output = (SBPrinterOutput){readout->luminance, readout->height, readout->top_margin,
+                                readout->bottom_margin, readout->exposure};
+    instance->printer_count--;
+    memmove(instance->printer_queue, instance->printer_queue + 1,
+            instance->printer_count * sizeof(instance->printer_queue[0]));
+    return true;
+}
+
+bool SBConsumePrinterOverflow(SBInstance *instance)
+{
+    if (!instance) return false;
+    bool overflow = instance->printer_overflow;
+    instance->printer_overflow = false;
+    return overflow;
+}
 
 static uint8_t sb_camera_pixel(GB_gameboy_t *gb, uint8_t x, uint8_t y)
 {
@@ -391,6 +461,7 @@ bool SBLoadROM(SBInstance *instance, const uint8_t *bytes, size_t size)
     SBSetCameraFrame(instance, NULL, 0);
     instance->camera_pending = false;
     GB_reset(instance->gb);
+    SBSetPrinterConnected(instance, instance->printer_connected);
     sb_apply_dmg_palette(instance);
     instance->has_run = false;
     return true;
@@ -503,8 +574,8 @@ bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame)
     SBCameraCapture camera = instance->camera;
     instance->previewing = true;
     *frame = SBRunFrame(instance);
-    instance->previewing = false;
     bool restored = SBLoadState(instance, state, size);
+    instance->previewing = false;
     instance->camera = camera;
     instance->has_run = has_run;
     free(state);
@@ -585,6 +656,7 @@ bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size)
     if (!instance || !instance->gb || !bytes || size == 0) return false;
     instance->has_run = true;
     if (GB_load_state_from_buffer(instance->gb, bytes, size) != 0) return false;
+    if (!instance->previewing) SBSetPrinterConnected(instance, instance->printer_connected);
     instance->camera.next_channel = 0;
     sb_apply_dmg_palette(instance);
     return true;
@@ -643,6 +715,7 @@ void SBReset(SBInstance *instance)
 {
     if (!instance || !instance->gb) return;
     GB_reset(instance->gb);
+    SBSetPrinterConnected(instance, instance->printer_connected);
     instance->camera.next_channel = 0;
     sb_apply_dmg_palette(instance);
     instance->has_run = false;

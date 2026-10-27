@@ -14,11 +14,12 @@ public enum SameBoyAdapterError: Error, Equatable {
     case stateSaveFailed
     case stateLoadFailed
     case frameRefreshFailed
+    case printerQueueOverflow
     case cheatCodeRefused
 }
 
 public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability,
-    CheatCapability, HardwareModelCapability, CameraCapability {
+    CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability {
     public let descriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
     public let supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
     public let stateSerializationVersion = "sameboy-bess-v1"
@@ -38,6 +39,31 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     public private(set) var cheatsEnabled = true
 
     public init() {}
+
+    public private(set) var printerConnected = false
+
+    public func setPrinterConnected(_ connected: Bool) {
+        guard printerConnected != connected else { return }
+        printerConnected = connected
+        if let instance { SBSetPrinterConnected(instance, connected) }
+    }
+
+    public func drainPrinterOutput() throws -> [PrinterOutput] {
+        guard let instance else { return [] }
+        if SBConsumePrinterOverflow(instance) { throw SameBoyAdapterError.printerQueueOverflow }
+        var result: [PrinterOutput] = []
+        var output = SBPrinterOutput()
+        while SBPopPrinterOutput(instance, &output) {
+            let count = Int(output.height) * PrinterOutput.width
+            guard let pixels = output.luminance else { continue }
+            let luminance = Data(bytes: pixels, count: count)
+            result.append(try PrinterOutput(
+                height: Int(output.height), luminance: luminance,
+                topMargin: Int(output.top_margin), bottomMargin: Int(output.bottom_margin), exposure: output.exposure
+            ))
+        }
+        return result
+    }
 
     public var hasCamera: Bool {
         guard let instance, loadedImage != nil else { return false }
@@ -116,6 +142,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             // Every code was read when it was set, so a new instance reads them too.
             _ = Self.setCheats(cheatCodes, on: created)
             SBSetCheatsEnabled(created, cheatsEnabled)
+            SBSetPrinterConnected(created, printerConnected)
             return created
         } catch {
             SBDestroy(created)

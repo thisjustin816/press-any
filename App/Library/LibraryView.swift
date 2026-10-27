@@ -252,8 +252,6 @@ struct LibraryView: View {
                 handleImportSelection(result)
             }
             .sheet(isPresented: $showSaveChooser, onDismiss: {
-                // The file picker opens after the chooser is gone, so choosing the file is the
-                // last step before the session starts and its first-frame time stays clean.
                 guard let profileID = chosenQuickPlaySave else { return }
                 chosenQuickPlaySave = nil
                 pendingFileAction = .quickPlay(copiedSaveProfileID: profileID)
@@ -502,11 +500,10 @@ struct LibraryView: View {
     }
 
     private func handleImportSelection(_ result: Result<[URL], Error>) {
-        let chosenAt = DispatchTime.now().uptimeNanoseconds
         guard case .success(let urls) = result, let url = urls.first else { return }
         switch pendingFileAction {
         case .quickPlay(let copiedSaveProfileID):
-            onQuickPlay(QuickPlayRequest(url: url, copiedSaveProfileID: copiedSaveProfileID, chosenAt: chosenAt))
+            onQuickPlay(QuickPlayRequest(url: url, copiedSaveProfileID: copiedSaveProfileID))
         case .importFiles:
             onImportFiles(urls)
         }

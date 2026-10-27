@@ -818,7 +818,9 @@ claims reliability from just an old ROM, old save and new ROM.
 Quick Play plays a ROM without adding it to the library: the fast way for a developer to try a
 fresh build.
 
-- **Time to first frame is the primary metric.** The launch reads the image once, validates the
+- **Time to first frame is the primary metric.** Timing starts when the new launch begins, after
+  any prompt to close the current game. Time spent choosing a file or answering prompts is excluded.
+  The launch reads the image once, validates the
   header from that buffer, writes the sandbox copy, hashes the same buffer, and boots the core past
   the boot logo: the boot ROM still runs, unthrottled and undrawn with its chime dropped, and GBC
   uses SameBoy's `cgb_boot_fast`. A session resumed from its autosave doesn't boot at all. Nothing
@@ -1448,20 +1450,35 @@ and patches, RTC, cheats, profile, core and settings; a full RAM snapshot is opt
 Mode. Bug-report exports preview a checklist, and memory, saves and notes need explicit inclusion.
 Game notes and timestamped gameplay notes; each Build already has a plain-text note in Build Details.
 
-### Game Boy Printer (planned for v1.1)
+### Game Boy Printer (v1.1)
 
-Game Boy Printer emulation is prioritized for v1.1 to support playing and testing games that
-print through the link port. The core integration belongs behind `PrinterCapability` and
-supports library play and Quick Play. Completed print output can be previewed, saved and shared.
+The game menu offers **Game Boy Printer** in library play and Quick Play. **Connect Printer**
+attaches it for the current session; it starts off. The game prints through its normal link-port
+commands. A message announces completed output, and **View Prints** opens a preview over the
+paused game. Closing the preview leaves the game paused until Resume.
 
-The default preview and exported PNG resemble a physical Game Boy Printer slip: a narrow strip
-of thermal paper with off-white paper tones, monochrome ink, side margins and the print job's
-feed spacing. Paper texture stays subtle and clear of the printed content. Preserve the original
-printed pixel grid, proportions and contrast, using integer scaling without smoothing, blur,
-random ink loss or distortion. Fine patterns must remain legible for testing. The slip appearance
-is part of the exported image, so saving or sharing preserves it.
+The preview keeps the latest 10 slips until the game closes. Commands with no bottom feed margin
+join the next command when it has no top margin. A new top margin, a disconnect, a reset or a
+state load starts another slip. A slip is limited to 2,048 native feed rows; a longer print reports
+an error and keeps the paper already received. Later prints in the same delivery are retained.
+Prints are session data and are not in Library Backup.
 
-Printer emulation and export are planned; the current capability declaration has no implementation.
+**Save or Share** exports a PNG with the chosen **Light**, **Dark** or **Transparent** background.
+The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
+shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
+scale, without smoothing or simulated ink loss. Paper styling stays outside the printed content.
+Game-provided feed margins are preserved, with space around the paper for its torn edges and shadow.
+Transparent exports retain alpha outside the paper. Save Image uses add-only Photos access; Save to
+Files and the other share actions use the system share sheet. Printer controls and export are free.
+
+`PrinterCapability` supplies completed PRINT commands through the core's serialized worker.
+Attachment changes, resets and state loads clear the core queue; display-only frame refreshes
+preserve it. The host queue holds 16 commands and reports overflow. The app drains it every frame;
+a printer error reports a message without stopping gameplay. Exposure is retained as metadata;
+the slip renderer preserves the decoded print tones.
+
+Core, session, feed and renderer tests cover this path. Apple SDK compilation, preview presentation,
+PNG sharing and physical-device checks remain pending in `docs/mvp-verification.md`.
 
 ### Documents (v2.0)
 

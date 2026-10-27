@@ -431,6 +431,21 @@ public final class EmulationSession: @unchecked Sendable {
         }
     }
 
+    public var supportsPrinter: Bool {
+        guard let (worker, _, _) = try? snapshotActive() else { return false }
+        return (try? worker.perform { $0 is any PrinterCapability }) ?? false
+    }
+
+    public func setPrinterConnected(_ connected: Bool) throws {
+        let (worker, _, _) = try snapshotActive()
+        try worker.perform { ($0 as? any PrinterCapability)?.setPrinterConnected(connected) }
+    }
+
+    public func drainPrinterOutput() throws -> [PrinterOutput] {
+        let (worker, _, _) = try snapshotActive()
+        return try worker.perform { try ($0 as? any PrinterCapability)?.drainPrinterOutput() ?? [] }
+    }
+
     public var hasCamera: Bool {
         guard let (worker, _, _) = try? snapshotActive() else { return false }
         return (try? worker.perform { ($0 as? any CameraCapability)?.hasCamera ?? false }) ?? false

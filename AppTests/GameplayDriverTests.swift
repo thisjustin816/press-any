@@ -6,6 +6,21 @@ import XCTest
 @testable import PressAny
 
 final class GameplayDriverTests: XCTestCase {
+    func testPrinterFailureReportsAnErrorAndFramesContinueToDeliverTheNextPrint() throws {
+        let runtime = PrinterTestRuntime()
+        let recorder = PrinterRecorder()
+        let refreshes = ManualRefreshes()
+        let driver = GameplayDriver(runtime: runtime, input: GameplayInputAccumulator(),
+            makeRefreshes: { refreshes.attach($0) })
+        driver.onPrinterOutput = { recorder.record($0) }
+        driver.onPrinterError = { _ in recorder.recordError() }
+        driver.start()
+        defer { runtime.allowSaveToFinish.signal(); driver.stop() }
+        XCTAssertTrue(refreshes.send(until: { recorder.receivedPrint }))
+        XCTAssertEqual(recorder.errors, 1)
+        XCTAssertTrue(driver.isRunning)
+    }
+
     func testCameraSensorUpdatesLeaveAHeldCaptureUntilExplicitlyCleared() throws {
         let runtime = BlockingSaveRuntime()
         let refreshes = ManualRefreshes()
@@ -138,6 +153,7 @@ private class BlockingSaveRuntime: GameplayRuntime, @unchecked Sendable {
         dmgPalette: DMGPalette,
         advanceColors: AdvanceColors
     ) throws -> EmulatorVideoFrame? { nil }
+    func drainPrinterOutput() throws -> [PrinterOutput] { [] }
     func consumeRumbleAmplitude() throws -> Double { 0 }
     func pause() throws {}
     func resume() throws {}
@@ -184,4 +200,27 @@ private final class BlockingTimedStateRuntime: BlockingSaveRuntime, SaveStateRun
     func loadStateKeepingCopy(_ saveState: SaveState) throws -> SaveProfile { throw NotSupported() }
     func thumbnailData(for state: SaveState) -> Data? { nil }
     private struct NotSupported: Error {}
+}
+
+private final class PrinterTestRuntime: BlockingSaveRuntime, @unchecked Sendable {
+    private var calls = 0
+    override func drainPrinterOutput() throws -> [PrinterOutput] {
+        calls += 1
+        if calls == 1 { throw TestError.queueFull }
+        if calls == 2 {
+            return [try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 1, bottomMargin: 3, exposure: 64)]
+        }
+        return []
+    }
+    private enum TestError: Error { case queueFull }
+}
+
+private final class PrinterRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var prints: [PrinterOutput] = []
+    private var errorCount = 0
+    var receivedPrint: Bool { lock.withLock { !prints.isEmpty } }
+    var errors: Int { lock.withLock { errorCount } }
+    func record(_ output: [PrinterOutput]) { lock.withLock { prints += output } }
+    func recordError() { lock.withLock { errorCount += 1 } }
 }

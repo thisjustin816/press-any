@@ -9,6 +9,27 @@ import Testing
 @testable import EmulationSession
 
 final class EmulationSessionTests: XCTestCase {
+    func testPrinterOutputIsOwnedByTheActiveLibrarySession() throws {
+        let harness = try SessionHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+        let session = harness.makeSession()
+        XCTAssertFalse(session.supportsPrinter)
+        try session.start(context: harness.contextA)
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        XCTAssertTrue(session.supportsPrinter)
+        try session.setPrinterConnected(true)
+        XCTAssertTrue(core.printerConnected)
+        let print = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 1, bottomMargin: 3, exposure: 64)
+        core.printerOutput = [print]
+        try session.pause()
+        XCTAssertEqual(try session.drainPrinterOutput(), [print])
+        XCTAssertEqual(try session.drainPrinterOutput(), [])
+        try session.setPrinterConnected(false)
+        XCTAssertFalse(core.printerConnected)
+        try session.stop()
+        XCTAssertFalse(session.supportsPrinter)
+    }
+
     func testCameraFramesReachTheActiveCoreWhileRunningOrPaused() throws {
         let harness = try SessionHarness.make()
         defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }

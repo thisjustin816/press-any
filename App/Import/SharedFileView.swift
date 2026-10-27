@@ -37,8 +37,7 @@ struct SharedFileView: View {
                             Button(quickPlayClosesGame ? "Close Game and Quick Play" : "Quick Play", systemImage: "play.circle") {
                                 onQuickPlay(QuickPlayRequest(
                                     url: file.url,
-                                    copiedSaveProfileID: nil,
-                                    chosenAt: DispatchTime.now().uptimeNanoseconds
+                                    copiedSaveProfileID: nil
                                 ))
                             }
                             Button("Import to Library", systemImage: "square.and.arrow.down") {

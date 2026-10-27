@@ -160,6 +160,21 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         return frame
     }
 
+    public var supportsPrinter: Bool {
+        guard let worker = try? activeWorker(requireRunning: false) else { return false }
+        return (try? worker.perform { $0 is any PrinterCapability }) ?? false
+    }
+
+    public func setPrinterConnected(_ connected: Bool) throws {
+        let worker = try activeWorker(requireRunning: false)
+        try worker.perform { ($0 as? any PrinterCapability)?.setPrinterConnected(connected) }
+    }
+
+    public func drainPrinterOutput() throws -> [PrinterOutput] {
+        let worker = try activeWorker(requireRunning: false)
+        return try worker.perform { try ($0 as? any PrinterCapability)?.drainPrinterOutput() ?? [] }
+    }
+
     public var hasCamera: Bool {
         guard let worker = try? activeWorker(requireRunning: false) else { return false }
         return (try? worker.perform { ($0 as? any CameraCapability)?.hasCamera ?? false }) ?? false

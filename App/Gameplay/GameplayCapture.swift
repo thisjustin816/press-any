@@ -24,9 +24,9 @@ final class SharedGameplayScreenshot: Sendable {
     let url: URL
     private let directory: URL
 
-    init(png: Data, temporaryDirectory: URL = FileManager.default.temporaryDirectory) throws {
+    init(png: Data, filename: String = "Screenshot.png", temporaryDirectory: URL = FileManager.default.temporaryDirectory) throws {
         directory = temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        url = directory.appendingPathComponent("Screenshot.png")
+        url = directory.appendingPathComponent(filename)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         do {
             try png.write(to: url, options: .atomic)

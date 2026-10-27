@@ -10,6 +10,27 @@ import XCTest
 @testable import QuickPlay
 
 final class QuickPlayTests: XCTestCase {
+    func testPrinterOutputStaysInTheTemporaryRuntime() throws {
+        let harness = try QuickPlayHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+        let session = try harness.workspace.start(romURL: harness.writeExternalROM(TestROM.make(title: "PRINTER")))
+        let factory = CapturingQuickPlayFactory()
+        let runtime = harness.makeRuntime(session, factory: factory)
+        XCTAssertFalse(runtime.supportsPrinter)
+        try runtime.start()
+        let core = try XCTUnwrap(factory.cores.last)
+        XCTAssertTrue(runtime.supportsPrinter)
+        try runtime.setPrinterConnected(true)
+        XCTAssertTrue(core.printerConnected)
+        let print = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 1, bottomMargin: 3, exposure: 64)
+        core.printerOutput = [print]
+        try runtime.pause()
+        XCTAssertEqual(try runtime.drainPrinterOutput(), [print])
+        XCTAssertEqual(try runtime.drainPrinterOutput(), [])
+        try runtime.stop(createAutoState: false)
+        XCTAssertFalse(runtime.supportsPrinter)
+    }
+
     func testQuickPlayCameraFramesStayWithTheTemporaryRuntime() throws {
         let harness = try QuickPlayHarness.make()
         defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }

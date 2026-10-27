@@ -38,6 +38,8 @@ final class GameplayDriver: @unchecked Sendable {
     var willRunFrame: (@Sendable () -> Void)?
     /// Set before starting the driver, only for cartridges with a camera.
     var cameraFrames: CameraFrameBuffer?
+    var onPrinterOutput: (@Sendable ([PrinterOutput]) -> Void)?
+    var onPrinterError: ErrorHandler?
     var onFrame: FrameHandler?
     var onAudio: AudioHandler?
     var onRumble: RumbleHandler?
@@ -174,6 +176,12 @@ final class GameplayDriver: @unchecked Sendable {
         if emulatedNanosecondsSinceSavePoll >= savePollNanoseconds {
             emulatedNanosecondsSinceSavePoll = 0
             scheduleGameSave()
+        }
+        if onPrinterOutput != nil {
+            do {
+                let prints = try runtime.drainPrinterOutput()
+                if !prints.isEmpty { onPrinterOutput?(prints) }
+            } catch { onPrinterError?(error) }
         }
         let samples = try runtime.drainAudio(maxFrames: 4096)
         let rumble = try runtime.consumeRumbleAmplitude()

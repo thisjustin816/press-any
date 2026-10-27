@@ -1,0 +1,142 @@
+import EmulationCore
+import SwiftUI
+import UIKit
+
+@MainActor
+final class PrinterPreviewController: UIHostingController<PrinterPreview>, UIAdaptivePresentationControllerDelegate {
+    var onClose: (() -> Void)?
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        presentationController?.delegate = self
+    }
+
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) { finish() }
+
+    private func finish() {
+        let close = onClose
+        onClose = nil
+        close?()
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        // A share sheet can cover this view without dismissing the print preview.
+        if isBeingDismissed || presentingViewController == nil { finish() }
+    }
+}
+
+struct PrinterPreview: View {
+    let slips: [PrinterSlip]
+    @Environment(\.dismiss) private var dismiss
+    @State private var selected = 0
+    @State private var background = PrinterBackground.light
+    @State private var png: Data?
+    @State private var error: String?
+    @State private var shareFailed = false
+    @State private var retry = 0
+    @State private var shared: PrinterSharedImage?
+
+    private var ordered: [PrinterSlip] { Array(slips.reversed()) }
+    private var renderKey: String { "\(selected)-\(background.rawValue)-\(retry)" }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                if ordered.count > 1 {
+                    Picker("Print", selection: $selected) {
+                        ForEach(ordered.indices, id: \.self) { index in
+                            Text("Print \(ordered.count - index)").tag(index)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .disabled(png == nil && error == nil)
+                }
+                Picker("Background", selection: $background) {
+                    Text("Light").tag(PrinterBackground.light)
+                    Text("Dark").tag(PrinterBackground.dark)
+                    Text("Transparent").tag(PrinterBackground.transparent)
+                }
+                .pickerStyle(.segmented)
+                .disabled(png == nil && error == nil)
+                ScrollView {
+                    if let png, let image = UIImage(data: png) {
+                        Image(uiImage: image)
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .accessibilityLabel("Printed slip")
+                    } else if let error {
+                        VStack(spacing: 12) {
+                            Text(error).foregroundStyle(.secondary)
+                            Button("Try Again") { retry += 1 }
+                        }
+                    } else {
+                        ProgressView("Preparing print")
+                    }
+                }
+                Text("The last 10 prints stay here until the game closes. Save a copy to keep them.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("Save or Share", systemImage: "square.and.arrow.up") {
+                    guard let png else { return }
+                    do { shared = try PrinterSharedImage(png: png) }
+                    catch { shareFailed = true }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(png == nil)
+            }
+            .padding()
+            .navigationTitle("Prints")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .task(id: renderKey) { await render() }
+            .alert("Could Not Share Print", isPresented: $shareFailed) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("The image could not be saved for sharing. Check available storage and try again.")
+            }
+            .sheet(item: $shared) { image in PrinterShareSheet(image: image) }
+        }
+    }
+
+    @MainActor
+    private func render() async {
+        png = nil
+        error = nil
+        guard ordered.indices.contains(selected) else { return }
+        let slip = ordered[selected]
+        let background = background
+        do {
+            let data = try await Task.detached(priority: .userInitiated) {
+                let image = PrinterSlipRenderer.render(slip, background: background)
+                return try PNGFrameEncoder(preservesAlpha: true).encode(EmulatorVideoFrame(
+                    width: image.width, height: image.height,
+                    bgra8888: image.bgra8888, emulatedNanoseconds: 0
+                ))
+            }.value
+            try Task.checkCancellation()
+            png = data
+        } catch is CancellationError {
+        } catch {
+            self.error = "Could not prepare the image. Try again."
+        }
+    }
+}
+
+private final class PrinterSharedImage: Identifiable, Sendable {
+    let id = UUID()
+    let file: SharedGameplayScreenshot
+    init(png: Data) throws { file = try SharedGameplayScreenshot(png: png, filename: "Printer Slip.png") }
+}
+
+private struct PrinterShareSheet: UIViewControllerRepresentable {
+    let image: PrinterSharedImage
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: [image.file.url], applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, _, _, _ in image.file.discard() }
+        return controller
+    }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}

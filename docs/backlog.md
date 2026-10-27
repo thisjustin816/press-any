@@ -23,7 +23,8 @@ roadmap; its final scope and timing are not fixed.
 The v1.1 fixes cover import names and matching after restore, exported-name round trips,
 Recently Played placing new imports at the top, empty-library game links, backup outcome
 placement, menu ordering and dismissal, on-screen buttons resuming a paused game, and saving
-shared screenshots to Photos. A capability already present in v1.0 keeps that initial target
+shared screenshots to Photos, and excluding the close-session prompt from Quick Play launch
+timing. A capability already present in v1.0 keeps that initial target
 in its table row; this list records its v1.1 updates.
 
 ## Suggested order
@@ -58,9 +59,9 @@ Game Boy Camera, including Photo! DX color capture, is built for v1.1. Its physi
 remain pending in `docs/mvp-verification.md`.
 
 Game Boy Printer emulation is the next prioritized play feature for v1.1, with preview, save and
-share. The default exported PNG resembles a physical printer slip: narrow thermal paper,
-printer margins and feed spacing, and monochrome print tones. Preserve the printed pixel grid
-and contrast so fine details remain usable for testing; paper styling must not obscure them.
+share. The renderer produces thermal-paper slips with torn edges and a shadow, and Light, Dark or
+Transparent backgrounds. The printed pixel grid and feed spacing are preserved. Core and session
+integration are implemented; Apple preview and export checks remain pending.
 
 v1.0 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
 The v1.1 artwork work adds automatic Libretro lookup after import and a reviewed manual
@@ -674,7 +675,7 @@ build/tests).
 |---|---|---|---|
 | missing | Link cable, local dual-core first; nearby/SharePlay initiation; no Multipeer | v2.0 | no LinkCableCapability |
 | missing | GB Studio save migration with old/new variable maps | v2.0 |  |
-| missing | Game Boy Printer emulation with printed-slip preview/save/share | v1.1 | Prioritized next play feature; PNG export with thermal-paper appearance, printer margins and feed spacing; preserve printed pixels and contrast. PrinterCapability is declared but has no implementation |
+| partial | Game Boy Printer emulation with printed-slip preview/save/share | v1.1 | SameBoy attachment, completed-output queue, library/Quick Play integration, slip assembly and paper renderer implemented. Game-menu controls, preview and PNG share flow added; Light/Dark/Transparent backgrounds, latest 10 slips per session. Synthetic serial-ROM, session and renderer tests; Apple SDK and device checks pending |
 | missing | RAR import (tentative) | v2.0 |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v2.0 |  |
 | missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v2.0 | saved recordings also land in the Files folder |

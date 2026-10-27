@@ -72,7 +72,7 @@ Verify with a user-supplied legal ROM:
 - [x] Remove its generated-ROM cache, relaunch, and confirm deterministic rebuild.
 - [x] Quick Play a new test build using a copy of Main; mutate the temporary save; Main remains unchanged.
 - [x] Promote the Quick Play session and choose whether its save becomes a new/default profile.
-- [x] Quick Play an 8 MB image on device and record the time from choosing the file to the first frame, which the game screen shows as "First frame in N ms"; it opens on the game, not the boot logo, and nothing optional (shaders, skins, custom layouts, detection) loads before it. Then play for a minute and confirm normal speed and audio.
+- [ ] Quick Play an 8 MB image on device and record the time from starting the launch to the first frame, which the game screen shows as "First frame in N ms"; it opens on the game, not the boot logo, and nothing optional (shaders, skins, custom layouts, detection) loads before it. Then play for a minute and confirm normal speed and audio.
 - [x] On both controller layouts and in both themes, the Press Any wordmark looks like a raised button. Tapping it freezes the game and opens the menu with Resume; dismissing the menu leaves the game frozen until Resume. The button remains available with a physical controller. Game-picture taps open the same paused menu only when Settings > Tap Game for Menu is on. Dragging a thumb across either doesn't open it. The first game played shows "Tap Press Any for the menu." once, and never again.
 - [ ] On an iPhone SE (2020 or 2022), a mini and a regular-size iPhone below the 68 mm screen minimum, verify Playtiles is disabled with an explanation in App, System, Game and Build settings. Restore a library containing Playtiles preferences at each scope: library gameplay and Quick Play use Game Boy controls, and the stored preferences remain unchanged. Resetting a scoped override to inherit still works. On a qualifying Plus/Max screen (native short edge at least 1242 pixels), Playtiles remains selectable and stored preferences apply. Repeat with Display Zoom and both orientations; availability stays the same.
 - [ ] On an iPhone with a Dynamic Island and one without, rotate a library game and Quick Play into both landscape orientations, then back to portrait, while running and while paused. The GBA game controls and picture clear the safe areas; Integer keeps whole pixels and Fill uses the available picture area. Hold a touch control while rotating: it releases, and Resume stays centered on the picture when paused. START and SELECT are small round buttons right of the D-pad's center and below it, START above SELECT, each with its slanted name plate to its left. The menu button has equal gaps to the bezel and actual screen edge, including space inside the side safe-area inset, and its bottom aligns with the bezel's bottom. It stays at least 24 points from the bezel and 44 points tall, clears the cutout and rounded screen corners in both landscape directions, and the taller picture keeps its full size.
@@ -311,3 +311,39 @@ A entered the camera, and 120 more frames settled automatic exposure.
 This is headless core evidence. It does not establish Apple SDK compilation, iPhone camera
 delivery, physical orientation/mirroring, microphone/audio-session behavior, or device lifecycle.
 Those checks remain unchecked above.
+
+
+## Game Boy Printer
+
+- [ ] In library play and Quick Play, connect the printer from the game menu and print through
+  a game's own menus. Check that the game reports success and View Prints opens the output.
+- [ ] Print a multi-command image with zero feed margins between sections. Verify one continuous
+  slip, followed by a separate slip for the next print with a top margin.
+- [ ] Check Light, Dark and Transparent backgrounds. Compare preview and exported PNGs, including
+  transparent corners, paper edges, feed spacing and sharp print pixels.
+- [ ] Use Save Image and Save to Files. Cancel sharing, switch backgrounds and export again.
+  Confirm the exported file is readable after the share sheet closes.
+- [ ] With low storage, check that a failed share-file write shows an error. A failed preview
+  render offers Try Again; retry after storage is available.
+- [ ] Close the preview with Done and by swiping. Gameplay stays paused, orientation returns to
+  the gameplay policy and Resume works.
+- [ ] Print, disconnect, restart and load a state. Completed slips stay available until closing
+  the game; output from another run starts new paper. Closing and reopening clears the feed.
+- [ ] Generate more than 10 separate prints and confirm the oldest leaves the session feed.
+
+Headless checks cover serial packet decoding, completed output, feed margins, reset and
+attachment, queue overflow, library and Quick Play worker forwarding, slip assembly, retention
+limits and pixel preservation. A Linux driver harness with manual refreshes also verifies that
+a printer error reports once and the next print arrives while frames continue. It excludes
+QuartzCore and does not establish iOS presentation, Photos or Files sharing, physical printer
+behavior or Apple SDK compilation.
+
+
+### Quick Play launch timing
+
+- [ ] From a running Quick Play game, share another ROM and choose Quick Play. Wait at least
+  10 seconds on the close-session prompt before confirming. The new game's first-frame time
+  excludes that wait while still measuring ROM loading and startup.
+- [ ] Cancel the close-session prompt. No new launch or first-frame report occurs.
+- [ ] Start Quick Play from the file picker and with a copied save. Both report launch time;
+  resuming a kept session still shows no first-frame timer.
