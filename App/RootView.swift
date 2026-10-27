@@ -214,7 +214,8 @@ struct RootView: View {
     private func gameplayArtworkTarget(_ presentation: GameplayPresentation) -> GameplayArtworkTarget? {
         guard !presentation.isQuickPlay, let gameID = presentation.settings?.gameID,
               let container = bootstrap.container else { return nil }
-        return GameplayArtworkTarget(gameID: gameID, games: container.repositories.games, artwork: container.gameArtwork)
+        return GameplayArtworkTarget(gameID: gameID, games: container.repositories.games, artwork: container.gameArtwork,
+                                     fileURL: { [weak container] in container?.artworkURL(for: $0) })
     }
 
     /// The choices a library launch can stop for: recovery, resume, a risky or a damaged save.

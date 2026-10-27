@@ -37,4 +37,30 @@ final class PrinterStatusViewTests: XCTestCase {
         status.showActivity(.idle)
         XCTAssertTrue(status.isHidden)
     }
+
+    func testReadyWaitsOutTheIdleGapBetweenPages() async throws {
+        let status = PrinterStatusView()
+        status.settleDelay = .milliseconds(50)
+        status.showActivity(.printing)
+        status.showActivity(.idle)
+        status.printReceived()
+        status.showActivity(.receiving)
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertTrue(status.viewPrint.isHidden)
+        XCTAssertEqual(status.message.text, "Receiving print...")
+        status.printReceived()
+        status.showActivity(.idle)
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertFalse(status.viewPrint.isHidden)
+        XCTAssertEqual(status.message.text, "Print ready")
+    }
+
+    func testOpeningThePrintsCancelsAPendingReadyBanner() async throws {
+        let status = PrinterStatusView()
+        status.settleDelay = .milliseconds(50)
+        status.printReceived()
+        status.dismissReadyPrint()
+        try await Task.sleep(for: .milliseconds(120))
+        XCTAssertTrue(status.isHidden)
+    }
 }

@@ -30,7 +30,7 @@ final class PrinterPreviewController: UIHostingController<PrinterPreview>, UIAda
 }
 
 private enum PrinterPreviewBackground: String, Sendable {
-    case transparent, light, dark, wood, custom
+    case transparent, light, dark, wood, custom, gameArtwork
     var flat: PrinterBackground {
         switch self {
         case .dark: .dark
@@ -43,6 +43,8 @@ private enum PrinterPreviewBackground: String, Sendable {
 struct PrinterPreview: View {
     let backgrounds = PrinterBackgroundStore()
     let slips: [PrinterSlip]
+    /// The Game's library artwork file, when it has one.
+    var gameArtworkURL: URL?
     @Environment(\.dismiss) private var dismiss
     @State private var selected = 0
     @State private var background = PrinterPreviewBackground.transparent
@@ -78,18 +80,23 @@ struct PrinterPreview: View {
                     Text("Dark").tag(PrinterPreviewBackground.dark)
                     Text("Transparent").tag(PrinterPreviewBackground.transparent)
                     Text("Wood").tag(PrinterPreviewBackground.wood)
+                    if gameArtworkURL != nil { Text("Game Artwork").tag(PrinterPreviewBackground.gameArtwork) }
                     if customImage != nil { Text("Custom").tag(PrinterPreviewBackground.custom) }
                 }
                 .pickerStyle(.menu)
                 .disabled(png == nil && error == nil)
-                Menu("Custom Background", systemImage: "photo") {
-                    PhotosPicker(selection: $photo, matching: .images) { Label("Choose from Photos", systemImage: "photo") }
-                    Button("Choose from Files", systemImage: "folder") { showImageImporter = true }
-                    if customImage != nil {
-                        Button("Remove Custom Background", systemImage: "trash", role: .destructive) { removeCustom() }
-                    }
+                // Pickers present from plain buttons: a menu dismisses its own presenter before they appear.
+                HStack {
+                    PhotosPicker(selection: $photo, matching: .images) { Label("Custom from Photos", systemImage: "photo") }
+                    Button("Custom from Files", systemImage: "folder") { showImageImporter = true }
+                        .fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image], onCompletion: importFile)
                 }
+                .buttonStyle(.bordered)
                 .disabled(importing || !loadedCustom)
+                if customImage != nil {
+                    Button("Remove Custom Background", systemImage: "trash", role: .destructive) { removeCustom() }
+                        .disabled(importing)
+                }
                 if importing { ProgressView("Loading background") }
                 ScrollView {
                     if let png, let image = UIImage(data: png) {
@@ -138,22 +145,6 @@ struct PrinterPreview: View {
                     try await useCustom(data)
                 } catch { importError = "Could not use this image. Choose a photo or image file under 25 MB." }
             }
-            .fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image]) { result in
-                guard case .success(let url) = result else {
-                    if case .failure(let error) = result, (error as NSError).code != NSUserCancelledError {
-                        importError = "The image could not be opened. Try another file."
-                    }
-                    return
-                }
-                importing = true
-                Task {
-                    defer { importing = false }
-                    do {
-                        let data = try await Task.detached { try PrinterBackgroundStore.readFile(url) }.value
-                        try await useCustom(data)
-                    } catch { importError = "Could not use this image. Choose a photo or image file under 25 MB." }
-                }
-            }
             .alert("Background Unavailable", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
                 Button("OK", role: .cancel) { importError = nil }
             } message: { Text(importError ?? "") }
@@ -163,6 +154,23 @@ struct PrinterPreview: View {
                 Text("The image could not be saved for sharing. Check available storage and try again.")
             }
             .sheet(item: $shared) { image in PrinterShareSheet(image: image) }
+        }
+    }
+
+    private func importFile(_ result: Result<URL, Error>) {
+        guard case .success(let url) = result else {
+            if case .failure(let error) = result, (error as NSError).code != NSUserCancelledError {
+                importError = "The image could not be opened. Try another file."
+            }
+            return
+        }
+        importing = true
+        Task {
+            defer { importing = false }
+            do {
+                let data = try await Task.detached { try PrinterBackgroundStore.readFile(url) }.value
+                try await useCustom(data)
+            } catch { importError = "Could not use this image. Choose a photo or image file under 25 MB." }
         }
     }
 
@@ -191,6 +199,7 @@ struct PrinterPreview: View {
         let slip = ordered[selected]
         let background = background
         let custom = customImage
+        let artworkURL = gameArtworkURL
         do {
             let data = try await Task.detached(priority: .userInitiated) {
                 let image: PrinterSlipRenderer.Image
@@ -199,6 +208,9 @@ struct PrinterPreview: View {
                 case .custom:
                     guard let custom else { throw PrinterBackgroundStore.ImageError.invalidImage }
                     image = PrinterSlipRenderer.render(slip, image: custom)
+                case .gameArtwork:
+                    guard let artworkURL else { throw PrinterBackgroundStore.ImageError.invalidImage }
+                    image = PrinterSlipRenderer.render(slip, image: try PrinterBackgroundStore.decode(PrinterBackgroundStore.readFile(artworkURL)))
                 default: image = PrinterSlipRenderer.render(slip, background: background.flat)
                 }
                 return try PNGFrameEncoder(preservesAlpha: true).encode(EmulatorVideoFrame(

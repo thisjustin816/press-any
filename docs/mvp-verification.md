@@ -319,7 +319,7 @@ Those checks remain unchecked above.
   a game's own menus. Disconnect and reconnect from the game menu. Check that the game reports success and View Prints opens the output.
 - [ ] Print a multi-command image with zero feed margins between sections. Verify one continuous
   slip, followed by a separate slip for the next print with a top margin.
-- [ ] Verify Transparent is selected initially; check Light, Dark, Wood and Custom backgrounds. Compare preview and exported PNGs, including
+- [ ] Verify Transparent is selected initially; check Light, Dark, Wood, Game Artwork (library play with artwork) and Custom backgrounds. Compare preview and exported PNGs, including
   transparent corners, paper edges, feed spacing and sharp print pixels.
 - [ ] Use Save Image and Save to Files. Cancel sharing, switch backgrounds and export again.
   Confirm the exported file is readable after the share sheet closes.
@@ -330,7 +330,8 @@ Those checks remain unchecked above.
 - [ ] Print, disconnect, restart and load a state. Completed slips stay available until closing
   the game; output from another run starts new paper. Closing and reopening clears the feed.
 - [ ] While receiving and printing, verify the progress banner is visible. When output arrives,
-  tap View Print directly, without opening the game menu. Dismiss a ready banner and print again;
+  tap View Print directly, without opening the game menu. With a multi-page print (PictoCode),
+  confirm the banner stays on Receiving/Printing until the last page, then shows View Print once. Dismiss a ready banner and print again;
   the new progress and View Print action appear. Repeat after pausing and resuming, and in landscape.
 - [ ] Generate more than 10 separate prints and confirm the oldest leaves the session feed.
 
@@ -355,7 +356,8 @@ behavior or Apple SDK compilation.
 ### Printer backgrounds
 
 - [ ] Choose the bundled Wood background offline and verify the photograph and credit in Settings.
-- [ ] Import a custom image from Photos, then Files. Cancel each picker and verify the previous
+- [ ] Tap Custom from Photos and Custom from Files: each opens its picker over the preview.
+  Import a custom image from Photos, then Files. Cancel each picker and verify the previous
   background remains available. Export Custom and confirm the image fills the area behind paper.
 - [ ] Close and reopen the preview and relaunch the app: Custom remains available, while the
   initial preview selection is Transparent. Replace Custom and remove it; removal returns an

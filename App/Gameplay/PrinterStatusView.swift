@@ -8,7 +8,12 @@ final class PrinterStatusView: UIView {
     let message = UILabel()
     let viewPrint = UIButton(type: .system)
     let dismissButton = UIButton(type: .system)
+    /// Multi-page prints go idle between pages, so "ready" waits for the printer to stay idle.
+    var settleDelay: Duration = .milliseconds(1500)
     private var hasReadyPrint = false
+    private var hasUnseenPrint = false
+    private var activity = PrinterActivity.idle
+    private var settleTask: Task<Void, Never>?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -50,11 +55,20 @@ final class PrinterStatusView: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    /// A finished page arrived. The banner turns to View Print once no more pages follow.
+    func printReceived() {
+        hasUnseenPrint = true
+        if activity == .idle { scheduleReady() }
+    }
+
     func showActivity(_ activity: PrinterActivity) {
+        self.activity = activity
         guard activity != .idle else {
-            if !hasReadyPrint { isHidden = true }
+            if hasUnseenPrint { scheduleReady() }
+            else if !hasReadyPrint { isHidden = true }
             return
         }
+        settleTask?.cancel()
         hasReadyPrint = false
         isHidden = false
         message.text = activity == .receiving ? "Receiving print..." : "Printing..."
@@ -64,10 +78,22 @@ final class PrinterStatusView: UIView {
         spinner.startAnimating()
     }
 
+    private func scheduleReady() {
+        settleTask?.cancel()
+        settleTask = Task { [weak self, settleDelay] in
+            try? await Task.sleep(for: settleDelay)
+            guard !Task.isCancelled else { return }
+            self?.showReadyPrint()
+        }
+    }
+
     func showReadyPrint() {
+        settleTask?.cancel()
+        hasUnseenPrint = false
         hasReadyPrint = true
         isHidden = false
         message.text = "Print ready"
+        UIAccessibility.post(notification: .announcement, argument: "Print ready")
         spinner.stopAnimating()
         spinner.isHidden = true
         viewPrint.isHidden = false
@@ -75,6 +101,8 @@ final class PrinterStatusView: UIView {
     }
 
     func dismissReadyPrint() {
+        settleTask?.cancel()
+        hasUnseenPrint = false
         hasReadyPrint = false
         isHidden = true
     }

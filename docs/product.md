@@ -1465,8 +1465,8 @@ state load starts another slip. A slip is limited to 2,048 native feed rows; a l
 an error and keeps the paper already received. Later prints in the same delivery are retained.
 Prints are session data and are not in Library Backup.
 
-**Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood** or
-**Custom** background. Transparent is the default. Wood uses Dimitrios Savva's CC0 Wood Table
+**Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood**,
+**Game Artwork** or **Custom** background. Transparent is the default. Wood uses Dimitrios Savva's CC0 Wood Table
 photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements.
 The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
 shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
@@ -1482,7 +1482,12 @@ a printer error reports a message without stopping gameplay. Exposure is retaine
 the slip renderer preserves the decoded print tones.
 
 The core reports idle, receiving and printing activity for an indeterminate progress display.
-**Custom Background** imports an image from Photos or Files. One custom image is kept on-device
+Games that print several pages go idle between them, so the banner changes to **View Print** only
+after the printer stays idle for about a second and a half; more data in that time keeps the
+progress display.
+**Game Artwork** uses the Game's library artwork as the background when it has any; it is offered
+in library play and not in Quick Play. It is cropped like Custom and is not copied or stored.
+**Custom from Photos** and **Custom from Files** import an image. One custom image is kept on-device
 and remains available in later previews, with replace and remove actions. Import accepts images
 up to 25 MB and 100 million source pixels, downsamples to 1,536 pixels on the longest edge,
 flattens transparency onto white and stores a JPEG without the original metadata. The original

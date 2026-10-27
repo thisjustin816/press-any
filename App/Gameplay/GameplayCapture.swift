@@ -1,16 +1,25 @@
 import EmulatorApplication
+import EmulatorDomain
 import Foundation
 
 struct GameplayArtworkTarget {
     let gameID: UUID
     let games: any GameRepository
     let artwork: GameArtwork
+    var fileURL: @MainActor (Game) -> URL? = { _ in nil }
 
     func hasArtwork() throws -> Bool {
         guard let game = try games.fetchGame(id: gameID) else {
             throw GameArtworkError.gameNotFound(gameID)
         }
         return game.artworkAssetID != nil
+    }
+
+    /// The Game's artwork file, or nil when it has none.
+    @MainActor
+    func currentFileURL() -> URL? {
+        guard let game = try? games.fetchGame(id: gameID) else { return nil }
+        return fileURL(game)
     }
 
     func set(_ png: Data) throws {

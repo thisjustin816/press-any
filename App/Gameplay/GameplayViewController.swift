@@ -424,7 +424,7 @@ final class GameplayViewController: UIViewController {
         guard presentedViewController == nil, !printerFeed.slips.isEmpty else { return }
         setCoveredBySheet(true)
         printerStatus.dismissReadyPrint()
-        let preview = PrinterPreview(slips: printerFeed.slips)
+        let preview = PrinterPreview(slips: printerFeed.slips, gameArtworkURL: artworkTarget?.currentFileURL())
         let sheet = PrinterPreviewController(rootView: preview)
         sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
         present(sheet, animated: true)
@@ -729,8 +729,7 @@ final class GameplayViewController: UIViewController {
                 do {
                     try feed.receive(outputs)
                     DispatchQueue.main.async {
-                        self?.printerStatus.showReadyPrint()
-                        UIAccessibility.post(notification: .announcement, argument: "Print ready")
+                        self?.printerStatus.printReceived()
                     }
                 } catch {
                     DispatchQueue.main.async {
