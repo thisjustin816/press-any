@@ -98,7 +98,7 @@ final class PrinterStatusView: UIView {
         hasUnseenPrint = false
         hasReadyPrint = true
         isHidden = false
-        message.text = pagesReceived > 1 ? "\(pagesReceived) pages ready" : "Print ready"
+        message.text = "Print ready"
         pagesReceived = 0
         UIAccessibility.post(notification: .announcement, argument: "Print ready")
         spinner.stopAnimating()

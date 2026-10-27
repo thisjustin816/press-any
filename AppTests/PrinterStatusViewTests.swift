@@ -54,7 +54,7 @@ final class PrinterStatusViewTests: XCTestCase {
         status.showActivity(.idle)
         try await Task.sleep(for: .milliseconds(120))
         XCTAssertFalse(status.viewPrint.isHidden)
-        XCTAssertEqual(status.message.text, "2 pages ready")
+        XCTAssertEqual(status.message.text, "Print ready")
         status.showActivity(.receiving)
         XCTAssertEqual(status.message.text, "Receiving print...")
     }

@@ -1485,7 +1485,7 @@ The core reports idle, receiving and printing activity for an indeterminate prog
 Games that print several pages go idle between them, so the banner changes to **View Print** only
 after the printer stays idle for about a second and a half; more data in that time keeps the
 progress display. From the second page the banner reads **Receiving page 2...** and **Printing
-page 2...**, and ends with **2 pages ready**. A game does not announce how many pages it will send,
+page 2...**, and ends with **Print ready**, since pages without a feed margin between them join into one slip. A game does not announce how many pages it will send,
 so no total is shown.
 **Game Artwork** uses the Game's library artwork as the background when it has any; it is offered
 in library play and not in Quick Play. It is cropped like Custom and is not copied or stored.
