@@ -48,7 +48,8 @@ final class AppContainer {
     let evictGeneratedImage: EvictGeneratedImage
     let gameArtwork: GameArtwork
     private let artworkProvider: (any ArtworkProvider)?
-    private var artworkTasks: [UUID: Task<Void, Never>] = [:]
+    /// Tests await a lookup through here; the app only starts them.
+    private(set) var artworkTasks: [UUID: Task<Void, Never>] = [:]
     private(set) var backgroundMaintenance: Task<Void, Error>?
     let quickPlayWorkspace: QuickPlayWorkspace
     let quickPlayPromoter: PromoteQuickPlay

@@ -159,10 +159,12 @@ final class ImportReviewTests: XCTestCase {
         game.preferredBuildID = first.id
         try container.repositories.games.updateGame(game)
         container.fetchArtworkAfterImport(first)
+        let firstLookup = try XCTUnwrap(container.artworkTasks[first.id])
         await fulfillment(of: [firstRequest], timeout: 2)
         game.preferredBuildID = second.id
         try container.repositories.games.updateGame(game)
         container.fetchArtworkAfterImport(second)
+        let secondLookup = try XCTUnwrap(container.artworkTasks[second.id])
         await fulfillment(of: [secondRequest], timeout: 2)
 
         let stored = expectation(description: "Current Preferred Build's artwork is stored")
@@ -175,6 +177,12 @@ final class ImportReviewTests: XCTestCase {
         let png = ArtworkTestLibrary.png()
         await provider.finish(with: ProvidedArtwork(data: png, fileExtension: "png", provenance: .init(provider: "test",
             sourceURL: URL(string: "https://example.com/art.png")!, fetchedAt: .distantPast, rights: "Synthetic test data")))
+        // Storing the artwork flushes its file to disk and commits before the notification, so a
+        // clock here measured the CI runner's disk. Waiting for both lookups also lets the stale one
+        // finish before the fixture closes its database. The notification is posted before a lookup
+        // ends, so the expectation is already met when these return.
+        await secondLookup.value
+        await firstLookup.value
         await fulfillment(of: [stored], timeout: 2)
         XCTAssertNotNil(try games.fetchGame(id: gameID)?.artworkAssetID)
     }
