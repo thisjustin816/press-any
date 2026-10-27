@@ -802,6 +802,64 @@ extension EmulationSessionTests {
         XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: harness.profile.id)?.saveWrittenByBuildID, harness.buildB.id)
     }
 
+    func testSwitchingBuildsKeepsTheSaveAsOneRefreshedCopy() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
+        var profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
+        profile.saveWrittenByBuildID = harness.buildA.id
+        try harness.profiles.updateSaveProfile(profile)
+        func copies() throws -> [SaveProfile] {
+            try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).filter { $0.id != profile.id }
+        }
+
+        let sessionB = harness.makeSession()
+        try sessionB.start(context: harness.contextB)
+        let copy = try XCTUnwrap(copies().first)
+        XCTAssertEqual(try copies().map(\.displayName), ["Main before switching Builds"])
+        XCTAssertEqual(copy.copiedFromProfileID, profile.id)
+        XCTAssertEqual(copy.saveWrittenByBuildID, harness.buildA.id)
+        XCTAssertEqual(try harness.batteryData(of: copy), Data([1, 2]))
+        try sessionB.stop()
+
+        _ = try PersistentSaveService(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+            .replacePersistentSaveData(Data([3, 4]), profileID: profile.id, writtenByBuildID: harness.buildB.id)
+        let sessionA = harness.makeSession()
+        try sessionA.start(context: harness.contextA)
+        try sessionA.stop()
+        XCTAssertEqual(try copies().map(\.id), [copy.id], "the profile keeps one copy, refreshed")
+        XCTAssertEqual(try harness.batteryData(of: copy), Data([3, 4]))
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: copy.id)?.saveWrittenByBuildID, harness.buildB.id)
+
+        let copySession = harness.makeSession()
+        try copySession.start(context: LaunchContext(gameID: harness.game.id, buildID: harness.buildA.id, saveProfileID: copy.id))
+        try copySession.stop()
+        XCTAssertEqual(try copies().map(\.id), [copy.id], "playing the copy elsewhere makes no copy of it")
+    }
+
+    func testNoCopyForTheSameBuildAnUnknownWriterOrAFreshCopy() throws {
+        let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
+        func profileCount() throws -> Int { try harness.profiles.fetchSaveProfiles(gameID: harness.game.id).count }
+
+        let unknownWriter = harness.makeSession()
+        try unknownWriter.start(context: harness.contextB)
+        try unknownWriter.stop()
+        XCTAssertEqual(try profileCount(), 1, "a save with no recorded writer isn't copied")
+
+        let sameBuild = harness.makeSession()
+        try sameBuild.start(context: harness.contextB)
+        try sameBuild.stop()
+        XCTAssertEqual(try profileCount(), 1)
+
+        var profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))
+        profile.saveWrittenByBuildID = harness.buildB.id
+        try harness.profiles.updateSaveProfile(profile)
+        let fresh = try DuplicateSaveProfile(profiles: harness.profiles, assets: harness.assets, assetStore: harness.store)
+            .execute(sourceProfileID: harness.profile.id, name: "Main for A")
+        let freshSession = harness.makeSession()
+        try freshSession.start(context: LaunchContext(gameID: harness.game.id, buildID: harness.buildA.id, saveProfileID: fresh.id))
+        try freshSession.stop()
+        XCTAssertEqual(try profileCount(), 2, "the source still holds the copied save")
+    }
+
     func testImportingASaveIntoAProfileKeepsItsOldSaveAsACopy() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2, 3]))
         var profile = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id))

@@ -14,7 +14,8 @@ roadmap; its final scope and timing are not fixed.
   the Model setting and hardware-family checks; automatic artwork previews, missing-artwork
   review, provenance and grouped Library settings; Game Boy Camera with Photo! DX color
   capture; Playtiles landscape controls and compatibility checks; and the fixes listed below.
-  ZIP globals attachment, grouped Build menus and list overflow cues are built for this release.
+  ZIP globals attachment, grouped Build menus and list overflow cues are built for this release,
+  as are the older-version save warning and the copy kept before switching Builds.
 - **v2.0:** the larger unfinished roadmap, including save migration, broader multi-asset
   import, documents, rewind, skins, sync and catalog services. Partial rows describe what
   is already built and what remains for this target.
@@ -288,6 +289,8 @@ multi-patch recipe (multi-select applies a stack); Unsupported formats identifie
 | missing | RTC: real time + per-profile manual offset; Developer RTC controls | v2.0 | SameBoy's internal RTC runs, no offset; the offset goes in the profile's stored `rtcContextJSON` |
 | missing | Save Profile locking | later |  |
 | done | Cross-region save check: launching a Build whose region or language differs from the Build that last wrote the profile warns, since many games' saves don't carry across languages | v1.0 | same risky-launch prompt names both releases; requires a writer and both regions, compares languages when both are recorded; Shares Saves clears the warning |
+| done | Older-version save check: launching a Build whose version is older than the Build that last wrote the profile warns, since an older release may not read a newer save | v1.1 | compares recorded versions without build metadata; no warning when either version is unknown or the Builds belong to different Games; a Shares Saves declaration clears it; package tests |
+| done | Copy kept before switching Builds: a library launch whose save another Build wrote first keeps it as "<profile> before switching Builds" | v1.1 | one copy per profile, refreshed on later switches; skipped for the copy itself and when the profile it was copied from holds the same save; a launch that can't keep the copy doesn't play; package tests, device checks pending |
 | done | Declared save compatibility between Builds (known to share, known not to), used by the launch check | v1.0 | symmetric pairs; Always Use Saves Between These Builds records a share and launches; Build Details adds, replaces and swipe-removes either choice; Shares Saves skips the prompt, Doesn't forces it; Move keeps pairs, Copy gets none; Recently Deleted hides and restores them, purge removes them |
 
 Done: One .sav per Save Profile, atomic flush synced to storage; In-game saves written during play

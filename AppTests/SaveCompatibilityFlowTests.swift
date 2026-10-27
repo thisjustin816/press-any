@@ -149,4 +149,22 @@ private final class Fixture {
     }
 
     func removeFiles() { try? FileManager.default.removeItem(at: root) }
+
+    func testOlderVersionPromptNamesBothVersionsAndTheKeptCopy() throws {
+        let fixture = try Fixture()
+        defer { fixture.removeFiles() }
+        for (build, version) in [(fixture.writer, "1.2"), (fixture.playing, "1.0")] {
+            var updated = build
+            updated.versionString = version
+            updated.versionSortKey = Build.versionSortKey(for: version)
+            try fixture.container.repositories.builds.updateBuildMetadata(updated)
+        }
+        let assessment = try fixture.container.saveCompatibility.execute(context: fixture.context)
+        XCTAssertTrue(assessment.risks.contains(.olderVersion(writtenVersion: "1.2", playingVersion: "1.0")))
+        let message = RiskyLaunch(context: fixture.context, assessment: assessment, profileName: "Main").message
+        XCTAssertTrue(message.contains("This Build is version 1.0, older than the version 1.2 that last saved."))
+        XCTAssertTrue(message.contains("keeps its current save as “Main before switching Builds”"))
+        let copyMessage = RiskyLaunch(context: fixture.context, assessment: assessment, profileName: "Main before switching Builds").message
+        XCTAssertFalse(copyMessage.contains("first keeps"), "playing the copy makes no copy of it")
+    }
 }
