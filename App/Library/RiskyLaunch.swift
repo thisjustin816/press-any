@@ -1,5 +1,6 @@
 import EmulatorApplication
 import EmulatorDomain
+import EmulationSession
 import Foundation
 
 /// How a library launch begins: as Resume Games says, or from the game's save, with the place the
@@ -30,6 +31,8 @@ struct RiskyLaunch {
                 if let writtenLanguage, let playingLanguage, writtenLanguage != playingLanguage {
                     lines.append("The save's language is \(writtenLanguage); this Build's is \(playingLanguage).")
                 }
+            case .olderVersion(let writtenVersion, let playingVersion):
+                lines.append("This Build is version \(playingVersion), older than the version \(writtenVersion) that last saved. An older version may not read a newer save.")
             case .gbStudio:
                 lines.append("A GB Studio game can lay out its saved data differently from one Build to the next, even with the same GB Studio version.")
             case .differentTools(let writtenWith, let playingWith):
@@ -38,7 +41,11 @@ struct RiskyLaunch {
                 lines.append("The two Builds declare different save hardware in their cartridge headers.")
             }
         }
-        lines.append("A copy keeps the original save safe.")
+        if profileName.hasSuffix(BackUpSaveBeforeBuildSwitch.suffix) {
+            lines.append("A copy keeps the original save safe.")
+        } else {
+            lines.append("A copy keeps the original save safe. Using “\(profileName)” here first keeps its current save as “\(profileName)\(BackUpSaveBeforeBuildSwitch.suffix)”.")
+        }
         return lines.joined(separator: "\n")
     }
 
