@@ -29,8 +29,18 @@ final class PrinterPreviewController: UIHostingController<PrinterPreview>, UIAda
     }
 }
 
-private enum PrinterPreviewBackground: String, Sendable {
-    case transparent, light, dark, wood, custom, gameArtwork
+private enum PrinterPreviewBackground: String, CaseIterable, Sendable {
+    case transparent, light, dark, wood, gameArtwork, custom
+    var title: String {
+        switch self {
+        case .transparent: "Transparent"
+        case .light: "Light"
+        case .dark: "Dark"
+        case .wood: "Wood"
+        case .gameArtwork: "Artwork"
+        case .custom: "Custom"
+        }
+    }
     var flat: PrinterBackground {
         switch self {
         case .dark: .dark
@@ -47,7 +57,10 @@ struct PrinterPreview: View {
     var gameArtworkURL: URL?
     @Environment(\.dismiss) private var dismiss
     @State private var selected = 0
-    @State private var background = PrinterPreviewBackground.transparent
+    /// The last background chosen, kept between previews and games.
+    @AppStorage("printer.background") private var chosen = PrinterPreviewBackground.transparent
+    @State private var thumbnails: [PrinterPreviewBackground: UIImage] = [:]
+    @State private var customVersion = 0
     @State private var png: Data?
     @State private var error: String?
     @State private var shareFailed = false
@@ -62,7 +75,19 @@ struct PrinterPreview: View {
     @State private var shared: PrinterSharedImage?
 
     private var ordered: [PrinterSlip] { Array(slips.reversed()) }
-    private var renderKey: String { "\(selected)-\(background.rawValue)-\(retry)" }
+    private var renderKey: String { "\(selected)-\(background.rawValue)-\(retry)-\(loadedCustom)" }
+    private var available: [PrinterPreviewBackground] {
+        PrinterPreviewBackground.allCases.filter {
+            switch $0 {
+            case .gameArtwork: gameArtworkURL != nil
+            case .custom: customImage != nil
+            default: true
+            }
+        }
+    }
+    /// The remembered choice, or Transparent where it isn't offered, as for Game Artwork in Quick Play.
+    /// The remembered choice itself is kept for the next game that offers it.
+    private var background: PrinterPreviewBackground { available.contains(chosen) ? chosen : .transparent }
 
     var body: some View {
         NavigationStack {
@@ -76,32 +101,6 @@ struct PrinterPreview: View {
                     .pickerStyle(.menu)
                     .disabled(png == nil && error == nil)
                 }
-                Picker("Background", selection: $background) {
-                    Text("Light").tag(PrinterPreviewBackground.light)
-                    Text("Dark").tag(PrinterPreviewBackground.dark)
-                    Text("Transparent").tag(PrinterPreviewBackground.transparent)
-                    Text("Wood").tag(PrinterPreviewBackground.wood)
-                    if gameArtworkURL != nil { Text("Game Artwork").tag(PrinterPreviewBackground.gameArtwork) }
-                    if customImage != nil { Text("Custom").tag(PrinterPreviewBackground.custom) }
-                }
-                .pickerStyle(.menu)
-                .disabled(png == nil && error == nil)
-                // Laid out like the Game's Artwork menu. Each picker hangs off its own view and opens
-                // once the menu has closed, since the menu took the pickers down with it before.
-                Menu {
-                    Button { present { showPhotoPicker = true } } label: { Label("From Photos…", systemImage: "photo") }
-                    Button { present { showImageImporter = true } } label: { Label("From Files…", systemImage: "folder") }
-                    if customImage != nil {
-                        Button(role: .destructive) { removeCustom() } label: {
-                            Label("Remove Custom Background", systemImage: "trash")
-                        }
-                    }
-                } label: {
-                    Label("Custom Background", systemImage: "photo.on.rectangle")
-                }
-                .disabled(importing || !loadedCustom)
-                .photosPicker(isPresented: $showPhotoPicker, selection: $photo, matching: .images)
-                .background(Color.clear.fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image], onCompletion: importFile))
                 if importing { ProgressView("Loading background") }
                 ScrollView {
                     if let png, let image = UIImage(data: png) {
@@ -119,6 +118,7 @@ struct PrinterPreview: View {
                         ProgressView("Preparing print")
                     }
                 }
+                backgroundSwatches
                 Text("The last 10 prints stay here until the game closes. Save a copy to keep them.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -135,6 +135,7 @@ struct PrinterPreview: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .task(id: renderKey) { await render() }
+            .task(id: "\(loadedCustom)-\(customVersion)") { await loadThumbnails() }
             .task {
                 let store = backgrounds
                 defer { loadedCustom = true }
@@ -160,6 +161,108 @@ struct PrinterPreview: View {
             }
             .sheet(item: $shared) { image in PrinterShareSheet(image: image) }
         }
+    }
+
+    /// Backgrounds as small previews, like a wallpaper picker. The saved custom image is one of them;
+    /// touch and hold it to replace or remove it, and Add brings in a new one.
+    private var backgroundSwatches: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Background").font(.subheadline.weight(.semibold))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(available.filter { $0 != .custom }, id: \.self) { swatchButton($0) }
+                    if customImage != nil {
+                        swatchButton(.custom).contextMenu {
+                            sourceButtons(photos: "Replace from Photos…", files: "Replace from Files…")
+                            Button(role: .destructive) { removeCustom() } label: {
+                                Label("Remove Background", systemImage: "trash")
+                            }
+                        }
+                    }
+                    Menu {
+                        sourceButtons(photos: "From Photos…", files: "From Files…")
+                    } label: {
+                        swatchLabel("Add") {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                                .overlay { Image(systemName: "plus").font(.title3).foregroundStyle(.tint) }
+                        }
+                    }
+                    .accessibilityLabel("Add Background Image")
+                }
+                .padding(2)
+            }
+            .disabled(importing || !loadedCustom)
+            // Each picker hangs off its own view and opens once the menu has closed, since a menu
+            // took the pickers down with it before.
+            .photosPicker(isPresented: $showPhotoPicker, selection: $photo, matching: .images)
+            .background(Color.clear.fileImporter(isPresented: $showImageImporter, allowedContentTypes: [.image], onCompletion: importFile))
+        }
+    }
+
+    private func swatchButton(_ option: PrinterPreviewBackground) -> some View {
+        let isSelected = option == background
+        return Button { chosen = option } label: {
+            swatchLabel(option.title, isSelected: isSelected) {
+                swatchFill(option)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(isSelected ? Color.accentColor : Color.secondary.opacity(0.3), lineWidth: isSelected ? 3 : 1)
+                    }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(option.title) background")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func swatchLabel(_ title: String, isSelected: Bool = false, @ViewBuilder tile: () -> some View) -> some View {
+        VStack(spacing: 4) {
+            tile()
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(isSelected ? .primary : .secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func swatchFill(_ option: PrinterPreviewBackground) -> some View {
+        switch option {
+        case .transparent: Checkerboard()
+        case .light: Color(white: 0.96)
+        case .dark: Color(white: 0.16)
+        case .wood, .gameArtwork, .custom:
+            if let image = thumbnails[option] {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                Color.secondary.opacity(0.2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sourceButtons(photos: String, files: String) -> some View {
+        Button { present { showPhotoPicker = true } } label: { Label(photos, systemImage: "photo") }
+        Button { present { showImageImporter = true } } label: { Label(files, systemImage: "folder") }
+    }
+
+    private func loadThumbnails() async {
+        let sources: [(PrinterPreviewBackground, URL?)] = [
+            (.wood, Bundle.main.url(forResource: "PrinterWood", withExtension: "jpg")),
+            (.gameArtwork, gameArtworkURL),
+            (.custom, customImage == nil ? nil : backgrounds.customURL),
+        ]
+        thumbnails = await Task.detached(priority: .utility) {
+            var images: [PrinterPreviewBackground: UIImage] = [:]
+            for case let (option, url?) in sources {
+                guard let image = UIImage(contentsOfFile: url.path), image.size.width > 0, image.size.height > 0 else { continue }
+                let scale = 168 / min(image.size.width, image.size.height)
+                images[option] = image.preparingThumbnail(of: CGSize(width: image.size.width * scale, height: image.size.height * scale))
+            }
+            return images
+        }.value
     }
 
     /// Lets the menu finish closing before a system picker takes its place.
@@ -192,7 +295,8 @@ struct PrinterPreview: View {
         let store = backgrounds
         let image = try await Task.detached { try store.save(data) }.value
         customImage = image
-        background = .custom
+        customVersion += 1
+        chosen = .custom
         retry += 1
     }
 
@@ -200,7 +304,8 @@ struct PrinterPreview: View {
         do {
             try backgrounds.remove()
             customImage = nil
-            if background == .custom { background = .transparent }
+            customVersion += 1
+            if chosen == .custom { chosen = .transparent }
         } catch { importError = "Could not remove the saved background. Try again." }
     }
 
@@ -208,7 +313,8 @@ struct PrinterPreview: View {
     private func render() async {
         png = nil
         error = nil
-        guard ordered.indices.contains(selected) else { return }
+        // A remembered Custom background can't be drawn until the saved image has loaded.
+        guard loadedCustom, ordered.indices.contains(selected) else { return }
         let slip = ordered[selected]
         let background = background
         let custom = customImage
@@ -254,4 +360,20 @@ private struct PrinterShareSheet: UIViewControllerRepresentable {
         return controller
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+/// The usual sign for transparency: a light gray checkerboard.
+private struct Checkerboard: View {
+    var body: some View {
+        Canvas { context, size in
+            let cell: CGFloat = 8
+            for row in 0..<Int((size.height / cell).rounded(.up)) {
+                for column in 0..<Int((size.width / cell).rounded(.up)) where (row + column).isMultiple(of: 2) {
+                    let square = CGRect(x: CGFloat(column) * cell, y: CGFloat(row) * cell, width: cell, height: cell)
+                    context.fill(Path(square), with: .color(Color(white: 0.8)))
+                }
+            }
+        }
+        .background(Color.white)
+    }
 }

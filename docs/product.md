@@ -1466,7 +1466,10 @@ an error and keeps the paper already received. Later prints in the same delivery
 Prints are session data and are not in Library Backup.
 
 **Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood**,
-**Game Artwork** or **Custom** background. Transparent is the default. Wood uses Dimitrios Savva's CC0 Wood Table
+**Game Artwork** or **Custom** background, shown as a row of previews under the print with the
+selected one outlined. Transparent is the default until another background is chosen; the preview
+then opens with the last one chosen, in any game. A remembered Game Artwork or Custom background
+that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered. Wood uses Dimitrios Savva's CC0 Wood Table
 photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements.
 The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
 shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
@@ -1489,8 +1492,11 @@ page 2...**, and ends with **Print ready**, since pages without a feed margin be
 so no total is shown.
 **Game Artwork** uses the Game's library artwork as the background when it has any; it is offered
 in library play and not in Quick Play. It is cropped like Custom and is not copied or stored.
-The **Custom Background** menu offers **From Photos…** and **From Files…**, as the Game's Artwork menu does, and **Remove Custom Background** once one is saved. One custom image is kept on-device
-and remains available in later previews, with replace and remove actions. Import accepts images
+The **Add** tile at the end of the row offers **From Photos…** and **From Files…**, as the Game's
+Artwork menu does; the imported image becomes the Custom preview and is selected. One custom image
+is kept on-device and remains available in later previews. Touching and holding Custom offers
+**Replace from Photos…**, **Replace from Files…** and **Remove Background**; removing it while
+selected returns to Transparent. Import accepts images
 up to 25 MB and 100 million source pixels, downsamples to 1,536 pixels on the longest edge,
 flattens transparency onto white and stores a JPEG without the original metadata. The original
 image is left alone, and a failed replacement preserves the saved background. The photo is

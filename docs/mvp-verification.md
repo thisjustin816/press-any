@@ -319,7 +319,7 @@ Those checks remain unchecked above.
   a game's own menus. Disconnect and reconnect from the game menu. Check that the game reports success and View Prints opens the output.
 - [ ] Print a multi-command image with zero feed margins between sections. Verify one continuous
   slip, followed by a separate slip for the next print with a top margin.
-- [ ] Verify Transparent is selected initially; check Light, Dark, Wood, Game Artwork (library play with artwork) and Custom backgrounds. Compare preview and exported PNGs, including
+- [ ] On a fresh install, verify Transparent is selected initially; check Light, Dark, Wood, Game Artwork (library play with artwork) and Custom backgrounds, each shown as a preview tile. Compare preview and exported PNGs, including
   transparent corners, paper edges, feed spacing and sharp print pixels.
 - [ ] Use Save Image and Save to Files. Cancel sharing, switch backgrounds and export again.
   Confirm the exported file is readable after the share sheet closes.
@@ -356,12 +356,14 @@ behavior or Apple SDK compilation.
 ### Printer backgrounds
 
 - [ ] Choose the bundled Wood background offline and verify the photograph and credit in Settings.
-- [ ] Open the Custom Background menu and choose From Photos… and From Files…: each opens its
-  picker over the preview.
+- [ ] Tap Add and choose From Photos… and From Files…: each opens its picker over the preview, and
+  an imported image appears as Custom and is selected. Touch and hold Custom: Replace from Photos…
+  and Replace from Files… open their pickers.
   Import a custom image from Photos, then Files. Cancel each picker and verify the previous
   background remains available. Export Custom and confirm the image fills the area behind paper.
-- [ ] Close and reopen the preview and relaunch the app: Custom remains available, while the
-  initial preview selection is Transparent. Replace Custom and remove it; removal returns an
-  active Custom preview to Transparent.
+- [ ] Choose Custom, then close and reopen the preview, print in another game and relaunch the app:
+  Custom is still selected. Choose Game Artwork, then print in Quick Play: Transparent shows, and
+  Game Artwork returns in a library game with artwork. Remove Custom while selected: Transparent
+  is selected.
 - [ ] Try an invalid image and an oversized file. The import shows an error and keeps the previous
   saved image. Check portrait/landscape images, orientation metadata and transparent PNG input.

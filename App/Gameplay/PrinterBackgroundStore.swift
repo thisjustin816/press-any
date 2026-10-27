@@ -16,7 +16,7 @@ struct PrinterBackgroundStore: Sendable {
         self.directory = directory
     }
 
-    private var customURL: URL { directory.appendingPathComponent("custom.jpg") }
+    var customURL: URL { directory.appendingPathComponent("custom.jpg") }
 
     func load() throws -> PrinterBackgroundImage? {
         guard FileManager.default.fileExists(atPath: customURL.path) else { return nil }
