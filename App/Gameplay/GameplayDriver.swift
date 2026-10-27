@@ -40,6 +40,8 @@ final class GameplayDriver: @unchecked Sendable {
     var cameraFrames: CameraFrameBuffer?
     var onPrinterOutput: (@Sendable ([PrinterOutput]) -> Void)?
     var onPrinterError: ErrorHandler?
+    var onPrinterActivity: (@Sendable (PrinterActivity) -> Void)?
+    private var lastPrinterActivity = PrinterActivity.idle
     var onFrame: FrameHandler?
     var onAudio: AudioHandler?
     var onRumble: RumbleHandler?
@@ -78,6 +80,7 @@ final class GameplayDriver: @unchecked Sendable {
         (runtime as? any SaveStateRuntime)?.resetTimedStateInterval()
         queue.async { [weak self] in
             self?.scheduler = FrameScheduler()
+            self?.lastPrinterActivity = .idle
         }
         let refreshes = makeRefreshes { [weak self] elapsed, interval in
             guard let self else { return }
@@ -179,6 +182,11 @@ final class GameplayDriver: @unchecked Sendable {
         }
         if onPrinterOutput != nil {
             do {
+                let activity = try runtime.printerActivity()
+                if activity != lastPrinterActivity {
+                    lastPrinterActivity = activity
+                    onPrinterActivity?(activity)
+                }
                 let prints = try runtime.drainPrinterOutput()
                 if !prints.isEmpty { onPrinterOutput?(prints) }
             } catch { onPrinterError?(error) }

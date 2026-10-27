@@ -315,11 +315,11 @@ Those checks remain unchecked above.
 
 ## Game Boy Printer
 
-- [ ] In library play and Quick Play, connect the printer from the game menu and print through
-  a game's own menus. Check that the game reports success and View Prints opens the output.
+- [ ] In library play and Quick Play, verify the printer starts connected and print through
+  a game's own menus. Disconnect and reconnect from the game menu. Check that the game reports success and View Prints opens the output.
 - [ ] Print a multi-command image with zero feed margins between sections. Verify one continuous
   slip, followed by a separate slip for the next print with a top margin.
-- [ ] Check Light, Dark and Transparent backgrounds. Compare preview and exported PNGs, including
+- [ ] Verify Transparent is selected initially; check Light, Dark, Wood and Custom backgrounds. Compare preview and exported PNGs, including
   transparent corners, paper edges, feed spacing and sharp print pixels.
 - [ ] Use Save Image and Save to Files. Cancel sharing, switch backgrounds and export again.
   Confirm the exported file is readable after the share sheet closes.
@@ -329,6 +329,9 @@ Those checks remain unchecked above.
   the gameplay policy and Resume works.
 - [ ] Print, disconnect, restart and load a state. Completed slips stay available until closing
   the game; output from another run starts new paper. Closing and reopening clears the feed.
+- [ ] While receiving and printing, verify the progress banner is visible. When output arrives,
+  tap View Print directly, without opening the game menu. Dismiss a ready banner and print again;
+  the new progress and View Print action appear. Repeat after pausing and resuming, and in landscape.
 - [ ] Generate more than 10 separate prints and confirm the oldest leaves the session feed.
 
 Headless checks cover serial packet decoding, completed output, feed margins, reset and
@@ -347,3 +350,15 @@ behavior or Apple SDK compilation.
 - [ ] Cancel the close-session prompt. No new launch or first-frame report occurs.
 - [ ] Start Quick Play from the file picker and with a copied save. Both report launch time;
   resuming a kept session still shows no first-frame timer.
+
+
+### Printer backgrounds
+
+- [ ] Choose the bundled Wood background offline and verify the photograph and credit in Settings.
+- [ ] Import a custom image from Photos, then Files. Cancel each picker and verify the previous
+  background remains available. Export Custom and confirm the image fills the area behind paper.
+- [ ] Close and reopen the preview and relaunch the app: Custom remains available, while the
+  initial preview selection is Transparent. Replace Custom and remove it; removal returns an
+  active Custom preview to Transparent.
+- [ ] Try an invalid image and an oversized file. The import shows an error and keeps the previous
+  saved image. Check portrait/landscape images, orientation metadata and transparent PNG input.

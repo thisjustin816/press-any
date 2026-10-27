@@ -120,6 +120,17 @@ void SBSetPrinterConnected(SBInstance *instance, bool connected)
     if (connected) GB_connect_printer(instance->gb, sb_printer_image, sb_printer_done);
 }
 
+SBPrinterActivity SBGetPrinterActivity(SBInstance *instance)
+{
+    if (!instance || !instance->printer_connected) return SB_PRINTER_IDLE;
+    if (instance->printer_pending) return SB_PRINTER_PRINTING;
+    GB_printer_t *printer = &instance->gb->printer;
+    if (printer->image_offset || (printer->command_id == GB_PRINTER_DATA_COMMAND &&
+        printer->command_state >= GB_PRINTER_COMMAND_DATA &&
+        printer->command_state <= GB_PRINTER_COMMAND_CHECKSUM_HIGH)) return SB_PRINTER_RECEIVING;
+    return SB_PRINTER_IDLE;
+}
+
 bool SBPopPrinterOutput(SBInstance *instance, SBPrinterOutput *output)
 {
     if (!instance || !output || !instance->printer_count) return false;

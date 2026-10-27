@@ -48,6 +48,15 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         if let instance { SBSetPrinterConnected(instance, connected) }
     }
 
+    public var printerActivity: PrinterActivity {
+        guard let instance else { return .idle }
+        switch SBGetPrinterActivity(instance) {
+        case SB_PRINTER_RECEIVING: return .receiving
+        case SB_PRINTER_PRINTING: return .printing
+        default: return .idle
+        }
+    }
+
     public func drainPrinterOutput() throws -> [PrinterOutput] {
         guard let instance else { return [] }
         if SBConsumePrinterOverflow(instance) { throw SameBoyAdapterError.printerQueueOverflow }

@@ -136,6 +136,8 @@ typedef struct {
 
 /// Attachment changes, resets and state loads clear the host queue. Calls use the core's serialized worker.
 void SBSetPrinterConnected(SBInstance *instance, bool connected);
+typedef enum { SB_PRINTER_IDLE, SB_PRINTER_RECEIVING, SB_PRINTER_PRINTING } SBPrinterActivity;
+SBPrinterActivity SBGetPrinterActivity(SBInstance *instance);
 /// Removes the oldest completed command. Pixels stay valid until the next pop, attachment change
 /// or destruction. Copy them before another core operation; the callback's stack buffer never escapes.
 bool SBPopPrinterOutput(SBInstance *instance, SBPrinterOutput *output);

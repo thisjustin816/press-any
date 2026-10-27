@@ -24,6 +24,8 @@ final class QuickPlayTests: XCTestCase {
         XCTAssertTrue(core.printerConnected)
         let print = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 1, bottomMargin: 3, exposure: 64)
         core.printerOutput = [print]
+        core.printerActivity = .printing
+        XCTAssertEqual(try runtime.printerActivity(), .printing)
         try runtime.pause()
         XCTAssertEqual(try runtime.drainPrinterOutput(), [print])
         XCTAssertEqual(try runtime.drainPrinterOutput(), [])

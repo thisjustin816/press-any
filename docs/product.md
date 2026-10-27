@@ -1453,9 +1453,11 @@ Game notes and timestamped gameplay notes; each Build already has a plain-text n
 ### Game Boy Printer (v1.1)
 
 The game menu offers **Game Boy Printer** in library play and Quick Play. **Connect Printer**
-attaches it for the current session; it starts off. The game prints through its normal link-port
-commands. A message announces completed output, and **View Prints** opens a preview over the
-paused game. Closing the preview leaves the game paused until Resume.
+toggles the attachment for the current session; it starts connected. The game prints through its normal link-port
+commands. A progress banner shows **Receiving print...** and **Printing...** while data is transferred
+and printed. When output arrives, **View Print** opens the preview directly; the game keeps
+running until that action is tapped. The ready banner stays until viewed or dismissed.
+**View Prints** in the game menu also opens the preview over the paused game. Closing the preview leaves the game paused until Resume.
 
 The preview keeps the latest 10 slips until the game closes. Commands with no bottom feed margin
 join the next command when it has no top margin. A new top margin, a disconnect, a reset or a
@@ -1463,7 +1465,9 @@ state load starts another slip. A slip is limited to 2,048 native feed rows; a l
 an error and keeps the paper already received. Later prints in the same delivery are retained.
 Prints are session data and are not in Library Backup.
 
-**Save or Share** exports a PNG with the chosen **Light**, **Dark** or **Transparent** background.
+**Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood** or
+**Custom** background. Transparent is the default. Wood uses Dimitrios Savva's CC0 Wood Table
+photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements.
 The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
 shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
 scale, without smoothing or simulated ink loss. Paper styling stays outside the printed content.
@@ -1476,6 +1480,15 @@ Attachment changes, resets and state loads clear the core queue; display-only fr
 preserve it. The host queue holds 16 commands and reports overflow. The app drains it every frame;
 a printer error reports a message without stopping gameplay. Exposure is retained as metadata;
 the slip renderer preserves the decoded print tones.
+
+The core reports idle, receiving and printing activity for an indeterminate progress display.
+**Custom Background** imports an image from Photos or Files. One custom image is kept on-device
+and remains available in later previews, with replace and remove actions. Import accepts images
+up to 25 MB and 100 million source pixels, downsamples to 1,536 pixels on the longest edge,
+flattens transparency onto white and stores a JPEG without the original metadata. The original
+image is left alone, and a failed replacement preserves the saved background. The photo is
+centered and cropped to fill the area behind the paper. It stays on-device and is not in Library
+Backup; the PNG export includes it when Custom is selected.
 
 Core, session, feed and renderer tests cover this path. Apple SDK compilation, preview presentation,
 PNG sharing and physical-device checks remain pending in `docs/mvp-verification.md`.

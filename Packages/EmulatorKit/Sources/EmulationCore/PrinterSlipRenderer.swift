@@ -1,7 +1,26 @@
 import Foundation
 
 public enum PrinterBackground: String, CaseIterable, Sendable {
-    case light, dark, transparent
+    case transparent, light, dark
+
+    public static let defaultValue: Self = .transparent
+}
+
+/// A decoded background, independent of an image file format or Apple framework.
+public struct PrinterBackgroundImage: Sendable {
+    public let width: Int
+    public let height: Int
+    public let bgra8888: Data
+    public enum ValidationError: Error { case invalidImage }
+
+    public init(width: Int, height: Int, bgra8888: Data) throws {
+        guard (1...1536).contains(width), (1...1536).contains(height), bgra8888.count == width * height * 4 else {
+            throw ValidationError.invalidImage
+        }
+        self.width = width
+        self.height = height
+        self.bgra8888 = bgra8888
+    }
 }
 
 /// Produces a paper-shaped image with an unchanged, integer-scaled print grid.
@@ -17,11 +36,19 @@ public enum PrinterSlipRenderer {
     public static let printOriginX = 40 * scale
     public static let printOriginY = 36 * scale
 
-    public static func render(_ output: PrinterOutput, background: PrinterBackground = .light) -> Image {
+    public static func render(_ output: PrinterOutput, background: PrinterBackground = .defaultValue) -> Image {
         render(PrinterSlip(output: output), background: background)
     }
 
-    public static func render(_ slip: PrinterSlip, background: PrinterBackground = .light) -> Image {
+    public static func render(_ slip: PrinterSlip, background: PrinterBackground = .defaultValue) -> Image {
+        render(slip, background: background, image: nil)
+    }
+
+    public static func render(_ slip: PrinterSlip, image: PrinterBackgroundImage) -> Image {
+        render(slip, background: .light, image: image)
+    }
+
+    private static func render(_ slip: PrinterSlip, background: PrinterBackground, image: PrinterBackgroundImage?) -> Image {
         let width = 240 * scale
         let height = (slip.feedHeight + 72) * scale
         let left = 24 * scale
@@ -29,6 +56,10 @@ public enum PrinterSlipRenderer {
         let top = 24 * scale
         let bottom = height - 24 * scale
         let base: (Int, Int, Int) = background == .dark ? (42, 44, 48) : (226, 227, 229)
+        let photo = image.map { Array($0.bgra8888) }
+        let fit = image.map { max(Double(width) / Double($0.width), Double(height) / Double($0.height)) } ?? 1
+        let cropX = image.map { (Double($0.width) - Double(width) / fit) / 2 } ?? 0
+        let cropY = image.map { (Double($0.height) - Double(height) / fit) / 2 } ?? 0
         var pixels = Data(count: width * height * 4)
         pixels.withUnsafeMutableBytes { raw in
             let bytes = raw.bindMemory(to: UInt8.self)
@@ -39,7 +70,14 @@ public enum PrinterSlipRenderer {
                     let dy = max(top + 6 * scale - y, 0, y - bottom - 6 * scale)
                     let distance = Int(Double(dx * dx + dy * dy).squareRoot())
                     let shadow = max(0, 18 - distance / 2)
-                    var rgb = (max(0, base.0 - shadow), max(0, base.1 - shadow), max(0, base.2 - shadow))
+                    var surface = base
+                    if let image, let photo {
+                        let sourceX = min(image.width - 1, Int(cropX + Double(x) / fit))
+                        let sourceY = min(image.height - 1, Int(cropY + Double(y) / fit))
+                        let source = (sourceY * image.width + sourceX) * 4
+                        surface = (Int(photo[source + 2]), Int(photo[source + 1]), Int(photo[source]))
+                    }
+                    var rgb = (max(0, surface.0 - shadow), max(0, surface.1 - shadow), max(0, surface.2 - shadow))
                     var alpha = background == .transparent ? 0 : 255
                     let tooth = (x / 4) % 6
                     let tear = min(tooth, 5 - tooth)

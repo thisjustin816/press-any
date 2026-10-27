@@ -58,9 +58,17 @@ void test_printer(void)
     SBSetPrinterConnected(instance, true);
     assert(SBSkipBootROM(instance, NULL, 0));
     SBPrinterOutput output;
+    bool received = false, printing = false;
+    assert(SBGetPrinterActivity(instance) == SB_PRINTER_IDLE);
     assert(!SBPopPrinterOutput(instance, &output));
     // Transfer takes about 0.7 seconds, and sixteen print rows take two seconds.
-    for (unsigned i = 0; i < 200; i++) (void)SBRunFrame(instance);
+    for (unsigned i = 0; i < 200; i++) {
+        (void)SBRunFrame(instance);
+        received |= SBGetPrinterActivity(instance) == SB_PRINTER_RECEIVING;
+        printing |= SBGetPrinterActivity(instance) == SB_PRINTER_PRINTING;
+    }
+    assert(received && printing);
+    assert(SBGetPrinterActivity(instance) == SB_PRINTER_IDLE);
     SBFrameView preview;
     assert(SBRefreshFrame(instance, &preview));
     assert(SBPopPrinterOutput(instance, &output));
@@ -88,6 +96,7 @@ void test_printer(void)
     while (SBPopPrinterOutput(instance, &output)) retained++;
     assert(retained == 16);
     SBSetPrinterConnected(instance, false);
+    assert(SBGetPrinterActivity(instance) == SB_PRINTER_IDLE);
     SBReset(instance);
     for (unsigned i = 0; i < 200; i++) (void)SBRunFrame(instance);
     assert(!SBPopPrinterOutput(instance, &output));

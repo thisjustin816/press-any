@@ -40,6 +40,27 @@ final class PrinterTests: XCTestCase {
         XCTAssertEqual(image, PrinterSlipRenderer.render(output))
     }
 
+    func testPhotographicBackgroundPreservesThePrintAndRejectsInvalidImages() throws {
+        for size in [0, -1, 1537, Int.max] {
+            XCTAssertThrowsError(try PrinterBackgroundImage(width: size, height: 1, bgra8888: Data()))
+        }
+        XCTAssertThrowsError(try PrinterBackgroundImage(width: 1, height: 1, bgra8888: Data(count: 3)))
+        let texture = try PrinterBackgroundImage(width: 2, height: 1, bgra8888: Data([10, 20, 30, 255, 70, 80, 90, 255]))
+        let output = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 0, bottomMargin: 0, exposure: 64)
+        let image = PrinterSlipRenderer.render(PrinterSlip(output: output), image: texture)
+        let transparent = PrinterSlipRenderer.render(output)
+        XCTAssertEqual(Array(image.bgra8888.prefix(4)), [10, 20, 30, 255])
+        let origin = (PrinterSlipRenderer.printOriginY * image.width + PrinterSlipRenderer.printOriginX) * 4
+        XCTAssertEqual(image.bgra8888[origin..<origin + 160 * 4 * 4], transparent.bgra8888[origin..<origin + 160 * 4 * 4])
+        XCTAssertEqual(image, PrinterSlipRenderer.render(PrinterSlip(output: output), image: texture))
+    }
+
+    func testDefaultIsTransparent() throws {
+        let output = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 0, bottomMargin: 0, exposure: 64)
+        XCTAssertEqual(PrinterBackground.defaultValue, .transparent)
+        XCTAssertEqual(PrinterSlipRenderer.render(output).bgra8888[3], 0)
+    }
+
     func testBackgroundChangesOnlyTheAreaBehindThePaper() throws {
         let output = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 0, bottomMargin: 0, exposure: 64)
         let light = PrinterSlipRenderer.render(output, background: .light)

@@ -18,6 +18,7 @@ final class GameplayViewController: UIViewController {
     private let rumble = RumbleRouter()
     private var printerConnected = false
     private let printerFeed = GameplayPrinterFeed()
+    private let printerStatus = PrinterStatusView()
     private let camera: GameplayCamera
     private var renderer: MetalRenderer?
     private let autoResumePolicy: AutoResumePolicy
@@ -198,12 +199,20 @@ final class GameplayViewController: UIViewController {
         // Audio can be unavailable, during a call for example. The game still runs, silently,
         // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
         var message = launchMessage
+        if runtime.supportsPrinter {
+            do {
+                try runtime.setPrinterConnected(true)
+                printerConnected = true
+            } catch {
+                message = [message, "Could not connect the printer. Try again from Game Boy Printer."].compactMap { $0 }.joined(separator: " ")
+            }
+        }
         audio.apply(soundMode)
         audio.onDisturbance = { [weak self] in self?.audioWasDisturbed() }
         do {
             try audio.start()
         } catch {
-            message = [launchMessage, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
+            message = [message, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
         }
         // Introduce the menu button once, on the first game played.
         if !UserDefaults.standard.bool(forKey: Self.menuHintShownKey) {
@@ -303,6 +312,15 @@ final class GameplayViewController: UIViewController {
         NSLayoutConstraint.activate([centerX, centerY])
         pausedOverlayCenterX = centerX
         pausedOverlayCenterY = centerY
+        printerStatus.translatesAutoresizingMaskIntoConstraints = false
+        printerStatus.onViewPrint = { [weak self] in self?.showPrinterPrints() }
+        view.addSubview(printerStatus)
+        NSLayoutConstraint.activate([
+            printerStatus.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            printerStatus.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            printerStatus.leadingAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
+            printerStatus.trailingAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+        ])
     }
 
     private lazy var gameMenu = makeGameMenu()
@@ -405,6 +423,7 @@ final class GameplayViewController: UIViewController {
     private func showPrinterPrints() {
         guard presentedViewController == nil, !printerFeed.slips.isEmpty else { return }
         setCoveredBySheet(true)
+        printerStatus.dismissReadyPrint()
         let preview = PrinterPreview(slips: printerFeed.slips)
         let sheet = PrinterPreviewController(rootView: preview)
         sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
@@ -710,13 +729,17 @@ final class GameplayViewController: UIViewController {
                 do {
                     try feed.receive(outputs)
                     DispatchQueue.main.async {
-                        self?.showTransientMessage("Print ready. Open Game Boy Printer to save or share it.")
+                        self?.printerStatus.showReadyPrint()
+                        UIAccessibility.post(notification: .announcement, argument: "Print ready")
                     }
                 } catch {
                     DispatchQueue.main.async {
                         self?.showTransientMessage("This print is too long. Earlier prints are still available.")
                     }
                 }
+            }
+            driver.onPrinterActivity = { [weak self] activity in
+                DispatchQueue.main.async { self?.printerStatus.showActivity(activity) }
             }
             driver.onPrinterError = { [weak self] _ in
                 DispatchQueue.main.async { self?.showTransientMessage("The printer could not keep every page. Try printing again.") }

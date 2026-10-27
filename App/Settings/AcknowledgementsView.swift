@@ -1,9 +1,7 @@
 import GameIdentity
 import SwiftUI
 
-/// The third-party code, artwork, data and online sources the app uses. Licenses whose terms ask to be shown are
-/// bundled verbatim from `App/Acknowledgements/`; public-domain code and freely licensed data get
-/// a credit instead.
+/// Third-party code, artwork, data and online sources, with credits and licenses.
 struct AcknowledgementsView: View {
     fileprivate struct Component: Identifiable {
         enum License {
@@ -20,6 +18,15 @@ struct AcknowledgementsView: View {
     }
 
     private let components: [Component] = [
+        Component(
+            name: "Wood Table",
+            use: """
+            Printer background photograph by Dimitrios Savva, from Poly Haven.
+            Source: https://polyhaven.com/a/wood_table
+            License: CC0 1.0 Universal (public domain).
+            """,
+            license: .bundled(file: "PrinterWood-CC0")
+        ),
         Component(
             name: "SameBoy",
             use: """

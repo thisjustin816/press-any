@@ -24,10 +24,19 @@ public struct PrinterOutput: Equatable, Sendable {
     }
 }
 
+public enum PrinterActivity: Equatable, Sendable {
+    case idle, receiving, printing
+}
+
 public protocol PrinterCapability: AnyObject {
+    var printerActivity: PrinterActivity { get }
     var printerConnected: Bool { get }
     /// Call between frames on the core worker. Changing attachment clears pending output.
     func setPrinterConnected(_ connected: Bool)
     /// Completed commands in print order. A full host queue must be reported to the caller.
     func drainPrinterOutput() throws -> [PrinterOutput]
+}
+
+extension PrinterCapability {
+    public var printerActivity: PrinterActivity { .idle }
 }

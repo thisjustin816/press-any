@@ -1,7 +1,3 @@
-#if canImport(ImageIO)
-import CoreGraphics
-import ImageIO
-#endif
 import Foundation
 
 /// Turns picked artwork into the bytes that are stored, and their file extension.
@@ -16,22 +12,12 @@ public enum ArtworkImage {
     /// every display. Without ImageIO, which only test hosts lack, the bytes are kept as given.
     public static func downscaled(_ data: Data, fileExtension: String) throws -> (data: Data, fileExtension: String) {
         #if canImport(ImageIO)
-        let thumbnailOptions: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maximumPixelSize,
-        ]
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary) else {
+        do {
+            let image = try ImportedImage.decode(data, maximumPixelSize: maximumPixelSize)
+            return (try ImportedImage.encode(image, format: .png), "png")
+        } catch {
             throw GameArtworkError.unreadableImage
         }
-        let output = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(output as CFMutableData, "public.png" as CFString, 1, nil) else {
-            throw GameArtworkError.unreadableImage
-        }
-        CGImageDestinationAddImage(destination, image, nil)
-        guard CGImageDestinationFinalize(destination) else { throw GameArtworkError.unreadableImage }
-        return (output as Data, "png")
         #else
         return (data, fileExtension)
         #endif

@@ -21,6 +21,8 @@ final class EmulationSessionTests: XCTestCase {
         XCTAssertTrue(core.printerConnected)
         let print = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 1, bottomMargin: 3, exposure: 64)
         core.printerOutput = [print]
+        core.printerActivity = .printing
+        XCTAssertEqual(try session.printerActivity(), .printing)
         try session.pause()
         XCTAssertEqual(try session.drainPrinterOutput(), [print])
         XCTAssertEqual(try session.drainPrinterOutput(), [])

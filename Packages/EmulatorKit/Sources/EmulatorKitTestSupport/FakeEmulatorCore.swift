@@ -51,6 +51,7 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
     public var failsNextStateLoadPartway = false
     public private(set) var printerConnected = false
     public var printerOutput: [PrinterOutput] = []
+    public var printerActivity = PrinterActivity.idle
     public func setPrinterConnected(_ connected: Bool) { printerConnected = connected }
     public func drainPrinterOutput() throws -> [PrinterOutput] {
         defer { printerOutput.removeAll() }
