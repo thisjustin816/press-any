@@ -10,6 +10,9 @@ public enum SaveDeclarationError: Error, Equatable {
 public enum SaveCompatibilityRisk: Equatable, Sendable {
     case declaredNonShare
     case differentRegionOrLanguage(writtenRegion: String, playingRegion: String, writtenLanguage: String?, playingLanguage: String?)
+    /// The Build about to play has an older version than the one that wrote the save, which may
+    /// not read what a later version saved.
+    case olderVersion(writtenVersion: String, playingVersion: String)
     /// One of the Builds was made with GB Studio, whose builds can move saved variables around
     /// even at the same engine version.
     case gbStudio
@@ -78,6 +81,11 @@ public struct AssessSaveCompatibility: Sendable {
                 ))
             }
         }
+        if writer.gameID == playing.gameID, let writtenVersion = writer.versionString, let playingVersion = playing.versionString,
+           let writtenKey = Self.releaseKey(writer.versionSortKey), let playingKey = Self.releaseKey(playing.versionSortKey),
+           playingKey < writtenKey {
+            risks.append(.olderVersion(writtenVersion: writtenVersion, playingVersion: playingVersion))
+        }
         if declaration?.compatibility == .doesNotShareSaves {
             return SaveCompatibilityAssessment(writtenBy: writer, risks: risks)
         }
@@ -124,6 +132,13 @@ public struct AssessSaveCompatibility: Sendable {
         let firstEntries = entries(first)
         let secondEntries = entries(second)
         return firstEntries.contains("world") || secondEntries.contains("world") || !firstEntries.isDisjoint(with: secondEntries)
+    }
+
+    /// A version sort key without its build metadata, which semver gives no precedence: "0.3.0+live1"
+    /// and "0.3.0+live2" are the same release.
+    private static func releaseKey(_ sortKey: String?) -> Substring? {
+        guard let sortKey else { return nil }
+        return sortKey[..<(sortKey.firstIndex(of: "+") ?? sortKey.endIndex)]
     }
 
     private static func recorded(_ value: String?) -> String? {

@@ -124,6 +124,32 @@ final class SaveCompatibilityTests: XCTestCase {
         XCTAssertFalse(try fixture.assess(blank, profile).isRisky)
     }
 
+    func testAnOlderVersionPlayingASaveANewerOneWroteIsRisky() throws {
+        let fixture = try Fixture()
+        func versioned(_ title: String, _ version: String?) throws -> Build {
+            var build = try fixture.addBuild(title: title)
+            build.versionString = version
+            build.versionSortKey = Build.versionSortKey(for: version)
+            try fixture.builds.updateBuildMetadata(build)
+            return build
+        }
+        let older = try versioned("V1", "1.0")
+        let newer = try versioned("V2", "1.2")
+        let rebuilt = try versioned("V2 AGAIN", "1.2+2")
+        let beta = try versioned("V2 BETA", "1.2-beta.1")
+        let unversioned = try versioned("NONE", nil)
+        let byNewer = try fixture.addProfile(writtenBy: newer.id)
+
+        XCTAssertEqual(try fixture.assess(older, byNewer).risks, [.olderVersion(writtenVersion: "1.2", playingVersion: "1.0")])
+        XCTAssertEqual(try fixture.assess(beta, byNewer).risks, [.olderVersion(writtenVersion: "1.2", playingVersion: "1.2-beta.1")])
+        XCTAssertFalse(try fixture.assess(newer, fixture.addProfile(writtenBy: older.id)).isRisky, "upgrading reads an older save")
+        XCTAssertFalse(try fixture.assess(newer, fixture.addProfile(writtenBy: rebuilt.id)).isRisky, "build metadata isn't a release")
+        XCTAssertFalse(try fixture.assess(rebuilt, byNewer).isRisky)
+        XCTAssertFalse(try fixture.assess(unversioned, byNewer).isRisky, "an unknown version has nothing to compare")
+        try fixture.builds.setSaveCompatibility(between: older.id, and: newer.id, compatibility: .sharesSaves)
+        XCTAssertFalse(try fixture.assess(older, byNewer).isRisky, "a Shares Saves declaration clears it")
+    }
+
     func testOverlappingRegionAndLanguageListsAreTheSameRelease() throws {
         let fixture = try Fixture()
         let usaEurope = try fixture.addBuild(title: "USA EUROPE", region: "USA, Europe", language: "En, Fr")

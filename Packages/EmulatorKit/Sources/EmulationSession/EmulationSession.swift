@@ -55,6 +55,7 @@ public final class EmulationSession: @unchecked Sendable {
     private let coreResolver: ResolveCoreForBuild
     private let coreRegistry: CoreRegistry
     private let persistentSaveService: PersistentSaveService
+    private let saveBackup: BackUpSaveBeforeBuildSwitch
     private let stateService: SaveStateService
     private let settings: SettingsResolver?
     private let launchHistory: SessionLaunchHistory?
@@ -119,6 +120,7 @@ public final class EmulationSession: @unchecked Sendable {
         self.coreResolver = ResolveCoreForBuild(builds: builds, registry: coreRegistry, now: now)
         self.coreRegistry = coreRegistry
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
+        self.saveBackup = BackUpSaveBeforeBuildSwitch(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
         self.stateService = SaveStateService(
             states: states,
             assets: assets,
@@ -175,6 +177,11 @@ public final class EmulationSession: @unchecked Sendable {
             let romURL = try imageResolver.resolveImageURL(buildID: build.id)
             let rom = try assetStore.readData(at: romURL)
             let battery = try persistentSaveService.loadPersistentSave(for: profile)
+            // Loading can finish an interrupted write and change who wrote the save, so the copy
+            // reads the profile as loading left it. A launch that can't keep the copy doesn't play.
+            if let battery, let loaded = try profiles.fetchSaveProfile(id: profile.id) {
+                try saveBackup.execute(profile: loaded, battery: battery, playingBuildID: build.id)
+            }
             // The save as the core reports it, which can differ in size from the file, so an
             // unchanged save isn't mistaken for a new one.
             var savedBattery = Data()

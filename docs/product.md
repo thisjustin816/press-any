@@ -679,6 +679,12 @@ asks, even when the inferred checks would pass. With no declaration, it's risky 
 Build was made with GB Studio, when detection names different tools or engine versions, or when
 the headers declare different save hardware (bytes 0x147 and 0x149).
 
+When both Builds of the same Game have a recorded version, playing a Build whose version is older
+than the one that last wrote the save adds a reason: "This Build is version 1.0, older than the
+version 1.2 that last saved. An older version may not read a newer save." Versions compare as they
+sort, with prereleases before their release; build metadata after "+" is ignored, so 1.2+2 and 1.2
+are the same release. A newer Build reading an older save is the usual upgrade and isn't flagged.
+
 A different region or language adds a reason to the same prompt when both Builds have a region
 recorded. Regions differ only when their lists share no entry, so a "USA, Europe" save on a
 "USA" Build doesn't count, and World matches every region; languages compare the same way. The reason names both releases: "This save was last written by the Japan release.
@@ -689,9 +695,17 @@ region, never raises this reason. A Shares Saves declaration clears it with the 
 A risky launch asks: Play with a Copy, Start a New Save, Always Use Saves Between These Builds,
 Use "<profile>" Anyway, or Cancel. Always Use Saves Between These Builds records Shares Saves
 for the pair and launches with the same profile; it's available when the two Builds belong to
-the same Game. Use Anyway applies to that launch alone. A copy or a new save becomes that
+the same Game. Use Anyway applies to that launch alone. The prompt says that using the profile here first
+keeps its current save as a copy. A copy or a new save becomes that
 Build's default. A save with no recorded writer, or an inferred check that fails, never blocks
 play. Detection adds caution and never proves two saves compatible.
+
+Before any library launch plays a save another Build wrote, prompted or not, the save is copied to
+"<profile> before switching Builds", so the switch can be undone by playing the copy. Each profile
+keeps one such copy, refreshed in place on later switches; a copy the player renames is left alone
+and a new one is made. No copy is made when the playing Build wrote the save, when the save has no
+recorded writer, when the profile is itself that copy, or when the profile it was copied from still
+holds the same save, as after Play with a Copy. A launch that can't keep the copy doesn't play.
 
 Build Details has a Save Compatibility section listing this Build's declarations by the other
 Build's current name and Shares Saves or Doesn't. Add Declaration picks another Build of the
