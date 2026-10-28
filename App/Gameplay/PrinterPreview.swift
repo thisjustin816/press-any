@@ -163,8 +163,9 @@ struct PrinterPreview: View {
         }
     }
 
-    /// Backgrounds as small previews, like a wallpaper picker. The saved custom image is one of them;
-    /// touch and hold it to replace or remove it, and Add brings in a new one.
+    /// Backgrounds as small previews, like a wallpaper picker. The last tile is the one custom slot:
+    /// empty, it asks for an image; filled, it selects like the others, and touching and holding it
+    /// replaces or removes the image.
     private var backgroundSwatches: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Background").font(.subheadline.weight(.semibold))
@@ -178,17 +179,19 @@ struct PrinterPreview: View {
                                 Label("Remove Background", systemImage: "trash")
                             }
                         }
-                    }
-                    Menu {
-                        sourceButtons(photos: "From Photos…", files: "From Files…")
-                    } label: {
-                        swatchLabel("Add") {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                .overlay { Image(systemName: "plus").font(.title3).foregroundStyle(.tint) }
+                    } else {
+                        Menu {
+                            sourceButtons(photos: "From Photos…", files: "From Files…")
+                        } label: {
+                            swatchLabel(PrinterPreviewBackground.custom.title) {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                                    .overlay { Image(systemName: "plus").font(.title3).foregroundStyle(.tint) }
+                            }
                         }
+                        .accessibilityLabel("Custom background")
+                        .accessibilityHint("Choose an image from Photos or Files")
                     }
-                    .accessibilityLabel("Add Background Image")
                 }
                 .padding(2)
             }
