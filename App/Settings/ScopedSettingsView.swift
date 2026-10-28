@@ -203,7 +203,6 @@ struct ScopedSettingsView: View {
                 key: .buttonBounce,
                 defaultValue: true,
                 options: [(true, "On"), (false, "Off")],
-                explanation: Self.buttonBounceExplanation,
                 context: context
             )
             InheritableSettingRow(
@@ -220,7 +219,8 @@ struct ScopedSettingsView: View {
         } header: {
             Text("Playing")
         } footer: {
-            Text(HardwareModel.settingSummary)
+            // A menu row shows no explanation of its own, so Button Bounce's goes here.
+            Text(Self.buttonBounceExplanation + " " + HardwareModel.settingSummary)
         }
     }
 
