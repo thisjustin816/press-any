@@ -1158,10 +1158,12 @@ Quick Play keeps them temporary until Add to Library.
   including per-app ones, and are how a player moves any button. Press Any's defaults above are fixed: it has no button
   mapping of its own and won't add one. It declares Extended Gamepad support, which iOS
   needs for per-app customizations.
-- Touch and controller input reach the core once per frame, at the start of vblank, so each press
-  and each release is one clean change. SameBoy's contact-bounce emulation is off: touch input has
-  no contacts to bounce, and with it on, a game that reads the joypad more than once in vblank
-  counted extra presses.
+- Touch and controller input reach the core once per frame, at the start of vblank. **Button
+  Bounce**, on by default as in SameBoy, then makes the button chatter for about 4.5 scanlines after
+  each press and release, as the hardware's contacts do. A game that reads the joypad more than
+  once in vblank can count one tap twice on real hardware and with Button Bounce on. Turning it off
+  makes each press and release one clean change. It's inheritable like Skip Boot Logo, and Quick
+  Play uses the App and System value.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls, under With a Controller, is on by default.
@@ -1187,8 +1189,8 @@ clears an override. The System level covers Game Boy and Game Boy Color. Save Pr
 the narrow playthrough overrides above. Sound is app-wide.
 
 Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (lists from System
-down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games, Timed States and
-Skip Boot Logo.
+down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games, Timed States,
+Skip Boot Logo and Button Bounce.
 App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics, Hide Touch Controls with a
 Controller, and the region and language order.
 
@@ -1198,7 +1200,8 @@ Game's or Build's settings use:
 - **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
 - **Controls**: Controller Layout and Controller Theme; Touch Haptics and Tap Game for Menu under
   Touch; Hide Touch Controls under With a Controller.
-- **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo; Save States
+- **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games, Skip Boot Logo and Button
+  Bounce; Save States
   (Slots, Name New States, Keep Save States and Keep Auto States, all App-only; Timed States is
   inheritable and needs Plus).
 - **App Icon** (Plus): the default icon and its colorways, each with a preview.
@@ -1215,7 +1218,7 @@ for a system, and otherwise a sheet short enough to sit at half height over a pa
 grouped under Display (Orientation, Screen Scaling, Screen Colors, Game Boy Advance Colors on those
 models, LCD Filter, Frame Blending),
 Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States,
-Skip Boot Logo, Model). Under each setting's name a note says where its value
+Skip Boot Logo, Button Bounce, Model). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
 **Model** is the hardware a game runs on, set like the other settings at every level. It's one

@@ -219,6 +219,7 @@ struct PlayingSettingsPage: View {
     @State private var fastForwardAudio: FastForwardAudio
     @State private var autoResumePolicy: AutoResumePolicy
     @State private var skipBootAnimation: Bool
+    @State private var buttonBounce: Bool
     @State private var saveStateSlots: SaveStateSlots
     @State private var nameNewStates: Bool
     @State private var keepSaveStates: KeepSaveStates
@@ -241,6 +242,7 @@ struct PlayingSettingsPage: View {
         _fastForwardAudio = State(initialValue: storage.value(FastForwardAudio.self, .fastForwardAudio) ?? .muted)
         _autoResumePolicy = State(initialValue: storage.value(AutoResumePolicy.self, .autoResumePolicy) ?? .always)
         _skipBootAnimation = State(initialValue: storage.value(Bool.self, .skipBootAnimation) ?? false)
+        _buttonBounce = State(initialValue: storage.value(Bool.self, .buttonBounce) ?? true)
         _hardwareModel = State(initialValue: storage.value(HardwareModel.self, .hardwareModel) ?? .automatic)
         _gameBoyCamera = State(initialValue: storage.value(GameBoyCamera.self, .gameBoyCamera) ?? .defaultValue)
     }
@@ -281,8 +283,9 @@ struct PlayingSettingsPage: View {
                     Text("Never").tag(AutoResumePolicy.never)
                 }
                 Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
+                Toggle("Button Bounce", isOn: $buttonBounce)
             } footer: {
-                Text("Resume Games picks up where you left off when you open a game again or return to the app. Skip Boot Logo opens library games on the game; Quick Play always skips it.")
+                Text("Resume Games picks up where you left off when you open a game again or return to the app. Skip Boot Logo opens library games on the game; Quick Play always skips it. " + ScopedSettingsView.buttonBounceExplanation)
             }
 
             Section {
@@ -335,6 +338,7 @@ struct PlayingSettingsPage: View {
         .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
         .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
         .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
+        .onChange(of: buttonBounce) { _, newValue in save(newValue, .buttonBounce) }
         .onChange(of: hardwareModel) { _, newValue in save(newValue, .hardwareModel) }
         .onChange(of: gameBoyCamera) { _, newValue in save(newValue, .gameBoyCamera) }
     }

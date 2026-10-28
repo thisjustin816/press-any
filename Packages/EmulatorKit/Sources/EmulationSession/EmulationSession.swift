@@ -186,10 +186,12 @@ public final class EmulationSession: @unchecked Sendable {
             // unchanged save isn't mistaken for a new one.
             var savedBattery = Data()
             let model = hardwareModel(build)
+            let bounce = buttonBounce(build)
 
             func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
                 let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
                 try newWorker.perform { core in
+                    (core as? any ButtonBounceCapability)?.setButtonBounce(bounce)
                     try (core as? any HardwareModelCapability)?.setHardwareModel(model)
                     try core.loadImage(rom, system: build.system)
                 }
@@ -317,6 +319,19 @@ public final class EmulationSession: @unchecked Sendable {
             buildID: build.id
         )
         return skip ?? false
+    }
+
+    /// Whether buttons chatter after a change, as the setting resolved for this Build says. An
+    /// unreadable setting keeps SameBoy's default, on.
+    private func buttonBounce(_ build: Build) -> Bool {
+        let bounce = try? settings?.decode(
+            Bool.self,
+            key: SettingKey.buttonBounce.rawValue,
+            system: build.system,
+            gameID: build.gameID,
+            buildID: build.id
+        )
+        return bounce ?? true
     }
 
     /// The hardware the open game runs on, or nil with no game open.
@@ -635,7 +650,9 @@ public final class EmulationSession: @unchecked Sendable {
         let build = try builds.fetchBuild(id: context.buildID)
         let skipBoot = build.map(skipsBootAnimation) ?? false
         let model = build.map(hardwareModel)
+        let bounce = build.map(buttonBounce)
         try worker.perform { core in
+            if let bounce { (core as? any ButtonBounceCapability)?.setButtonBounce(bounce) }
             if let model { try (core as? any HardwareModelCapability)?.setHardwareModel(model) }
             try core.reset()
             if skipBoot { _ = try (core as? any BootSkippingCapability)?.skipBootAnimation() }

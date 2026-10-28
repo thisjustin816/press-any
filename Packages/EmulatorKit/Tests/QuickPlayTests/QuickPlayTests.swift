@@ -10,6 +10,19 @@ import XCTest
 @testable import QuickPlay
 
 final class QuickPlayTests: XCTestCase {
+    func testQuickPlayAppliesTheButtonBounceItWasGiven() throws {
+        for bounce in [true, false] {
+            let harness = try QuickPlayHarness.make()
+            defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+            let session = try harness.workspace.start(romURL: harness.writeExternalROM(TestROM.make(title: "BOUNCE")))
+            let factory = CapturingQuickPlayFactory()
+            let runtime = harness.makeRuntime(session, factory: factory, buttonBounce: bounce)
+            try runtime.start()
+            XCTAssertEqual(try XCTUnwrap(factory.cores.last).buttonBounce, bounce)
+            try runtime.stop(createAutoState: false)
+        }
+    }
+
     func testPrinterOutputStaysInTheTemporaryRuntime() throws {
         let harness = try QuickPlayHarness.make()
         defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
@@ -465,9 +478,11 @@ private struct QuickPlayHarness {
     func makeRuntime(
         _ session: QuickPlaySession,
         factory: any EmulatorCoreFactory = QuickPlayFakeFactory(),
-        store: (any AssetStore)? = nil
+        store: (any AssetStore)? = nil,
+        buttonBounce: Bool = true
     ) -> QuickPlayRuntimeSession {
-        QuickPlayRuntimeSession(session: session, coreRegistry: CoreRegistry(factories: [factory]), assetStore: store ?? self.store)
+        QuickPlayRuntimeSession(session: session, coreRegistry: CoreRegistry(factories: [factory]), assetStore: store ?? self.store,
+            buttonBounce: buttonBounce)
     }
 
     func writeExternalROM(_ data: Data) throws -> URL {

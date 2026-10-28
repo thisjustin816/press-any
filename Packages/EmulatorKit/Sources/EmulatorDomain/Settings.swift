@@ -88,6 +88,9 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case timedStates
     /// `HardwareModel`, unset means `.automatic`. Read when a game starts or restarts.
     case hardwareModel
+    /// Bool, unset means true. A button chatters briefly after each press and release, as the
+    /// hardware's contacts do. Read when a game starts or restarts.
+    case buttonBounce
     /// `AdvanceColors`, unset means `.gameBoyAdvance`.
     case advanceColors
     /// `GameBoyCamera`, unset means `.rear`. Only camera cartridges read it. Test builds saved the

@@ -18,7 +18,7 @@ public enum SameBoyAdapterError: Error, Equatable {
     case cheatCodeRefused
 }
 
-public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability,
+public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability, ButtonBounceCapability,
     CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability {
     public let descriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
     public let supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
@@ -41,6 +41,12 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     public init() {}
 
     public private(set) var printerConnected = false
+    public private(set) var buttonBounce = true
+
+    public func setButtonBounce(_ enabled: Bool) {
+        buttonBounce = enabled
+        if let instance { SBSetJoypadBouncing(instance, enabled) }
+    }
 
     public func setPrinterConnected(_ connected: Bool) {
         guard printerConnected != connected else { return }
@@ -152,6 +158,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             _ = Self.setCheats(cheatCodes, on: created)
             SBSetCheatsEnabled(created, cheatsEnabled)
             SBSetPrinterConnected(created, printerConnected)
+            SBSetJoypadBouncing(created, buttonBounce)
             return created
         } catch {
             SBDestroy(created)

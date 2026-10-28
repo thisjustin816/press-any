@@ -808,6 +808,10 @@ final class AppContainer {
         return launchSetting(type, key, system: build.system, gameID: build.gameID, buildID: build.id)
     }
 
+    func quickPlayButtonBounce(system: GameSystem) -> Bool {
+        launchSetting(Bool.self, .buttonBounce, system: system, gameID: nil, buildID: nil) ?? true
+    }
+
     func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {
         launchSetting(AutoResumePolicy.self, .autoResumePolicy, system: system, gameID: nil, buildID: nil) ?? .always
     }

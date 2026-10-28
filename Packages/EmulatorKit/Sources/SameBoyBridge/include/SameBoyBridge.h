@@ -135,6 +135,10 @@ typedef struct {
 } SBPrinterOutput;
 
 /// Attachment changes, resets and state loads clear the host queue. Calls use the core's serialized worker.
+/// SameBoy flips a key for a few scanlines after each change, as a button's contacts do, unless
+/// this turns it off. Input applied once per frame then lands as one clean change. Kept through
+/// resets and state loads.
+void SBSetJoypadBouncing(SBInstance *instance, bool enabled);
 void SBSetPrinterConnected(SBInstance *instance, bool connected);
 typedef enum { SB_PRINTER_IDLE, SB_PRINTER_RECEIVING, SB_PRINTER_PRINTING } SBPrinterActivity;
 SBPrinterActivity SBGetPrinterActivity(SBInstance *instance);

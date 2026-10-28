@@ -664,7 +664,8 @@ struct RootView: View {
         let runtime = QuickPlayRuntimeSession(
             session: session,
             coreRegistry: container.coreRegistry,
-            assetStore: container.fileStore
+            assetStore: container.fileStore,
+            buttonBounce: container.quickPlayButtonBounce(system: session.system)
         )
         try runtime.start()
         gameplay = GameplayPresentation(

@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 
-// A press or release set before a frame reaches the game as one transition, with no contact
-// bounce: a game that samples the joypad more than once per frame must not see a key change
+// With bounce emulation off, a press or release set before a frame reaches the game as one
+// transition, so a game that samples the joypad more than once per frame never sees a key change
 // twice. The ROM selects the direction keys, reads FF00 in a tight loop, and counts each read
 // that differs from the previous one in C000.
 static void make_joypad_rom(uint8_t *rom, size_t size)
@@ -31,31 +31,41 @@ static void make_joypad_rom(uint8_t *rom, size_t size)
     memcpy(&rom[0x150], code, sizeof(code));
 }
 
-void test_joypad_transitions(void)
+// Transitions the game counts for 40 taps of 3 to 5 frames, input applied once per frame as the app
+// does. A clean joypad gives 80: one per press and one per release.
+static unsigned count_transitions(SBModel model, bool bounce)
 {
     uint8_t rom[32768];
     make_joypad_rom(rom, sizeof(rom));
+    SBInstance *instance = SBCreate(model);
+    assert(instance);
+    uint8_t boot[256] = {0};
+    boot[0] = 0xc3; boot[1] = 0x00; boot[2] = 0x01; // jp $0100
+    assert(SBLoadBootROM(instance, boot, sizeof(boot)));
+    assert(SBLoadROM(instance, rom, sizeof(rom)));
+    SBSetJoypadBouncing(instance, bounce);
+    SBInputState none = {0}, down = {0};
+    down.down = true;
+    for (int i = 0; i < 10; i++) { SBSetInput(instance, none); (void)SBRunFrame(instance); }
+    uint8_t before = SBReadMemory(instance, 0xc000);
+    for (int tap = 0; tap < 40; tap++) {
+        for (int f = 0; f < 3 + tap % 3; f++) { SBSetInput(instance, down); (void)SBRunFrame(instance); }
+        for (int f = 0; f < 17 + tap % 4; f++) { SBSetInput(instance, none); (void)SBRunFrame(instance); }
+    }
+    unsigned transitions = (uint8_t)(SBReadMemory(instance, 0xc000) - before);
+    SBDestroy(instance);
+    return transitions;
+}
+
+void test_joypad_transitions(void)
+{
     const SBModel models[] = { SB_MODEL_DMG, SB_MODEL_CGB };
     for (size_t m = 0; m < sizeof(models) / sizeof(models[0]); m++) {
-        SBInstance *instance = SBCreate(models[m]);
-        assert(instance);
-        uint8_t boot[256] = {0};
-        boot[0] = 0xc3; boot[1] = 0x00; boot[2] = 0x01; // jp $0100
-        assert(SBLoadBootROM(instance, boot, sizeof(boot)));
-        assert(SBLoadROM(instance, rom, sizeof(rom)));
-        SBInputState none = {0}, down = {0};
-        down.down = true;
-        for (int i = 0; i < 10; i++) { SBSetInput(instance, none); (void)SBRunFrame(instance); }
-        uint8_t before = SBReadMemory(instance, 0xc000);
-        // 40 taps of 3 to 5 frames: every press and every release is exactly one transition.
-        for (int tap = 0; tap < 40; tap++) {
-            int held = 3 + tap % 3;
-            for (int f = 0; f < held; f++) { SBSetInput(instance, down); (void)SBRunFrame(instance); }
-            for (int f = 0; f < 17 + tap % 4; f++) { SBSetInput(instance, none); (void)SBRunFrame(instance); }
-        }
-        uint8_t transitions = (uint8_t)(SBReadMemory(instance, 0xc000) - before);
-        fprintf(stderr, "model %d: %u transitions for 40 taps (80 expected)\n", (int)models[m], transitions);
-        assert(transitions == 80);
-        SBDestroy(instance);
+        // SameBoy's default emulates contact bounce, so a game reading in a loop sees extra changes.
+        unsigned bouncing = count_transitions(models[m], true);
+        unsigned clean = count_transitions(models[m], false);
+        fprintf(stderr, "model %d: %u transitions bouncing, %u clean (80 expected)\n", (int)models[m], bouncing, clean);
+        assert(bouncing > 80);
+        assert(clean == 80);
     }
 }

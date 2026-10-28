@@ -651,6 +651,38 @@ extension EmulationSessionTests {
         XCTAssertEqual(try skipsOnStart(harness.contextA), 0, "an unreadable value shows the logo")
     }
 
+    func testButtonBounceStaysOnUnlessTheResolvedSettingTurnsItOff() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let key = SettingKey.buttonBounce.rawValue
+
+        func bounceOnStart(_ context: LaunchContext) throws -> Bool {
+            let session = harness.makeSession(settings: SettingsResolver(store: settings))
+            try session.start(context: context)
+            try session.stop(createAutoState: false)
+            return try XCTUnwrap(harness.factory.cores.last).buttonBounce
+        }
+
+        XCTAssertTrue(try bounceOnStart(harness.contextA), "unset keeps SameBoy's default")
+
+        try settings.set(false, key: key, scope: .app)
+        XCTAssertFalse(try bounceOnStart(harness.contextA), "the app-wide setting turns it off")
+
+        try settings.set(true, key: key, scope: .build(harness.buildB.id))
+        XCTAssertTrue(try bounceOnStart(harness.contextB), "a Build override wins")
+
+        try settings.setValueJSON("not json", key: key, scope: .app)
+        XCTAssertTrue(try bounceOnStart(harness.contextA), "an unreadable value keeps the default")
+
+        try settings.set(true, key: key, scope: .app)
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: harness.contextA)
+        try settings.set(false, key: key, scope: .app)
+        try session.restart()
+        XCTAssertFalse(try XCTUnwrap(harness.factory.cores.last).buttonBounce, "a restart reads the changed setting")
+        try session.stop(createAutoState: false)
+    }
+
     func testTheResolvedModelIsSetBeforeTheImageLoads() throws {
         let harness = try SessionHarness.make()
         let settings = InMemorySettingsStore()
