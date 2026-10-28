@@ -434,6 +434,11 @@ SBInstance *SBCreate(SBModel model)
     // no cap and no frame skipping is that mode; a reset keeps it.
     GB_set_turbo_mode(instance->gb, true, true);
     GB_set_turbo_cap(instance->gb, 0);
+    // Input is applied once per frame, at the start of vblank. SameBoy's contact-bounce emulation
+    // would then flip the key for about 4.5 scanlines after each change, which a game that reads
+    // the joypad more than once in vblank counts as extra presses. Touch input has no contacts to
+    // bounce. The setting isn't saved, so resets and state loads keep it.
+    GB_set_emulate_joypad_bouncing(instance->gb, false);
     return instance;
 }
 

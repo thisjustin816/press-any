@@ -1158,6 +1158,10 @@ Quick Play keeps them temporary until Add to Library.
   including per-app ones, and are how a player moves any button. Press Any's defaults above are fixed: it has no button
   mapping of its own and won't add one. It declares Extended Gamepad support, which iOS
   needs for per-app customizations.
+- Touch and controller input reach the core once per frame, at the start of vblank, so each press
+  and each release is one clean change. SameBoy's contact-bounce emulation is off: touch input has
+  no contacts to bounce, and with it on, a game that reads the joypad more than once in vblank
+  counted extra presses.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls, under With a Controller, is on by default.
