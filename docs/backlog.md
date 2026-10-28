@@ -16,6 +16,7 @@ roadmap; its final scope and timing are not fixed.
   capture; Playtiles landscape controls and compatibility checks; and the fixes listed below.
   ZIP globals attachment, grouped Build menus and list overflow cues are built for this release,
   as are the older-version save warning and the copy kept before switching Builds.
+  Game Boy Printer emulation with printed-slip preview and image export is planned for v1.1.
 - **v2.0:** the larger unfinished roadmap, including save migration, broader multi-asset
   import, documents, rewind, skins, sync and catalog services. Partial rows describe what
   is already built and what remains for this target.
@@ -23,7 +24,8 @@ roadmap; its final scope and timing are not fixed.
 The v1.1 fixes cover import names and matching after restore, exported-name round trips,
 Recently Played placing new imports at the top, empty-library game links, backup outcome
 placement, menu ordering and dismissal, on-screen buttons resuming a paused game, and saving
-shared screenshots to Photos. A capability already present in v1.0 keeps that initial target
+shared screenshots to Photos, and excluding the close-session prompt from Quick Play launch
+timing. A capability already present in v1.0 keeps that initial target
 in its table row; this list records its v1.1 updates.
 
 ## Suggested order
@@ -56,6 +58,11 @@ GameShark cheats.
 
 Game Boy Camera, including Photo! DX color capture, is built for v1.1. Its physical-camera checks
 remain pending in `docs/mvp-verification.md`.
+
+Game Boy Printer emulation is the next prioritized play feature for v1.1, with preview, save and
+share. The renderer produces thermal-paper slips with torn edges and a shadow, and Light, Dark or
+Transparent backgrounds. The printed pixel grid and feed spacing are preserved. Core and session
+integration are implemented; Apple preview and export checks remain pending.
 
 v1.0 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
 The v1.1 artwork work adds automatic Libretro lookup after import and a reviewed manual
@@ -664,14 +671,14 @@ Add to Library, never before the first frame; Feeds the save compatibility check
 Done: ci.yml (L1/L2/L3, gbtoolsid differential, test-coverage, hygiene) and ios-build.yml (simulator
 build/tests).
 
-### v2.0 targets
+### Peripheral and other release targets
 
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | missing | Link cable, local dual-core first; nearby/SharePlay initiation; no Multipeer | v2.0 | no LinkCableCapability |
 | missing | GB Studio save migration with old/new variable maps | v2.0 |  |
-| missing | Game Boy Printer with preview/save/share | v2.0 | no PrinterCapability |
+| partial | Game Boy Printer emulation with printed-slip preview/save/share | v1.1 | SameBoy attachment, completed-output queue, library/Quick Play integration, slip assembly and paper renderer implemented. Game-menu controls, preview and PNG share flow added; Connected and Transparent by default, latest 10 slips per session; receiving/printing progress and direct View Print action; CC0 Wood Table photo plus one saved custom image from Photos/Files with replace/remove, and the Game's library artwork as a background; the ready banner waits for a multi-page print to finish. Synthetic serial-ROM, session and renderer tests; Apple SDK and device checks pending |
 | missing | RAR import (tentative) | v2.0 |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v2.0 |  |
 | missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v2.0 | saved recordings also land in the Files folder |

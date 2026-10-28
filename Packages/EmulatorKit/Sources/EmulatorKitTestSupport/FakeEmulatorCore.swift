@@ -28,7 +28,7 @@ public struct FakeCoreFactory: EmulatorCoreFactory {
     }
 }
 
-public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability, CameraCapability {
+public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability, ButtonBounceCapability, CameraCapability, PrinterCapability {
     public let descriptor: CoreDescriptor
     public let supportedSystems: Set<GameSystem>
     public let stateSerializationVersion = "fake-json-v1"
@@ -49,6 +49,14 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
     /// Makes the next state load write the state's cartridge RAM and then fail, as SameBoy does
     /// with a state that ends early.
     public var failsNextStateLoadPartway = false
+    public private(set) var printerConnected = false
+    public var printerOutput: [PrinterOutput] = []
+    public var printerActivity = PrinterActivity.idle
+    public func setPrinterConnected(_ connected: Bool) { printerConnected = connected }
+    public func drainPrinterOutput() throws -> [PrinterOutput] {
+        defer { printerOutput.removeAll() }
+        return printerOutput
+    }
     public var hasCamera = false
     public private(set) var cameraFrame: CameraFrame?
 
@@ -174,6 +182,10 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
         bootAnimationSkips += 1
         return true
     }
+
+    public private(set) var buttonBounce = true
+
+    public func setButtonBounce(_ enabled: Bool) { buttonBounce = enabled }
 
     public func setHardwareModel(_ model: HardwareModel) throws {
         hardwareModelRequests.append(model)

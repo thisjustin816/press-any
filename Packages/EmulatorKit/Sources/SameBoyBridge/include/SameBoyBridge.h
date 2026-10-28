@@ -128,6 +128,26 @@ size_t SBStateSize(SBInstance *instance);
 bool SBSaveState(SBInstance *instance, uint8_t *output, size_t size);
 bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size);
 
+#define SB_PRINTER_MAX_PIXELS (160u * 200u)
+typedef struct {
+    const uint8_t *luminance;
+    uint8_t height, top_margin, bottom_margin, exposure;
+} SBPrinterOutput;
+
+/// Attachment changes, resets and state loads clear the host queue. Calls use the core's serialized worker.
+/// SameBoy flips a key for a few scanlines after each change, as a button's contacts do, unless
+/// this turns it off. Input applied once per frame then lands as one clean change. Kept through
+/// resets and state loads.
+void SBSetJoypadBouncing(SBInstance *instance, bool enabled);
+void SBSetPrinterConnected(SBInstance *instance, bool connected);
+typedef enum { SB_PRINTER_IDLE, SB_PRINTER_RECEIVING, SB_PRINTER_PRINTING } SBPrinterActivity;
+SBPrinterActivity SBGetPrinterActivity(SBInstance *instance);
+/// Removes the oldest completed command. Pixels stay valid until the next pop, attachment change
+/// or destruction. Copy them before another core operation; the callback's stack buffer never escapes.
+bool SBPopPrinterOutput(SBInstance *instance, SBPrinterOutput *output);
+/// Returns and clears the queue-overflow flag.
+bool SBConsumePrinterOverflow(SBInstance *instance);
+
 void SBReset(SBInstance *instance);
 
 /// Whether SameBoy reads code as a Game Genie (XXX-XXX or XXX-XXX-XXX) or GameShark (01VVAAAA)

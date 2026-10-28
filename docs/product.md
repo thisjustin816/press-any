@@ -24,6 +24,7 @@ change. There is no separate decision log.
 The submitted v1.0 App Store candidate is build 110, identified by
 `app-store-review/1.0-build-110`. Development after that candidate targets v1.1. The larger
 unfinished roadmap targets v2.0 tentatively; `docs/backlog.md` separates these scopes.
+Game Boy Printer emulation with printed-slip image export is prioritized for v1.1.
 
 - iOS 17.4 or later, iPhone first. iPad keeps working but gets no special design until later.
 - SameBoy 1.0.3 for GB and GBC, built from its `Core/` only. SameBoy's `iOS/` directory needs
@@ -831,7 +832,9 @@ claims reliability from just an old ROM, old save and new ROM.
 Quick Play plays a ROM without adding it to the library: the fast way for a developer to try a
 fresh build.
 
-- **Time to first frame is the primary metric.** The launch reads the image once, validates the
+- **Time to first frame is the primary metric.** Timing starts when the new launch begins, after
+  any prompt to close the current game. Time spent choosing a file or answering prompts is excluded.
+  The launch reads the image once, validates the
   header from that buffer, writes the sandbox copy, hashes the same buffer, and boots the core past
   the boot logo: the boot ROM still runs, unthrottled and undrawn with its chime dropped, and GBC
   uses SameBoy's `cgb_boot_fast`. A session resumed from its autosave doesn't boot at all. Nothing
@@ -1155,6 +1158,12 @@ Quick Play keeps them temporary until Add to Library.
   including per-app ones, and are how a player moves any button. Press Any's defaults above are fixed: it has no button
   mapping of its own and won't add one. It declares Extended Gamepad support, which iOS
   needs for per-app customizations.
+- Touch and controller input reach the core once per frame, at the start of vblank. **Button
+  Bounce**, on by default as in SameBoy, then makes the button chatter for about 4.5 scanlines after
+  each press and release, as the hardware's contacts do. A game that reads the joypad more than
+  once in vblank can count one tap twice on real hardware and with Button Bounce on. Turning it off
+  makes each press and release one clean change. It's inheritable like Skip Boot Logo, and Quick
+  Play uses the App and System value.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls, under With a Controller, is on by default.
@@ -1180,8 +1189,8 @@ clears an override. The System level covers Game Boy and Game Boy Color. Save Pr
 the narrow playthrough overrides above. Sound is app-wide.
 
 Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (lists from System
-down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games, Timed States and
-Skip Boot Logo.
+down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games, Timed States,
+Skip Boot Logo and Button Bounce.
 App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics, Hide Touch Controls with a
 Controller, and the region and language order.
 
@@ -1191,7 +1200,8 @@ Game's or Build's settings use:
 - **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
 - **Controls**: Controller Layout and Controller Theme; Touch Haptics and Tap Game for Menu under
   Touch; Hide Touch Controls under With a Controller.
-- **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo; Save States
+- **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games, Skip Boot Logo and Button
+  Bounce; Save States
   (Slots, Name New States, Keep Save States and Keep Auto States, all App-only; Timed States is
   inheritable and needs Plus).
 - **App Icon** (Plus): the default icon and its colorways, each with a preview.
@@ -1208,7 +1218,7 @@ for a system, and otherwise a sheet short enough to sit at half height over a pa
 grouped under Display (Orientation, Screen Scaling, Screen Colors, Game Boy Advance Colors on those
 models, LCD Filter, Frame Blending),
 Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States,
-Skip Boot Logo, Model). Under each setting's name a note says where its value
+Skip Boot Logo, Button Bounce, Model). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
 **Model** is the hardware a game runs on, set like the other settings at every level. It's one
@@ -1461,6 +1471,62 @@ and patches, RTC, cheats, profile, core and settings; a full RAM snapshot is opt
 Mode. Bug-report exports preview a checklist, and memory, saves and notes need explicit inclusion.
 Game notes and timestamped gameplay notes; each Build already has a plain-text note in Build Details.
 
+### Game Boy Printer (v1.1)
+
+The game menu offers **Game Boy Printer** in library play and Quick Play. **Connect Printer**
+toggles the attachment for the current session; it starts connected. The game prints through its normal link-port
+commands. A progress banner shows **Receiving print...** and **Printing...** while data is transferred
+and printed. When output arrives, **View Print** opens the preview directly; the game keeps
+running until that action is tapped. The ready banner stays until viewed or dismissed.
+**View Prints** in the game menu also opens the preview over the paused game. Closing the preview leaves the game paused until Resume.
+
+The preview keeps the latest 10 slips until the game closes. Commands with no bottom feed margin
+join the next command when it has no top margin. A new top margin, a disconnect, a reset or a
+state load starts another slip. A slip is limited to 2,048 native feed rows; a longer print reports
+an error and keeps the paper already received. Later prints in the same delivery are retained.
+Prints are session data and are not in Library Backup.
+
+**Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood**,
+**Game Artwork** or **Custom** background, shown as a row of previews under the print with the
+selected one outlined. Transparent is the default until another background is chosen; the preview
+then opens with the last one chosen, in any game. A remembered Game Artwork or Custom background
+that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered. Wood uses Dimitrios Savva's CC0 Wood Table
+photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements.
+The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
+shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
+scale, without smoothing or simulated ink loss. Paper styling stays outside the printed content.
+Game-provided feed margins are preserved, with space around the paper for its torn edges and shadow.
+Transparent exports retain alpha outside the paper. Save Image uses add-only Photos access; Save to
+Files and the other share actions use the system share sheet. Printer controls and export are free.
+
+`PrinterCapability` supplies completed PRINT commands through the core's serialized worker.
+Attachment changes, resets and state loads clear the core queue; display-only frame refreshes
+preserve it. The host queue holds 16 commands and reports overflow. The app drains it every frame;
+a printer error reports a message without stopping gameplay. Exposure is retained as metadata;
+the slip renderer preserves the decoded print tones.
+
+The core reports idle, receiving and printing activity for an indeterminate progress display.
+Games that print several pages go idle between them, so the banner changes to **View Print** only
+after the printer stays idle for about a second and a half; more data in that time keeps the
+progress display. From the second page the banner reads **Receiving page 2...** and **Printing
+page 2...**, and ends with **Print ready**, since pages without a feed margin between them join into one slip. A game does not announce how many pages it will send,
+so no total is shown.
+**Game Artwork** uses the Game's library artwork as the background when it has any; it is offered
+in library play and not in Quick Play. It is cropped like Custom and is not copied or stored.
+The **Add** tile at the end of the row offers **From Photos…** and **From Files…**, as the Game's
+Artwork menu does; the imported image becomes the Custom preview and is selected. One custom image
+is kept on-device and remains available in later previews. Touching and holding Custom offers
+**Replace from Photos…**, **Replace from Files…** and **Remove Background**; removing it while
+selected returns to Transparent. Import accepts images
+up to 25 MB and 100 million source pixels, downsamples to 1,536 pixels on the longest edge,
+flattens transparency onto white and stores a JPEG without the original metadata. The original
+image is left alone, and a failed replacement preserves the saved background. The photo is
+centered and cropped to fill the area behind the paper. It stays on-device and is not in Library
+Backup; the PNG export includes it when Custom is selected.
+
+Core, session, feed and renderer tests cover this path. Apple SDK compilation, preview presentation,
+PNG sharing and physical-device checks remain pending in `docs/mvp-verification.md`.
+
 ### Documents (v2.0)
 
 Manuals, READMEs, changelogs, guides and maps as managed copies (PDF, CBZ, PNG, JPEG, WebP image
@@ -1671,7 +1737,7 @@ silently. The default shader must hold full speed on the slowest supported devic
   and memory tools (above), with states recording their cheat configuration and offering to
   restore it; the app's screens fitting above a controller that covers the bottom of the screen, as
   with Playtiles, and navigable with its buttons; link cable (local first, then nearby; not built on Multipeer Connectivity), GB Studio
-  save migration, Game Boy Camera and Printer, RAR, skin authoring beyond the editor, video and GIF
+  save migration, RAR, skin authoring beyond the editor, video and GIF
   capture framed like a Game Boy, `.gbproject` import and export, better ROM comparison and BPS
   generation, side-by-side manuals on iPad, itch.io and Homebrew Hub browsing and shared game pages.
 - **Later:** mGBA for GBA (1.2 or 2.0), network link play, RetroAchievements, a full debugger,

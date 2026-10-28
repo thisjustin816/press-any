@@ -24,6 +24,8 @@ public enum QuickPlayRuntimeError: Error, Equatable {
 public final class QuickPlayRuntimeSession: @unchecked Sendable {
     private let session: QuickPlaySession
     private let registry: CoreRegistry
+    /// Quick Play has no Game or Build, so this comes from the App and System settings.
+    private let buttonBounce: Bool
     private let files: any AssetStore
     private let lock = NSLock()
     private var worker: SessionWorker?
@@ -38,9 +40,11 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         session: QuickPlaySession,
         coreRegistry: CoreRegistry,
         assetStore: any AssetStore,
+        buttonBounce: Bool = true,
         batteryCheckInterval: TimeInterval = 5
     ) {
         self.session = session
+        self.buttonBounce = buttonBounce
         self.registry = coreRegistry
         self.files = assetStore
         self.batteryCheckIntervalNanoseconds = UInt64(batteryCheckInterval * 1_000_000_000)
@@ -75,7 +79,10 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
                 core: try factory.makeCore(),
                 label: "QuickPlay.RuntimeSession.\(session.id.uuidString)"
             )
-            try worker.perform { try $0.loadImage(rom, system: self.session.system) }
+            try worker.perform { core in
+                (core as? any ButtonBounceCapability)?.setButtonBounce(self.buttonBounce)
+                try core.loadImage(rom, system: self.session.system)
+            }
             try worker.perform { try $0.loadPersistentSave(battery) }
             savedBattery = try worker.perform { try $0.persistentSaveData() }
             return worker
@@ -158,6 +165,26 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         }
         if let frame { lock.withLock { latestFrame = frame } }
         return frame
+    }
+
+    public var supportsPrinter: Bool {
+        guard let worker = try? activeWorker(requireRunning: false) else { return false }
+        return (try? worker.perform { $0 is any PrinterCapability }) ?? false
+    }
+
+    public func setPrinterConnected(_ connected: Bool) throws {
+        let worker = try activeWorker(requireRunning: false)
+        try worker.perform { ($0 as? any PrinterCapability)?.setPrinterConnected(connected) }
+    }
+
+    public func printerActivity() throws -> PrinterActivity {
+        let worker = try activeWorker(requireRunning: false)
+        return try worker.perform { ($0 as? any PrinterCapability)?.printerActivity ?? .idle }
+    }
+
+    public func drainPrinterOutput() throws -> [PrinterOutput] {
+        let worker = try activeWorker(requireRunning: false)
+        return try worker.perform { try ($0 as? any PrinterCapability)?.drainPrinterOutput() ?? [] }
     }
 
     public var hasCamera: Bool {

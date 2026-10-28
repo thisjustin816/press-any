@@ -21,6 +21,10 @@ protocol GameplayRuntime: AnyObject {
         advanceColors: AdvanceColors
     ) throws -> EmulatorVideoFrame?
     func consumeRumbleAmplitude() throws -> Double
+    var supportsPrinter: Bool { get }
+    func setPrinterConnected(_ connected: Bool) throws
+    func drainPrinterOutput() throws -> [PrinterOutput]
+    func printerActivity() throws -> PrinterActivity
     var hasCamera: Bool { get }
     func setCameraFrame(_ frame: CameraFrame?) throws
 
@@ -41,6 +45,10 @@ protocol GameplayRuntime: AnyObject {
 }
 
 extension GameplayRuntime {
+    var supportsPrinter: Bool { false }
+    func setPrinterConnected(_ connected: Bool) throws {}
+    func drainPrinterOutput() throws -> [PrinterOutput] { [] }
+    func printerActivity() throws -> PrinterActivity { .idle }
     var hasCamera: Bool { false }
     func setCameraFrame(_ frame: CameraFrame?) throws {}
 

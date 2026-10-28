@@ -135,3 +135,17 @@ if it changed, run the platform-independent tests and the device checks in
 `docs/mvp-verification.md`, and record the reason here. A SameBoy update is a
 core migration candidate: existing Builds keep their pinned core until they are migrated
 deliberately.
+
+
+## Printer wood background
+
+- Asset: Wood Table
+- Author: Dimitrios Savva
+- Source: https://polyhaven.com/a/wood_table
+- Download: https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table/wood_table_diff_1k.jpg
+- Location: `App/Resources/PrinterWood.jpg` (original 1K photograph)
+- SHA-256: `f81642ae141958feac6c5acac03e2aeb6cfe049dff301d0627e3c17f2dc5c7a5`
+- Usage: optional Wood background behind exported printer slips.
+- License: CC0 1.0 Universal, https://polyhaven.com/license and
+  https://creativecommons.org/publicdomain/zero/1.0/; the legal text is bundled in
+  `App/Acknowledgements/PrinterWood-CC0.txt`.

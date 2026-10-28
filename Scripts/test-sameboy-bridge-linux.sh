@@ -36,5 +36,7 @@ ar rcs "$BUILD/libsameboy.a" "${objects[@]}"
   -I"$SAMEBOY" -I"$SAMEBOY/Core" -I"$BRIDGE/include" \
   "$BRIDGE/SameBoyBridge.c" "$ROOT_DIR/Scripts/tests/sameboy_bridge_smoke.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_camera_rgb.c" \
+  "$ROOT_DIR/Scripts/tests/sameboy_printer.c" \
+  "$ROOT_DIR/Scripts/tests/sameboy_joypad.c" \
   "$BUILD/libsameboy.a" -lm -o "$BUILD/smoke"
 "$BUILD/smoke"

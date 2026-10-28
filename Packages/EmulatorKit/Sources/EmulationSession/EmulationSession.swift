@@ -186,10 +186,12 @@ public final class EmulationSession: @unchecked Sendable {
             // unchanged save isn't mistaken for a new one.
             var savedBattery = Data()
             let model = hardwareModel(build)
+            let bounce = buttonBounce(build)
 
             func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
                 let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
                 try newWorker.perform { core in
+                    (core as? any ButtonBounceCapability)?.setButtonBounce(bounce)
                     try (core as? any HardwareModelCapability)?.setHardwareModel(model)
                     try core.loadImage(rom, system: build.system)
                 }
@@ -319,6 +321,19 @@ public final class EmulationSession: @unchecked Sendable {
         return skip ?? false
     }
 
+    /// Whether buttons chatter after a change, as the setting resolved for this Build says. An
+    /// unreadable setting keeps SameBoy's default, on.
+    private func buttonBounce(_ build: Build) -> Bool {
+        let bounce = try? settings?.decode(
+            Bool.self,
+            key: SettingKey.buttonBounce.rawValue,
+            system: build.system,
+            gameID: build.gameID,
+            buildID: build.id
+        )
+        return bounce ?? true
+    }
+
     /// The hardware the open game runs on, or nil with no game open.
     public var runningHardwareModel: HardwareModel? {
         lock.withLock { _runningHardwareModel }
@@ -436,6 +451,26 @@ public final class EmulationSession: @unchecked Sendable {
             try core.setCheatCodes(active.filter { $0.allSatisfy(core.isValidCheatCode) }.flatMap { $0 })
             core.setCheatsEnabled(enabled)
         }
+    }
+
+    public var supportsPrinter: Bool {
+        guard let (worker, _, _) = try? snapshotActive() else { return false }
+        return (try? worker.perform { $0 is any PrinterCapability }) ?? false
+    }
+
+    public func setPrinterConnected(_ connected: Bool) throws {
+        let (worker, _, _) = try snapshotActive()
+        try worker.perform { ($0 as? any PrinterCapability)?.setPrinterConnected(connected) }
+    }
+
+    public func printerActivity() throws -> PrinterActivity {
+        let (worker, _, _) = try snapshotActive()
+        return try worker.perform { ($0 as? any PrinterCapability)?.printerActivity ?? .idle }
+    }
+
+    public func drainPrinterOutput() throws -> [PrinterOutput] {
+        let (worker, _, _) = try snapshotActive()
+        return try worker.perform { try ($0 as? any PrinterCapability)?.drainPrinterOutput() ?? [] }
     }
 
     public var hasCamera: Bool {
@@ -615,7 +650,9 @@ public final class EmulationSession: @unchecked Sendable {
         let build = try builds.fetchBuild(id: context.buildID)
         let skipBoot = build.map(skipsBootAnimation) ?? false
         let model = build.map(hardwareModel)
+        let bounce = build.map(buttonBounce)
         try worker.perform { core in
+            if let bounce { (core as? any ButtonBounceCapability)?.setButtonBounce(bounce) }
             if let model { try (core as? any HardwareModelCapability)?.setHardwareModel(model) }
             try core.reset()
             if skipBoot { _ = try (core as? any BootSkippingCapability)?.skipBootAnimation() }

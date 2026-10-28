@@ -55,6 +55,13 @@ Do not permanently vendor third-party source snapshots into normal Git history.
 - Preserve upstream licenses and update `THIRD_PARTY_NOTICES.md` when dependencies change.
 - Credit the author of every shader, skin, artwork or other third-party asset that ships in the app. The change that adds it also names the author, source and license in `THIRD_PARTY_NOTICES.md` and in Settings > Acknowledgements (`App/Settings/AcknowledgementsView.swift`), and bundles the license text. Credit is given even when the license asks for none.
 
+## Reuse existing functionality
+
+Before adding functionality, search the repository for an existing implementation and read its
+callers and tests. State what can be reused before proposing a separate implementation. When a
+second feature needs the same processing, share that processing and keep feature-specific
+settings and storage with their callers. During review, compare similar paths for duplication.
+
 ## Testing rules
 
 - Do not commit copyrighted commercial ROMs or saves as fixtures. The original test ROMs in `TestROMs/` are the exception: built from the source beside them, each listed in `TestROMs/manifest.json`, which `Scripts/verify-repo-hygiene.sh` checks. Add a ROM there with its source, license and manifest entry, not anywhere else.

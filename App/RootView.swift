@@ -214,7 +214,8 @@ struct RootView: View {
     private func gameplayArtworkTarget(_ presentation: GameplayPresentation) -> GameplayArtworkTarget? {
         guard !presentation.isQuickPlay, let gameID = presentation.settings?.gameID,
               let container = bootstrap.container else { return nil }
-        return GameplayArtworkTarget(gameID: gameID, games: container.repositories.games, artwork: container.gameArtwork)
+        return GameplayArtworkTarget(gameID: gameID, games: container.repositories.games, artwork: container.gameArtwork,
+                                     fileURL: { [weak container] in container?.artworkURL(for: $0) })
     }
 
     /// The choices a library launch can stop for: recovery, resume, a risky or a damaged save.
@@ -520,8 +521,7 @@ struct RootView: View {
             quickPlay(
                 QuickPlayRequest(
                     url: ScreenshotScene.romURL(file),
-                    copiedSaveProfileID: nil,
-                    chosenAt: DispatchTime.now().uptimeNanoseconds
+                    copiedSaveProfileID: nil
                 ),
                 container: container
             )
@@ -635,6 +635,7 @@ struct RootView: View {
     }
 
     private func quickPlay(_ request: QuickPlayRequest, container: AppContainer) {
+        let startedAt = DispatchTime.now().uptimeNanoseconds
         let url = request.url
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -644,7 +645,7 @@ struct RootView: View {
                 romURL: url,
                 copiedSaveProfileID: request.copiedSaveProfileID
             )
-            try present(temporary, container: container, firstFrameClock: request.chosenAt)
+            try present(temporary, container: container, firstFrameClock: startedAt)
         } catch {
             errorMessage = "Couldn’t start Quick Play: \(error.localizedDescription)"
         }
@@ -663,7 +664,8 @@ struct RootView: View {
         let runtime = QuickPlayRuntimeSession(
             session: session,
             coreRegistry: container.coreRegistry,
-            assetStore: container.fileStore
+            assetStore: container.fileStore,
+            buttonBounce: container.quickPlayButtonBounce(system: session.system)
         )
         try runtime.start()
         gameplay = GameplayPresentation(
@@ -747,7 +749,7 @@ private struct GameplayPresentation: Identifiable {
     let runtime: any GameplayRuntime
     let autoResumePolicy: AutoResumePolicy
     let launchMessage: String?
-    /// `DispatchTime` uptime when the file was chosen, for Quick Play's time-to-first-frame report.
+    /// `DispatchTime` uptime when the Quick Play launch began.
     let firstFrameClock: UInt64?
     /// Where the game menu's Settings saves, or nil when the game's Build couldn't be read.
     let settings: GameplaySettingsTarget?
@@ -765,8 +767,6 @@ private struct GameplayPresentation: Identifiable {
 struct QuickPlayRequest {
     let url: URL
     let copiedSaveProfileID: UUID?
-    /// `DispatchTime` uptime when the file was chosen.
-    let chosenAt: UInt64
 }
 
 private extension ControllerTheme {

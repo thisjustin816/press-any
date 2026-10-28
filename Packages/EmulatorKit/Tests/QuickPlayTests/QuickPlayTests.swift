@@ -10,6 +10,42 @@ import XCTest
 @testable import QuickPlay
 
 final class QuickPlayTests: XCTestCase {
+    func testQuickPlayAppliesTheButtonBounceItWasGiven() throws {
+        for bounce in [true, false] {
+            let harness = try QuickPlayHarness.make()
+            defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+            let session = try harness.workspace.start(romURL: harness.writeExternalROM(TestROM.make(title: "BOUNCE")))
+            let factory = CapturingQuickPlayFactory()
+            let runtime = harness.makeRuntime(session, factory: factory, buttonBounce: bounce)
+            try runtime.start()
+            XCTAssertEqual(try XCTUnwrap(factory.cores.last).buttonBounce, bounce)
+            try runtime.stop(createAutoState: false)
+        }
+    }
+
+    func testPrinterOutputStaysInTheTemporaryRuntime() throws {
+        let harness = try QuickPlayHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+        let session = try harness.workspace.start(romURL: harness.writeExternalROM(TestROM.make(title: "PRINTER")))
+        let factory = CapturingQuickPlayFactory()
+        let runtime = harness.makeRuntime(session, factory: factory)
+        XCTAssertFalse(runtime.supportsPrinter)
+        try runtime.start()
+        let core = try XCTUnwrap(factory.cores.last)
+        XCTAssertTrue(runtime.supportsPrinter)
+        try runtime.setPrinterConnected(true)
+        XCTAssertTrue(core.printerConnected)
+        let print = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 1, bottomMargin: 3, exposure: 64)
+        core.printerOutput = [print]
+        core.printerActivity = .printing
+        XCTAssertEqual(try runtime.printerActivity(), .printing)
+        try runtime.pause()
+        XCTAssertEqual(try runtime.drainPrinterOutput(), [print])
+        XCTAssertEqual(try runtime.drainPrinterOutput(), [])
+        try runtime.stop(createAutoState: false)
+        XCTAssertFalse(runtime.supportsPrinter)
+    }
+
     func testQuickPlayCameraFramesStayWithTheTemporaryRuntime() throws {
         let harness = try QuickPlayHarness.make()
         defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
@@ -442,9 +478,11 @@ private struct QuickPlayHarness {
     func makeRuntime(
         _ session: QuickPlaySession,
         factory: any EmulatorCoreFactory = QuickPlayFakeFactory(),
-        store: (any AssetStore)? = nil
+        store: (any AssetStore)? = nil,
+        buttonBounce: Bool = true
     ) -> QuickPlayRuntimeSession {
-        QuickPlayRuntimeSession(session: session, coreRegistry: CoreRegistry(factories: [factory]), assetStore: store ?? self.store)
+        QuickPlayRuntimeSession(session: session, coreRegistry: CoreRegistry(factories: [factory]), assetStore: store ?? self.store,
+            buttonBounce: buttonBounce)
     }
 
     func writeExternalROM(_ data: Data) throws -> URL {

@@ -7,6 +7,30 @@ import XCTest
 @testable import PressAny
 
 final class GameplayCaptureTests: XCTestCase {
+    func testPrinterPNGPreservesTransparentBackgroundAndPaper() throws {
+        let output = try PrinterOutput(height: 1, luminance: Data(count: 160), topMargin: 0, bottomMargin: 0, exposure: 64)
+        let paper = PrinterSlipRenderer.render(output, background: .transparent)
+        let png = try PNGFrameEncoder(preservesAlpha: true).encode(EmulatorVideoFrame(
+            width: paper.width, height: paper.height, bgra8888: paper.bgra8888, emulatedNanoseconds: 0
+        ))
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(png as CFData, nil))
+        let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        XCTAssertEqual(image.width, paper.width)
+        XCTAssertEqual(image.height, paper.height)
+        var pixels = [UInt8](repeating: 0, count: paper.width * paper.height * 4)
+        try pixels.withUnsafeMutableBytes { buffer in
+            let context = try XCTUnwrap(CGContext(
+                data: buffer.baseAddress, width: image.width, height: image.height,
+                bitsPerComponent: 8, bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
+            ))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        }
+        XCTAssertEqual(pixels[3], 0)
+        let center = ((image.height / 2) * image.width + image.width / 2) * 4 + 3
+        XCTAssertEqual(pixels[center], 255)
+    }
+
     func testPNGKeepsTheNativeFrameSizeAndOpaqueColors() throws {
         let frame = EmulatorVideoFrame(
             width: 2, height: 2,

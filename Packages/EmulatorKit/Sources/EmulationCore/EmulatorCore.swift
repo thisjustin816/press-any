@@ -43,6 +43,12 @@ public protocol BootSkippingCapability: AnyObject {
 }
 
 /// A core that can run a game on hardware other than its system's own.
+public protocol ButtonBounceCapability: AnyObject {
+    /// Whether a button chatters briefly after each press and release, as the hardware's contacts
+    /// do. Takes effect on the next button change and lasts through resets and state loads.
+    func setButtonBounce(_ enabled: Bool)
+}
+
 public protocol HardwareModelCapability: AnyObject {
     /// The model the next image loads on, and with an image loaded, the model it switches to: the
     /// game starts again from its boot on the new hardware, keeping its battery save, cheats and

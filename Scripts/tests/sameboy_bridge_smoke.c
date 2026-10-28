@@ -7,6 +7,8 @@
 #include <string.h>
 
 void test_camera_rgb(void);
+void test_printer(void);
+void test_joypad_transitions(void);
 
 static void make_test_rom(uint8_t *rom, size_t size)
 {
@@ -350,6 +352,8 @@ int main(void)
     test_cheats(rom, sizeof(rom));
     test_camera();
     test_camera_rgb();
+    test_printer();
+    test_joypad_transitions();
     puts("sameboy bridge smoke: ok");
     return 0;
 }

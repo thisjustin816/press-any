@@ -3,6 +3,7 @@ import EmulatorDomain
 import GameplayInput
 import MetalKit
 import OSLog
+import SwiftUI
 import UIKit
 
 @MainActor
@@ -15,6 +16,9 @@ final class GameplayViewController: UIViewController {
     private let audio = AudioOutputEngine()
     private let controllerMonitor: PhysicalControllerMonitor
     private let rumble = RumbleRouter()
+    private var printerConnected = false
+    private let printerFeed = GameplayPrinterFeed()
+    private let printerStatus = PrinterStatusView()
     private let camera: GameplayCamera
     private var renderer: MetalRenderer?
     private let autoResumePolicy: AutoResumePolicy
@@ -25,7 +29,7 @@ final class GameplayViewController: UIViewController {
     /// Center the paused overlay on the game picture, which stays visible behind it.
     private var pausedOverlayCenterX: NSLayoutConstraint?
     private var pausedOverlayCenterY: NSLayoutConstraint?
-    /// Uptime when Quick Play's file was chosen, cleared once the first frame is reported.
+    /// Launch uptime, cleared once Quick Play reports its first frame.
     private var firstFrameClock: UInt64?
     private var pauseReasons = GameplayPauseReasons()
     private var coveredBySheet = false
@@ -195,12 +199,20 @@ final class GameplayViewController: UIViewController {
         // Audio can be unavailable, during a call for example. The game still runs, silently,
         // and resuming tries the audio again. An alert can't be shown yet: the view isn't on screen.
         var message = launchMessage
+        if runtime.supportsPrinter {
+            do {
+                try runtime.setPrinterConnected(true)
+                printerConnected = true
+            } catch {
+                message = [message, "Could not connect the printer. Try again from Game Boy Printer."].compactMap { $0 }.joined(separator: " ")
+            }
+        }
         audio.apply(soundMode)
         audio.onDisturbance = { [weak self] in self?.audioWasDisturbed() }
         do {
             try audio.start()
         } catch {
-            message = [launchMessage, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
+            message = [message, "Sound is unavailable right now."].compactMap { $0 }.joined(separator: " ")
         }
         // Introduce the menu button once, on the first game played.
         if !UserDefaults.standard.bool(forKey: Self.menuHintShownKey) {
@@ -300,6 +312,15 @@ final class GameplayViewController: UIViewController {
         NSLayoutConstraint.activate([centerX, centerY])
         pausedOverlayCenterX = centerX
         pausedOverlayCenterY = centerY
+        printerStatus.translatesAutoresizingMaskIntoConstraints = false
+        printerStatus.onViewPrint = { [weak self] in self?.showPrinterPrints() }
+        view.addSubview(printerStatus)
+        NSLayoutConstraint.activate([
+            printerStatus.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            printerStatus.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            printerStatus.leadingAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
+            printerStatus.trailingAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+        ])
     }
 
     private lazy var gameMenu = makeGameMenu()
@@ -342,6 +363,7 @@ final class GameplayViewController: UIViewController {
         }
         elements.append(makeCaptureMenu())
         if runtime.hasCamera { elements.append(makeCameraMenu()) }
+        if runtime.supportsPrinter { elements.append(makePrinterMenu()) }
         elements.append(UIMenu(
             title: "Sound",
             subtitle: soundMode.displayName,
@@ -376,6 +398,36 @@ final class GameplayViewController: UIViewController {
         #endif
         elements.append(UIMenu(options: .displayInline, children: [restart, close]))
         return elements
+    }
+
+    private func makePrinterMenu() -> UIMenu {
+        let connect = UIAction(
+            title: "Connect Printer", image: UIImage(systemName: "printer"),
+            state: printerConnected ? .on : .off
+        ) { [weak self] _ in
+            guard let self else { return }
+            do {
+                try self.runtime.setPrinterConnected(!self.printerConnected)
+                self.printerConnected.toggle()
+                self.printerFeed.endRoll()
+            } catch { self.showTransientMessage("Could not update the printer connection.") }
+        }
+        let prints = UIAction(
+            title: "View Prints", image: UIImage(systemName: "doc.richtext"),
+            attributes: printerFeed.slips.isEmpty ? .disabled : []
+        ) { [weak self] _ in self?.showPrinterPrints() }
+        return UIMenu(title: "Game Boy Printer", subtitle: printerConnected ? "Connected" : "Off",
+                      image: UIImage(systemName: "printer"), children: [connect, prints])
+    }
+
+    private func showPrinterPrints() {
+        guard presentedViewController == nil, !printerFeed.slips.isEmpty else { return }
+        setCoveredBySheet(true)
+        printerStatus.dismissReadyPrint()
+        let preview = PrinterPreview(slips: printerFeed.slips, gameArtworkURL: artworkTarget?.currentFileURL())
+        let sheet = PrinterPreviewController(rootView: preview)
+        sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
+        present(sheet, animated: true)
     }
 
     private func makeCaptureMenu() -> UIMenu {
@@ -636,6 +688,7 @@ final class GameplayViewController: UIViewController {
         holdFrames()
         do {
             guard try states.loadingWouldRollBackSave(state) else {
+                self.printerFeed.endRoll()
                 try states.loadState(state)
                 releaseFrames()
                 showTransientMessage("State loaded.")
@@ -659,6 +712,7 @@ final class GameplayViewController: UIViewController {
             defer { self.releaseFrames() }
             guard let states = self.runtime as? any SaveStateRuntime else { return }
             do {
+                self.printerFeed.endRoll()
                 try states.loadStateKeepingCopy(state)
                 self.showTransientMessage("State loaded. The newer save was kept as a copy.")
             } catch {
@@ -669,6 +723,27 @@ final class GameplayViewController: UIViewController {
     }
 
     private func configureRuntimeLoop() {
+        if runtime.supportsPrinter {
+            let feed = printerFeed
+            driver.onPrinterOutput = { [weak self] outputs in
+                do {
+                    try feed.receive(outputs)
+                    DispatchQueue.main.async {
+                        self?.printerStatus.printReceived(pages: outputs.count)
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        self?.showTransientMessage("This print is too long. Earlier prints are still available.")
+                    }
+                }
+            }
+            driver.onPrinterActivity = { [weak self] activity in
+                DispatchQueue.main.async { self?.printerStatus.showActivity(activity) }
+            }
+            driver.onPrinterError = { [weak self] _ in
+                DispatchQueue.main.async { self?.showTransientMessage("The printer could not keep every page. Try printing again.") }
+            }
+        }
         driver.onFrame = { [weak self] frame in
             DispatchQueue.main.async {
                 guard let self, let renderer = self.renderer else { return }
@@ -692,7 +767,7 @@ final class GameplayViewController: UIViewController {
         }
     }
 
-    /// Quick Play's primary metric (docs/product.md): time from choosing the file to the first
+    /// Quick Play's primary metric (docs/product.md): time from starting the launch to the first
     /// frame handed to Metal. The device checklist records this figure.
     private func reportFirstFrame() {
         guard let start = firstFrameClock else { return }
@@ -1095,6 +1170,7 @@ final class GameplayViewController: UIViewController {
             guard let self else { return }
             defer { self.releaseFrames() }
             do {
+                self.printerFeed.endRoll()
                 try self.runtime.restart()
                 self.resumeTapped()
             } catch {
@@ -1151,6 +1227,7 @@ final class GameplayViewController: UIViewController {
         holdFrames()
         defer { releaseFrames() }
         do {
+            printerFeed.endRoll()
             try runtime.restart()
             resumeTapped()
             showTransientMessage("Restarted on \(model.displayName).")

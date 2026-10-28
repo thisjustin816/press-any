@@ -8,6 +8,7 @@ import SwiftUI
 /// value it gets and where that value comes from, or holds its own value until it is reset to
 /// inherit.
 struct ScopedSettingsView: View {
+    static let buttonBounceExplanation = "Button Bounce makes a button chatter briefly after each press and release, as the hardware's contacts do. Turn it off if a game counts one tap twice."
     let title: String
     let scope: SettingsScope
     let system: GameSystem
@@ -198,6 +199,13 @@ struct ScopedSettingsView: View {
                 context: context
             )
             InheritableSettingRow(
+                title: "Button Bounce",
+                key: .buttonBounce,
+                defaultValue: true,
+                options: [(true, "On"), (false, "Off")],
+                context: context
+            )
+            InheritableSettingRow(
                 title: "Model",
                 key: .hardwareModel,
                 defaultValue: HardwareModel.automatic,
@@ -211,7 +219,8 @@ struct ScopedSettingsView: View {
         } header: {
             Text("Playing")
         } footer: {
-            Text(HardwareModel.settingSummary)
+            // A menu row shows no explanation of its own, so Button Bounce's goes here.
+            Text(Self.buttonBounceExplanation + " " + HardwareModel.settingSummary)
         }
     }
 

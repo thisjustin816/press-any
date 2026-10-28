@@ -48,7 +48,8 @@ final class AppContainer {
     let evictGeneratedImage: EvictGeneratedImage
     let gameArtwork: GameArtwork
     private let artworkProvider: (any ArtworkProvider)?
-    private var artworkTasks: [UUID: Task<Void, Never>] = [:]
+    /// Tests await a lookup through here; the app only starts them.
+    private(set) var artworkTasks: [UUID: Task<Void, Never>] = [:]
     private(set) var backgroundMaintenance: Task<Void, Error>?
     let quickPlayWorkspace: QuickPlayWorkspace
     let quickPlayPromoter: PromoteQuickPlay
@@ -805,6 +806,10 @@ final class AppContainer {
     ) -> Value? {
         guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return nil }
         return launchSetting(type, key, system: build.system, gameID: build.gameID, buildID: build.id)
+    }
+
+    func quickPlayButtonBounce(system: GameSystem) -> Bool {
+        launchSetting(Bool.self, .buttonBounce, system: system, gameID: nil, buildID: nil) ?? true
     }
 
     func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {

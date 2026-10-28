@@ -10,7 +10,7 @@ import XCTest
 final class ImportArtworkPreviewTests: XCTestCase {
     func testPreviewIsNotStoredUntilImportAndKeepsItsProvenance() async throws {
         let provider = PreviewArtworkProvider(data: ArtworkTestLibrary.png())
-        let fixture = try PreviewFixture(provider: provider)
+        let fixture = try await PreviewFixture(provider: provider)
         defer { fixture.library.removeFiles() }
 
         await fixture.review.loadAutomaticArtwork()
@@ -31,7 +31,7 @@ final class ImportArtworkPreviewTests: XCTestCase {
     func testManualArtworkWinsOverALateAutomaticProposal() async throws {
         let requested = expectation(description: "Preview download begins")
         let provider = PendingArtworkProvider { _, _ in requested.fulfill() }
-        let fixture = try PreviewFixture(provider: provider)
+        let fixture = try await PreviewFixture(provider: provider)
         defer { fixture.library.removeFiles() }
         let task = Task { await fixture.review.loadAutomaticArtwork() }
         await fulfillment(of: [requested], timeout: 3)
@@ -49,7 +49,7 @@ final class ImportArtworkPreviewTests: XCTestCase {
 
     func testRemovingTheAutomaticPreviewImportsWithoutArtworkOrAnotherLookup() async throws {
         let provider = PreviewArtworkProvider(data: ArtworkTestLibrary.png())
-        let fixture = try PreviewFixture(provider: provider)
+        let fixture = try await PreviewFixture(provider: provider)
         defer { fixture.library.removeFiles() }
         await fixture.review.loadAutomaticArtwork()
         XCTAssertNotNil(fixture.review.artworkPreview)
@@ -65,7 +65,7 @@ final class ImportArtworkPreviewTests: XCTestCase {
 
     func testImportSettingOffDoesNotDownloadAPreview() async throws {
         let provider = PreviewArtworkProvider(data: ArtworkTestLibrary.png())
-        let fixture = try PreviewFixture(provider: provider)
+        let fixture = try await PreviewFixture(provider: provider)
         defer { fixture.library.removeFiles() }
         try AutomaticArtworkSetting(store: fixture.library.container.repositories.settings).save(false)
 
@@ -79,7 +79,7 @@ final class ImportArtworkPreviewTests: XCTestCase {
     func testChangingTheRequestDiscardsALateProposal() async throws {
         let requested = expectation(description: "Preview download begins")
         let provider = PendingArtworkProvider { _, _ in requested.fulfill() }
-        let fixture = try PreviewFixture(provider: provider)
+        let fixture = try await PreviewFixture(provider: provider)
         defer { fixture.library.removeFiles() }
         let task = Task { await fixture.review.loadAutomaticArtwork() }
         await fulfillment(of: [requested], timeout: 3)
@@ -94,7 +94,7 @@ final class ImportArtworkPreviewTests: XCTestCase {
     func testCancelDiscardsALateProposalAndTheStagedROM() async throws {
         let requested = expectation(description: "Preview download begins")
         let provider = PendingArtworkProvider { _, _ in requested.fulfill() }
-        let fixture = try PreviewFixture(provider: provider)
+        let fixture = try await PreviewFixture(provider: provider)
         defer { fixture.library.removeFiles() }
         let task = Task { await fixture.review.loadAutomaticArtwork() }
         await fulfillment(of: [requested], timeout: 3)
@@ -110,7 +110,7 @@ final class ImportArtworkPreviewTests: XCTestCase {
 
     func testAPreferredBuildChangedDuringReviewKeepsTheStaleProposalOut() async throws {
         let provider = PreviewArtworkProvider(data: ArtworkTestLibrary.png())
-        let fixture = try PreviewFixture(provider: provider, existingGame: true)
+        let fixture = try await PreviewFixture(provider: provider, existingGame: true)
         defer { fixture.library.removeFiles() }
         let container = fixture.library.container
         var game = try XCTUnwrap(container.repositories.games.fetchGames().first)
@@ -130,7 +130,7 @@ final class ImportArtworkPreviewTests: XCTestCase {
         let requested = expectation(description: "Preview download begins")
         let provider = PendingArtworkProvider { _, _ in requested.fulfill() }
         var lookups = 0
-        let fixture = try PreviewFixture(provider: provider, fetchArtwork: { _ in lookups += 1 })
+        let fixture = try await PreviewFixture(provider: provider, fetchArtwork: { _ in lookups += 1 })
         defer { fixture.library.removeFiles() }
         let task = Task { await fixture.review.loadAutomaticArtwork() }
         await fulfillment(of: [requested], timeout: 3)
@@ -162,8 +162,8 @@ private struct PreviewFixture {
     let library: ArtworkTestLibrary
     let review: ImportReviewViewModel
 
-    init(provider: any ArtworkProvider, existingGame: Bool = false, fetchArtwork: ((Build) -> Void)? = nil) throws {
-        library = try ArtworkTestLibrary(provider: provider)
+    init(provider: any ArtworkProvider, existingGame: Bool = false, fetchArtwork: ((Build) -> Void)? = nil) async throws {
+        library = try await ArtworkTestLibrary(provider: provider)
         let container = library.container
         if existingGame { _ = try library.addGame(dump: library.dumps[0], marker: 1) }
         let file = library.root.appendingPathComponent("Preview Example.gb")

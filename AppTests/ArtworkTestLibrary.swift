@@ -11,11 +11,14 @@ struct ArtworkTestLibrary {
     let container: AppContainer
     let dumps: [KnownDump]
 
-    init(provider: any ArtworkProvider) throws {
+    /// Waits for the container's launch maintenance, so it doesn't hold the database or the
+    /// utility threads while a test times artwork work, or outlive the files it runs on.
+    init(provider: any ArtworkProvider) async throws {
         let index = try KnownDumpIndex.bundled()
         let recognized = index.catalog.games.filter { $0.system == .gameBoy && $0.files.contains { !$0.bad } }
         dumps = [try XCTUnwrap(recognized.first), try XCTUnwrap(recognized.dropFirst().first)]
         container = try AppContainer(rootURL: root, artworkProvider: provider)
+        try await container.backgroundMaintenance?.value
     }
 
     func addGame(dump: KnownDump?, marker: UInt8) throws -> Game {

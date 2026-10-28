@@ -13,10 +13,12 @@ struct PNGFrameEncoder: FrameImageEncoding {
     }
 
     let fileExtension = "png"
+    var preservesAlpha = false
 
     func encode(_ frame: EmulatorVideoFrame) throws -> Data {
-        // The core's BGRA is little-endian ARGB with alpha first; the picture is opaque.
-        let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue
+        // Core frames are opaque; rendered paper also uses premultiplied alpha at its edges.
+        let alpha: CGImageAlphaInfo = preservesAlpha ? .premultipliedFirst : .noneSkipFirst
+        let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue | alpha.rawValue
         guard frame.width > 0, frame.height > 0,
               frame.bgra8888.count >= frame.width * frame.height * 4,
               let provider = CGDataProvider(data: frame.bgra8888 as CFData),

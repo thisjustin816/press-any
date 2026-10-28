@@ -50,9 +50,9 @@ targets:
         PRODUCT_NAME: PressAny
         INFOPLIST_KEY_CFBundleDisplayName: Press Any
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
-        # Save Image in the share sheet, which Share Screenshot opens, needs this key. The app only
+        # Saving a screenshot or printer slip from the share sheet needs this key. The app only
         # adds to Photos and never reads the library.
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Press Any adds a screenshot to your Photos when you choose Save Image in the share sheet."
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Save Image adds the selected image to Photos."
         INFOPLIST_KEY_NSCameraUsageDescription: "Game Boy Camera games see through your iPhone's camera. Images stay on your iPhone."
         # Document types and exempt encryption declaration, merged into the generated Info.plist.
         INFOPLIST_FILE: Config/PressAny-Info.plist
