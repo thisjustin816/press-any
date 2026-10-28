@@ -358,8 +358,9 @@ behavior or Apple SDK compilation.
 ### Printer backgrounds
 
 - [ ] Choose the bundled Wood background offline and verify the photograph and credit in Settings.
-- [ ] Tap Add and choose From Photos… and From Files…: each opens its picker over the preview, and
-  an imported image appears as Custom and is selected. Touch and hold Custom: Replace from Photos…
+- [ ] With no custom image, the last tile is an empty dashed Custom tile. Tap it and choose From
+  Photos… and From Files…: each opens its picker over the preview, and the imported image fills the
+  Custom tile and is selected. There is no separate Add tile. Touch and hold Custom: Replace from Photos…
   and Replace from Files… open their pickers.
   Import a custom image from Photos, then Files. Cancel each picker and verify the previous
   background remains available. Export Custom and confirm the image fills the area behind paper.

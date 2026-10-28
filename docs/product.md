@@ -1513,11 +1513,12 @@ page 2...**, and ends with **Print ready**, since pages without a feed margin be
 so no total is shown.
 **Game Artwork** uses the Game's library artwork as the background when it has any; it is offered
 in library play and not in Quick Play. It is cropped like Custom and is not copied or stored.
-The **Add** tile at the end of the row offers **From Photos…** and **From Files…**, as the Game's
-Artwork menu does; the imported image becomes the Custom preview and is selected. One custom image
-is kept on-device and remains available in later previews. Touching and holding Custom offers
-**Replace from Photos…**, **Replace from Files…** and **Remove Background**; removing it while
-selected returns to Transparent. Import accepts images
+The last tile is the one **Custom** slot. Until an image is chosen it's an empty dashed tile that
+offers **From Photos…** and **From Files…**, as the Game's Artwork menu does; the imported image
+fills it and is selected. One custom image is kept on-device and remains available in later
+previews. Touching and holding the filled Custom tile offers **Replace from Photos…**, **Replace
+from Files…** and **Remove Background**; removing it empties the slot and, while selected, returns
+to Transparent. Import accepts images
 up to 25 MB and 100 million source pixels, downsamples to 1,536 pixels on the longest edge,
 flattens transparency onto white and stores a JPEG without the original metadata. The original
 image is left alone, and a failed replacement preserves the saved background. The photo is
