@@ -1382,6 +1382,18 @@ final class GameMenuButton: UIButton {
         onMenuDismissed?()
     }
 
+    /// The menu closes by morphing back into this button. Build 179 crashed inside that iOS 27.2
+    /// morph after a game import, possibly once a rotation left the button with nothing to land on.
+    /// When the button is out of its window, hidden or off screen, the menu closes with the default
+    /// animation instead; on screen it closes as before.
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration
+    ) -> UITargetedPreview? {
+        guard let window, !isHidden, alpha > 0, window.bounds.intersects(convert(bounds, to: window)) else { return nil }
+        return super.contextMenuInteraction(interaction, previewForDismissingMenuWithConfiguration: configuration)
+    }
+
     private let face = CAGradientLayer()
     private let wordmark = UIImageView()
     private var palette: ControllerPalette?
