@@ -30,13 +30,14 @@ final class PrinterPreviewController: UIHostingController<PrinterPreview>, UIAda
 }
 
 private enum PrinterPreviewBackground: String, CaseIterable, Sendable {
-    case transparent, light, dark, wood, gameArtwork, custom
+    case transparent, light, dark, wood, printer, gameArtwork, custom
     var title: String {
         switch self {
         case .transparent: "Transparent"
         case .light: "Light"
         case .dark: "Dark"
         case .wood: "Wood"
+        case .printer: "Printer"
         case .gameArtwork: "Artwork"
         case .custom: "Custom"
         }
@@ -268,6 +269,7 @@ struct PrinterPreview: View {
         case .transparent: Checkerboard()
         case .light: Color(white: 0.96)
         case .dark: Color(white: 0.16)
+        case .printer: PrinterSwatch()
         case .wood, .gameArtwork, .custom:
             if let image = thumbnails[option] {
                 Image(uiImage: image).resizable().scaledToFill()
@@ -356,6 +358,10 @@ struct PrinterPreview: View {
         let artworkURL = gameArtworkURL
         do {
             let data = try await Task.detached(priority: .userInitiated) {
+                if background == .printer {
+                    guard let data = PrinterScene.render(slip)?.pngData() else { throw PrinterBackgroundStore.ImageError.invalidImage }
+                    return data
+                }
                 let image: PrinterSlipRenderer.Image
                 switch background {
                 case .wood: image = PrinterSlipRenderer.render(slip, image: try PrinterBackgroundStore.wood())
@@ -395,6 +401,30 @@ private struct PrinterShareSheet: UIViewControllerRepresentable {
         return controller
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+/// The Printer background's tile: paper rising out of a dark printer with its red light.
+private struct PrinterSwatch: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let size = geometry.size
+            ZStack(alignment: .top) {
+                Color(white: 0.08)
+                Rectangle()
+                    .fill(Color(white: 0.97))
+                    .frame(width: size.width * 0.56, height: size.height * 0.62)
+                    .offset(y: size.height * 0.06)
+                Rectangle()
+                    .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.12)], startPoint: .top, endPoint: .bottom))
+                    .frame(height: size.height * 0.36)
+                    .offset(y: size.height * 0.64)
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: size.width * 0.1)
+                    .offset(x: size.width * 0.3, y: size.height * 0.84)
+            }
+        }
+    }
 }
 
 /// The usual sign for transparency: a light gray checkerboard.
