@@ -10,8 +10,8 @@ SAMEBOY_ROOT="$(resolve_sameboy_root "$ROOT_DIR")" || {
 RESOURCE_DIR="$ROOT_DIR/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs"
 VERSION="$(sed -n 's/^VERSION := //p' "$SAMEBOY_ROOT/version.mk")"
 
-if [[ "$VERSION" != "1.0.3" ]]; then
-  echo "Expected SameBoy 1.0.3, found '$VERSION'" >&2
+if [[ "$VERSION" != "1.0.4" ]]; then
+  echo "Expected SameBoy 1.0.4, found '$VERSION'" >&2
   exit 1
 fi
 

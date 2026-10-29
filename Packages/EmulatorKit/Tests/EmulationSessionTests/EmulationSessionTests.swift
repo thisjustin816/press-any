@@ -415,6 +415,26 @@ final class EmulationSessionTests: XCTestCase {
         XCTAssertEqual(try harness.assets.fetchAsset(id: state.stateAssetID)?.integrityStatus, .verified)
     }
 
+    func testAStateFromAReplacedCoreVersionLoadsAndAnotherCoresDoesNot() throws {
+        let harness = try SessionHarness.make()
+        let service = SaveStateService(states: harness.states, assets: harness.assets, assetStore: harness.store)
+        let old = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
+        let oldWorker = SessionWorker(core: FakeEmulatorCore(descriptor: old))
+        try oldWorker.perform { try $0.loadPersistentSave(Data([1, 2, 3])) }
+        let state = try service.save(worker: oldWorker, context: harness.contextA, kind: .manual, playtimeSeconds: 0)
+
+        let replacement = SessionWorker(core: FakeEmulatorCore(
+            descriptor: CoreDescriptor(identifier: "sameboy", version: "1.0.4"), replacedDescriptors: [old]
+        ))
+        try service.load(state, worker: replacement, context: harness.contextA)
+        XCTAssertEqual(try replacement.perform { try $0.persistentSaveData() }, Data([1, 2, 3]))
+
+        let unrelated = SessionWorker(core: FakeEmulatorCore(descriptor: CoreDescriptor(identifier: "sameboy", version: "1.0.4")))
+        XCTAssertThrowsError(try service.load(state, worker: unrelated, context: harness.contextA)) {
+            XCTAssertEqual($0 as? SaveStateServiceError, .coreMismatch(expected: old, actual: CoreDescriptor(identifier: "sameboy", version: "1.0.4")))
+        }
+    }
+
     func testDamagedStateIsRejectedBeforeDeserializationMarkedAndKept() throws {
         try assertDamagedStateIsRejected(markingFails: false)
     }

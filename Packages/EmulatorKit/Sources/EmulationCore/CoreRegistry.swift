@@ -13,8 +13,10 @@ public struct CoreRegistry: Sendable {
         self.factories = factories
     }
 
+    /// The core a Build is pinned to, or the one that replaced that version.
     public func factory(for descriptor: CoreDescriptor) throws -> any EmulatorCoreFactory {
-        guard let factory = factories.first(where: { $0.descriptor == descriptor }) else {
+        guard let factory = factories.first(where: { $0.descriptor == descriptor })
+                ?? factories.first(where: { $0.replacedDescriptors.contains(descriptor) }) else {
             throw CoreRegistryError.pinnedCoreUnavailable(descriptor)
         }
         return factory
