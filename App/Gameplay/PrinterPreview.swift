@@ -412,7 +412,7 @@ private struct PrinterSwatch: View {
             ZStack(alignment: .top) {
                 Color(white: 0.1)
                 RoundedRectangle(cornerRadius: size.width * 0.08)
-                    .fill(Color(red: 0.79, green: 0.77, blue: 0.75))
+                    .fill(Color(red: 0.82, green: 0.81, blue: 0.78))
                     .frame(width: size.width * 0.9, height: size.height * 0.78)
                     .offset(y: size.height * 0.2)
                 Rectangle()
@@ -432,7 +432,7 @@ private struct PrinterSwatch: View {
                     .frame(width: size.width * 0.09)
                     .offset(x: size.width * 0.26, y: size.height * 0.64)
                 Circle()
-                    .fill(Color(red: 0.45, green: 0.18, blue: 0.36))
+                    .fill(Color(red: 0.69, green: 0.13, blue: 0.40))
                     .frame(width: size.width * 0.16)
                     .offset(x: -size.width * 0.24, y: size.height * 0.8)
             }

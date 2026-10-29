@@ -16,8 +16,6 @@ enum PrinterScene {
     private static let slotInset: CGFloat = 150
     private static let slotDepth: CGFloat = 40
 
-    private static let bodyGray = UIColor(red: 0.81, green: 0.79, blue: 0.77, alpha: 1)
-    private static let bodyShade = UIColor(red: 0.72, green: 0.70, blue: 0.68, alpha: 1)
     private static let panelBlack = UIColor(red: 0.03, green: 0.03, blue: 0.04, alpha: 1)
     private static let lettering = UIColor(white: 0.93, alpha: 1)
 
@@ -58,7 +56,9 @@ enum PrinterScene {
         let path = UIBezierPath(roundedRect: shell, cornerRadius: 56)
         cg.saveGState()
         path.addClip()
-        let colors = [bodyGray.cgColor, bodyShade.cgColor] as CFArray
+        // The same Game Boy gray as the Classic touch controller.
+        let palette = ControllerPalette.classic
+        let colors = [palette.bodyTop.cgColor, palette.bodyBottom.cgColor] as CFArray
         if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
             cg.drawLinearGradient(gradient, start: CGPoint(x: 0, y: shell.minY), end: CGPoint(x: 0, y: shell.maxY), options: [])
         }
@@ -94,8 +94,7 @@ enum PrinterScene {
         UIBezierPath(roundedRect: slot, cornerRadius: 6).fill()
 
         let top = slotY + slotDepth + 70
-        let wordmark = AppBrand.Wordmark.artwork(size: 92, appearance: .light).withTintColor(lettering, renderingMode: .alwaysOriginal)
-        wordmark.draw(at: CGPoint(x: 150, y: top))
+        wordmark(height: 92)?.draw(at: CGPoint(x: 150, y: top))
         let printer = NSAttributedString(string: "printer", attributes: [
             .font: UIFont.systemFont(ofSize: 176, weight: .heavy).withTraits(.traitItalic),
             .foregroundColor: lettering,
@@ -140,11 +139,20 @@ enum PrinterScene {
 
     /// The gray base below the panel, with the Feed button and the power switch.
     private static func drawBase(in cg: CGContext, top: CGFloat) {
+        // Feed takes the Game Boy's A and B color, lighter at the top like the touch controls' buttons.
         let feed = CGRect(x: 150, y: top + 90, width: 150, height: 150)
         cg.saveGState()
         cg.setShadow(offset: CGSize(width: 0, height: 6), blur: 10, color: UIColor(white: 0, alpha: 0.35).cgColor)
-        UIColor(red: 0.45, green: 0.18, blue: 0.36, alpha: 1).setFill()
         cg.fillEllipse(in: feed)
+        cg.restoreGState()
+        cg.saveGState()
+        cg.addEllipse(in: feed)
+        cg.clip()
+        let palette = ControllerPalette.classic
+        let colors = [palette.buttonTop.cgColor, palette.buttonBottom.cgColor] as CFArray
+        if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
+            cg.drawLinearGradient(gradient, start: CGPoint(x: 0, y: feed.minY), end: CGPoint(x: 0, y: feed.maxY), options: [])
+        }
         cg.restoreGState()
         label("FEED", size: 34, color: UIColor(white: 0.95, alpha: 0.9), center: CGPoint(x: feed.midX, y: feed.midY))
 
@@ -154,6 +162,32 @@ enum PrinterScene {
         UIColor(red: 0.86, green: 0.84, blue: 0.82, alpha: 1).setFill()
         cg.fillEllipse(in: CGRect(x: switchWell.midX - 32, y: switchWell.midY - 22, width: 64, height: 64))
         label("POWER", size: 28, color: UIColor(white: 0.25, alpha: 1), center: CGPoint(x: switchWell.midX, y: switchWell.minY - 24))
+    }
+
+    /// The wordmark as it shows in Dark Mode, with its pink A, and the other letters in the panel's
+    /// light lettering.
+    private static func wordmark(height: CGFloat) -> UIImage? {
+        let art = AppBrand.Wordmark.artwork(size: height, appearance: .dark)
+        guard let source = art.cgImage else { return nil }
+        let width = source.width, rows = source.height
+        var pixels = [UInt8](repeating: 0, count: width * rows * 4)
+        let space = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let context = CGContext(data: &pixels, width: width, height: rows, bitsPerComponent: 8,
+                                      bytesPerRow: width * 4, space: space, bitmapInfo: info) else { return nil }
+        context.draw(source, in: CGRect(x: 0, y: 0, width: width, height: rows))
+        var light: (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        lettering.getRed(&light.0, green: &light.1, blue: &light.2, alpha: &light.3)
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            let alpha = Int(pixels[i + 3])
+            // The pink A is much redder than green; the lavender letters aren't.
+            guard alpha > 0, Int(pixels[i]) - Int(pixels[i + 1]) < alpha / 4 else { continue }
+            pixels[i] = UInt8(light.0 * CGFloat(alpha))
+            pixels[i + 1] = UInt8(light.1 * CGFloat(alpha))
+            pixels[i + 2] = UInt8(light.2 * CGFloat(alpha))
+        }
+        guard let recolored = context.makeImage() else { return nil }
+        return UIImage(cgImage: recolored, scale: art.scale, orientation: .up)
     }
 
     private static func label(_ text: String, size: CGFloat, color: UIColor, center: CGPoint) {
