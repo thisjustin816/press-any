@@ -1526,7 +1526,8 @@ selected one outlined. Transparent is the default until another background is ch
 then opens with the last one chosen, in any game. A remembered Game Artwork or Custom background
 that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered. Wood uses Dimitrios Savva's CC0 Wood Table
 photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements. **Printer** draws
-the slip coming out of a printer laid out like the Game Boy Printer. A smoked lid with the paper
+the slip coming out of a printer laid out like the Game Boy Printer and drawn to scale with the
+paper, which is about a third of its width. A smoked lid with the paper
 roll showing through and a darker rim rises above a tall body in the Classic controller's Game
 Boy gray. Under the lid, a black panel holds the slot window, with a serrated cutter in front of
 the paper whose teeth are the shape of the paper's torn edge. The Press Any wordmark, with its A

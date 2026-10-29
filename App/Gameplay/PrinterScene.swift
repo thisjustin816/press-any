@@ -6,10 +6,15 @@ import UIKit
 /// body, a black panel with the slot and its serrated cutter, the name centered under it and a
 /// power light, a raised badge, and the Feed button and power switch low on the body.
 /// The slip is rendered on a transparent background first, then the printer is drawn around it,
-/// so its pixel grid stays as the renderer made it.
+/// so its pixel grid stays as the renderer made it. The printer is drawn to scale with the paper,
+/// which is about a third of its width, as on the machine.
+///
+/// The printer's measurements are in printer units, drawn `printerScale` pixels each. The paper,
+/// its shade in the slot and the cutter, whose teeth match the paper's torn edge, are in pixels.
 enum PrinterScene {
+    private static let printerScale: CGFloat = 1.8
     private static let width: CGFloat = 1300
-    /// The slip's paper starts this far into its transparent render.
+    /// The slip's paper starts this far into its transparent render, in pixels.
     private static let paperInset: CGFloat = CGFloat(24 * PrinterSlipRenderer.scale)
     private static let bodyInset: CGFloat = 70
     /// How far the lid stands above the body's top edge.
@@ -24,9 +29,9 @@ enum PrinterScene {
     private static let baseStep: CGFloat = 30
     private static let windowTop: CGFloat = 34
     private static let windowInset: CGFloat = 230
-    /// From the slot window's top edge to the cutter.
-    private static let slotDepth: CGFloat = 40
-    private static let cutterBar: CGFloat = 8
+    /// From the slot window's top edge to the cutter, in pixels.
+    private static let slotDepth: CGFloat = 60
+    private static let cutterBar: CGFloat = 12
     /// How far the paper's bottom edge runs into the slot: past the cutter's bar by a tooth's depth,
     /// so the notches in that edge stay inside the printer, where the paper is cut off from view.
     private static let paperSink: CGFloat = slotDepth + cutterBar + CGFloat(PrinterSlipRenderer.tearDepth)
@@ -39,12 +44,13 @@ enum PrinterScene {
         guard let paper = cgImage(PrinterSlipRenderer.render(slip, background: .transparent)) else { return nil }
         let paperSize = CGSize(width: paper.width, height: paper.height)
         // A short slip comes out under the lid; a long one rises above the printer.
-        let bodyTop = max(40 + lidRise, paperSize.height - paperInset - paperSink - lidHeight - windowTop + 40)
+        let bodyTop = max(40 + lidRise, (paperSize.height - paperInset - paperSink + 40) / printerScale - lidHeight - windowTop)
         let panelTop = bodyTop + lidHeight
-        let slotY = panelTop + windowTop
         let bodyBottom = panelTop + panelHeight + baseHeight
-        let paperOrigin = CGPoint(x: (width - paperSize.width) / 2, y: slotY + paperSink + paperInset - paperSize.height)
-        let size = CGSize(width: width, height: bodyBottom + baseStep + 40)
+        // Whole pixels, so the paper's pixel grid lands on the image's.
+        let slotY = ((panelTop + windowTop) * printerScale).rounded()
+        let paperOrigin = CGPoint(x: (width * printerScale - paperSize.width) / 2, y: slotY + paperSink + paperInset - paperSize.height)
+        let size = CGSize(width: width * printerScale, height: ((bodyBottom + baseStep + 40) * printerScale).rounded())
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         format.opaque = true
@@ -52,13 +58,16 @@ enum PrinterScene {
             let cg = context.cgContext
             UIColor(white: 0.1, alpha: 1).setFill()
             cg.fill(CGRect(origin: .zero, size: size))
+            cg.saveGState()
+            cg.scaleBy(x: printerScale, y: printerScale)
             drawBody(in: cg, top: bodyTop, bottom: bodyBottom)
             drawLid(in: cg, top: bodyTop - lidRise, bottom: panelTop)
-            drawPanel(in: cg, top: panelTop, slotY: slotY)
+            drawPanel(in: cg, top: panelTop)
+            cg.restoreGState()
             // UIKit draws a CGImage upside down without this flip. Below the cutter, the paper is
             // inside the printer.
             cg.saveGState()
-            cg.clip(to: CGRect(x: 0, y: 0, width: width, height: slotY + slotDepth + cutterBar))
+            cg.clip(to: CGRect(x: 0, y: 0, width: size.width, height: slotY + slotDepth + cutterBar))
             cg.translateBy(x: 0, y: paperOrigin.y * 2 + paperSize.height)
             cg.scaleBy(x: 1, y: -1)
             cg.interpolationQuality = .none
@@ -66,7 +75,10 @@ enum PrinterScene {
             cg.restoreGState()
             shadePaperInSlot(in: cg, paperOrigin: paperOrigin, paperWidth: paperSize.width, slotY: slotY)
             drawCutter(in: cg, slotY: slotY, paperLeft: paperOrigin.x + paperInset)
+            cg.saveGState()
+            cg.scaleBy(x: printerScale, y: printerScale)
             drawBase(in: cg, top: panelTop + panelHeight)
+            cg.restoreGState()
         }
     }
 
@@ -127,30 +139,33 @@ enum PrinterScene {
 
     /// The black panel: the slot window near its top, the name centered under it, and the power
     /// light with BATT. marked under it.
-    private static func drawPanel(in cg: CGContext, top: CGFloat, slotY: CGFloat) {
+    private static func drawPanel(in cg: CGContext, top: CGFloat) {
         let panel = CGRect(x: bodyInset + panelInset, y: top, width: width - (bodyInset + panelInset) * 2, height: panelHeight)
         panelBlack.setFill()
         UIBezierPath(roundedRect: panel, cornerRadius: 10).fill()
-        let window = CGRect(x: windowInset, y: slotY, width: width - windowInset * 2, height: slotDepth + cutterBar + 40)
+        let window = CGRect(x: windowInset, y: top + windowTop, width: width - windowInset * 2,
+                            height: (slotDepth + cutterBar) / printerScale + 40)
         UIColor.black.setFill()
         UIBezierPath(roundedRect: window, cornerRadius: 8).fill()
 
         // The wordmark over "printer", their left edges lined up and the two centered together.
         let wordmarkHeight: CGFloat = 64
-        let name = wordmark(height: wordmarkHeight)
+        // Made at its drawn pixel size, so scaling it up doesn't blur it.
+        let name = wordmark(height: wordmarkHeight * printerScale)
+        let nameSize = CGSize(width: (name?.size.width ?? 0) / printerScale, height: (name?.size.height ?? 0) / printerScale)
         let printer = NSAttributedString(string: "printer", attributes: [
             .font: UIFont.systemFont(ofSize: 160, weight: .heavy).withTraits(.traitItalic),
             .foregroundColor: lettering,
         ])
-        let blockWidth = max(name?.size.width ?? 0, printer.size().width)
+        let blockWidth = max(nameSize.width, printer.size().width)
         let left = (width - blockWidth) / 2 - 20
         let textTop = window.maxY + 50
-        name?.draw(at: CGPoint(x: left + 8, y: textTop))
+        name?.draw(in: CGRect(origin: CGPoint(x: left + 8, y: textTop), size: nameSize))
         printer.draw(at: CGPoint(x: left, y: textTop + wordmarkHeight - 6))
 
         let light = CGPoint(x: panel.maxX - 70, y: textTop + 60)
         cg.saveGState()
-        cg.setShadow(offset: .zero, blur: 24, color: UIColor(red: 1, green: 0.1, blue: 0.1, alpha: 0.8).cgColor)
+        cg.setShadow(offset: .zero, blur: 24 * printerScale, color: UIColor(red: 1, green: 0.1, blue: 0.1, alpha: 0.8).cgColor)
         UIColor(red: 0.92, green: 0.07, blue: 0.1, alpha: 1).setFill()
         cg.fillEllipse(in: CGRect(x: light.x - 17, y: light.y - 17, width: 34, height: 34))
         cg.restoreGState()
@@ -180,9 +195,10 @@ enum PrinterScene {
         let depth = CGFloat(PrinterSlipRenderer.tearDepth)
         UIColor(white: 0.66, alpha: 1).setFill()
         let teeth = UIBezierPath()
-        let firstTip = paperLeft - ((paperLeft - windowInset - 16) / pitch).rounded(.down) * pitch
+        let windowLeft = windowInset * printerScale, windowRight = (width - windowInset) * printerScale
+        let firstTip = paperLeft - ((paperLeft - windowLeft - 16) / pitch).rounded(.down) * pitch
         var x = firstTip - pitch / 2
-        while x + pitch <= width - windowInset - 16 + pitch / 2 {
+        while x + pitch <= windowRight - 16 + pitch / 2 {
             teeth.move(to: CGPoint(x: x, y: edge))
             teeth.addLine(to: CGPoint(x: x + pitch / 2, y: edge - depth))
             teeth.addLine(to: CGPoint(x: x + pitch, y: edge))
@@ -191,7 +207,7 @@ enum PrinterScene {
         }
         teeth.fill()
         UIColor(white: 0.58, alpha: 1).setFill()
-        cg.fill(CGRect(x: windowInset, y: edge, width: width - windowInset * 2, height: cutterBar))
+        cg.fill(CGRect(x: windowLeft, y: edge, width: windowRight - windowLeft, height: cutterBar))
     }
 
     /// The body below the panel: the badge, then the Feed button and the power switch low on it.
@@ -201,7 +217,7 @@ enum PrinterScene {
         // Feed takes the Game Boy's A and B color, lighter at the top like the touch controls' buttons.
         let feed = CGRect(x: bodyInset + 108, y: top + 570 - 140, width: 280, height: 280)
         cg.saveGState()
-        cg.setShadow(offset: CGSize(width: 0, height: 8), blur: 14, color: UIColor(white: 0, alpha: 0.35).cgColor)
+        cg.setShadow(offset: CGSize(width: 0, height: 8 * printerScale), blur: 14 * printerScale, color: UIColor(white: 0, alpha: 0.35).cgColor)
         cg.fillEllipse(in: feed)
         cg.restoreGState()
         let palette = ControllerPalette.classic
@@ -244,7 +260,7 @@ enum PrinterScene {
         }
         let plate = CGRect(origin: CGPoint(x: track.minX + 6, y: track.minY + 6), size: plateSize)
         cg.saveGState()
-        cg.setShadow(offset: CGSize(width: 2, height: 3), blur: 4, color: UIColor(white: 0, alpha: 0.3).cgColor)
+        cg.setShadow(offset: CGSize(width: 2 * printerScale, height: 3 * printerScale), blur: 4 * printerScale, color: UIColor(white: 0, alpha: 0.3).cgColor)
         UIColor(red: 0.80, green: 0.79, blue: 0.76, alpha: 1).setFill()
         UIBezierPath(roundedRect: plate, cornerRadius: 8).fill()
         cg.restoreGState()
