@@ -15,6 +15,10 @@ enum PrinterScene {
     private static let baseHeight: CGFloat = 330
     private static let slotInset: CGFloat = 150
     private static let slotDepth: CGFloat = 40
+    private static let cutterBar: CGFloat = 8
+    /// How far the paper's bottom edge runs into the slot: past the cutter's bar by a tooth's depth,
+    /// so the notches in that edge stay inside the printer, where the paper is cut off from view.
+    private static let paperSink: CGFloat = slotDepth + cutterBar + CGFloat(PrinterSlipRenderer.tearDepth)
 
     private static let panelBlack = UIColor(red: 0.03, green: 0.03, blue: 0.04, alpha: 1)
     private static let lettering = UIColor(white: 0.93, alpha: 1)
@@ -23,9 +27,9 @@ enum PrinterScene {
         guard let paper = cgImage(PrinterSlipRenderer.render(slip, background: .transparent)) else { return nil }
         let paperSize = CGSize(width: paper.width, height: paper.height)
         // A short slip still clears the lid; a long one rises above the printer.
-        let bodyTop = max(40, paperSize.height - paperInset - 44 - lidHeight + 40)
+        let bodyTop = max(40, paperSize.height - paperInset - paperSink - lidHeight + 40)
         let slotY = bodyTop + lidHeight
-        let paperOrigin = CGPoint(x: (width - paperSize.width) / 2, y: slotY + 44 + paperInset - paperSize.height)
+        let paperOrigin = CGPoint(x: (width - paperSize.width) / 2, y: slotY + paperSink + paperInset - paperSize.height)
         let size = CGSize(width: width, height: slotY + panelHeight + baseHeight + 40)
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
@@ -37,15 +41,17 @@ enum PrinterScene {
             drawShell(in: cg, top: bodyTop, size: size)
             drawLid(in: cg, top: bodyTop, slotY: slotY)
             drawPanel(in: cg, slotY: slotY)
-            // UIKit draws a CGImage upside down without this flip.
+            // UIKit draws a CGImage upside down without this flip. Below the cutter, the paper is
+            // inside the printer.
             cg.saveGState()
+            cg.clip(to: CGRect(x: 0, y: 0, width: width, height: slotY + slotDepth + cutterBar))
             cg.translateBy(x: 0, y: paperOrigin.y * 2 + paperSize.height)
             cg.scaleBy(x: 1, y: -1)
             cg.interpolationQuality = .none
             cg.draw(paper, in: CGRect(origin: paperOrigin, size: paperSize))
             cg.restoreGState()
             shadePaperInSlot(in: cg, paperOrigin: paperOrigin, paperWidth: paperSize.width, slotY: slotY)
-            drawCutter(in: cg, slotY: slotY)
+            drawCutter(in: cg, slotY: slotY, paperLeft: paperOrigin.x + paperInset)
             drawBase(in: cg, top: slotY + panelHeight)
         }
     }
@@ -137,21 +143,26 @@ enum PrinterScene {
     }
 
     /// The metal cutter along the slot's front edge, its teeth pointing up in front of the paper.
-    private static func drawCutter(in cg: CGContext, slotY: CGFloat) {
+    /// The teeth are the shape the paper's torn edge takes, and line up with it: each tooth's tip
+    /// falls under a point of the edge, where this cutter tore it.
+    private static func drawCutter(in cg: CGContext, slotY: CGFloat, paperLeft: CGFloat) {
         let edge = slotY + slotDepth
+        let pitch = CGFloat(PrinterSlipRenderer.tearPitch)
+        let depth = CGFloat(PrinterSlipRenderer.tearDepth)
         UIColor(white: 0.66, alpha: 1).setFill()
         let teeth = UIBezierPath()
-        var x = slotInset + 16
-        while x + 16 <= width - slotInset - 16 {
+        let firstTip = paperLeft - ((paperLeft - slotInset - 16) / pitch).rounded(.down) * pitch
+        var x = firstTip - pitch / 2
+        while x + pitch <= width - slotInset - 16 + pitch / 2 {
             teeth.move(to: CGPoint(x: x, y: edge))
-            teeth.addLine(to: CGPoint(x: x + 8, y: edge - 16))
-            teeth.addLine(to: CGPoint(x: x + 16, y: edge))
+            teeth.addLine(to: CGPoint(x: x + pitch / 2, y: edge - depth))
+            teeth.addLine(to: CGPoint(x: x + pitch, y: edge))
             teeth.close()
-            x += 16
+            x += pitch
         }
         teeth.fill()
         UIColor(white: 0.58, alpha: 1).setFill()
-        cg.fill(CGRect(x: slotInset, y: edge, width: width - slotInset * 2, height: 8))
+        cg.fill(CGRect(x: slotInset, y: edge, width: width - slotInset * 2, height: cutterBar))
     }
 
     /// The gray base below the panel, with the Feed button and the power switch.
