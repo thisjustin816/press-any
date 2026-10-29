@@ -180,11 +180,11 @@ enum PrinterScene {
         drawPowerSwitch(in: cg, origin: CGPoint(x: width - 360, y: top + 100))
     }
 
-    /// The raised oval under the panel, in the body's own gray, the way the printer carries its
-    /// maker's name.
+    /// The raised badge under the panel, in the body's own gray, the way the printer carries its
+    /// maker's name: straight along the top and bottom with round ends, like a race track.
     private static func drawEmblem(in cg: CGContext, center: CGPoint) {
-        let oval = CGRect(x: center.x - 150, y: center.y - 26, width: 300, height: 52)
-        let path = UIBezierPath(ovalIn: oval)
+        let badge = CGRect(x: center.x - 150, y: center.y - 26, width: 300, height: 52)
+        let path = UIBezierPath(roundedRect: badge, cornerRadius: badge.height / 2)
         path.lineWidth = 4
         cg.saveGState()
         cg.translateBy(x: 0, y: 2)
