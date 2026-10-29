@@ -30,11 +30,18 @@ public struct CoreRegistry: Sendable {
             factory.supportedSystems.contains(system)
                 && (preferredIdentifier == nil || factory.descriptor.identifier == preferredIdentifier)
         }
-        guard let latest = compatible.max(by: { lhs, rhs in
-            lhs.descriptor.version.compare(rhs.descriptor.version, options: .numeric) == .orderedAscending
-        }) else {
+        guard let latest = compatible.max(by: { Self.isOlder($0.descriptor.version, than: $1.descriptor.version) }) else {
             throw CoreRegistryError.noCompatibleCore(system: system, identifier: preferredIdentifier)
         }
         return latest
+    }
+
+    /// Orders versions as releases are ordered: a prerelease such as "1.0.5-prerelease.53+19a7b14"
+    /// comes before "1.0.5". A version that isn't numbered that way is compared as numeric text.
+    private static func isOlder(_ lhs: String, than rhs: String) -> Bool {
+        if let lhsKey = Build.versionSortKey(for: lhs), let rhsKey = Build.versionSortKey(for: rhs) {
+            return lhsKey < rhsKey
+        }
+        return lhs.compare(rhs, options: .numeric) == .orderedAscending
     }
 }
