@@ -1526,11 +1526,15 @@ selected one outlined. Transparent is the default until another background is ch
 then opens with the last one chosen, in any game. A remembered Game Artwork or Custom background
 that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered. Wood uses Dimitrios Savva's CC0 Wood Table
 photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements. **Printer** draws
-the slip coming out of a printer laid out like the Game Boy Printer: a smoked lid with the paper
-roll showing through, a black panel with the slot, its serrated cutter in front of the paper with teeth the shape of the paper's torn edge, the Press Any
-wordmark with its A in the buttons' magenta over "printer" in light lettering and a red power light, and a body in the
-Classic controller's Game Boy gray with an embossed, race-track-shaped PRESS ANY badge, a Feed button in the A and B buttons' magenta with FEED pressed into it and a POWER slide switch
-marked ON and OFF.
+the slip coming out of a printer laid out like the Game Boy Printer. A smoked lid with the paper
+roll showing through and a darker rim rises above a tall body in the Classic controller's Game
+Boy gray. Under the lid, a black panel holds the slot window, with a serrated cutter in front of
+the paper whose teeth are the shape of the paper's torn edge. The Press Any wordmark, with its A
+in the buttons' magenta, sits over a larger "printer" in light lettering, the two centered
+together, with a red power light and BATT. at the panel's right. Below the panel are an
+embossed, race-track-shaped PRESS ANY badge and, low on the body, a Feed button in the A and B
+buttons' magenta with FEED pressed into it and a tall POWER slide switch with ON and OFF arrows.
+A short slip comes out under the lid; a long one rises above the printer.
 The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
 shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
 scale, without smoothing or simulated ink loss. Paper styling stays outside the printed content.

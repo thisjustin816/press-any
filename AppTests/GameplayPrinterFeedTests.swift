@@ -79,7 +79,7 @@ final class GameplayPrinterFeedTests: XCTestCase {
         let output = try PrinterOutput(height: 160, luminance: Data(repeating: 0xFF, count: 160 * 160), topMargin: 1, bottomMargin: 3, exposure: 64)
         let image = try XCTUnwrap(PrinterScene.render(PrinterSlip(output: output))?.cgImage)
         // The paper starts 40 px down, after its render's 96 px inset; 60 px into it is above the
-        // printer's body, which starts 576 px down for this print.
+        // printer, whose lid starts 232 px down for this print.
         var pixel = [UInt8](repeating: 0, count: 4)
         try pixel.withUnsafeMutableBytes { buffer in
             let context = try XCTUnwrap(CGContext(
