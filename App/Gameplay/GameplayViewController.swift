@@ -784,16 +784,16 @@ final class GameplayViewController: UIViewController {
         if runtime.supportsPrinter {
             let feed = printerFeed
             let prints = self.prints
+            // Made here rather than in the frame callback, which can't hand `self` to another closure.
+            let keepFailed: @Sendable () -> Void = { [weak self] in
+                DispatchQueue.main.async {
+                    self?.showTransientMessage("Couldn’t keep this print in Captures. Save or share it to keep a copy.")
+                }
+            }
             driver.onPrinterOutput = { [weak self] outputs in
                 // Only the driver queue feeds paper, so nothing changes the slips between reads.
                 let before = feed.slips
-                defer {
-                    prints?.keep(GameplayPrinterFeed.changes(from: before, to: feed.slips)) {
-                        DispatchQueue.main.async {
-                            self?.showTransientMessage("Couldn’t keep this print in Captures. Save or share it to keep a copy.")
-                        }
-                    }
-                }
+                defer { prints?.keep(GameplayPrinterFeed.changes(from: before, to: feed.slips), onFailure: keepFailed) }
                 do {
                     try feed.receive(outputs)
                     DispatchQueue.main.async {
