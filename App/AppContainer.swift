@@ -32,6 +32,8 @@ final class AppContainer {
     let duplicateSaveProfile: DuplicateSaveProfile
     let setSaveProfileBadge: SetSaveProfileBadge
     let libraryDeletion: LibraryDeletionOperations
+    /// Prints kept in each Game's Captures.
+    let printCaptures: PrintCaptures
     let importBatterySave: ImportBatterySave
     let replaceBatterySave: ReplaceBatterySave
     let acceptDamagedSave: AcceptDamagedSave
@@ -158,11 +160,19 @@ final class AppContainer {
             builds: repositories.builds,
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
+            captures: repositories.captures,
             recipes: repositories.patchRecipes,
             deletions: repositories.deletions,
             assetStore: fileStore,
             transactions: repositories.transactions,
             settings: SettingsResolver(store: repositories.settings)
+        )
+        printCaptures = PrintCaptures(
+            captures: repositories.captures,
+            assets: repositories.assets,
+            assetStore: fileStore,
+            transactions: repositories.transactions,
+            deletion: libraryDeletion
         )
         duplicateSaveProfile = DuplicateSaveProfile(
             profiles: repositories.saveProfiles,
@@ -285,7 +295,8 @@ final class AppContainer {
             profiles: repositories.saveProfiles,
             states: repositories.saveStates,
             assets: repositories.assets,
-            assetStore: fileStore
+            assetStore: fileStore,
+            prints: printCaptures
         )
         coreRegistry = CoreRegistry(factories: [SameBoyCoreFactory()])
         settingsResolver = SettingsResolver(store: ScreenshotScene.settingsStore(repositories.settings))

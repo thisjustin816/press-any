@@ -51,10 +51,26 @@ private enum PrinterPreviewBackground: String, CaseIterable, Sendable {
 }
 
 struct PrinterPreview: View {
+    /// Where the prints shown are kept, which the note under them says.
+    enum Keeping {
+        /// Only until the game closes.
+        case session
+        /// In the Game's Captures.
+        case captures
+        /// With the Quick Play session, until it is added to the library.
+        case quickPlay
+        /// Opened from Captures, which needs no note.
+        case captured
+    }
+
     let backgrounds = PrinterBackgroundStore()
     let slips: [PrinterSlip]
     /// The Game's library artwork file, when it has one.
     var gameArtworkURL: URL?
+    var keeping = Keeping.session
+    /// The Game's Captures, offered as All Prints.
+    var makeCapturesView: (() -> AnyView)?
+    @State private var showsCaptures = false
     @Environment(\.dismiss) private var dismiss
     @State private var selected = 0
     /// The last background chosen, kept between previews and games.
@@ -75,6 +91,14 @@ struct PrinterPreview: View {
     @State private var shared: PrinterSharedImage?
 
     private var ordered: [PrinterSlip] { Array(slips.reversed()) }
+    private var note: String? {
+        switch keeping {
+        case .session: "The last 10 prints stay here until the game closes. Save a copy to keep them."
+        case .captures: "Prints are kept in the Game’s Captures. The last 10 from this session are here."
+        case .quickPlay: "Prints stay with this Quick Play session and move to the Game’s Captures when you add it to the library."
+        case .captured: nil
+        }
+    }
     private var renderKey: String { "\(selected)-\(background.rawValue)-\(retry)-\(loadedCustom)" }
     private var available: [PrinterPreviewBackground] {
         PrinterPreviewBackground.allCases.filter {
@@ -119,9 +143,11 @@ struct PrinterPreview: View {
                     }
                 }
                 backgroundSwatches
-                Text("The last 10 prints stay here until the game closes. Save a copy to keep them.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                if let note {
+                    Text(note)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
                 Button("Save or Share", systemImage: "square.and.arrow.up") {
                     guard let png else { return }
                     do { shared = try PrinterSharedImage(png: png) }
@@ -133,7 +159,13 @@ struct PrinterPreview: View {
             .padding()
             .navigationTitle("Prints")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                if makeCapturesView != nil {
+                    ToolbarItem(placement: .topBarLeading) { Button("All Prints") { showsCaptures = true } }
+                }
+            }
+            .sheet(isPresented: $showsCaptures) { makeCapturesView?() }
             .task(id: renderKey) { await render() }
             .task(id: "\(loadedCustom)-\(customVersion)") { await loadThumbnails() }
             .task {

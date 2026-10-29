@@ -124,10 +124,11 @@ struct RecentlyDeletedView: View {
         switch deletion.kind {
         case .game:
             parts.append("Game")
-        case .build, .saveProfile, .saveState:
+        case .build, .saveProfile, .saveState, .capture:
             let kind = switch deletion.kind {
             case .build: "Build"
             case .saveState: "Save State"
+            case .capture: deletion.records.captureIDs.count == 1 ? "Print" : "Prints"
             default: "Save Profile"
             }
             if let game = try? games.fetchGame(id: deletion.gameID) {

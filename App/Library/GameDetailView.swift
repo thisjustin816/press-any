@@ -26,6 +26,7 @@ struct GameDetailView: View {
     @StateObject private var model: GameDetailViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var capturesPreview = CapturesSection.Preview()
     @State private var newProfileName = "Main"
     @State private var showNewProfile = false
     @State private var fileRequest: FileRequest?
@@ -109,10 +110,15 @@ struct GameDetailView: View {
             buildsSection
             profilesSection
             if !model.selection.isSelecting {
+                CapturesSection(container: container, gameID: model.gameID, preview: capturesPreview)
                 statisticsSection
             }
         }
         .scrollOverflowCue()
+        .task(id: model.gameID) { capturesPreview = await CapturesSection.load(container: container, gameID: model.gameID) }
+        .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in
+            Task { capturesPreview = await CapturesSection.load(container: container, gameID: model.gameID) }
+        }
     }
 
     @ViewBuilder
@@ -463,6 +469,7 @@ struct GameDetailView: View {
         case .build: "Delete This Build?"
         case .saveProfile, nil: "Delete This Save Profile?"
         case .saveState: "Delete This Save State?"
+        case .capture: "Delete This Print?"
         }
     }
 
