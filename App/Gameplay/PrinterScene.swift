@@ -232,9 +232,9 @@ enum PrinterScene {
         label("PRESS ANY", size: 32, color: UIColor(white: 0, alpha: 0.24), center: center)
     }
 
-    /// The power switch: a plate in the body's gray that slides along a recessed track ridged
-    /// on its right, with POWER and a domed knob on it, and ON and OFF beside it under arrows that
-    /// point the way to slide.
+    /// The power switch: a plate in the body's gray that slides sideways along a recessed, ridged
+    /// track, with POWER and a domed knob on it, and ON and OFF beside it under arrows that point
+    /// the way to slide. It is on: slid right, with the track's ridges showing on its left.
     private static func drawPowerSwitch(in cg: CGContext, origin: CGPoint) {
         let plateSize = CGSize(width: 140, height: 180)
         let track = CGRect(x: origin.x, y: origin.y, width: plateSize.width + 60, height: plateSize.height + 12)
@@ -242,9 +242,9 @@ enum PrinterScene {
         UIBezierPath(roundedRect: track, cornerRadius: 8).fill()
         UIColor(white: 0.44, alpha: 1).setFill()
         for y in stride(from: track.minY + 14, to: track.maxY - 10, by: 9) {
-            cg.fill(CGRect(x: track.maxX - 50, y: y, width: 40, height: 3))
+            cg.fill(CGRect(x: track.minX + 10, y: y, width: 40, height: 3))
         }
-        let plate = CGRect(origin: CGPoint(x: track.minX + 6, y: track.minY + 6), size: plateSize)
+        let plate = CGRect(origin: CGPoint(x: track.maxX - 6 - plateSize.width, y: track.minY + 6), size: plateSize)
         cg.saveGState()
         cg.setShadow(offset: CGSize(width: 2, height: 3), blur: 4, color: UIColor(white: 0, alpha: 0.3).cgColor)
         UIColor(red: 0.80, green: 0.79, blue: 0.76, alpha: 1).setFill()
