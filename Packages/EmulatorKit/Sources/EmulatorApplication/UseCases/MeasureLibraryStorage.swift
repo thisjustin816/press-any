@@ -6,6 +6,7 @@ public enum LibraryStorageCategory: CaseIterable, Hashable, Sendable {
     case patches
     case saves
     case saveStates
+    case captures
     case artwork
     case other
     case patchedROMCache
@@ -54,6 +55,7 @@ public struct MeasureLibraryStorage: Sendable {
         case .sourcePatch: .patches
         case .persistentSave: .saves
         case .saveState, .stateThumbnail: .saveStates
+        case .capture: .captures
         case .artwork: .artwork
         case .generatedImage: .patchedROMCache
         default: .other

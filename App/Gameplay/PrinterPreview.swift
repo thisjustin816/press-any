@@ -30,13 +30,14 @@ final class PrinterPreviewController: UIHostingController<PrinterPreview>, UIAda
 }
 
 private enum PrinterPreviewBackground: String, CaseIterable, Sendable {
-    case transparent, light, dark, wood, gameArtwork, custom
+    case transparent, light, dark, wood, printer, gameArtwork, custom
     var title: String {
         switch self {
         case .transparent: "Transparent"
         case .light: "Light"
         case .dark: "Dark"
         case .wood: "Wood"
+        case .printer: "Printer"
         case .gameArtwork: "Artwork"
         case .custom: "Custom"
         }
@@ -51,10 +52,26 @@ private enum PrinterPreviewBackground: String, CaseIterable, Sendable {
 }
 
 struct PrinterPreview: View {
+    /// Where the prints shown are kept, which the note under them says.
+    enum Keeping {
+        /// Only until the game closes.
+        case session
+        /// In the Game's Captures.
+        case captures
+        /// With the Quick Play session, until it is added to the library.
+        case quickPlay
+        /// Opened from Captures, which needs no note.
+        case captured
+    }
+
     let backgrounds = PrinterBackgroundStore()
     let slips: [PrinterSlip]
     /// The Game's library artwork file, when it has one.
     var gameArtworkURL: URL?
+    var keeping = Keeping.session
+    /// The Game's Captures, offered as All Prints.
+    var makeCapturesView: (() -> AnyView)?
+    @State private var showsCaptures = false
     @Environment(\.dismiss) private var dismiss
     @State private var selected = 0
     /// The last background chosen, kept between previews and games.
@@ -75,6 +92,14 @@ struct PrinterPreview: View {
     @State private var shared: PrinterSharedImage?
 
     private var ordered: [PrinterSlip] { Array(slips.reversed()) }
+    private var note: String? {
+        switch keeping {
+        case .session: "The last 10 prints stay here until the game closes. Save a copy to keep them."
+        case .captures: "Prints are kept in the Game’s Captures. The last 10 from this session are here."
+        case .quickPlay: "Prints stay with this Quick Play session and move to the Game’s Captures when you add it to the library."
+        case .captured: nil
+        }
+    }
     private var renderKey: String { "\(selected)-\(background.rawValue)-\(retry)-\(loadedCustom)" }
     private var available: [PrinterPreviewBackground] {
         PrinterPreviewBackground.allCases.filter {
@@ -119,9 +144,11 @@ struct PrinterPreview: View {
                     }
                 }
                 backgroundSwatches
-                Text("The last 10 prints stay here until the game closes. Save a copy to keep them.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                if let note {
+                    Text(note)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
                 Button("Save or Share", systemImage: "square.and.arrow.up") {
                     guard let png else { return }
                     do { shared = try PrinterSharedImage(png: png) }
@@ -133,7 +160,13 @@ struct PrinterPreview: View {
             .padding()
             .navigationTitle("Prints")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                if makeCapturesView != nil {
+                    ToolbarItem(placement: .topBarLeading) { Button("All Prints") { showsCaptures = true } }
+                }
+            }
+            .sheet(isPresented: $showsCaptures) { makeCapturesView?() }
             .task(id: renderKey) { await render() }
             .task(id: "\(loadedCustom)-\(customVersion)") { await loadThumbnails() }
             .task {
@@ -236,6 +269,7 @@ struct PrinterPreview: View {
         case .transparent: Checkerboard()
         case .light: Color(white: 0.96)
         case .dark: Color(white: 0.16)
+        case .printer: PrinterSwatch()
         case .wood, .gameArtwork, .custom:
             if let image = thumbnails[option] {
                 Image(uiImage: image).resizable().scaledToFill()
@@ -324,6 +358,10 @@ struct PrinterPreview: View {
         let artworkURL = gameArtworkURL
         do {
             let data = try await Task.detached(priority: .userInitiated) {
+                if background == .printer {
+                    guard let data = PrinterScene.render(slip)?.pngData() else { throw PrinterBackgroundStore.ImageError.invalidImage }
+                    return data
+                }
                 let image: PrinterSlipRenderer.Image
                 switch background {
                 case .wood: image = PrinterSlipRenderer.render(slip, image: try PrinterBackgroundStore.wood())
@@ -363,6 +401,43 @@ private struct PrinterShareSheet: UIViewControllerRepresentable {
         return controller
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+/// The Printer background's tile: a gray printer with its smoked lid, the paper rising from the
+/// slot in its black panel, and the red light.
+private struct PrinterSwatch: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let size = geometry.size
+            ZStack(alignment: .top) {
+                Color(white: 0.1)
+                RoundedRectangle(cornerRadius: size.width * 0.08)
+                    .fill(Color(red: 0.82, green: 0.81, blue: 0.78))
+                    .frame(width: size.width * 0.9, height: size.height * 0.78)
+                    .offset(y: size.height * 0.2)
+                Rectangle()
+                    .fill(Color(red: 0.36, green: 0.38, blue: 0.40))
+                    .frame(width: size.width * 0.74, height: size.height * 0.24)
+                    .offset(y: size.height * 0.24)
+                Rectangle()
+                    .fill(Color(white: 0.97))
+                    .frame(width: size.width * 0.5, height: size.height * 0.44)
+                    .offset(y: size.height * 0.06)
+                Rectangle()
+                    .fill(Color(white: 0.03))
+                    .frame(width: size.width * 0.78, height: size.height * 0.28)
+                    .offset(y: size.height * 0.5)
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: size.width * 0.09)
+                    .offset(x: size.width * 0.26, y: size.height * 0.64)
+                Circle()
+                    .fill(Color(red: 0.69, green: 0.13, blue: 0.40))
+                    .frame(width: size.width * 0.16)
+                    .offset(x: -size.width * 0.24, y: size.height * 0.8)
+            }
+        }
+    }
 }
 
 /// The usual sign for transparency: a light gray checkerboard.

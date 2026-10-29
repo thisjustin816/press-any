@@ -151,6 +151,12 @@ public struct ManagedFileStore: AssetStore, Sendable {
             .appendingPathComponent("\(stateID.uuidString.lowercased()).\(try validateFileExtension(fileExtension))")
     }
 
+    public func captureURL(captureID: UUID) -> URL {
+        rootURL
+            .appendingPathComponent("UserData/Captures", isDirectory: true)
+            .appendingPathComponent("\(captureID.uuidString.lowercased()).print")
+    }
+
     public func quickPlayRoot(sessionID: UUID) -> URL {
         rootURL
             .appendingPathComponent("Temporary/QuickPlay", isDirectory: true)

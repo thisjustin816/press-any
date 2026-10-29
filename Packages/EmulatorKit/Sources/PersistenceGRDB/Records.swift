@@ -610,3 +610,57 @@ struct PatchRecipeItemRecord: Codable, FetchableRecord, PersistableRecord {
         )
     }
 }
+
+struct CaptureRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "captures"
+
+    var id: String
+    var gameID: String
+    var buildID: String?
+    var saveProfileID: String?
+    var kind: String
+    var assetID: String
+    var isPinned: Bool
+    var createdAt: String
+    var modifiedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind
+        case gameID = "game_id"
+        case buildID = "build_id"
+        case saveProfileID = "save_profile_id"
+        case assetID = "asset_id"
+        case isPinned = "is_pinned"
+        case createdAt = "created_at"
+        case modifiedAt = "modified_at"
+    }
+
+    init(_ value: Capture) {
+        id = PersistenceCodec.uuid(value.id)
+        gameID = PersistenceCodec.uuid(value.gameID)
+        buildID = value.buildID.map(PersistenceCodec.uuid)
+        saveProfileID = value.saveProfileID.map(PersistenceCodec.uuid)
+        kind = value.kind.rawValue
+        assetID = PersistenceCodec.uuid(value.assetID)
+        isPinned = value.isPinned
+        createdAt = PersistenceCodec.date(value.createdAt)
+        modifiedAt = PersistenceCodec.date(value.modifiedAt)
+    }
+
+    func domain() throws -> Capture {
+        guard let captureKind = CaptureKind(rawValue: kind) else {
+            throw PersistenceError.invalidEnum(type: "CaptureKind", value: kind)
+        }
+        return Capture(
+            id: try PersistenceCodec.uuid(id),
+            gameID: try PersistenceCodec.uuid(gameID),
+            buildID: try PersistenceCodec.optionalUUID(buildID),
+            saveProfileID: try PersistenceCodec.optionalUUID(saveProfileID),
+            kind: captureKind,
+            assetID: try PersistenceCodec.uuid(assetID),
+            isPinned: isPinned,
+            createdAt: try PersistenceCodec.date(createdAt),
+            modifiedAt: try PersistenceCodec.date(modifiedAt)
+        )
+    }
+}

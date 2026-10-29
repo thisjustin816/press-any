@@ -45,6 +45,13 @@ extension SaveState {
     }
 }
 
+extension Capture {
+    func backupCopy(assetID: UUID) -> Capture {
+        Capture(id: id, gameID: gameID, buildID: buildID, saveProfileID: saveProfileID, kind: kind,
+            assetID: assetID, isPinned: isPinned, createdAt: createdAt, modifiedAt: modifiedAt)
+    }
+}
+
 extension LibraryBackupSnapshot {
     func scoped(to gameID: UUID?) throws -> LibraryBackupSnapshot {
         guard let gameID else { return self }
@@ -89,6 +96,7 @@ extension LibraryBackupSnapshot {
         // A patch's base Build travels only so the patch can be rebuilt; its cheats stay behind.
         let ownBuildIDs = Set(builds.filter { $0.gameID == gameID }.map(\.id))
         result.cheats = cheats.filter { ownBuildIDs.contains($0.buildID) }
+        result.captures = captures.filter { $0.gameID == gameID }
         result.gameProvenance = gameProvenance.filter { gameIDs.contains($0.ownerID) }
         result.buildProvenance = buildProvenance.filter { buildIDs.contains($0.ownerID) }
         result.reports = reports.filter { buildIDs.contains($0.buildID) }
@@ -115,6 +123,8 @@ extension LibraryBackupSnapshot {
         leftAlone += builds.filter { deletedIDs.contains($0.id) }.map { "\($0.displayName) (Build)" }
         leftAlone += profiles.filter { deletedIDs.contains($0.id) }.map { "\($0.displayName) (Save Profile)" }
         leftAlone += states.filter { deletedIDs.contains($0.id) }.map { "\($0.displayName) (Save State)" }
+        let deletedPrints = captures.filter { deletedIDs.contains($0.id) }.count
+        if deletedPrints > 0 { leftAlone.append(deletedPrints == 1 ? "1 print" : "\(deletedPrints) prints") }
         guard !leftAlone.isEmpty || recipes.contains(where: { deletedIDs.contains($0.id) })
                 || variableMaps.contains(where: { deletedIDs.contains($0.id) })
                 || cheats.contains(where: { deletedIDs.contains($0.id) || deletedIDs.contains($0.buildID) }) else {
@@ -144,6 +154,7 @@ extension LibraryBackupSnapshot {
         }
         result.variableMaps = variableMaps.filter { !deletedIDs.contains($0.id) && buildIDs.contains($0.buildID) }
         result.cheats = cheats.filter { !deletedIDs.contains($0.id) && buildIDs.contains($0.buildID) }
+        result.captures = captures.filter { !deletedIDs.contains($0.id) && gameIDs.contains($0.gameID) }
         let keptCheats = Set(result.cheats.map(\.id))
         leftAlone += cheats.filter { !keptCheats.contains($0.id) }.map { "\($0.name) (Cheat)" }
         result.gameProvenance = gameProvenance.filter { gameIDs.contains($0.ownerID) }
@@ -176,6 +187,7 @@ extension LibraryBackupSnapshot {
         if let owner = games.first(where: { $0.artworkAssetID == asset.id }) { return "The artwork for \(owner.primaryTitle)" }
         if let build = builds.first(where: { $0.imageAssetID == asset.id }) { return "The ROM for \(build.displayName) in \(game(build.gameID))" }
         if let map = variableMaps.first(where: { $0.assetID == asset.id }) { return "The variable map \(map.originalFilename)" }
+        if let capture = captures.first(where: { $0.assetID == asset.id }) { return "A print in \(game(capture.gameID))" }
         return asset.originalFilename.map { "The file \($0)" } ?? "A library file"
     }
 
@@ -187,5 +199,6 @@ extension LibraryBackupSnapshot {
             .union(states.compactMap(\.screenshotAssetID))
             .union(recipes.flatMap { $0.items.map(\.patchAssetID) })
             .union(variableMaps.map(\.assetID))
+            .union(captures.map(\.assetID))
     }
 }

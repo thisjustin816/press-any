@@ -166,7 +166,9 @@ struct RootView: View {
                 onOpenSettings: presentation.settings == nil ? nil : { showsGameplaySettings = true },
                 onOpenCheats: presentation.cheatsBuildID == nil ? nil : { showsGameplayCheats = true },
                 onSoundModeChange: { try bootstrap.container?.setSoundMode($0) },
-                artworkTarget: gameplayArtworkTarget(presentation)
+                artworkTarget: gameplayArtworkTarget(presentation),
+                prints: presentation.prints,
+                makeCapturesView: capturesView(presentation)
             )
             .ignoresSafeArea()
             // The status bar sits on the controller's body: dark text on Classic, light on Dark.
@@ -209,6 +211,12 @@ struct RootView: View {
                 .interactiveDismissDisabled()
             }
         }
+    }
+
+    /// The Game's Captures, which the Prints sheet offers as All Prints in library play.
+    private func capturesView(_ presentation: GameplayPresentation) -> (() -> AnyView)? {
+        guard let gameID = presentation.prints?.gameID, let container = bootstrap.container else { return nil }
+        return { AnyView(CapturesView(container: container, gameID: gameID)) }
     }
 
     private func gameplayArtworkTarget(_ presentation: GameplayPresentation) -> GameplayArtworkTarget? {
@@ -607,6 +615,9 @@ struct RootView: View {
                 firstFrameClock: nil,
                 settings: container.gameplaySettingsTarget(for: launch.context),
                 cheatsBuildID: launch.context.buildID,
+                prints: GameplayPrints(gameID: launch.context.gameID) { [captures = container.printCaptures, context = launch.context] slip in
+                    _ = try captures.save(slip, gameID: context.gameID, buildID: context.buildID, saveProfileID: context.saveProfileID)
+                },
                 display: GameplayDisplaySettings(
                     controlStyle: container.controllerStyle(for: launch.context),
                     orientation: container.orientation(for: launch.context),
@@ -678,6 +689,9 @@ struct RootView: View {
             firstFrameClock: firstFrameClock,
             settings: container.gameplaySettingsTarget(system: session.system),
             cheatsBuildID: nil,
+            prints: GameplayPrints(gameID: nil) { [prints = QuickPlayPrints(session: session, files: container.fileStore)] slip in
+                try prints.save(slip)
+            },
             display: container.gameplayDisplay(for: container.gameplaySettingsTarget(system: session.system))
         )
     }
@@ -755,6 +769,8 @@ private struct GameplayPresentation: Identifiable {
     let settings: GameplaySettingsTarget?
     /// The Build whose cheats the game menu's Cheats lists. Nil for Quick Play, which has none.
     let cheatsBuildID: UUID?
+    /// Where prints are kept as they come out.
+    let prints: GameplayPrints?
     /// Updated as the settings sheet changes them.
     var display: GameplayDisplaySettings
 

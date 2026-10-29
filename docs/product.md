@@ -1275,7 +1275,7 @@ list shows no model numbers. App Settings has it on the Playing page.
 
 ## Deletion
 
-- Games, Builds, Save Profiles and save states are deleted into Settings > Recently Deleted for 30
+- Games, Builds, Save Profiles, save states and prints are deleted into Settings > Recently Deleted for 30
   days, with Restore and Delete Now, and purged at launch after that.
 - Deletion is dependency-aware: the confirmation names patched Builds and emptied Games that go
   too, and a Game can't go while another Game's patch is built from it.
@@ -1397,6 +1397,14 @@ list shows no model numbers. App Settings has it on the Playing page.
   such as "MBC5 + RAM + Battery", ROM and RAM size, revision number, and the header and global
   checksums with their stored value and Valid or Invalid. An unreadable header shows one row,
   "Header unavailable".
+- When a Game has prints, a **Captures** section after Save Profiles shows the newest as
+  thumbnails with **Show All**. Captures shows them newest first in a grid with each print's
+  paper and margins, and a Build menu when more than one Build printed. Tapping a print opens the
+  print preview with its backgrounds and Save or Share. Touch and hold to **Pin** or **Delete**.
+  Prints are stored as the printer's rows, so any background still applies later. A Game keeps
+  its newest 50 unpinned prints; an older one goes to Recently Deleted, in one "Cleaned-up Prints"
+  entry, and pinned prints never count. Deleting a Game takes its prints; deleting a Build or
+  profile leaves them with the Game. Storage lists them as Captures.
 - Once a Game has been played, a Statistics section after Save Profiles shows Playtime, Sessions
   and Last Played. Playtime uses the same abbreviated hours, minutes and seconds as Build Details.
   Played Save Profiles show their playtime and relative last played under their names. These
@@ -1484,18 +1492,29 @@ and printed. When output arrives, **View Print** opens the preview directly; the
 running until that action is tapped. The ready banner stays until viewed or dismissed.
 **View Prints** in the game menu also opens the preview over the paused game. Closing the preview leaves the game paused until Resume.
 
-The preview keeps the latest 10 slips until the game closes. Commands with no bottom feed margin
+The preview shows the session's latest 10 slips. Commands with no bottom feed margin
 join the next command when it has no top margin. A new top margin, a disconnect, a reset or a
 state load starts another slip. A slip is limited to 2,048 native feed rows; a longer print reports
 an error and keeps the paper already received. Later prints in the same delivery are retained.
-Prints are session data and are not in Library Backup.
 
-**Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood**,
+Each slip is also kept as soon as paper comes out, and kept again when the game feeds more paper
+onto it. In library play it goes to the Game's **Captures** with the Build and Save Profile that
+printed it; the preview says so and offers **All Prints**, which opens them. In Quick Play it is
+kept with the session and moves to the Game's Captures, with the new Build, on Add to Library; a
+print that can't move keeps the session, and the promotion says so. A print that can't be kept
+shows a message once per session, and the slip stays in the preview to save or share.
+
+**Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood**, **Printer**,
 **Game Artwork** or **Custom** background, shown as a row of previews under the print with the
 selected one outlined. Transparent is the default until another background is chosen; the preview
 then opens with the last one chosen, in any game. A remembered Game Artwork or Custom background
 that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered. Wood uses Dimitrios Savva's CC0 Wood Table
-photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements.
+photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements. **Printer** draws
+the slip coming out of a printer laid out like the Game Boy Printer: a smoked lid with the paper
+roll showing through, a black panel with the slot, its serrated cutter in front of the paper with teeth the shape of the paper's torn edge, the Press Any
+wordmark with its A in the buttons' magenta over "printer" in light lettering and a red power light, and a body in the
+Classic controller's Game Boy gray with an embossed, race-track-shaped PRESS ANY badge, a Feed button in the A and B buttons' magenta with FEED pressed into it and a POWER slide switch
+marked ON and OFF.
 The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
 shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
 scale, without smoothing or simulated ink loss. Paper styling stays outside the printed content.
@@ -1640,7 +1659,7 @@ community metadata aims for CC0, and imported data and media keep their own righ
 Library Backup uses an ordinary zip with a root manifest, domain-model JSON and managed asset
 files. [The backup format](backup-format.md) documents its versions, inventory, checksums and
 limits. It carries all live library records, provenance, notes, playtime, profiles, saves,
-states, thumbnails, recipes, patches, maps, artwork, reports, declarations, settings and
+states, thumbnails, prints, recipes, patches, maps, artwork, reports, declarations, settings and
 region/language ordering and image fingerprints. ROM files are optional. Generated patched ROMs, crash
 checkpoints, Quick Play, staging, Recently Deleted and device view preferences stay out.
 

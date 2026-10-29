@@ -36,7 +36,7 @@ A newer `formatVersion` requires an app update and is refused before library cha
 migration ID is descriptive; restore decodes domain models and never replays SQL rows or archive
 migrations. Optional model and manifest fields have decoding defaults, and a missing record file
 reads as no records of its kind: an archive written before cheats restores with none, and its
-Builds have Cheats On. A format change that cannot be read this way needs a new version. Unknown
+Builds have Cheats On; one written before prints restores none. A format change that cannot be read this way needs a new version. Unknown
 payload files are refused with an update message so their data cannot disappear during restore.
 
 ## Record files
@@ -55,6 +55,7 @@ persistent enum values come from the Codable models in `EmulatorDomain`.
 | `recipes.json` | `recipes` | Patch recipes and all enabled and disabled items, input hashes and Apply Anyway flags |
 | `variable-maps.json` | `variableMaps` | Build variable maps and their file references |
 | `cheats.json` | `cheats` | Each Build's cheats: name, codes, on or off, list position and dates |
+| `captures.json` | `captures` | Each Game's prints: Build, Save Profile, pin and dates, with the printer archive as a managed asset |
 | `managed-assets.json` | `assets` | Referenced asset metadata, including image rows whose files are omitted |
 | `game-provenance.json` | `gameProvenance` | `ownerID` and domain provenance `values` for Games |
 | `build-provenance.json` | `buildProvenance` | `ownerID` and domain provenance `values` for Builds |
@@ -124,7 +125,7 @@ unread, along with links and bytes after the end of the archive.
 ## Game packages
 
 A Game package uses the same files and merge rules. It includes the selected Game's Builds,
-profiles, states, recipes, cheats, patches, artwork, notes, declarations, maps, reports,
+profiles, states, prints, recipes, cheats, patches, artwork, notes, declarations, maps, reports,
 provenance and scoped settings. A patch's base Build and its parent chain travel with it,
 including their owning Game when necessary, but a base Build in another Game travels without its
 cheats. That dependency is visible in the review's contents. Unrelated Games and App/System
@@ -147,7 +148,8 @@ suggested and ties favoring the library. Saves and states require an explicit ch
 Records the library has in Recently Deleted, or deleted for good, are left alone. Review lists
 them, the report notes how many there were, and the restore skips them with the records that
 depend on them. A Build's cheats are left alone with it and listed by name. A cheat deleted on
-its own leaves no tombstone, so a backup that still has it adds it back.
+its own leaves no tombstone, so a backup that still has it adds it back. Prints in Recently Deleted
+are left alone and counted.
 
 A Save Profile can be copied as `<name> from backup`. A replaced battery save is copied as
 `<profile> before restore`. A replaced state is retained as a pinned manual state with

@@ -85,6 +85,10 @@ struct BackupMerge {
             name: { $0.originalFilename }, date: { $0.attachedAt }, choices: choices)
         result.cheats = try records(archive.cheats, library.cheats, kind: "Cheat", key: { $0.id.uuidString },
             name: { "\($0.name) for \(names.build($0.buildID))" }, date: { $0.modifiedAt }, choices: choices)
+        result.captures = try records(archive.captures, library.captures, kind: "Print", key: { $0.id.uuidString },
+            name: { "Print in \(names.game($0.gameID))" }, date: { $0.modifiedAt }, equivalent: { a, b in
+                a == b && hash(a.assetID, archive) == hash(b.assetID, library)
+            }, choices: choices)
         result.reports = try records(archive.reports, library.reports, kind: "Toolchain Report", key: { $0.identity },
             name: { "\($0.report.detector) for \(names.build($0.buildID))" }, date: { $0.detectedAt }, choices: choices)
         result.declarations = try records(archive.declarations, library.declarations, kind: "Save Declaration",
@@ -121,6 +125,10 @@ private struct RecordNames {
 
     func build(_ id: UUID) -> String {
         (archive.builds + library.builds).first { $0.id == id }?.displayName ?? "a Build"
+    }
+
+    func game(_ id: UUID) -> String {
+        (archive.games + library.games).first { $0.id == id }?.primaryTitle ?? "a Game"
     }
 
     /// "Skip boot animation (Moon Garden)" for a stored key such as `skipBootAnimation`.

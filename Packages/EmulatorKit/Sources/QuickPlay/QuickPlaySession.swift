@@ -34,6 +34,8 @@ public struct QuickPlaySession: Identifiable, Codable, Hashable, Sendable {
     public var imageURL: URL { rootURL.appendingPathComponent("rom.bin") }
     public var persistentSaveURL: URL { rootURL.appendingPathComponent("battery.sav") }
     public var manifestURL: URL { rootURL.appendingPathComponent("session.json") }
+    /// Prints from the session, one printer archive each.
+    public var printsURL: URL { rootURL.appendingPathComponent("prints", isDirectory: true) }
 
     private enum CodingKeys: String, CodingKey {
         case id

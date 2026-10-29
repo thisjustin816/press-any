@@ -658,6 +658,7 @@ private struct QuickHashStore: AssetStore {
         try base.artworkURL(gameID: gameID, sha256: sha256, extension: fileExtension)
     }
     func stateURL(stateID: UUID) -> URL { base.stateURL(stateID: stateID) }
+    func captureURL(captureID: UUID) -> URL { base.captureURL(captureID: captureID) }
     func stateThumbnailURL(stateID: UUID, extension fileExtension: String) throws -> URL { try base.stateThumbnailURL(stateID: stateID, extension: fileExtension) }
     func quickPlayRoot(sessionID: UUID) -> URL { base.quickPlayRoot(sessionID: sessionID) }
     func quickPlaySessionIDs() throws -> [UUID] { try base.quickPlaySessionIDs() }

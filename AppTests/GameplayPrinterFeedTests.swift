@@ -15,6 +15,47 @@ final class GameplayPrinterFeedTests: XCTestCase {
         XCTAssertEqual(feed.slips.last?.sections, [next])
     }
 
+    func testChangesNameNewSlipsAndSlipsThatGainedPaperOnly() throws {
+        let feed = GameplayPrinterFeed()
+        let attached = try PrinterOutput(height: 16, luminance: Data(count: 2560), topMargin: 0, bottomMargin: 0, exposure: 64)
+        let separate = try PrinterOutput(height: 8, luminance: Data(count: 1280), topMargin: 1, bottomMargin: 3, exposure: 64)
+        try feed.receive([separate])
+        try feed.receive([attached])
+        let before = feed.slips
+        try feed.receive([attached])
+        XCTAssertEqual(GameplayPrinterFeed.changes(from: before, to: feed.slips).map(\.id), [before[1].id])
+        let grown = feed.slips
+        try feed.receive([separate])
+        XCTAssertEqual(GameplayPrinterFeed.changes(from: grown, to: feed.slips).map(\.id), [feed.slips[2].id])
+    }
+
+    func testPrintsAreKeptInOrderAndOneFailureIsReportedOnce() throws {
+        final class Saved: @unchecked Sendable {
+            let lock = NSLock()
+            var ids: [UUID] = []
+            var failures = 0
+        }
+        let saved = Saved()
+        let first = PrinterSlip(output: try PrinterOutput(height: 8, luminance: Data(count: 1280), topMargin: 1, bottomMargin: 3, exposure: 64))
+        let second = PrinterSlip(output: try PrinterOutput(height: 8, luminance: Data(count: 1280), topMargin: 1, bottomMargin: 3, exposure: 64))
+        let prints = GameplayPrints(gameID: nil) { slip in
+            struct Refused: Error {}
+            saved.lock.withLock { saved.ids.append(slip.id) }
+            throw Refused()
+        }
+        prints.keep([first, second]) { saved.lock.withLock { saved.failures += 1 } }
+        prints.keep([first]) { saved.lock.withLock { saved.failures += 1 } }
+        prints.finish()
+        XCTAssertEqual(saved.lock.withLock { saved.ids }, [first.id, second.id, first.id])
+        XCTAssertEqual(saved.lock.withLock { saved.failures }, 1)
+    }
+
+    func testAThumbnailShowsThePaperWithItsMargins() throws {
+        let slip = PrinterSlip(output: try PrinterOutput(height: 8, luminance: Data(count: 1280), topMargin: 1, bottomMargin: 2, exposure: 64))
+        let image = try XCTUnwrap(PrintThumbnail.image(for: slip))
+        XCTAssertEqual(image.size, CGSize(width: 160, height: 8 + 3 * 8))
+    }
+
     func testEndingARollPreservesItsPaperAndSeparatesTheNextDelivery() throws {
         let feed = GameplayPrinterFeed()
         let section = try PrinterOutput(height: 16, luminance: Data(count: 2560), topMargin: 0, bottomMargin: 0, exposure: 64)

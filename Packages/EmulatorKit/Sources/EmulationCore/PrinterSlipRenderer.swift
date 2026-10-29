@@ -35,6 +35,11 @@ public enum PrinterSlipRenderer {
     public static let scale = 4
     public static let printOriginX = 40 * scale
     public static let printOriginY = 36 * scale
+    /// The paper's torn edges follow the printer's cutter: a tooth every `tearPitch` pixels, each
+    /// `tearDepth` deep, starting at the paper's left edge. The Printer background draws its cutter
+    /// from the same numbers.
+    public static let tearPitch = 4 * scale
+    public static let tearDepth = 4 * scale
 
     public static func render(_ output: PrinterOutput, background: PrinterBackground = .defaultValue) -> Image {
         render(PrinterSlip(output: output), background: background)
@@ -79,8 +84,8 @@ public enum PrinterSlipRenderer {
                     }
                     var rgb = (max(0, surface.0 - shadow), max(0, surface.1 - shadow), max(0, surface.2 - shadow))
                     var alpha = background == .transparent ? 0 : 255
-                    let tooth = (x / 4) % 6
-                    let tear = min(tooth, 5 - tooth)
+                    let tooth = (x - left + tearPitch) % tearPitch
+                    let tear = min(tooth, tearPitch - tooth) * 2 * tearDepth / tearPitch
                     if x >= left, x < right, y >= top + tear, y < bottom - tear {
                         let noise = (x * 73 + y * 151 + (x * y) % 29) % 5
                         let edge = min(x - left, right - 1 - x)

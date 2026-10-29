@@ -6,6 +6,7 @@ public enum LibraryRecordKind: String, Codable, Sendable, CaseIterable {
     case build
     case saveProfile
     case saveState
+    case capture
 }
 
 /// The records one deletion hides, and later purges.
@@ -14,32 +15,39 @@ public struct LibraryRecordSet: Equatable, Sendable {
     public var buildIDs: [UUID]
     public var saveProfileIDs: [UUID]
     public var saveStateIDs: [UUID]
+    public var captureIDs: [UUID]
 
-    public init(gameIDs: [UUID] = [], buildIDs: [UUID] = [], saveProfileIDs: [UUID] = [], saveStateIDs: [UUID] = []) {
+    public init(
+        gameIDs: [UUID] = [], buildIDs: [UUID] = [], saveProfileIDs: [UUID] = [], saveStateIDs: [UUID] = [],
+        captureIDs: [UUID] = []
+    ) {
         self.gameIDs = gameIDs
         self.buildIDs = buildIDs
         self.saveProfileIDs = saveProfileIDs
         self.saveStateIDs = saveStateIDs
+        self.captureIDs = captureIDs
     }
 
     public var isEmpty: Bool {
-        gameIDs.isEmpty && buildIDs.isEmpty && saveProfileIDs.isEmpty && saveStateIDs.isEmpty
+        gameIDs.isEmpty && buildIDs.isEmpty && saveProfileIDs.isEmpty && saveStateIDs.isEmpty && captureIDs.isEmpty
     }
 
     /// Every record with its kind, as tombstones list them.
     public var all: [(id: UUID, kind: LibraryRecordKind)] {
         gameIDs.map { ($0, .game) } + buildIDs.map { ($0, .build) }
             + saveProfileIDs.map { ($0, .saveProfile) } + saveStateIDs.map { ($0, .saveState) }
+            + captureIDs.map { ($0, .capture) }
     }
 
     /// The same records in any order are the same set; a store may read them back sorted.
     public static func == (lhs: Self, rhs: Self) -> Bool {
         Set(lhs.gameIDs) == Set(rhs.gameIDs) && Set(lhs.buildIDs) == Set(rhs.buildIDs)
             && Set(lhs.saveProfileIDs) == Set(rhs.saveProfileIDs) && Set(lhs.saveStateIDs) == Set(rhs.saveStateIDs)
+            && Set(lhs.captureIDs) == Set(rhs.captureIDs)
     }
 }
 
-/// What the player deleted in one go: a Game, a Build, a Save Profile or a save state, with
+/// What the player deleted in one go: a Game, a Build, a Save Profile, a save state or prints, with
 /// whatever went with it. It stays in Recently Deleted, restorable, for `retention`, then its
 /// records are purged.
 public struct LibraryDeletion: Identifiable, Equatable, Sendable {
@@ -48,6 +56,7 @@ public struct LibraryDeletion: Identifiable, Equatable, Sendable {
         case build
         case saveProfile
         case saveState
+        case capture
     }
 
     /// Thirty days.

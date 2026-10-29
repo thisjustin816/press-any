@@ -135,6 +135,9 @@ final class QuickPlayPromotionViewModel: ObservableObject {
         if shortfalls.contains(.buildDefaultSaveNotSet) {
             lines.append("The Build couldn’t be set to play the kept save. Choose it from the Build’s menu.")
         }
+        if shortfalls.contains(.printsNotMoved) {
+            lines.append("Some prints couldn’t be added to the Game’s Captures, so the Quick Play session is kept with them.")
+        }
         return lines.isEmpty ? nil : lines.joined(separator: "\n\n")
     }
 }

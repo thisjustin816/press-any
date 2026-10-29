@@ -10,6 +10,7 @@ public enum ManagedAssetKind: String, Codable, Sendable {
     case quickPlayImage = "quickPlayROM"
     case artwork
     case variableMap
+    case capture
 }
 
 public enum ManagedAssetStorageClass: String, Codable, Sendable {

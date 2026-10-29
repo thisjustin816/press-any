@@ -95,6 +95,10 @@ final class GameplayViewController: UIViewController {
     /// game menu's choice.
     private var cameraSetting: GameBoyCamera
     var artworkTarget: GameplayArtworkTarget?
+    /// Keeps prints past the session. Set before the view loads.
+    var prints: GameplayPrints?
+    /// Opens the Game's Captures from the Prints sheet, in library play.
+    var makeCapturesView: (() -> AnyView)?
 
     init(
         runtime: any GameplayRuntime,
@@ -430,7 +434,9 @@ final class GameplayViewController: UIViewController {
         guard presentedViewController == nil, !printerFeed.slips.isEmpty else { return }
         setCoveredBySheet(true)
         printerStatus.dismissReadyPrint()
-        let preview = PrinterPreview(slips: printerFeed.slips, gameArtworkURL: artworkTarget?.currentFileURL())
+        var preview = PrinterPreview(slips: printerFeed.slips, gameArtworkURL: artworkTarget?.currentFileURL())
+        preview.keeping = prints == nil ? .session : prints?.gameID == nil ? .quickPlay : .captures
+        preview.makeCapturesView = makeCapturesView
         let sheet = PrinterPreviewController(rootView: preview)
         sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
         present(sheet, animated: true)
@@ -738,7 +744,17 @@ final class GameplayViewController: UIViewController {
     private func configureRuntimeLoop() {
         if runtime.supportsPrinter {
             let feed = printerFeed
+            let prints = self.prints
+            // Made here rather than in the frame callback, which can't hand `self` to another closure.
+            let keepFailed: @Sendable () -> Void = { [weak self] in
+                DispatchQueue.main.async {
+                    self?.showTransientMessage("Couldn’t keep this print in Captures. Save or share it to keep a copy.")
+                }
+            }
             driver.onPrinterOutput = { [weak self] outputs in
+                // Only the driver queue feeds paper, so nothing changes the slips between reads.
+                let before = feed.slips
+                defer { prints?.keep(GameplayPrinterFeed.changes(from: before, to: feed.slips), onFailure: keepFailed) }
                 do {
                     try feed.receive(outputs)
                     DispatchQueue.main.async {
@@ -1299,6 +1315,8 @@ final class GameplayViewController: UIViewController {
     private func stopRuntime() throws {
         guard !stopped else { return }
         driver.stop()
+        // Quick Play's Add to Library reads the session's prints next.
+        prints?.finish()
         // Before saving, which can fail and leave the game on screen, stopped.
         updateScreenAwake()
         camera.close()

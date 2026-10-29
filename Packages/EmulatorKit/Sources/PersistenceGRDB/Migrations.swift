@@ -62,6 +62,9 @@ extension AppDatabase {
         migrator.registerMigration("v1-v19-timed-states") { db in
             try db.execute(sql: "ALTER TABLE save_states ADD COLUMN is_timed INTEGER NOT NULL DEFAULT 0 CHECK (is_timed IN (0, 1))")
         }
+        migrator.registerMigration("v1-v20-captures") { db in
+            try db.execute(sql: V1V20CapturesSchema.sql)
+        }
         return migrator
     }
 }
@@ -486,5 +489,26 @@ enum V1V18BuildCheatsSchema {
         modified_at TEXT NOT NULL
     );
     CREATE INDEX build_cheats_build ON build_cheats(build_id, position);
+    """
+}
+
+/// Prints kept in a Game's Captures. The Build and Save Profile have no foreign keys: a print stays
+/// with its Game when either is deleted, and keeps naming it for the Build filter. A print goes to
+/// Recently Deleted on its own or with its Game.
+enum V1V20CapturesSchema {
+    static let sql = """
+    CREATE TABLE captures (
+        id TEXT PRIMARY KEY NOT NULL,
+        game_id TEXT NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+        build_id TEXT,
+        save_profile_id TEXT,
+        kind TEXT NOT NULL CHECK (kind IN ('print')),
+        asset_id TEXT NOT NULL REFERENCES managed_assets(id),
+        is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1)),
+        created_at TEXT NOT NULL,
+        modified_at TEXT NOT NULL,
+        deletion_id TEXT
+    );
+    CREATE INDEX captures_game ON captures(game_id, created_at);
     """
 }

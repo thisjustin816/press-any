@@ -459,6 +459,42 @@ public final class GRDBSaveStateRepository: SaveStateRepository, GRDBRepositoryB
     }
 }
 
+public final class GRDBCaptureRepository: CaptureRepository, GRDBRepositoryBacking, @unchecked Sendable {
+    let writer: any DatabaseWriter
+
+    init(writer: any DatabaseWriter) {
+        self.writer = writer
+    }
+
+    public func insertCapture(_ capture: Capture) throws {
+        try write { db in try CaptureRecord(capture).insert(db) }
+    }
+
+    public func updateCapture(_ capture: Capture) throws {
+        try write { db in try CaptureRecord(capture).update(db) }
+    }
+
+    public func fetchCaptures(gameID: UUID) throws -> [Capture] {
+        try read { db in
+            try CaptureRecord.fetchAll(
+                db,
+                sql: "SELECT * FROM captures WHERE game_id = ? AND deletion_id IS NULL ORDER BY created_at DESC, id",
+                arguments: [PersistenceCodec.uuid(gameID)]
+            ).map { try $0.domain() }
+        }
+    }
+
+    public func fetchCapture(id: UUID) throws -> Capture? {
+        try read { db in
+            try CaptureRecord.fetchOne(
+                db,
+                sql: "SELECT * FROM captures WHERE id = ? AND deletion_id IS NULL",
+                arguments: [PersistenceCodec.uuid(id)]
+            )?.domain()
+        }
+    }
+}
+
 public final class GRDBPatchRecipeRepository: PatchRecipeRepository, GRDBRepositoryBacking, @unchecked Sendable {
     let writer: any DatabaseWriter
 
@@ -764,6 +800,7 @@ public struct GRDBRepositorySet: Sendable {
     public let builds: GRDBBuildRepository
     public let saveProfiles: GRDBSaveProfileRepository
     public let saveStates: GRDBSaveStateRepository
+    public let captures: GRDBCaptureRepository
     public let patchRecipes: GRDBPatchRecipeRepository
     public let toolchainReports: GRDBToolchainReportRepository
     public let fingerprints: GRDBImageFingerprintRepository
@@ -780,6 +817,7 @@ public struct GRDBRepositorySet: Sendable {
         builds = GRDBBuildRepository(writer: writer)
         saveProfiles = GRDBSaveProfileRepository(writer: writer)
         saveStates = GRDBSaveStateRepository(writer: writer)
+        captures = GRDBCaptureRepository(writer: writer)
         patchRecipes = GRDBPatchRecipeRepository(writer: writer)
         toolchainReports = GRDBToolchainReportRepository(writer: writer)
         fingerprints = GRDBImageFingerprintRepository(writer: writer)

@@ -79,6 +79,7 @@ struct BackupRestorePlanner {
         let gameIDs = Set(library.games.map(\.id)), buildIDs = Set(library.builds.map(\.id))
         let profileIDs = Set(library.profiles.map(\.id)), stateIDs = Set(library.states.map(\.id))
         let recipeIDs = Set(library.recipes.map(\.id)), mapIDs = Set(library.variableMaps.map(\.id))
+        let captureIDs = Set(library.captures.map(\.id))
         result.games = result.games.map { value in
             var value = value
             if selected("Game", value.id, gameIDs), let id = value.artworkAssetID { value.artworkAssetID = mapped(id) }
@@ -104,6 +105,9 @@ struct BackupRestorePlanner {
                     PatchRecipeItem(position: $0.position, patchAssetID: mapped($0.patchAssetID), enabled: $0.enabled,
                         ignoresBaseMismatch: $0.ignoresBaseMismatch, expectedInputSHA256: $0.expectedInputSHA256)
                 }, createdAt: value.createdAt)
+        }
+        result.captures = result.captures.map { value in
+            selected("Print", value.id, captureIDs) ? value.backupCopy(assetID: mapped(value.assetID)) : value
         }
         result.variableMaps = result.variableMaps.map { value in
             guard selected("Variable Map", value.id, mapIDs) else { return value }
