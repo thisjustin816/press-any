@@ -27,9 +27,9 @@ unfinished roadmap targets v2.0 tentatively; `docs/backlog.md` separates these s
 Game Boy Printer emulation with printed-slip image export is prioritized for v1.1.
 
 - iOS 17.4 or later, iPhone first. iPad keeps working but gets no special design until later.
-- SameBoy 1.0.3 for GB and GBC, built from its `Core/` only. SameBoy's `iOS/` directory needs
-  its author's written permission to ship on the App Store, so none of its code, artwork or
-  layouts are used.
+- SameBoy 1.0.4 for GB and GBC, at the master commit `THIRD_PARTY_NOTICES.md` records, built
+  from its `Core/` only. SameBoy's `iOS/` directory needs its author's written permission to ship
+  on the App Store, so none of its code, artwork or layouts are used.
 - GBA comes through an mGBA adapter in a later release, once GB/GBC is feature complete. Other
   systems aren't planned, but the library, storage, input and core abstractions
   mustn't rule them out.

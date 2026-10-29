@@ -9,12 +9,17 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
 - Author: Lior Halphon
 - Upstream: https://github.com/LIJI32/SameBoy
 - Location: git submodule at `Packages/EmulatorKit/Dependencies/SameBoy`
-- Pinned commit: `213a12ce93d66b105a113debd9396306066a7cfc` (`v1.0.3-5-g213a12c`)
-- Why this commit and not the `v1.0.3` tag: the five commits after the tag include upstream
-  `21b0dd3`, which fixes the `object_low_line_address` mask in `sanitize_state`. In `v1.0.3`
-  that mask does not bound the field, so loading a corrupt save state can read past the end of
-  VRAM. The other four commits change only the Cocoa frontend and Workboy emulation, which Press
-  Any does not compile or use. Move to a release tag once one contains this fix.
+- Pinned commit: `19a7b14cfb10bb20b0f931b3d77359c11f866e17` (`v1.0.4-53-g19a7b14c`, master on
+  2026-10-28)
+- Why this commit and not the `v1.0.4` tag: the commits after the tag include upstream
+  `ecd0b5f`, which stops a WX register write from also landing in `hram`, where it overwrote a
+  byte of the Game Boy Camera's dither matrix. They also stop MBC3 and TPP1 clocks from counting
+  time while a game has halted them, apply six-digit Game Genie codes and cheats in cartridge RAM
+  banks, expose the camera's shoot flags, fix Super Game Boy `MLT_REQ`, refuse truncated states
+  with an error, and model the infrared sensor more closely. Version 1.0.4 itself fixes Super
+  Game Boy command reading, MMM01 detection and reads past the core's memory when loading a
+  damaged state. States saved by the previous pin (`213a12c`) load unchanged. Move to a release
+  tag once one contains these fixes.
 - Usage: only `Core/` is compiled, behind Press Any's `SameBoyBridge`. The boot ROMs are built
   from the submodule's `BootROMs/` sources. Nothing from SameBoy's iOS frontend (`iOS/`), whose
   license needs the author's written permission for App Store distribution, is compiled,

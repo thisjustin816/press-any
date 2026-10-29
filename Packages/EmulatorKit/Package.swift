@@ -58,7 +58,7 @@ let package = Package(
             publicHeadersPath: "graphics",
             cSettings: [
                 .define("GB_INTERNAL"),
-                .define("GB_VERSION", to: "\"1.0.3\""),
+                .define("GB_VERSION", to: "\"1.0.4\""),
                 .define("GB_COPYRIGHT_YEAR", to: "\"2026\""),
                 .define("_GNU_SOURCE", .when(platforms: [.linux])),
                 .unsafeFlags(["-std=gnu11"]),
