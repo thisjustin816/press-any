@@ -137,7 +137,9 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
   a disassembly of the printer's ROM, and from timings measured with its firmware emulator
   (`emulator/gbprinter_emu.py`). The model is Press Any's own code: no source, ROM or binary
   from the project is copied or shipped. Its replies were checked byte for byte against that
-  emulator running the printer's firmware; the check ran outside this repository.
+  emulator running the printer's firmware; the check ran outside this repository. One rule
+  departs from that reading: a data packet after a finished Print needs an Init first, because a
+  physical printer refused one without it.
 - License: the project states none. Nothing is copied; it is credited in Acknowledgements.
 
 ## In the app

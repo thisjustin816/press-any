@@ -6,7 +6,8 @@
 // Game-Boy-Printer-disassembly documents it (Printer_protocol.md) and runs it in its firmware
 // emulator (https://github.com/Raphael-Boichot/Game-Boy-Printer-disassembly). The 4 ms per pixel
 // column was checked on a real printer there; the paper feed of a margin unit was not, so the
-// print times that include it are the emulator's.
+// print times that include it are the emulator's. One rule, for data after a finished Print,
+// comes from a physical printer (header_done).
 #define SBP_MS(ms) ((uint64_t)(ms) * SBP_TICKS_PER_SECOND / 1000u)
 #define SBP_BYTE_TIMEOUT (SBP_TICKS_PER_SECOND * 512u / 100000u) // 5.12 ms between bytes.
 #define SBP_IDLE_RESET SBP_MS(125)    // Without a byte while not printing, the printer re-inits.
@@ -152,8 +153,7 @@ bool sbp_is_printing(const SBGameBoyPrinter *p)
     return p->printing;
 }
 
-// Image memory still holds a printed job until the next data packet, so it counts only before
-// a Print.
+// Image memory still holds a printed job until an Init, so it counts only before a Print.
 bool sbp_is_receiving(const SBGameBoyPrinter *p)
 {
     return (p->image_bytes && !p->after_print) || (p->data_packet && p->phase == SBP_PAYLOAD);
@@ -220,15 +220,13 @@ static void header_done(SBGameBoyPrinter *p)
                 }
                 break;
             }
-            if (p->break_block) {
+            // A finished Print's data needs an Init before the next image. A physical printer on a
+            // ModRetro Chromatic refused a data packet sent after a finished Print with no Init
+            // between, every time: packet error, image full still set (status 0x14), nothing
+            // printed. A reading of the firmware has that packet start a new image instead.
+            if (p->break_block || p->after_print) {
                 p->packet_error = true;
                 break;
-            }
-            if (p->after_print) {
-                p->after_print = false;
-                p->status &= (uint8_t)~SBP_FULL;
-                p->end_mark = false;
-                p->image_bytes = 0;
             }
             if ((p->status & SBP_FULL) || p->compression > 1u) {
                 p->packet_error = true;

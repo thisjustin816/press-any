@@ -1552,8 +1552,11 @@ the slip renderer preserves the decoded print tones.
 The printer follows the Game Boy Printer's own firmware, not the core's simpler model. Bytes
 more than 5.12 ms apart drop the packet, which the game reads as 0xFF. About 125 ms without a
 byte while the printer is idle clears what it holds, as Init does. Print needs the empty data
-packet first. Status bits, the checksum flag that shows a packet late, packet errors, data sent
-while printing, and data after a print without Init all follow the firmware. A print stays busy
+packet first. Status bits, the checksum flag that shows a packet late, packet errors and data sent
+while printing all follow the firmware. Data sent after a finished print needs an Init first:
+without one, the printer refuses it with a packet error and image full set (status 0x14) and
+stores none of it, as a physical printer did on a ModRetro Chromatic, though a reading of the
+firmware has it start a new image. A print stays busy
 as long as the paper takes: about 0.8 seconds to the end of the first 16-row band, 1.1 to 1.3
 seconds for each band after it, and 0.16 seconds for each unit of margin. The top margin feeds
 once and the bottom margin after every copy, and each copy after the first feeds about 0.1

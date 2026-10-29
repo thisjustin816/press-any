@@ -6,15 +6,16 @@
 // milliseconds since the test began.
 static SBGameBoyPrinter printer;
 static unsigned prints;
-static uint8_t last_height;
+static uint8_t last_height, last_first_pixel;
 static uint64_t now_ms;
 
 static void on_print(void *context, const uint8_t *pixels, uint8_t height, uint8_t top,
                      uint8_t bottom, uint8_t exposure)
 {
-    (void)context; (void)pixels; (void)top; (void)bottom; (void)exposure;
+    (void)context; (void)top; (void)bottom; (void)exposure;
     prints++;
     last_height = height;
+    last_first_pixel = pixels[0];
 }
 
 static uint64_t ticks(uint64_t ms)
@@ -120,6 +121,29 @@ static void test_idle_after_print(void)
     assert(!sbp_is_receiving(&printer));
 }
 
+// A finished Print's data needs an Init before the next image, as on a physical printer
+// (header_done in SBGameBoyPrinter.c).
+static void test_data_after_a_print_waits_for_an_init(void)
+{
+    uint8_t black[640];
+    memset(black, 0xff, sizeof(black));
+    start();
+    uint64_t printed = print_bands(1, print_one);
+    poll_until(printed, 1500);
+    assert(prints == 1 && last_first_pixel == 0 && !sbp_is_printing(&printer));
+
+    assert(packet(4, 0, black, sizeof(black)) == 0x14);
+    assert(packet(4, 0, black, sizeof(black)) == 0x14);
+    assert(printer.image_bytes == 640 && printer.memory[0] == 0x55);
+
+    packet(1, 0, NULL, 0);
+    assert(!(packet(4, 0, black, sizeof(black)) & 0x10));
+    assert(!(packet(4, 0, NULL, 0) & 0x10));
+    assert(!(packet(2, 0, print_one, sizeof(print_one)) & 0x10));
+    poll_until(now_ms, 1500);
+    assert(prints == 2 && last_height == 16 && last_first_pixel == 3);
+}
+
 // Times from the printer's firmware run in its emulator: a Break while the paper feeds between
 // bands stops it at the next feed step, and the band already printed comes out.
 static void test_break_between_bands(void)
@@ -190,6 +214,7 @@ void test_printer_model(void)
 {
     test_run_ends_with_its_band();
     test_idle_after_print();
+    test_data_after_a_print_waits_for_an_init();
     test_break_between_bands();
     test_copies_take_their_time();
     test_events_name_what_the_printer_dropped();
