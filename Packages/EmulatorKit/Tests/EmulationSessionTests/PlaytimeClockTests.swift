@@ -27,6 +27,21 @@ final class PlaytimeClockTests: XCTestCase {
         XCTAssertEqual(clock.nanoseconds, frame + 8 * (frame / 4))
     }
 
+    func testSlowMotionCountsTheLongerRealTimeOfEachFrame() {
+        let uptime = FakeUptime()
+        var clock = PlaytimeClock(uptime: uptime.read)
+        clock.setSpeed(.multiplier(0.5))
+        clock.ranFrame(lasting: frame)
+        for _ in 0..<4 {
+            uptime.advance(by: frame * 2)
+            clock.ranFrame(lasting: frame)
+        }
+        XCTAssertEqual(clock.nanoseconds, frame + 8 * frame)
+        uptime.advance(by: 60_000_000_000)
+        clock.ranFrame(lasting: frame)
+        XCTAssertEqual(clock.nanoseconds, frame + 10 * frame, "a pause adds at most one slowed frame")
+    }
+
     func testUnlimitedCountsRealTimeAndAPauseAddsAtMostOneFrame() {
         let uptime = FakeUptime()
         var clock = PlaytimeClock(uptime: uptime.read)

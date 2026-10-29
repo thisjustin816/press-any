@@ -2,8 +2,9 @@ import EmulationCore
 import Foundation
 
 /// Counts real play time from the frames a session runs. At normal speed a frame counts the time it
-/// emulates. Faster, it counts the real time since the frame before, up to the time it emulates, so
-/// Fast Forward adds only the time the player spent and a pause between frames adds nothing.
+/// emulates. At any other speed it counts the real time since the frame before, up to how long the
+/// frame lasts at that speed, so Fast Forward and slow motion add only the time the player spent
+/// and a pause between frames adds nothing. Rewind, when it comes, should count the same way.
 public struct PlaytimeClock: Sendable {
     public private(set) var nanoseconds: UInt64 = 0
     private var speed = EmulationSpeed.normal
@@ -25,7 +26,13 @@ public struct PlaytimeClock: Sendable {
             nanoseconds &+= emulated
             return
         }
-        nanoseconds &+= min(now &- lastFrameAt, emulated)
+        nanoseconds &+= min(now &- lastFrameAt, realLength(of: emulated))
+    }
+
+    /// The real time a frame takes at the current speed; one frame's game time when faster.
+    private func realLength(of emulated: UInt64) -> UInt64 {
+        guard case .multiplier(let value) = speed, value > 0, value < 1 else { return emulated }
+        return UInt64(Double(emulated) / value)
     }
 
     /// Starts a new session's count at the speed already set.
