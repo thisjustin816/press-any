@@ -66,6 +66,17 @@ struct AcknowledgementsView: View {
             """)
         ),
         Component(
+            name: "Game Boy Printer disassembly",
+            use: "How the Game Boy Printer behaves",
+            license: .rightsNotice(credit: """
+            Raphaël Boichot’s Game-Boy-Printer-disassembly \
+            (https://github.com/Raphael-Boichot/Game-Boy-Printer-disassembly) documents the protocol \
+            the printer's firmware implements and runs that firmware in an emulator. \
+            \(AppBrand.displayName)’s printer is its own code, built from that documentation and \
+            checked against the emulator. No code from the project is included.
+            """)
+        ),
+        Component(
             name: "No-Intro",
             use: "Recognizing known Game Boy and Game Boy Color releases",
             license: .freeData(credit: AcknowledgementsView.noIntroCredit)

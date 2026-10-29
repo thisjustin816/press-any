@@ -2,8 +2,9 @@
 
 #include <string.h>
 
-// The rules and timings come from the printer's firmware (Raphael Boichot's Game-Boy-Printer-
-// disassembly, Printer_protocol.md, and its firmware emulator). The 4 ms per pixel column was
+// The rules and timings come from the printer's firmware, as Raphaël Boichot's Game-Boy-
+// Printer-disassembly documents it (Printer_protocol.md) and runs it in its firmware emulator
+// (https://github.com/Raphael-Boichot/Game-Boy-Printer-disassembly). The 4 ms per pixel column was
 // checked on a real printer there; the paper feed of a margin unit was not, so the print times
 // that include it are the emulator's.
 #define SBP_MS(ms) ((uint64_t)(ms) * SBP_TICKS_PER_SECOND / 1000u)
