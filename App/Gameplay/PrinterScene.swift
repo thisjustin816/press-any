@@ -62,6 +62,13 @@ enum PrinterScene {
         if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
             cg.drawLinearGradient(gradient, start: CGPoint(x: 0, y: shell.minY), end: CGPoint(x: 0, y: shell.maxY), options: [])
         }
+        // A rounded lip along the bottom: a band of shade with light catching its upper edge.
+        cg.saveGState()
+        path.addClip()
+        UIColor(white: 0, alpha: 0.12).setFill()
+        cg.fill(CGRect(x: shell.minX, y: shell.maxY - 30, width: shell.width, height: 30))
+        UIColor(white: 1, alpha: 0.35).setFill()
+        cg.fill(CGRect(x: shell.minX, y: shell.maxY - 32, width: shell.width, height: 3))
         cg.restoreGState()
         UIColor(white: 0.55, alpha: 1).setStroke()
         path.lineWidth = 4
@@ -74,9 +81,19 @@ enum PrinterScene {
         let path = UIBezierPath(roundedRect: lid, byRoundingCorners: [.topLeft, .topRight], cornerRadii: CGSize(width: 44, height: 44))
         UIColor(red: 0.36, green: 0.38, blue: 0.40, alpha: 1).setFill()
         path.fill()
-        // The roll inside shows through.
-        UIColor(white: 0.62, alpha: 0.35).setFill()
-        cg.fill(CGRect(x: lid.minX + 120, y: lid.minY + 60, width: lid.width - 240, height: lid.height - 110))
+        // The paper roll shows through: a cylinder lying across, lightest along its middle.
+        let roll = CGRect(x: lid.minX + 70, y: lid.minY + 50, width: lid.width - 140, height: min(200, lid.height - 90))
+        cg.saveGState()
+        UIBezierPath(roundedRect: roll, cornerRadius: 30).addClip()
+        let rollColors = [UIColor(white: 0.55, alpha: 0.5).cgColor, UIColor(white: 0.85, alpha: 0.55).cgColor,
+                          UIColor(white: 0.5, alpha: 0.5).cgColor] as CFArray
+        if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: rollColors, locations: [0, 0.45, 1]) {
+            cg.drawLinearGradient(gradient, start: CGPoint(x: 0, y: roll.minY), end: CGPoint(x: 0, y: roll.maxY), options: [])
+        }
+        cg.restoreGState()
+        // Light on the clear plastic: its top edge and one side.
+        UIColor(white: 1, alpha: 0.18).setFill()
+        UIBezierPath(roundedRect: CGRect(x: lid.minX + 30, y: lid.minY + 8, width: lid.width - 60, height: 10), cornerRadius: 5).fill()
         UIColor(white: 1, alpha: 0.12).setFill()
         cg.fill(CGRect(x: lid.minX + 24, y: lid.minY + 40, width: 10, height: lid.height - 70))
         UIColor(white: 0.25, alpha: 1).setStroke()
@@ -154,9 +171,30 @@ enum PrinterScene {
             cg.drawLinearGradient(gradient, start: CGPoint(x: 0, y: feed.minY), end: CGPoint(x: 0, y: feed.maxY), options: [])
         }
         cg.restoreGState()
-        label("FEED", size: 34, color: UIColor(white: 0.95, alpha: 0.9), center: CGPoint(x: feed.midX, y: feed.midY))
+        // FEED is pressed into the button: darker than it, with light catching the lower edges.
+        label("FEED", size: 34, color: UIColor(white: 1, alpha: 0.28), center: CGPoint(x: feed.midX, y: feed.midY + 2))
+        label("FEED", size: 34, color: UIColor(red: 0.36, green: 0.06, blue: 0.21, alpha: 1), center: CGPoint(x: feed.midX, y: feed.midY))
+
+        drawEmblem(in: cg, center: CGPoint(x: width / 2, y: top + 48))
 
         drawPowerSwitch(in: cg, origin: CGPoint(x: width - 360, y: top + 100))
+    }
+
+    /// The raised oval under the panel, in the body's own gray, the way the printer carries its
+    /// maker's name.
+    private static func drawEmblem(in cg: CGContext, center: CGPoint) {
+        let oval = CGRect(x: center.x - 150, y: center.y - 26, width: 300, height: 52)
+        let path = UIBezierPath(ovalIn: oval)
+        path.lineWidth = 4
+        cg.saveGState()
+        cg.translateBy(x: 0, y: 2)
+        UIColor(white: 1, alpha: 0.45).setStroke()
+        path.stroke()
+        cg.restoreGState()
+        UIColor(white: 0, alpha: 0.22).setStroke()
+        path.stroke()
+        label("PRESS ANY", size: 30, color: UIColor(white: 1, alpha: 0.45), center: CGPoint(x: center.x, y: center.y + 2))
+        label("PRESS ANY", size: 30, color: UIColor(white: 0, alpha: 0.24), center: center)
     }
 
     /// The power switch: a plate in the body's gray that slides along a recessed, ridged track,
