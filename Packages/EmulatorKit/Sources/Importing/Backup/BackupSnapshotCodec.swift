@@ -20,6 +20,7 @@ enum BackupSnapshotCodec {
             "recipes.json": try encoder.encode(snapshot.recipes),
             "variable-maps.json": try encoder.encode(snapshot.variableMaps),
             "cheats.json": try encoder.encode(snapshot.cheats),
+            "captures.json": try encoder.encode(snapshot.captures),
             "managed-assets.json": try encoder.encode(snapshot.assets),
             "game-provenance.json": try encoder.encode(snapshot.gameProvenance),
             "build-provenance.json": try encoder.encode(snapshot.buildProvenance),
@@ -32,7 +33,7 @@ enum BackupSnapshotCodec {
 
     static let recordFilenames: Set<String> = [
         "games.json", "manual-positions.json", "builds.json", "profiles.json", "states.json", "recipes.json",
-        "variable-maps.json", "cheats.json", "managed-assets.json", "game-provenance.json", "build-provenance.json",
+        "variable-maps.json", "cheats.json", "captures.json", "managed-assets.json", "game-provenance.json", "build-provenance.json",
         "toolchain-reports.json", "save-declarations.json", "fingerprints.json", "settings.json",
     ]
 
@@ -51,6 +52,8 @@ enum BackupSnapshotCodec {
         snapshot.recipes = try values([PatchRecipe].self, "recipes.json")
         snapshot.variableMaps = try values([BuildVariableMap].self, "variable-maps.json")
         snapshot.cheats = try values([BuildCheat].self, "cheats.json")
+        // An archive written before prints were kept has none.
+        snapshot.captures = try values([Capture].self, "captures.json")
         snapshot.assets = try values([ManagedAsset].self, "managed-assets.json")
         snapshot.gameProvenance = try values([BackupProvenance].self, "game-provenance.json")
         snapshot.buildProvenance = try values([BackupProvenance].self, "build-provenance.json")
@@ -66,6 +69,7 @@ enum BackupSnapshotCodec {
         ["games": snapshot.games.count, "manualPositions": snapshot.manualPositions.count, "builds": snapshot.builds.count,
          "profiles": snapshot.profiles.count, "states": snapshot.states.count,
          "recipes": snapshot.recipes.count, "variableMaps": snapshot.variableMaps.count, "cheats": snapshot.cheats.count,
+         "captures": snapshot.captures.count,
          "assets": snapshot.assets.count, "gameProvenance": snapshot.gameProvenance.count,
          "buildProvenance": snapshot.buildProvenance.count, "reports": snapshot.reports.count,
          "declarations": snapshot.declarations.count, "settings": snapshot.settings.count]
@@ -81,6 +85,7 @@ enum BackupSnapshotCodec {
         snapshot.recipes.sort { $0.id.uuidString < $1.id.uuidString }
         snapshot.variableMaps.sort { $0.id.uuidString < $1.id.uuidString }
         snapshot.cheats.sort { $0.id.uuidString < $1.id.uuidString }
+        snapshot.captures.sort { $0.id.uuidString < $1.id.uuidString }
         snapshot.assets.sort { $0.id.uuidString < $1.id.uuidString }
         snapshot.gameProvenance.sort { $0.ownerID.uuidString < $1.ownerID.uuidString }
         snapshot.buildProvenance.sort { $0.ownerID.uuidString < $1.ownerID.uuidString }
@@ -120,6 +125,7 @@ enum BackupSnapshotCodec {
         try unique(snapshot.recipes) { $0.resultBuildID.uuidString }
         try unique(snapshot.variableMaps) { $0.id.uuidString }
         try unique(snapshot.cheats) { $0.id.uuidString }
+        try unique(snapshot.captures) { $0.id.uuidString }
         try unique(snapshot.assets) { $0.id.uuidString }
         try unique(snapshot.assets) { $0.relativePath.lowercased() }
         try unique(snapshot.gameProvenance) { $0.ownerID.uuidString }
@@ -203,6 +209,10 @@ enum BackupSnapshotCodec {
             try require(builds.contains(cheat.buildID), "the cheat \(cheat.name) would lose its Build")
             try require(cheat.position >= 0 && !cheat.codes.isEmpty
                 && cheat.codes.allSatisfy { !$0.isEmpty && !$0.contains(where: \.isNewline) })
+        }
+        for capture in snapshot.captures {
+            try require(games.contains(capture.gameID), "a print would lose its Game")
+            try asset(capture.assetID, kind: .capture)
         }
         for value in snapshot.gameProvenance { try require(games.contains(value.ownerID)) }
         for value in snapshot.buildProvenance { try require(builds.contains(value.ownerID)) }

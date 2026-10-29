@@ -5,11 +5,19 @@ public struct PrinterSlip: Identifiable, Equatable, Sendable {
     public private(set) var sections: [PrinterOutput]
     public static let maximumFeedHeight = 2048
 
-    public enum ValidationError: Error { case paperTooLong }
+    public enum ValidationError: Error { case paperTooLong, noPaper }
 
     public init(output: PrinterOutput, id: UUID = UUID()) {
         self.id = id
         sections = [output]
+    }
+
+    /// A slip read back from storage, held to the same limits as one the printer fed.
+    public init(id: UUID, sections: [PrinterOutput]) throws {
+        guard let first = sections.first else { throw ValidationError.noPaper }
+        var slip = PrinterSlip(output: first, id: id)
+        for section in sections.dropFirst() { try slip.append(section) }
+        self = slip
     }
 
     public var feedHeight: Int {

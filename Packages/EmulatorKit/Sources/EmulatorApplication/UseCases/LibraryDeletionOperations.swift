@@ -6,6 +6,7 @@ public enum LibraryDeletionError: Error, Equatable {
     case buildNotFound(UUID)
     case saveProfileNotFound(UUID)
     case saveStateNotFound(UUID)
+    case captureNotFound(UUID)
     case deletionNotFound(UUID)
     /// Patched Builds in other Games are rebuilt from Builds in this Game. They name the Builds.
     case dependentBuildsInOtherGames([UUID])
@@ -34,13 +35,14 @@ public struct DeletionPlan: Equatable, Sendable {
     public let emptiedGames: [Game]
 }
 
-/// Deletes Games, Builds, Save Profiles and save states into Recently Deleted, restores them, and
-/// purges them after `LibraryDeletion.retention`.
+/// Deletes Games, Builds, Save Profiles, save states and prints into Recently Deleted, restores
+/// them, and purges them after `LibraryDeletion.retention`.
 public struct LibraryDeletionOperations: Sendable {
     let games: any GameRepository
     let builds: any BuildRepository
     private let profiles: any SaveProfileRepository
     private let states: any SaveStateRepository
+    private let captures: (any CaptureRepository)?
     private let recipes: any PatchRecipeRepository
     private let deletions: any LibraryDeletionRepository
     private let assetStore: any AssetStore
@@ -54,6 +56,7 @@ public struct LibraryDeletionOperations: Sendable {
         builds: any BuildRepository,
         profiles: any SaveProfileRepository,
         states: any SaveStateRepository,
+        captures: (any CaptureRepository)? = nil,
         recipes: any PatchRecipeRepository,
         deletions: any LibraryDeletionRepository,
         assetStore: any AssetStore,
@@ -66,6 +69,7 @@ public struct LibraryDeletionOperations: Sendable {
         self.builds = builds
         self.profiles = profiles
         self.states = states
+        self.captures = captures
         self.recipes = recipes
         self.deletions = deletions
         self.assetStore = assetStore
@@ -75,7 +79,7 @@ public struct LibraryDeletionOperations: Sendable {
         self.now = now
     }
 
-    /// The Game with all its Builds, Save Profiles and states. Refused while a patched Build in
+    /// The Game with all its Builds, Save Profiles, states and prints. Refused while a patched Build in
     /// another Game is rebuilt from one of its Builds.
     public func planGameDeletion(gameID: UUID) throws -> DeletionPlan {
         guard let game = try games.fetchGame(id: gameID) else { throw LibraryDeletionError.gameNotFound(gameID) }
@@ -91,6 +95,7 @@ public struct LibraryDeletionOperations: Sendable {
         guard outside.isEmpty else { throw LibraryDeletionError.dependentBuildsInOtherGames(outside) }
         var records = LibraryRecordSet(gameIDs: [gameID], buildIDs: gameBuilds.map(\.id))
         try addProfilesAndStates(ofGame: gameID, to: &records)
+        try addCaptures(ofGame: gameID, to: &records)
         return DeletionPlan(kind: .game, title: game.primaryTitle, gameID: gameID, records: records, dependentBuilds: [], emptiedGames: [])
     }
 
@@ -117,6 +122,7 @@ public struct LibraryDeletionOperations: Sendable {
                 emptied.append(game)
                 records.gameIDs.append(gameID)
                 try addProfilesAndStates(ofGame: gameID, to: &records)
+                try addCaptures(ofGame: gameID, to: &records)
             } else {
                 for profile in try profiles.fetchSaveProfiles(gameID: gameID) {
                     records.saveStateIDs += try states.fetchSaveStates(saveProfileID: profile.id)
@@ -157,6 +163,23 @@ public struct LibraryDeletionOperations: Sendable {
             title: state.displayName,
             gameID: profile.gameID,
             records: LibraryRecordSet(saveStateIDs: [stateID]),
+            dependentBuilds: [],
+            emptiedGames: []
+        )
+    }
+
+    /// Prints from one Game, deleted together.
+    public func planCaptureDeletion(captureIDs: [UUID]) throws -> DeletionPlan {
+        let found = try captureIDs.map { id in
+            guard let capture = try captures?.fetchCapture(id: id) else { throw LibraryDeletionError.captureNotFound(id) }
+            return capture
+        }
+        guard let first = found.first else { throw LibraryDeletionError.captureNotFound(UUID()) }
+        return DeletionPlan(
+            kind: .capture,
+            title: found.count == 1 ? "Print" : "\(found.count) Prints",
+            gameID: first.gameID,
+            records: LibraryRecordSet(captureIDs: found.map(\.id)),
             dependentBuilds: [],
             emptiedGames: []
         )
@@ -222,6 +245,23 @@ public struct LibraryDeletionOperations: Sendable {
             title: "Cleaned-up Save States",
             gameID: context.gameID,
             records: LibraryRecordSet(saveStateIDs: expired.map(\.id)),
+            dependentBuilds: [],
+            emptiedGames: []
+        ))
+    }
+
+    /// Keeps the Game's newest `keepCount` unpinned prints and moves the rest to Recently Deleted
+    /// together.
+    public func cleanCaptures(gameID: UUID, keepCount: Int = Capture.keepCount) throws {
+        guard let captures else { return }
+        let unpinned = try captures.fetchCaptures(gameID: gameID).filter { !$0.isPinned }
+        let expired = Array(unpinned.dropFirst(max(0, keepCount)))
+        guard !expired.isEmpty else { return }
+        try delete(DeletionPlan(
+            kind: .capture,
+            title: "Cleaned-up Prints",
+            gameID: gameID,
+            records: LibraryRecordSet(captureIDs: expired.map(\.id)),
             dependentBuilds: [],
             emptiedGames: []
         ))
@@ -293,6 +333,7 @@ public struct LibraryDeletionOperations: Sendable {
         case .build: (try? builds.fetchBuild(id: target.id))?.displayName ?? "Build"
         case .saveProfile: (try? profiles.fetchSaveProfile(id: target.id))?.displayName ?? "Save Profile"
         case .saveState: (try? states.fetchSaveState(id: target.id))?.displayName ?? "Save State"
+        case .capture: "Print"
         }
     }
 
@@ -329,6 +370,10 @@ public struct LibraryDeletionOperations: Sendable {
             records.saveProfileIDs.append(profile.id)
             records.saveStateIDs += try states.fetchSaveStates(saveProfileID: profile.id).map(\.id)
         }
+    }
+
+    private func addCaptures(ofGame gameID: UUID, to records: inout LibraryRecordSet) throws {
+        records.captureIDs += try captures?.fetchCaptures(gameID: gameID).map(\.id) ?? []
     }
 
     /// The rows are gone, so a file left behind is only an orphan for the library check.

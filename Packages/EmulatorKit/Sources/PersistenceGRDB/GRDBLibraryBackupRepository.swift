@@ -82,6 +82,11 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
                 AND state.kind <> 'crashRecovery'
             ORDER BY state.created_at, state.id
             """).map { try $0.domain() }
+        value.captures = try CaptureRecord.fetchAll(db, sql: """
+            SELECT capture.* FROM captures capture JOIN games game ON game.id = capture.game_id
+            WHERE capture.deletion_id IS NULL AND game.deletion_id IS NULL
+            ORDER BY capture.created_at, capture.id
+            """).map { try $0.domain() }
 
         let liveBuildIDs = Set(value.builds.map(\.id))
         var declarations = Set<BuildSaveDeclaration>()
@@ -138,6 +143,7 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
         assetIDs.formUnion(value.states.compactMap(\.screenshotAssetID))
         assetIDs.formUnion(value.recipes.flatMap { $0.items.map(\.patchAssetID) })
         assetIDs.formUnion(value.variableMaps.map(\.assetID))
+        assetIDs.formUnion(value.captures.map(\.assetID))
         let inventory = try repositories.assets.fetchAssets()
         value.assets = inventory.filter { assetIDs.contains($0.id) }
         value.retained = RetainedLibraryRecords(recordIDs: try deletedRecordIDs(db: db),
@@ -151,6 +157,8 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
             UNION SELECT id FROM builds WHERE deletion_id IS NOT NULL
             UNION SELECT id FROM save_profiles WHERE deletion_id IS NOT NULL
             UNION SELECT id FROM save_states WHERE deletion_id IS NOT NULL
+            UNION SELECT capture.id FROM captures capture JOIN games game ON game.id = capture.game_id
+                WHERE capture.deletion_id IS NOT NULL OR game.deletion_id IS NOT NULL
             UNION SELECT record_id FROM tombstones
             UNION SELECT recipe.id FROM patch_recipes recipe
                 JOIN builds result ON result.id = recipe.result_build_id
@@ -190,6 +198,7 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
             ("builds", .build, value.builds.map(\.id)),
             ("save_profiles", .saveProfile, value.profiles.map(\.id)),
             ("save_states", .saveState, value.states.map(\.id)),
+            ("captures", .capture, value.captures.map(\.id)),
         ]
         for (table, kind, ids) in records {
             let deleted = Set(try String.fetchAll(db, sql: """
@@ -226,7 +235,7 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
 
     private func clearLibrary(db: Database) throws {
         for table in [
-            "save_states", "patch_recipe_items", "patch_recipes", "build_variable_maps", "build_cheats",
+            "save_states", "captures", "patch_recipe_items", "patch_recipes", "build_variable_maps", "build_cheats",
             "build_toolchain_reports", "build_save_declarations", "build_metadata_provenance",
             "game_metadata_provenance", "game_aliases", "game_manual_positions", "save_profiles", "builds", "games",
             "managed_assets", "library_deletions", "tombstones", "settings_overrides", "image_fingerprints",
@@ -276,6 +285,7 @@ public final class GRDBLibraryBackupRepository: LibraryBackupRepository, GRDBRep
         }
         for profile in value.profiles { try SaveProfileRecord(profile).save(db) }
         for state in value.states { try SaveStateRecord(state).save(db) }
+        for capture in value.captures { try CaptureRecord(capture).save(db) }
         for recipe in value.recipes {
             try PatchRecipeRecord(recipe).save(db)
             try db.execute(sql: "DELETE FROM patch_recipe_items WHERE recipe_id = ?", arguments: [PersistenceCodec.uuid(recipe.id)])
@@ -359,6 +369,7 @@ enum BackupCoverage {
         "tombstones": "Excluded; merge preserves it and leaves the backup's copies of its records alone; replacement clears it.",
         "image_fingerprints": "Evidence of live Builds' source images, kept for an image a restored Build uses. Derived from the ROM, but a backup without ROMs has nothing to derive it from. Replacement clears the rest.",
         "build_cheats": "Cheats of live Builds, with their codes, switches and order.",
+        "captures": "Live prints of live Games, with their Build, Save Profile, pin and paper file.",
     ]
 
     /// Every column of every table, as the decisions above cover them. Columns that hold
@@ -373,6 +384,10 @@ enum BackupCoverage {
             "build_id", "detector", "detector_version", "corpus_revision", "report_json", "detected_at"
         ],
         "build_variable_maps": ["id", "build_id", "asset_id", "format", "source", "original_filename", "attached_at"],
+        "captures": [
+            "id", "game_id", "build_id", "save_profile_id", "kind", "asset_id", "is_pinned", "created_at",
+            "modified_at", "deletion_id"
+        ],
         "builds": [
             "id", "game_id", "system", "display_name", "rom_asset_id", "rom_sha256", "source_kind",
             "parent_build_id", "is_base", "region", "language", "revision", "version_string", "version_sort_key",
@@ -424,6 +439,7 @@ enum BackupCoverage {
         "PatchRecipeRepository": "Live recipes and their steps.",
         "BuildVariableMapRepository": "Maps of live Builds.",
         "BuildCheatRepository": "Cheats of live Builds.",
+        "CaptureRepository": "Live prints of live Games.",
         "ManagedAssetRepository": "Referenced assets.",
         "ManagedAssetInventoryRepository": "Inventory filtered to referenced assets.",
         "MetadataProvenanceRepository": "Live Game and Build provenance.",

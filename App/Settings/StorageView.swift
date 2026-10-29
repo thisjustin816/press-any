@@ -27,7 +27,7 @@ struct StorageView: View {
 
             if let usage {
                 Section {
-                    ForEach([LibraryStorageCategory.gameROMs, .patches, .saves, .saveStates, .artwork, .other], id: \.self) { category in
+                    ForEach([LibraryStorageCategory.gameROMs, .patches, .saves, .saveStates, .captures, .artwork, .other], id: \.self) { category in
                         LabeledContent(category.title, value: size(usage.bytes(in: category)))
                     }
                 } header: {
@@ -125,6 +125,7 @@ private extension LibraryStorageCategory {
         case .patches: "Patches"
         case .saves: "Saves"
         case .saveStates: "Save States"
+        case .captures: "Captures"
         case .artwork: "Artwork"
         case .other: "Other"
         case .patchedROMCache: "Patched ROM Cache"

@@ -106,12 +106,13 @@ extension LibraryDeletionOperations {
         case .build: try planBuildDeletion(buildID: target.id)
         case .saveProfile: try planProfileDeletion(profileID: target.id)
         case .saveState: try planStateDeletion(stateID: target.id)
+        case .capture: try planCaptureDeletion(captureIDs: [target.id])
         }
     }
 
     private func deletionOrder(_ kind: LibraryDeletion.Kind) -> Int {
         switch kind {
-        case .saveState: 0
+        case .saveState, .capture: 0
         case .saveProfile: 1
         case .build: 2
         case .game: 3

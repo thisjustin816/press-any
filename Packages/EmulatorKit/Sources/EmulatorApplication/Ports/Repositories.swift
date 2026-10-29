@@ -77,6 +77,15 @@ public protocol SaveStateRepository: Sendable {
     func deleteSaveState(id: UUID) throws
 }
 
+/// Prints a Game keeps in its Captures. Reads leave out anything in Recently Deleted.
+public protocol CaptureRepository: Sendable {
+    func insertCapture(_ capture: Capture) throws
+    func updateCapture(_ capture: Capture) throws
+    /// Newest first.
+    func fetchCaptures(gameID: UUID) throws -> [Capture]
+    func fetchCapture(id: UUID) throws -> Capture?
+}
+
 /// Each Build keeps one report per detector, the latest it ran.
 public protocol ToolchainReportRepository: Sendable {
     /// Inserts the report, or replaces the Build's earlier report from the same detector.

@@ -17,6 +17,9 @@ public enum QuickPlayPromotionShortfall: Equatable, Hashable, Sendable {
     case resumePointNotMoved
     /// The promoted Build couldn't be set to play the kept save, so Play may pick another one.
     case buildDefaultSaveNotSet
+    /// Some of the session's prints couldn't be added to the Game's Captures, so the session is
+    /// kept with them.
+    case printsNotMoved
 }
 
 public struct QuickPlayPromotionResult: Equatable, Sendable {
@@ -62,6 +65,7 @@ public struct PromoteQuickPlay: Sendable {
     private let states: any SaveStateRepository
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
+    private let prints: PrintCaptures?
     private let persistentSaveService: PersistentSaveService
     private let now: @Sendable () -> Date
     private let makeID: @Sendable () -> UUID
@@ -75,9 +79,11 @@ public struct PromoteQuickPlay: Sendable {
         states: any SaveStateRepository,
         assets: any ManagedAssetRepository,
         assetStore: any AssetStore,
+        prints: PrintCaptures? = nil,
         now: @escaping @Sendable () -> Date = Date.init,
         makeID: @escaping @Sendable () -> UUID = UUID.init
     ) {
+        self.prints = prints
         self.analyzer = analyzer
         self.committer = committer
         self.workspace = workspace
@@ -185,7 +191,12 @@ public struct PromoteQuickPlay: Sendable {
                 shortfalls.insert(.buildDefaultSaveNotSet)
             }
         }
-        if !shortfalls.contains(.resumePointNotMoved) {
+        do {
+            try adoptPrints(of: session, gameID: result.game.id, buildID: result.build.id, profileID: promotedProfile?.id)
+        } catch {
+            shortfalls.insert(.printsNotMoved)
+        }
+        if !shortfalls.contains(.resumePointNotMoved) && !shortfalls.contains(.printsNotMoved) {
             // Promotion is complete; a sandbox left behind is removed by retention.
             try? workspace.discard(sessionID: session.id)
         }
@@ -196,6 +207,15 @@ public struct PromoteQuickPlay: Sendable {
             safetyCopy: safetyCopy,
             shortfalls: shortfalls
         )
+    }
+
+    /// Adds the session's prints to the Game's Captures, oldest first, with the Build and any
+    /// profile the save was kept in. A retry after a failure finds the ones already added.
+    private func adoptPrints(of session: QuickPlaySession, gameID: UUID, buildID: UUID, profileID: UUID?) throws {
+        guard let prints else { return }
+        for (slip, printedAt) in try QuickPlayPrints(session: session, files: assetStore).slips() {
+            try prints.save(slip, gameID: gameID, buildID: buildID, saveProfileID: profileID, printedAt: printedAt)
+        }
     }
 
     private func setDefaultSave(_ profileID: UUID, buildID: UUID) throws -> Build {

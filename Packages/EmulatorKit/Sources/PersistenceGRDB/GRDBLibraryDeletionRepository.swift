@@ -11,6 +11,7 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
     /// The tables a deletion marks, with the record kind each holds.
     private static let tables: [(table: String, kind: LibraryRecordKind)] = [
         ("games", .game), ("builds", .build), ("save_profiles", .saveProfile), ("save_states", .saveState),
+        ("captures", .capture),
     ]
 
     init(writer: any DatabaseWriter) {
@@ -31,6 +32,7 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
             for (table, ids) in [
                 ("games", records.gameIDs), ("builds", records.buildIDs),
                 ("save_profiles", records.saveProfileIDs), ("save_states", records.saveStateIDs),
+                ("captures", records.captureIDs),
             ] {
                 for id in ids {
                     try db.execute(
@@ -144,12 +146,14 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
             }
             // A deleted patched Build elsewhere can't be rebuilt once its base goes, and a save state
             // deleted on its own can't come back once its Save Profile or Build goes, so their
-            // deletions go too, and so on down the line.
+            // deletions go too, and so on down the line. Prints deleted on their own go with their
+            // Game.
             while true {
                 let list = Self.placeholders(purged.count)
                 var dependentArguments: [String] = purged + purged
                 dependentArguments.append(LibraryDeletion.Kind.saveState.rawValue)
                 dependentArguments += purged + purged + purged
+                dependentArguments += purged + purged
                 let dependents = try String.fetchAll(
                     db,
                     sql: """
@@ -165,6 +169,10 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                         state.save_profile_id IN (SELECT id FROM save_profiles WHERE deletion_id IN \(list))
                         OR state.build_id IN (SELECT id FROM builds WHERE deletion_id IN \(list))
                     )
+                    UNION
+                    SELECT DISTINCT capture.deletion_id FROM captures capture
+                    WHERE capture.deletion_id IS NOT NULL AND capture.deletion_id NOT IN \(list)
+                        AND capture.game_id IN (SELECT id FROM games WHERE deletion_id IN \(list))
                     """,
                     arguments: StatementArguments(dependentArguments)
                 )
@@ -202,6 +210,7 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                 """
             let goneStatesArguments: [String] = purged + purged + purged
             let candidateArguments: [String] = Array(repeating: purged, count: 5).flatMap { $0 } + goneStatesArguments + goneStatesArguments
+                + purged
 
             let candidates = try Set(String.fetchAll(
                 db,
@@ -217,6 +226,7 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                 UNION SELECT battery_asset_id FROM save_profiles WHERE deletion_id IN \(list) AND battery_asset_id IS NOT NULL
                 UNION SELECT state_asset_id FROM save_states WHERE \(goneStates)
                 UNION SELECT screenshot_asset_id FROM save_states WHERE (\(goneStates)) AND screenshot_asset_id IS NOT NULL
+                UNION SELECT asset_id FROM captures WHERE deletion_id IN \(list)
                 """,
                 arguments: StatementArguments(candidateArguments)
             ))
@@ -236,6 +246,7 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                 arguments: inPurged
             )
             try db.execute(sql: "DELETE FROM save_states WHERE \(goneStates)", arguments: StatementArguments(goneStatesArguments))
+            try db.execute(sql: "DELETE FROM captures WHERE deletion_id IN \(list)", arguments: inPurged)
             for table in ["save_profiles", "builds", "games"] {
                 try db.execute(sql: "DELETE FROM \(table) WHERE deletion_id IN \(list)", arguments: inPurged)
             }
@@ -309,7 +320,8 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                 gameIDs: try ids("games"),
                 buildIDs: try ids("builds"),
                 saveProfileIDs: try ids("save_profiles"),
-                saveStateIDs: try ids("save_states")
+                saveStateIDs: try ids("save_states"),
+                captureIDs: try ids("captures")
             )
         )
     }
@@ -325,8 +337,9 @@ public final class GRDBLibraryDeletionRepository: LibraryDeletionRepository, GRD
                  + (SELECT COUNT(*) FROM build_variable_maps WHERE asset_id = ?)
                  + (SELECT COUNT(*) FROM save_profiles WHERE battery_asset_id = ?)
                  + (SELECT COUNT(*) FROM save_states WHERE state_asset_id = ? OR screenshot_asset_id = ?)
+                 + (SELECT COUNT(*) FROM captures WHERE asset_id = ?)
             """,
-            arguments: StatementArguments(Array(repeating: assetID, count: 7))
+            arguments: StatementArguments(Array(repeating: assetID, count: 8))
         ) ?? 0 > 0
     }
 
