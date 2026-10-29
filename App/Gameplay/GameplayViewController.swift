@@ -72,6 +72,11 @@ final class GameplayViewController: UIViewController {
     nonisolated(unsafe) private var lifecycleObservers: [NSObjectProtocol] = []
     private var stopped = false
     private var pendingExit: Exit?
+    /// Keeps the screen on while the game runs: controller play and quiet stretches don't touch
+    /// the screen, so iOS would otherwise lock mid-game. Paused, closed or failed, the phone may
+    /// lock as usual. Tests replace it.
+    var setsScreenAwake: (Bool) -> Void = { UIApplication.shared.isIdleTimerDisabled = $0 }
+    private var keepsScreenAwake = false
 
     var onClose: (() -> Void)?
     /// Set for Quick Play: the menu then offers Add to Library, which closes the game and calls this.
@@ -224,6 +229,7 @@ final class GameplayViewController: UIViewController {
         driver.start()
         selectCamera()
         updateCameraCapture()
+        updateScreenAwake()
         if let message { showTransientMessage(message) }
     }
 
@@ -477,6 +483,13 @@ final class GameplayViewController: UIViewController {
         guard runtime.hasCamera, !stopped, !halted else { return }
         camera.select(cameraChoice.position)
         try? driver.clearCameraFrame()
+    }
+
+    private func updateScreenAwake() {
+        let awake = driver.isRunning && !stopped && !halted
+        guard awake != keepsScreenAwake else { return }
+        keepsScreenAwake = awake
+        setsScreenAwake(awake)
     }
 
     private func updateCameraCapture() {
@@ -1096,7 +1109,10 @@ final class GameplayViewController: UIViewController {
     /// through here.
     private func applyPauseReasons() {
         guard !stopped, !halted else { return }
-        defer { updateCameraCapture() }
+        defer {
+            updateCameraCapture()
+            updateScreenAwake()
+        }
         pausedOverlay.isHidden = !pauseReasons.showsPausedOverlay
         if pauseReasons.shouldRun {
             guard !driver.isRunning else { return }
@@ -1283,6 +1299,8 @@ final class GameplayViewController: UIViewController {
     private func stopRuntime() throws {
         guard !stopped else { return }
         driver.stop()
+        // Before saving, which can fail and leave the game on screen, stopped.
+        updateScreenAwake()
         camera.close()
         if runtime.hasCamera { try? runtime.setCameraFrame(nil) }
         audio.stop()
@@ -1293,6 +1311,7 @@ final class GameplayViewController: UIViewController {
     private func presentRuntimeError(_ error: Error) {
         halted = true
         driver.stop()
+        updateScreenAwake()
         camera.close()
         if runtime.hasCamera { try? runtime.setCameraFrame(nil) }
         audio.pause()
