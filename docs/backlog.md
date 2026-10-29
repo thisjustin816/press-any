@@ -384,7 +384,7 @@ the temporary file after sharing. Free, with no gallery or capture metadata.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | In-app screenshot gallery tied to exact Build; export/share to Photos | v2.0 |  |
+| missing | In-app screenshot gallery tied to exact Build; export/share to Photos | v2.0 | screenshots join the Game's Captures section that prints start in v1.1, with the same cap, pins and Build filter |
 | missing | Export presets Clean / Build Info / Bug Report with rendered info strip and metadata fields | v2.0 |  |
 | missing | Optional atomic Capture Context (watches, named vars, memory ranges, registers, frame/time, Build/hash/patches, RTC, cheats, profile, core/settings) | v2.0 |  |
 | missing | Full-RAM snapshot (opt-in, Developer Mode) | v2.0 |  |
@@ -680,6 +680,7 @@ build/tests).
 | missing | Link cable, local dual-core first; nearby/SharePlay initiation; no Multipeer | v2.0 | no LinkCableCapability |
 | missing | GB Studio save migration with old/new variable maps | v2.0 |  |
 | partial | Game Boy Printer emulation with printed-slip preview/save/share | v1.1 | SameBoy attachment, completed-output queue, library/Quick Play integration, slip assembly and paper renderer implemented. Game-menu controls, preview and PNG share flow added; Connected and Transparent by default, latest 10 slips per session; receiving/printing progress and direct View Print action; CC0 Wood Table photo plus one saved custom image from Photos/Files with replace/remove, and the Game's library artwork as a background; the ready banner waits for a multi-page print to finish. The printer follows the printer firmware's timeouts, status bits, errors, copies and Break (`SBGameBoyPrinter.c`), checked byte for byte against the firmware running in an emulator. Synthetic serial-ROM, session and renderer tests; Apple SDK and device checks pending |
+| missing | Prints kept in a Game's Captures | v1.1 | A Captures section in Game Details keeps the Game's prints, newest first, as thumbnails that open a grid filterable by Build; screenshots join the same section later. Each print is stored as its four-tone rows and margins, not a rendered PNG, so any background, including a later Super Game Boy border, still applies when it is exported, with the Build, Save Profile and time it was printed. Prints belong to the Game, not a Build or profile. Up to 50 per Game; pinned prints don't count and are never removed, and the oldest unpinned print beyond the cap goes to Recently Deleted, as do deleted prints. The in-game Prints sheet shows the session's prints first, with a way into the Game's Captures. Quick Play prints stay temporary and carry over on Add to Library, like its save. Library Backup and Game packages include them |
 | missing | RAR import (tentative) | v2.0 |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v2.0 |  |
 | missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v2.0 | saved recordings also land in the Files folder |
