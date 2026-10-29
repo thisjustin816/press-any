@@ -13,23 +13,27 @@ public enum FakeEmulatorCoreError: Error {
 
 public struct FakeCoreFactory: EmulatorCoreFactory {
     public let descriptor: CoreDescriptor
+    public let replacedDescriptors: Set<CoreDescriptor>
     public let supportedSystems: Set<GameSystem>
 
     public init(
         descriptor: CoreDescriptor,
+        replacedDescriptors: Set<CoreDescriptor> = [],
         supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
     ) {
         self.descriptor = descriptor
+        self.replacedDescriptors = replacedDescriptors
         self.supportedSystems = supportedSystems
     }
 
     public func makeCore() throws -> any EmulatorCore {
-        FakeEmulatorCore(descriptor: descriptor, supportedSystems: supportedSystems)
+        FakeEmulatorCore(descriptor: descriptor, replacedDescriptors: replacedDescriptors, supportedSystems: supportedSystems)
     }
 }
 
 public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability, ButtonBounceCapability, CameraCapability, PrinterCapability {
     public let descriptor: CoreDescriptor
+    public let replacedDescriptors: Set<CoreDescriptor>
     public let supportedSystems: Set<GameSystem>
     public let stateSerializationVersion = "fake-json-v1"
     public private(set) var hardwareModel: HardwareModel = .automatic
@@ -64,9 +68,11 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
 
     public init(
         descriptor: CoreDescriptor = .init(identifier: "fake", version: "1.0.0"),
+        replacedDescriptors: Set<CoreDescriptor> = [],
         supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
     ) {
         self.descriptor = descriptor
+        self.replacedDescriptors = replacedDescriptors
         self.supportedSystems = supportedSystems
     }
 

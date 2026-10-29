@@ -229,8 +229,8 @@ public struct SaveStateService: Sendable {
             throw SaveStateServiceError.contextMismatch
         }
 
-        let currentCore = try worker.perform { $0.descriptor }
-        guard state.core == currentCore else {
+        let (currentCore, servesState) = try worker.perform { ($0.descriptor, $0.serves(state.core)) }
+        guard servesState else {
             throw SaveStateServiceError.coreMismatch(expected: state.core, actual: currentCore)
         }
 

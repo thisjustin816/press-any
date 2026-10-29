@@ -17,6 +17,22 @@ final class CoreRegistryTests: XCTestCase {
         XCTAssertEqual(factory.descriptor.version, "1.1.0")
     }
 
+    func testABuildPinnedToAReplacedVersionRunsOnItsReplacementAndAnExactPinWins() throws {
+        let old = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
+        let replacement = CoreRegistry(factories: [
+            FakeCoreFactory(descriptor: .init(identifier: "sameboy", version: "1.0.4"), replacedDescriptors: [old]),
+        ])
+        XCTAssertEqual(try replacement.factory(for: old).descriptor.version, "1.0.4")
+
+        let both = CoreRegistry(factories: [
+            FakeCoreFactory(descriptor: .init(identifier: "sameboy", version: "1.0.4"), replacedDescriptors: [old]),
+            FakeCoreFactory(descriptor: old),
+        ])
+        XCTAssertEqual(try both.factory(for: old).descriptor.version, "1.0.3")
+        XCTAssertThrowsError(try CoreRegistry(factories: [FakeCoreFactory(descriptor: .init(identifier: "sameboy", version: "1.0.4"))])
+            .factory(for: old))
+    }
+
     func testFirstLaunchPinsLatestCompatibleCore() throws {
         let build = makeBuild(corePin: nil)
         let repository = InMemoryBuildRepository([build])

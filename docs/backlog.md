@@ -120,7 +120,7 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Move the SameBoy pin to current master | v1.1 | The pin (`213a12c`) sends a WX register write into `hram`, where it lands on a byte of the Game Boy Camera's dither matrix; master fixes it (`ecd0b5f`). Master also brings MBC3 and TPP1 RTC halt fixes, six-digit Game Genie codes, cheats in RAM banks, camera shoot flags, Super Game Boy command and MLT_REQ fixes, MMM01 detection and hardening against damaged states. Check that states from the current pin still load (BESS sections only grow) and rerun the accuracy ROMs |
+| partial | Move the SameBoy pin to current master | v1.1 | Pinned at `19a7b14` (master on 2026-10-28, after 1.0.4). It has the WX write fix that stops corrupting the Game Boy Camera's dither matrix (`ecd0b5f`), MBC3 and TPP1 RTC halt fixes, six-digit Game Genie codes, cheats in RAM banks, camera shoot flags, Super Game Boy command and MLT_REQ fixes, MMM01 detection, hardening against damaged states and a closer infrared sensor model. Checked on Linux: the package tests, the bridge smoke test and the accuracy ROMs, whose results are unchanged; states saved by the previous pin (`213a12c`) load with the same registers and memory on DMG, CGB, SGB2 and AGB. New Builds pin `sameboy 1.0.4`. The core names `sameboy 1.0.3` as a version it replaces (`replacedDescriptors`), so Builds pinned to it run on 1.0.4 and their states load, and Build Technical Info keeps showing the version each Build was pinned to. Device checks pending |
 | missing | Nonintrusive "core update available" notice | v2.0 | none |
 | missing | Explicit, reversible core-migration checkpoint (new state lineage, rollback when old core available) | v2.0 | none |
 | done | Automatic model selection | v1.0 | CGB flag 0x80/0xC0 -> GBC, else DMG (`HardwareModel.resolved`); SGB never chosen automatically |
@@ -131,7 +131,7 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 | missing | mGBA/GBA adapter | later | after GB/GBC is feature complete |
 | missing | The Game Boy Printer model as a libretro core | later | The bridge's printer (`SBGameBoyPrinter.c`) is plain C on SameBoy's serial bit callbacks, with no Swift or Apple dependency. A libretro build of SameBoy with it attached would give RetroArch and desktop test harnesses the firmware-timed printer: busy and idle timing, copies, Break and RLE. Prints could come out as PNG files beside the save, with each print's margins in the name or a sidecar, so a script can tell one job from the next. The other route is offering the model to SameBoy upstream |
 
-Done: SameBoy 1.0.3 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest compatible core on
+Done: SameBoy 1.0.4 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest compatible core on
 first launch, then pinned per Build; Open SameBoy boot ROMs incl. cgb_boot_fast; Skip Boot Logo:
 Quick Play always, library via inheritable setting (default shows logo); Optional capability
 protocols: rumble, boot skipping, cheats and camera input implemented; rewind, memory access, RTC,

@@ -21,7 +21,7 @@ objects=()
 while IFS= read -r source; do
   object="$BUILD/obj/$(basename "${source%.c}").o"
   "${CC:-clang}" -std=gnu11 -D_GNU_SOURCE -DGB_INTERNAL \
-    -DGB_VERSION='"1.0.3"' -DGB_COPYRIGHT_YEAR='"2026"' \
+    -DGB_VERSION='"1.0.4"' -DGB_COPYRIGHT_YEAR='"2026"' \
     -O2 -fPIC -I"$SAMEBOY" -I"$SAMEBOY/Core" \
     -c "$source" -o "$object"
   objects+=("$object")
@@ -31,7 +31,7 @@ ar rcs "$BUILD/libsameboy.a" "${objects[@]}"
 # AddressSanitizer's memcpy checks also cover the copies SameBoy makes from buffers the bridge
 # hands it, so a read past one fails the smoke test.
 "${CC:-clang}" -std=gnu11 -D_GNU_SOURCE -DGB_INTERNAL \
-  -DGB_VERSION='"1.0.3"' -DGB_COPYRIGHT_YEAR='"2026"' \
+  -DGB_VERSION='"1.0.4"' -DGB_COPYRIGHT_YEAR='"2026"' \
   -fsanitize=address -fno-omit-frame-pointer \
   -I"$SAMEBOY" -I"$SAMEBOY/Core" -I"$BRIDGE" -I"$BRIDGE/include" \
   "$BRIDGE/SameBoyBridge.c" "$BRIDGE/SBGameBoyPrinter.c" "$ROOT_DIR/Scripts/tests/sameboy_bridge_smoke.c" \
