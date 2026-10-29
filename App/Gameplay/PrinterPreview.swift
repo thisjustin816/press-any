@@ -403,31 +403,38 @@ private struct PrinterShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
-/// The Printer background's tile: paper rising out of the slot between the black top and the
-/// gray front, with the red light.
+/// The Printer background's tile: a gray printer with its smoked lid, the paper rising from the
+/// slot in its black panel, and the red light.
 private struct PrinterSwatch: View {
     var body: some View {
         GeometryReader { geometry in
             let size = geometry.size
             ZStack(alignment: .top) {
-                Color(white: 0.08)
+                Color(white: 0.1)
+                RoundedRectangle(cornerRadius: size.width * 0.08)
+                    .fill(Color(red: 0.79, green: 0.77, blue: 0.75))
+                    .frame(width: size.width * 0.9, height: size.height * 0.78)
+                    .offset(y: size.height * 0.2)
                 Rectangle()
-                    .fill(Color(white: 0.04))
-                    .frame(width: size.width * 0.84, height: size.height * 0.66)
-                    .offset(y: size.height * 0.06)
+                    .fill(Color(red: 0.36, green: 0.38, blue: 0.40))
+                    .frame(width: size.width * 0.74, height: size.height * 0.24)
+                    .offset(y: size.height * 0.24)
                 Rectangle()
                     .fill(Color(white: 0.97))
-                    .frame(width: size.width * 0.56, height: size.height * 0.56)
-                    .offset(y: size.height * 0.12)
+                    .frame(width: size.width * 0.5, height: size.height * 0.44)
+                    .offset(y: size.height * 0.06)
                 Rectangle()
-                    .fill(LinearGradient(colors: [Color(red: 0.79, green: 0.79, blue: 0.76), Color(red: 0.70, green: 0.70, blue: 0.67)],
-                                         startPoint: .top, endPoint: .bottom))
-                    .frame(height: size.height * 0.32)
-                    .offset(y: size.height * 0.68)
+                    .fill(Color(white: 0.03))
+                    .frame(width: size.width * 0.78, height: size.height * 0.28)
+                    .offset(y: size.height * 0.5)
                 Circle()
                     .fill(Color.red)
-                    .frame(width: size.width * 0.1)
-                    .offset(x: size.width * 0.3, y: size.height * 0.84)
+                    .frame(width: size.width * 0.09)
+                    .offset(x: size.width * 0.26, y: size.height * 0.64)
+                Circle()
+                    .fill(Color(red: 0.45, green: 0.18, blue: 0.36))
+                    .frame(width: size.width * 0.16)
+                    .offset(x: -size.width * 0.24, y: size.height * 0.8)
             }
         }
     }
