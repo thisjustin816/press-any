@@ -394,9 +394,9 @@ the temporary file after sharing. Free, with no gallery or capture metadata.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Rewind, presets 5 s/15 s/30 s/1 m/2 m/5 m, memory-budgeted, effective duration shown, muted by default (optional audio), survives brief background | v2.0 | no RewindCapability |
+| missing | Rewind, presets 5 s/15 s/30 s/1 m/2 m/5 m, memory-budgeted, effective duration shown, muted by default (optional audio), survives brief background | v2.0 | no RewindCapability; time spent rewinding counts as playtime through `PlaytimeClock`, as real time, never subtracting the rewound game time |
 | partial | Fast-forward | MVP basic / v2.0 full | menu toggle at the Fast Forward Speed setting (1.5x/2x/3x/4x/8x/Unlimited, default 2x, inheritable, changes live from the game menu's Settings); Fast Forward Audio setting Muted (default) or Accelerated up to 4x; hold vs toggle waits for Quick Actions |
-| missing | Slow motion 0.25x/0.5x/0.75x | v2.0 |  |
+| missing | Slow motion 0.25x/0.5x/0.75x | v2.0 | `PlaytimeClock` already counts a slowed frame's real time as playtime |
 
 Done: Pause / Resume from menu with paused overlay; any fresh non-directional controller button
 or on-screen A, B, START or SELECT press resumes the exposed overlay and is consumed until

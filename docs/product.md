@@ -170,7 +170,8 @@ Each Build has one plain-text note, shown and edited in Build Details (Build Inf
 preserves whitespace; Cancel leaves the stored note alone, and saving an empty note clears it.
 FTS5 search over notes comes later. Build Details also shows its accumulated playtime. A session
 adds the same played time to its Build and Save Profile on background and close, counting only
-time since the last write. Game Details shows the Game's combined statistics. A separate
+time since the last write. Playtime is real time spent playing: Fast Forward adds only the time
+that passed, not the faster game time, and paused time adds nothing. Game Details shows the Game's combined statistics. A separate
 statistics screen comes later.
 
 v2.0 adds a lightweight timeline (versions, hashes, parents, notes, import and activation history)

@@ -590,6 +590,27 @@ final class EmulationSessionTests: XCTestCase {
         XCTAssertEqual(session.playtimeSeconds, 0.033485412, accuracy: 0.000000001)
     }
 
+    func testFastForwardRecordsTheRealTimePlayed() throws {
+        let harness = try SessionHarness.make()
+        let uptime = FakeUptime()
+        let session = harness.makeSession(playtime: PlaytimeClock(uptime: uptime.read))
+        try session.start(context: harness.contextA)
+        _ = try session.stepFrame()
+        try session.setSpeed(.multiplier(4))
+        for _ in 0..<4 {
+            uptime.advance(by: 4_185_676)
+            _ = try session.stepFrame()
+        }
+        try session.stop()
+
+        let frame = 0.016742706
+        XCTAssertEqual(session.playtimeSeconds, 2 * frame, accuracy: 1e-6, "four frames at 4× take one frame's time")
+        XCTAssertEqual(try XCTUnwrap(harness.profiles.fetchSaveProfile(id: harness.profile.id)).totalPlaytimeSeconds,
+                       2 * frame, accuracy: 1e-6)
+        XCTAssertEqual(try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id)).totalPlaytimeSeconds,
+                       2 * frame, accuracy: 1e-6)
+    }
+
     func testSaveStatesAreSeparatedByBuildEvenWhenBatteryProfileIsShared() throws {
         let harness = try SessionHarness.make()
         let session = harness.makeSession()
@@ -1554,7 +1575,8 @@ private struct SessionHarness {
         writesTimedStates: @escaping @Sendable () -> Bool = { false },
         choosesHardwareModel: @escaping @Sendable () -> Bool = { true },
         clock: (@Sendable () -> Date)? = nil,
-        now: Date = Date(timeIntervalSince1970: 1_700_000_000)
+        now: Date = Date(timeIntervalSince1970: 1_700_000_000),
+        playtime: PlaytimeClock = PlaytimeClock()
     ) -> EmulationSession {
         EmulationSession(
             builds: builds,
@@ -1570,7 +1592,8 @@ private struct SessionHarness {
             cheats: cheats,
             writesTimedStates: writesTimedStates,
             choosesHardwareModel: choosesHardwareModel,
-            now: clock ?? { now }
+            now: clock ?? { now },
+            playtime: playtime
         )
     }
 
