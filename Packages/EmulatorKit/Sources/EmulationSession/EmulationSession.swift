@@ -77,8 +77,10 @@ public final class EmulationSession: @unchecked Sendable {
     /// Holds the running game's image from launch until the session ends.
     private var imageLease: InFlightFiles.Lease?
     private var sessionEmulatedNanoseconds: UInt64 = 0
+    /// Real time played this session, which Fast Forward doesn't speed up.
+    private var playtime: PlaytimeClock
     private var basePlaytimeSeconds: Double = 0
-    /// Session time already added to the Build and profile, and whether this session has been counted.
+    /// Playtime already added to the Build and profile, and whether this session has been counted.
     private var recordedNanoseconds: UInt64 = 0
     private var sessionCounted = false
     private let now: @Sendable () -> Date
@@ -106,8 +108,10 @@ public final class EmulationSession: @unchecked Sendable {
         writesTimedStates: @escaping @Sendable () -> Bool = { false },
         choosesHardwareModel: @escaping @Sendable () -> Bool = { true },
         batteryCheckInterval: TimeInterval = 5,
-        now: @escaping @Sendable () -> Date = Date.init
+        now: @escaping @Sendable () -> Date = Date.init,
+        playtime: PlaytimeClock = PlaytimeClock()
     ) {
+        self.playtime = playtime
         self.builds = builds
         self.profiles = profiles
         self.states = states
@@ -149,7 +153,7 @@ public final class EmulationSession: @unchecked Sendable {
     }
 
     public var playtimeSeconds: Double {
-        lock.withLock { basePlaytimeSeconds + Double(sessionEmulatedNanoseconds) / 1_000_000_000 }
+        lock.withLock { basePlaytimeSeconds + Double(playtime.nanoseconds) / 1_000_000_000 }
     }
 
     /// Starts the session, restoring the supplied state when one is given. A state that fails to restore
@@ -247,6 +251,7 @@ public final class EmulationSession: @unchecked Sendable {
                 _runningHardwareModel = model.resolved(for: build.system)
                 imageLease = lease
                 sessionEmulatedNanoseconds = 0
+                playtime.reset()
                 recordedNanoseconds = 0
                 sessionCounted = false
                 basePlaytimeSeconds = profile.totalPlaytimeSeconds
@@ -397,6 +402,7 @@ public final class EmulationSession: @unchecked Sendable {
         lock.withLock {
             guard activeContext == context else { return }
             sessionEmulatedNanoseconds &+= frame.emulatedNanoseconds
+            playtime.ranFrame(lasting: frame.emulatedNanoseconds)
             latestFrame = frame
         }
         return frame
@@ -410,6 +416,7 @@ public final class EmulationSession: @unchecked Sendable {
     public func setSpeed(_ speed: EmulationSpeed) throws {
         let (worker, _, _) = try snapshotActive()
         try worker.perform { $0.setSpeed(speed) }
+        lock.withLock { playtime.setSpeed(speed) }
     }
 
     @discardableResult
@@ -820,7 +827,7 @@ public final class EmulationSession: @unchecked Sendable {
         try playtimeRecordingLock.withLock {
             let (_, context, _) = try snapshotActive()
             let (played, recorded, firstRecord) = lock.withLock {
-                (sessionEmulatedNanoseconds, recordedNanoseconds, !sessionCounted)
+                (playtime.nanoseconds, recordedNanoseconds, !sessionCounted)
             }
             let seconds = Double(played &- recorded) / 1_000_000_000
             try transactions.run { [builds, profiles, now] in

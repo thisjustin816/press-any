@@ -77,11 +77,12 @@ final class QuickPlayTests: XCTestCase {
         let runtime = harness.makeRuntime(session)
         try runtime.start()
         try runtime.setSpeed(.unlimited)
+        var emulated: UInt64 = 0
         for _ in 0..<4_000 {
-            _ = try runtime.stepFrame()
+            emulated += try runtime.stepFrame().emulatedNanoseconds
             _ = try runtime.flushBatteryIfChanged()
         }
-        XCTAssertGreaterThan(runtime.playtimeSeconds, 60)
+        XCTAssertGreaterThan(Double(emulated) / 1_000_000_000, 60, "more than a minute of game time")
         XCTAssertFalse(FileManager.default.fileExists(atPath: session.autoStateURL.path))
         XCTAssertTrue(try harness.states.fetchSaveStates(saveProfileID: harness.profile.id).isEmpty)
     }

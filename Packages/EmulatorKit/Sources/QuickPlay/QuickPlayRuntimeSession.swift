@@ -32,6 +32,8 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
     private var _state: QuickPlayRuntimeState = .idle
     private var latestFrame: EmulatorVideoFrame?
     private var sessionNanoseconds: UInt64 = 0
+    /// Real time played this session, which Fast Forward doesn't speed up.
+    private var playtime: PlaytimeClock
     private let batteryCheckIntervalNanoseconds: UInt64
     private var lastBatteryCheckNanoseconds: UInt64 = 0
     private var lastWrittenBattery = Data()
@@ -41,9 +43,11 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         coreRegistry: CoreRegistry,
         assetStore: any AssetStore,
         buttonBounce: Bool = true,
-        batteryCheckInterval: TimeInterval = 5
+        batteryCheckInterval: TimeInterval = 5,
+        playtime: PlaytimeClock = PlaytimeClock()
     ) {
         self.session = session
+        self.playtime = playtime
         self.buttonBounce = buttonBounce
         self.registry = coreRegistry
         self.files = assetStore
@@ -52,7 +56,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
 
     public var state: QuickPlayRuntimeState { lock.withLock { _state } }
     public var currentFrame: EmulatorVideoFrame? { lock.withLock { latestFrame } }
-    public var playtimeSeconds: Double { lock.withLock { Double(sessionNanoseconds) / 1_000_000_000 } }
+    public var playtimeSeconds: Double { lock.withLock { Double(playtime.nanoseconds) / 1_000_000_000 } }
 
     /// True when the last start found an autosave the core rejected. The game booted normally and
     /// the rejected file was kept beside the session as `autosave.rejected.state`.
@@ -123,6 +127,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             self.worker = worker
             latestFrame = nil
             sessionNanoseconds = 0
+            playtime.reset()
             lastBatteryCheckNanoseconds = 0
             lastWrittenBattery = savedBattery
             _autoStateRejected = rejected
@@ -136,6 +141,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         let frame = try worker.perform { try $0.runFrame(input: input) }
         lock.withLock {
             sessionNanoseconds &+= frame.emulatedNanoseconds
+            playtime.ranFrame(lasting: frame.emulatedNanoseconds)
             latestFrame = frame
         }
         return frame
@@ -149,6 +155,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
     public func setSpeed(_ speed: EmulationSpeed) throws {
         let worker = try activeWorker(requireRunning: false)
         try worker.perform { $0.setSpeed(speed) }
+        lock.withLock { playtime.setSpeed(speed) }
     }
 
     @discardableResult
