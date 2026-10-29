@@ -38,6 +38,8 @@ final class GameplayDriver: @unchecked Sendable {
     var willRunFrame: (@Sendable () -> Void)?
     /// Set before starting the driver, only for cartridges with a camera.
     var cameraFrames: CameraFrameBuffer?
+    /// Set before starting the driver, only for cartridges that sense tilt.
+    var tilt: GameplayTilt?
     var onPrinterOutput: (@Sendable ([PrinterOutput]) -> Void)?
     var onPrinterError: ErrorHandler?
     var onPrinterActivity: (@Sendable (PrinterActivity) -> Void)?
@@ -175,6 +177,10 @@ final class GameplayDriver: @unchecked Sendable {
     private func runFrame() throws -> EmulatorVideoFrame {
         willRunFrame?()
         if let frame = cameraFrames?.current { try runtime.setCameraFrame(frame) }
+        if let tilt {
+            let value = tilt.value
+            try runtime.setTilt(x: value.x, y: value.y)
+        }
         let frame = try runtime.stepFrame(input: input.current())
         emulatedNanosecondsSinceSavePoll &+= frame.emulatedNanoseconds
         if emulatedNanosecondsSinceSavePoll >= savePollNanoseconds {

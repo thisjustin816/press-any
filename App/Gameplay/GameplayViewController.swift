@@ -80,6 +80,8 @@ final class GameplayViewController: UIViewController {
     /// lock as usual. Tests replace it.
     var setsScreenAwake: (Bool) -> Void = { UIApplication.shared.isIdleTimerDisabled = $0 }
     private var keepsScreenAwake = false
+    /// The phone's motion, for cartridges that sense tilt.
+    private var tilt: GameplayTilt?
 
     var onClose: (() -> Void)?
     /// Set for Quick Play: the menu then offers Add to Library, which closes the game and calls this.
@@ -191,6 +193,10 @@ final class GameplayViewController: UIViewController {
         installViews()
         configureRuntimeLoop()
         if runtime.hasCamera { driver.cameraFrames = camera.frames }
+        if runtime.hasTiltSensor {
+            tilt = GameplayTilt()
+            driver.tilt = tilt
+        }
         camera.onError = { [weak self] message in
             guard let self else { return }
             try? self.driver.clearCameraFrame()
@@ -374,6 +380,12 @@ final class GameplayViewController: UIViewController {
                 attributes: .disabled
             ) { _ in })
         }
+        if tilt != nil {
+            elements.append(UIAction(title: "Recenter Tilt", image: UIImage(systemName: "gyroscope")) { [weak self] _ in
+                self?.tilt?.recenter()
+                self?.showTransientMessage("Tilt recentered. Hold the phone the way you want to play.")
+            })
+        }
         elements.append(makeCaptureMenu())
         if runtime.hasCamera { elements.append(makeCameraMenu()) }
         if runtime.supportsPrinter { elements.append(makePrinterMenu()) }
@@ -517,12 +529,15 @@ final class GameplayViewController: UIViewController {
 
     private func updateScreenAwake() {
         let awake = driver.isRunning && !stopped && !halted
+        // Tilt reads the motion sensor exactly while the game runs too.
+        tilt?.setActive(awake)
         guard awake != keepsScreenAwake else { return }
         keepsScreenAwake = awake
         setsScreenAwake(awake)
     }
 
     private func updateCameraCapture() {
+        tilt?.setOrientation(viewIfLoaded?.window?.windowScene?.interfaceOrientation ?? .portrait)
         let angle: Double
         switch viewIfLoaded?.window?.windowScene?.interfaceOrientation {
         case .landscapeLeft: angle = 0

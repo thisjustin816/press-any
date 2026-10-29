@@ -1144,6 +1144,14 @@ Quick Play keeps them temporary until Add to Library.
   default, surviving a brief trip to the background but never saved as a timeline; frame advance
   and a frame counter.
 
+### Tilt cartridges
+
+A cartridge with a tilt sensor (MBC7), such as Kirby Tilt 'n' Tumble, reads the iPhone's tilt
+while the game runs, in library play and Quick Play. The way the phone is held when play starts is
+level, and turning the screen to another orientation makes the new position level. **Recenter
+Tilt** in the game menu, shown only for these cartridges, makes the current position level. Tilt
+beyond 2 g reads as 2 g. The motion sensor runs only while the game runs and needs no permission.
+
 ### Controllers, haptics and rumble
 
 - Apple's GameController framework: Xbox, PlayStation, Switch-compatible, MFi and generic

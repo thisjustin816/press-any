@@ -29,6 +29,8 @@ protocol GameplayRuntime: AnyObject {
     func drainPrinterEvents() throws -> [PrinterEvent]
     var hasCamera: Bool { get }
     func setCameraFrame(_ frame: CameraFrame?) throws
+    var hasTiltSensor: Bool { get }
+    func setTilt(x: Double, y: Double) throws
 
     func pause() throws
     func resume() throws
@@ -54,6 +56,8 @@ extension GameplayRuntime {
     func drainPrinterEvents() throws -> [PrinterEvent] { [] }
     var hasCamera: Bool { false }
     func setCameraFrame(_ frame: CameraFrame?) throws {}
+    var hasTiltSensor: Bool { false }
+    func setTilt(x: Double, y: Double) throws {}
 
     /// Quick Play always runs on Automatic.
     func changedHardwareModel() -> HardwareModel? { nil }

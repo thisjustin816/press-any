@@ -19,7 +19,7 @@ public enum SameBoyAdapterError: Error, Equatable {
 }
 
 public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability, ButtonBounceCapability,
-    CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability {
+    CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability, TiltCapability {
     public let descriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
     public let supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
     public let stateSerializationVersion = "sameboy-bess-v1"
@@ -93,6 +93,16 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             ))
         }
         return result
+    }
+
+    public var hasTiltSensor: Bool {
+        guard let instance else { return false }
+        return SBHasAccelerometer(instance)
+    }
+
+    public func setTilt(x: Double, y: Double) {
+        guard let instance else { return }
+        SBSetAccelerometer(instance, x, y)
     }
 
     public var hasCamera: Bool {

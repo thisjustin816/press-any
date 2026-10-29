@@ -461,7 +461,7 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | partial | Multiple controllers, choose Player 1, reserve Player 2 | v2.0 | first connected used; selectPlayerOne() has no UI |
 | done | Controller Menu opens and closes the game menu | v1.0 | Menu opens the game menu with no combo; pressing it again closes and resumes, including with touch controls hidden. X or PlayStation Triangle stays START; Y or Square stays SELECT; Home is never taken |
 | missing | Rumble routing override Phone / Controller / Both / Off | v2.0 |  |
-| missing | Tilt cartridges (MBC7) from the phone's motion | v1.1 | Kirby Tilt 'n' Tumble and Command Master can't be played: SameBoy emulates MBC7 and takes `GB_set_accelerometer_values`, but the bridge never sends any, so tilt always reads level (SameBoy #201, #490). Feed Core Motion before each frame when `GB_has_accelerometer`, with a way to recenter |
+| partial | Tilt cartridges (MBC7) from the phone's motion | v1.1 | `TiltCapability` and the bridge's `SBHasAccelerometer`/`SBSetAccelerometer` feed Core Motion gravity before each frame, turned to the interface orientation and measured from how the phone was held at start, a rotation or Recenter Tilt in the game menu; clamped to ±2 g; the sensor runs only while the game runs (SameBoy #201, #490). Bridge smoke test with an MBC7 header and an axis test. Device check with Kirby Tilt 'n' Tumble pending |
 | missing | Opposite D-pad directions resolve to the last one pressed | v2.0 | The core lets Right win over Left and Up over Down; a sliding touch D-pad can press both for a moment (SameBoy #101). Resolve in `SBSetInput` or GameplayInput |
 | missing | Separate phone and controller intensity | v2.0 |  |
 

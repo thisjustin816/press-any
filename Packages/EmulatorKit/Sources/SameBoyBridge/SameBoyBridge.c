@@ -264,6 +264,17 @@ bool SBHasCamera(SBInstance *instance)
     return instance && instance->gb && instance->gb->cartridge_type->mbc_type == GB_CAMERA;
 }
 
+bool SBHasAccelerometer(SBInstance *instance)
+{
+    return instance && instance->gb && GB_has_accelerometer(instance->gb);
+}
+
+void SBSetAccelerometer(SBInstance *instance, double x, double y)
+{
+    if (!instance || !instance->gb) return;
+    GB_set_accelerometer_values(instance->gb, x, y);
+}
+
 bool SBSetCameraFrame(SBInstance *instance, const uint8_t *bytes, size_t size)
 {
     if (!instance) return false;
