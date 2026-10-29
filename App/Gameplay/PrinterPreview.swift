@@ -75,6 +75,11 @@ struct PrinterPreview: View {
     var keeping = Keeping.session
     /// The Game's Captures, offered as All Prints.
     var makeCapturesView: (() -> AnyView)?
+    /// Removes a print wherever it is kept. Nil offers no Discard.
+    var onDiscard: ((PrinterSlip) -> Void)?
+    /// Discarded here, and left out until the sheet closes.
+    @State private var discarded: Set<UUID> = []
+    @State private var confirmsDiscard = false
     @State private var showsCaptures = false
     @Environment(\.dismiss) private var dismiss
     @State private var selected = 0
@@ -95,7 +100,7 @@ struct PrinterPreview: View {
     @State private var importError: String?
     @State private var shared: PrinterSharedImage?
 
-    private var ordered: [PrinterSlip] { Array(slips.reversed()) }
+    private var ordered: [PrinterSlip] { slips.reversed().filter { !discarded.contains($0.id) } }
     private var note: String? {
         switch keeping {
         case .session: "The last 10 prints stay here until the game closes. Save a copy to keep them."
@@ -104,7 +109,13 @@ struct PrinterPreview: View {
         case .captured: nil
         }
     }
-    private var renderKey: String { "\(selected)-\(background.rawValue)-\(retry)-\(loadedCustom)" }
+    private var discardMessage: String {
+        switch keeping {
+        case .captures, .captured: "The print moves to Recently Deleted."
+        case .session, .quickPlay: "The print is removed and can’t be brought back."
+        }
+    }
+    private var renderKey: String { "\(selected)-\(background.rawValue)-\(retry)-\(loadedCustom)-\(discarded.count)" }
     private var available: [PrinterPreviewBackground] {
         PrinterPreviewBackground.allCases.filter {
             switch $0 {
@@ -153,13 +164,20 @@ struct PrinterPreview: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                Button("Save or Share", systemImage: "square.and.arrow.up") {
-                    guard let png else { return }
-                    do { shared = try PrinterSharedImage(png: png) }
-                    catch { shareFailed = true }
+                HStack {
+                    if onDiscard != nil {
+                        Button("Discard", systemImage: "trash", role: .destructive) { confirmsDiscard = true }
+                            .buttonStyle(.bordered)
+                            .disabled(!ordered.indices.contains(selected))
+                    }
+                    Button("Save or Share", systemImage: "square.and.arrow.up") {
+                        guard let png else { return }
+                        do { shared = try PrinterSharedImage(png: png) }
+                        catch { shareFailed = true }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(png == nil)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(png == nil)
             }
             .padding()
             .navigationTitle("Prints")
@@ -171,6 +189,11 @@ struct PrinterPreview: View {
                 }
             }
             .sheet(isPresented: $showsCaptures) { makeCapturesView?() }
+            .confirmationDialog("Discard This Print?", isPresented: $confirmsDiscard, titleVisibility: .visible) {
+                Button("Discard Print", role: .destructive) { discardSelected() }
+            } message: {
+                Text(discardMessage)
+            }
             .task(id: renderKey) { await render() }
             .task(id: "\(loadedCustom)-\(customVersion)") { await loadThumbnails() }
             .task {
@@ -348,6 +371,16 @@ struct PrinterPreview: View {
             customVersion += 1
             if chosen == .custom { chosen = .transparent }
         } catch { importError = "Could not remove the saved background. Try again." }
+    }
+
+    /// Removes the print shown and moves to the next one, or closes the sheet after the last.
+    private func discardSelected() {
+        guard ordered.indices.contains(selected) else { return }
+        let slip = ordered[selected]
+        onDiscard?(slip)
+        discarded.insert(slip.id)
+        png = nil
+        if ordered.isEmpty { dismiss() } else { selected = min(selected, ordered.count - 1) }
     }
 
     @MainActor

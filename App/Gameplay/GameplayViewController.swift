@@ -455,9 +455,18 @@ final class GameplayViewController: UIViewController {
         var preview = PrinterPreview(slips: printerFeed.slips, gameArtworkURL: artworkTarget?.currentFileURL())
         preview.keeping = prints == nil ? .session : prints?.gameID == nil ? .quickPlay : .captures
         preview.makeCapturesView = makeCapturesView
+        preview.onDiscard = { [weak self] slip in self?.discardPrint(slip) }
         let sheet = PrinterPreviewController(rootView: preview)
         sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
         present(sheet, animated: true)
+    }
+
+    /// Takes a print out of the session's feed and out of wherever it is kept.
+    private func discardPrint(_ slip: PrinterSlip) {
+        printerFeed.discard(id: slip.id)
+        prints?.discard(slip.id) { [weak self] in
+            DispatchQueue.main.async { self?.showTransientMessage("Couldn’t discard this print. Delete it from the Game’s Captures.") }
+        }
     }
 
     private func showPrinterLog() {

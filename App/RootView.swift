@@ -615,9 +615,13 @@ struct RootView: View {
                 firstFrameClock: nil,
                 settings: container.gameplaySettingsTarget(for: launch.context),
                 cheatsBuildID: launch.context.buildID,
-                prints: GameplayPrints(gameID: launch.context.gameID) { [captures = container.printCaptures, context = launch.context] slip in
-                    _ = try captures.save(slip, gameID: context.gameID, buildID: context.buildID, saveProfileID: context.saveProfileID)
-                },
+                prints: GameplayPrints(
+                    gameID: launch.context.gameID,
+                    save: { [captures = container.printCaptures, context = launch.context] slip in
+                        _ = try captures.save(slip, gameID: context.gameID, buildID: context.buildID, saveProfileID: context.saveProfileID)
+                    },
+                    discard: { [captures = container.printCaptures] id in try captures.delete(captureID: id) }
+                ),
                 display: GameplayDisplaySettings(
                     controlStyle: container.controllerStyle(for: launch.context),
                     orientation: container.orientation(for: launch.context),
@@ -689,9 +693,11 @@ struct RootView: View {
             firstFrameClock: firstFrameClock,
             settings: container.gameplaySettingsTarget(system: session.system),
             cheatsBuildID: nil,
-            prints: GameplayPrints(gameID: nil) { [prints = QuickPlayPrints(session: session, files: container.fileStore)] slip in
-                try prints.save(slip)
-            },
+            prints: GameplayPrints(
+                gameID: nil,
+                save: { [prints = QuickPlayPrints(session: session, files: container.fileStore)] slip in try prints.save(slip) },
+                discard: { [prints = QuickPlayPrints(session: session, files: container.fileStore)] id in try prints.discard(id: id) }
+            ),
             display: container.gameplayDisplay(for: container.gameplaySettingsTarget(system: session.system))
         )
     }

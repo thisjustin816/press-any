@@ -50,6 +50,14 @@ public struct PrinterFeed: Sendable {
         startsNewRoll = false
     }
 
+    /// Takes a slip out of the feed. Discarding the newest one ends its roll, so paper the game
+    /// feeds next starts a new slip instead of joining the one before it.
+    public mutating func discard(id: UUID) {
+        guard let index = slips.firstIndex(where: { $0.id == id }) else { return }
+        if index == slips.count - 1 { startsNewRoll = true }
+        slips.remove(at: index)
+    }
+
     /// Stops a later command from joining paper captured before a reset or disconnection.
     public mutating func endRoll() { startsNewRoll = true }
     private var startsNewRoll = false

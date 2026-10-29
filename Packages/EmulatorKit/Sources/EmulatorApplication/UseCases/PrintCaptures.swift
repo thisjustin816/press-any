@@ -92,6 +92,13 @@ public struct PrintCaptures: Sendable {
         return try PrinterSlipArchive.decode(data, id: capture.id)
     }
 
+    /// Moves a print to Recently Deleted. One that was never saved has nothing to move. Paper the
+    /// game feeds onto it afterward isn't saved, as for any deleted print.
+    public func delete(captureID: UUID) throws {
+        guard try captures.fetchCapture(id: captureID) != nil else { return }
+        try deletion.delete(deletion.planCaptureDeletion(captureIDs: [captureID]))
+    }
+
     /// A pinned print never counts toward the cap. Unpinning one can push the oldest past it.
     public func setPinned(_ isPinned: Bool, captureID: UUID) throws {
         guard var capture = try captures.fetchCapture(id: captureID) else { throw LibraryDeletionError.captureNotFound(captureID) }

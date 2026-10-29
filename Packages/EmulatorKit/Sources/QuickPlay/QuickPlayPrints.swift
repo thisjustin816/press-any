@@ -18,6 +18,11 @@ public struct QuickPlayPrints: Sendable {
         try files.writeDataAtomically(try PrinterSlipArchive.encode(slip), to: url(for: slip.id))
     }
 
+    /// Removes the print from the session.
+    public func discard(id: UUID) throws {
+        try files.removeIfExists(url(for: id))
+    }
+
     /// Oldest first, each with the time its file was first written.
     public func slips() throws -> [(slip: PrinterSlip, printedAt: Date)] {
         let folder = session.printsURL

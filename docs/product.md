@@ -1410,7 +1410,7 @@ list shows no model numbers. App Settings has it on the Playing page.
 - When a Game has prints, a **Captures** section after Save Profiles shows the newest as
   thumbnails with **Show All**. Captures shows them newest first in a grid with each print's
   paper and margins, and a Build menu when more than one Build printed. Tapping a print opens the
-  print preview with its backgrounds and Save or Share. Touch and hold to **Pin** or **Delete**.
+  print preview with its backgrounds, Save or Share and Discard. Touch and hold to **Pin** or **Delete**.
   Prints are stored as the printer's rows, so any background still applies later. A Game keeps
   its newest 50 unpinned prints; an older one goes to Recently Deleted, in one "Cleaned-up Prints"
   entry, and pinned prints never count. Deleting a Game takes its prints; deleting a Build or
@@ -1513,6 +1513,12 @@ printed it; the preview says so and offers **All Prints**, which opens them. In 
 kept with the session and moves to the Game's Captures, with the new Build, on Add to Library; a
 print that can't move keeps the session, and the promotion says so. A print that can't be kept
 shows a message once per session, and the slip stays in the preview to save or share.
+
+**Discard** removes the print shown, after asking. In library play it moves to Recently Deleted;
+in Quick Play, or with nowhere to keep prints, it is gone. Paper the game feeds after a discard
+starts a new slip, and a discarded print is never saved again. A print the game stopped partway,
+by sending Break, comes out as the paper fed before the stop, as on the printer, and Discard
+removes it like any other.
 
 **Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood**, **Printer**,
 **Game Artwork** or **Custom** background, shown as a row of previews under the print with the

@@ -50,6 +50,25 @@ final class GameplayPrinterFeedTests: XCTestCase {
         XCTAssertEqual(saved.lock.withLock { saved.failures }, 1)
     }
 
+    func testADiscardedPrintIsRemovedAfterEarlierSavesAndNeverSavedAgain() throws {
+        final class Kept: @unchecked Sendable {
+            let lock = NSLock()
+            var steps: [String] = []
+        }
+        let kept = Kept()
+        let slip = PrinterSlip(output: try PrinterOutput(height: 8, luminance: Data(count: 1280), topMargin: 1, bottomMargin: 3, exposure: 64))
+        let prints = GameplayPrints(
+            gameID: nil,
+            save: { slip in kept.lock.withLock { kept.steps.append("save \(slip.id)") } },
+            discard: { id in kept.lock.withLock { kept.steps.append("discard \(id)") } }
+        )
+        prints.keep([slip]) {}
+        prints.discard(slip.id) {}
+        prints.keep([slip]) {}
+        prints.finish()
+        XCTAssertEqual(kept.lock.withLock { kept.steps }, ["save \(slip.id)", "discard \(slip.id)"])
+    }
+
     func testAThumbnailShowsThePaperWithItsMargins() throws {
         let slip = PrinterSlip(output: try PrinterOutput(height: 8, luminance: Data(count: 1280), topMargin: 1, bottomMargin: 2, exposure: 64))
         let image = try XCTUnwrap(PrintThumbnail.image(for: slip))
