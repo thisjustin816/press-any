@@ -602,6 +602,40 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertFalse(runtime.failedFrame)
     }
 
+    func testTheScreenStaysAwakeOnlyWhileTheGameRuns() {
+        let runtime = LifecycleRuntime()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
+        let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: .never, controllerMonitor: monitor)
+        var awake: [Bool] = []
+        gameplay.setsScreenAwake = { awake.append($0) }
+        gameplay.loadViewIfNeeded()
+        XCTAssertEqual(awake, [true], "playing keeps the phone from locking")
+
+        gameplay.sceneWillDeactivate()
+        gameplay.sceneDidActivate()
+        XCTAssertEqual(awake, [true, false, true], "an overlay lets it lock until play picks up")
+
+        gameplay.setCoveredBySheet(true)
+        gameplay.setCoveredBySheet(false)
+        XCTAssertFalse(gameplay.isRunningFrames)
+        XCTAssertEqual(awake, [true, false, true, false], "paused, the phone may lock")
+
+        gameplay.requestClose()
+        XCTAssertEqual(runtime.stops, 1)
+        XCTAssertEqual(awake, [true, false, true, false], "closing a paused game changes nothing")
+    }
+
+    func testClosingARunningGameLetsThePhoneLock() {
+        let runtime = LifecycleRuntime()
+        let monitor = PhysicalControllerMonitor(connectedControllers: { [] })
+        let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: .always, controllerMonitor: monitor)
+        var awake: [Bool] = []
+        gameplay.setsScreenAwake = { awake.append($0) }
+        gameplay.loadViewIfNeeded()
+        gameplay.requestClose()
+        XCTAssertEqual(awake, [true, false])
+    }
+
     func testAfterTheBackgroundAlwaysResumesOnlyOnceActive() {
         let (gameplay, runtime, _) = makeGameplay(policy: .always)
         gameplay.sceneWillDeactivate()

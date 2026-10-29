@@ -816,6 +816,9 @@ claims reliability from just an old ROM, old save and new ROM.
   (headphones unplugged, a Bluetooth speaker lost), pauses the game as the game menu does, even
   while the scene stays active. It stays paused until the player chooses Resume, so sound never
   restarts on its own when the interruption ends. In the background, Resume Games decides.
+- **Screen lock.** While the game runs, the phone doesn't dim or lock on its own, even when play
+  goes untouched for a while or comes from a controller. Paused, closed, or stopped by an error,
+  Auto-Lock works as usual.
 - **Crash recovery.** During library play, one hidden `SaveStateKind.crashRecovery` checkpoint
   for the exact Build and Save Profile refreshes about once a minute of play, replacing the
   previous one in the existing state storage. A successful Auto State or clean close removes it.
