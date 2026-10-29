@@ -34,7 +34,7 @@ ar rcs "$BUILD/libsameboy.a" "${objects[@]}"
   -DGB_VERSION='"1.0.3"' -DGB_COPYRIGHT_YEAR='"2026"' \
   -fsanitize=address -fno-omit-frame-pointer \
   -I"$SAMEBOY" -I"$SAMEBOY/Core" -I"$BRIDGE/include" \
-  "$BRIDGE/SameBoyBridge.c" "$ROOT_DIR/Scripts/tests/sameboy_bridge_smoke.c" \
+  "$BRIDGE/SameBoyBridge.c" "$BRIDGE/SBGameBoyPrinter.c" "$ROOT_DIR/Scripts/tests/sameboy_bridge_smoke.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_camera_rgb.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_printer.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_joypad.c" \

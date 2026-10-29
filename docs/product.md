@@ -1508,6 +1508,17 @@ preserve it. The host queue holds 16 commands and reports overflow. The app drai
 a printer error reports a message without stopping gameplay. Exposure is retained as metadata;
 the slip renderer preserves the decoded print tones.
 
+The printer follows the Game Boy Printer's own firmware, not the core's simpler model. Bytes
+more than 5.12 ms apart drop the packet, which the game reads as 0xFF. About 125 ms without a
+byte while the printer is idle clears what it holds, as Init does. Print needs the empty data
+packet first. Status bits, the checksum flag that shows a packet late, packet errors, data sent
+while printing, Break, and data after a print without Init all follow the firmware. A print
+stays busy as long as the paper takes: about 0.8 seconds to the end of the first 16-row band,
+1.1 to 1.3 seconds for each band after it, and 0.16 seconds for each unit of margin. A game
+that prints on a real printer prints the same here, and one that breaks these rules fails here
+as it would on paper. The timings come from the printer's firmware run in an emulator; how far a
+margin unit feeds the paper was not measured on a printer.
+
 The core reports idle, receiving and printing activity for an indeterminate progress display.
 Games that print several pages go idle between them, so the banner changes to **View Print** only
 after the printer stays idle for about a second and a half; more data in that time keeps the
