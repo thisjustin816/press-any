@@ -264,15 +264,17 @@ enum PrinterScene {
 
         let x = track.maxX + 52
         for (text, y, pointsRight) in [("ON", plate.minY + plate.height * 0.45, true), ("OFF", plate.minY + plate.height * 0.85, false)] {
-            bodyInk.setFill()
-            cg.fill(CGRect(x: x - 26, y: y - 31.5, width: 52, height: 3))
-            let tip = pointsRight ? x + 38 : x - 38, base = pointsRight ? x + 26 : x - 26
+            // A harpoon, as marked on the printer: one barb, above the line.
+            let tip = pointsRight ? x + 30 : x - 30, barb = pointsRight ? x + 18 : x - 18
             let arrow = UIBezierPath()
-            arrow.move(to: CGPoint(x: base, y: y - 38))
+            arrow.move(to: CGPoint(x: pointsRight ? x - 30 : x + 30, y: y - 30))
             arrow.addLine(to: CGPoint(x: tip, y: y - 30))
-            arrow.addLine(to: CGPoint(x: base, y: y - 22))
-            arrow.close()
-            arrow.fill()
+            arrow.addLine(to: CGPoint(x: barb, y: y - 42))
+            arrow.lineWidth = 3
+            arrow.lineCapStyle = .round
+            arrow.lineJoinStyle = .round
+            bodyInk.setStroke()
+            arrow.stroke()
             label(text, size: 26, color: bodyInk, center: CGPoint(x: x, y: y))
         }
     }
