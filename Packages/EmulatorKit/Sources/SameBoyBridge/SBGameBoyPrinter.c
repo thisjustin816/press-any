@@ -2,21 +2,26 @@
 
 #include <string.h>
 
-// The rules and timings come from the printer's firmware, as Raphaël Boichot's Game-Boy-
-// Printer-disassembly documents it (Printer_protocol.md) and runs it in its firmware emulator
-// (https://github.com/Raphael-Boichot/Game-Boy-Printer-disassembly). The 4 ms per pixel column was
-// checked on a real printer there; the paper feed of a margin unit was not, so the print times
-// that include it are the emulator's.
+// The rules and timings come from the printer's firmware, as Raphaël Boichot's
+// Game-Boy-Printer-disassembly documents it (Printer_protocol.md) and runs it in its firmware
+// emulator (https://github.com/Raphael-Boichot/Game-Boy-Printer-disassembly). The 4 ms per pixel
+// column was checked on a real printer there; the paper feed of a margin unit was not, so the
+// print times that include it are the emulator's.
 #define SBP_MS(ms) ((uint64_t)(ms) * SBP_TICKS_PER_SECOND / 1000u)
 #define SBP_BYTE_TIMEOUT (SBP_TICKS_PER_SECOND * 512u / 100000u) // 5.12 ms between bytes.
 #define SBP_IDLE_RESET SBP_MS(125)    // Without a byte while not printing, the printer re-inits.
-#define SBP_BUSY_DELAY SBP_MS(30)     // A print shows busy this long after the command.
-#define SBP_MARGIN_UNIT SBP_MS(160)   // One unit of paper feed before or after.
+#define SBP_BUSY_DELAY SBP_MS(30)     // Busy shows, and the paper starts, this long after Print.
+#define SBP_MARGIN_UNIT SBP_MS(160)   // One unit of margin; the paper also feeds in steps this long.
 #define SBP_FEED_ONLY SBP_MS(13)      // A print with no copies only feeds, after this long.
-// Break stops the job at the end of the band printing, or this long after it while the paper
-// is still moving between bands.
-#define SBP_BREAK_FEED SBP_MS(95)
-#define SBP_BETWEEN_BANDS SBP_MS(200)
+#define SBP_BAND_PRINT SBP_MS(638)    // Printing one band, up to its end in band_end_ms.
+#define SBP_COPY_FEED SBP_MS(108)     // The feed before each copy after the first.
+#define SBP_STEP_PHASE SBP_MS(7)      // Feed steps start this long after a band ends.
+// Break stops the paper at a feed step at least SBP_BREAK_LEAD away, or as the next band
+// starts if that is at least SBP_BREAK_BEFORE_BAND away.
+#define SBP_BREAK_LEAD SBP_MS(45)
+#define SBP_BREAK_BEFORE_BAND SBP_MS(80)
+// How long into the feed before a copy's first band a Break still stops it.
+#define SBP_BREAK_LEAD_IN SBP_MS(75)
 
 enum {
     SBP_CHECKSUM = 0x01, SBP_BUSY = 0x02, SBP_FULL = 0x04, SBP_UNPROCESSED = 0x08,
@@ -37,12 +42,10 @@ static bool busy_now(const SBGameBoyPrinter *p)
 
 static void init(SBGameBoyPrinter *p)
 {
-    p->status &= (uint8_t)~SBP_FULL;
-    if (!(p->status & SBP_JAM)) p->status &= (uint8_t)~SBP_UNPROCESSED;
+    p->status &= (uint8_t)~(SBP_FULL | SBP_UNPROCESSED);
     p->image_bytes = 0;
     p->end_mark = p->after_print = p->break_block = p->packet_error = false;
     p->rle_run = 0;
-    p->rle_have_byte = false;
 }
 
 void sbp_reset(SBGameBoyPrinter *p, SBPPrintCallback on_print, void *context)
@@ -52,8 +55,8 @@ void sbp_reset(SBGameBoyPrinter *p, SBPPrintCallback on_print, void *context)
     p->context = context;
 }
 
-// From the Print command to the end of each 16-row band. The bands take 1,117, 1,129 and
-// 1,272 ms in turn, as the paper cam comes round.
+// From the start of a copy, after any top margin, to the end of each 16-row band. The bands
+// after the first take 1,117, 1,129 and 1,272 ms in turn, as the paper cam comes round.
 static const uint16_t band_end_ms[SBP_SLOTS] = {828, 1945, 3074, 4346, 5475, 6592, 7864, 8993, 10110};
 
 static uint64_t band_end(uint8_t bands)
@@ -66,21 +69,23 @@ static uint8_t bands_of(uint16_t bytes)
     return (uint8_t)((bytes + SBP_SLOT_BYTES - 1u) / SBP_SLOT_BYTES);
 }
 
-// From the Print command to the end of the job.
+// From the Print command to the end of the job. The top margin feeds once, the bottom margin
+// after every copy.
 static uint64_t print_ticks(const SBGameBoyPrinter *p)
 {
     uint8_t bands = bands_of(p->print_bytes);
-    uint64_t feed = (uint64_t)(p->top_margin + p->bottom_margin) * SBP_MARGIN_UNIT;
-    if (!p->copies || !bands) return SBP_FEED_ONLY + feed;
-    uint64_t copy = band_end(bands) + feed;
-    return copy * p->copies;
+    uint64_t top = p->top_margin * SBP_MARGIN_UNIT, bottom = p->bottom_margin * SBP_MARGIN_UNIT;
+    if (!p->copies || !bands) return SBP_FEED_ONLY + top + bottom;
+    uint64_t copy = band_end(bands) + bottom;
+    return top + copy + (p->copies - 1u) * (SBP_COPY_FEED + copy);
 }
 
+// The full copies, then the bands of a copy Break cut short.
 static void deliver(SBGameBoyPrinter *p)
 {
-    if (!p->on_print || !p->copies || !p->print_bytes) return;
+    if (!p->on_print || !p->print_bytes || (!p->copies && !p->partial_bands)) return;
     uint8_t bands = bands_of(p->print_bytes);
-    static uint8_t pixels[160u * 16u * SBP_SLOTS];
+    uint8_t pixels[160u * 16u * SBP_SLOTS];
     // Bands are 2 rows of 20 tiles; a short last band prints the zeroes past the data.
     for (unsigned band = 0; band < bands; band++) {
         for (unsigned tile = 0; tile < 40u; tile++) {
@@ -101,6 +106,10 @@ static void deliver(SBGameBoyPrinter *p)
         p->on_print(p->context, pixels, (uint8_t)(bands * 16u), p->top_margin, p->bottom_margin,
                     p->exposure);
     }
+    if (p->partial_bands) {
+        p->on_print(p->context, pixels, (uint8_t)(p->partial_bands * 16u), p->top_margin,
+                    p->bottom_margin, p->exposure);
+    }
 }
 
 void sbp_advance(SBGameBoyPrinter *p, uint64_t now)
@@ -109,7 +118,7 @@ void sbp_advance(SBGameBoyPrinter *p, uint64_t now)
     p->now = now;
     if (p->printing && now >= p->busy_until) {
         p->printing = false;
-        if (!(p->status & SBP_JAM)) p->status &= (uint8_t)~SBP_UNPROCESSED;
+        p->status &= (uint8_t)~SBP_UNPROCESSED;
         deliver(p);
     }
     if (!p->any_byte || p->printing || p->quiet_reset_done) return;
@@ -127,9 +136,11 @@ bool sbp_is_printing(const SBGameBoyPrinter *p)
     return p->printing;
 }
 
+// Image memory still holds a printed job until the next data packet, so it counts only before
+// a Print.
 bool sbp_is_receiving(const SBGameBoyPrinter *p)
 {
-    return p->image_bytes || (p->data_packet && p->phase == SBP_PAYLOAD);
+    return (p->image_bytes && !p->after_print) || (p->data_packet && p->phase == SBP_PAYLOAD);
 }
 
 static void store(SBGameBoyPrinter *p, uint8_t byte)
@@ -137,10 +148,7 @@ static void store(SBGameBoyPrinter *p, uint8_t byte)
     if (p->image_bytes >= SBP_MEMORY) return; // Memory full: the rest is dropped silently.
     p->memory[p->image_bytes++] = byte;
     // A run never crosses into the next slot.
-    if (p->image_bytes % SBP_SLOT_BYTES == 0) {
-        p->rle_run = 0;
-        p->rle_have_byte = false;
-    }
+    if (p->image_bytes % SBP_SLOT_BYTES == 0) p->rle_run = 0;
 }
 
 static void take_payload(SBGameBoyPrinter *p, uint8_t byte)
@@ -154,17 +162,17 @@ static void take_payload(SBGameBoyPrinter *p, uint8_t byte)
     if (!p->rle_run) {
         p->rle_repeat = byte & 0x80;
         p->rle_run = p->rle_repeat ? (uint16_t)((byte & 0x7f) + 2u) : (uint16_t)(byte + 1u);
-        p->rle_have_byte = false;
         return;
     }
+    // store() ends the run at a slot's end, so count the byte first.
     if (!p->rle_repeat) {
-        store(p, byte);
         p->rle_run--;
+        store(p, byte);
         return;
     }
     while (p->rle_run && p->image_bytes < SBP_MEMORY) {
+        p->rle_run--;
         store(p, byte);
-        if (p->rle_run) p->rle_run--;
     }
     p->rle_run = 0;
 }
@@ -172,17 +180,15 @@ static void take_payload(SBGameBoyPrinter *p, uint8_t byte)
 // The header is complete: decide what this packet may do, as the firmware's receiver does.
 static void header_done(SBGameBoyPrinter *p)
 {
-    p->data_packet = p->ignoring_payload = false;
+    // Only a data packet's payload is kept; any other payload fills args, and the rest of it
+    // only counts toward the checksum.
+    p->data_packet = false;
     if (p->command != SBP_NUL) p->packet_error = false;
     switch (p->command) {
         case SBP_DATA:
-            if (busy_now(p) || p->printing) {
-                p->ignoring_payload = true; // Data while printing is ignored.
-                break;
-            }
+            if (p->printing) break; // Data while printing is ignored.
             if (p->length >= 0x400u) {
                 if (!p->compression) p->packet_error = true;
-                p->ignoring_payload = true;
                 break;
             }
             if (!p->length) {
@@ -196,24 +202,16 @@ static void header_done(SBGameBoyPrinter *p)
             }
             if (p->break_block) {
                 p->packet_error = true;
-                p->ignoring_payload = true;
                 break;
             }
             if (p->after_print) {
                 p->after_print = false;
-                if (p->status & SBP_UNPROCESSED) {
-                    // Abandoned before its first payload byte: 0xFF until the line is quiet.
-                    p->sync_lost = true;
-                    p->out_byte = 0xff;
-                    return;
-                }
                 p->status &= (uint8_t)~SBP_FULL;
                 p->end_mark = false;
                 p->image_bytes = 0;
             }
             if ((p->status & SBP_FULL) || p->compression > 1u) {
                 p->packet_error = true;
-                p->ignoring_payload = true;
                 break;
             }
             p->data_packet = true;
@@ -227,7 +225,7 @@ static void header_done(SBGameBoyPrinter *p)
             // A status poll ends the empty data packet's mask and, while idle, the unprocessed
             // flag as it arrives, so its own reply already shows both.
             p->hide_full = false;
-            if (!p->printing && !(p->status & SBP_JAM)) p->status &= (uint8_t)~SBP_UNPROCESSED;
+            if (!p->printing) p->status &= (uint8_t)~SBP_UNPROCESSED;
             if (p->length >= 0x400u) p->packet_error = true;
             break;
         case SBP_BREAK:
@@ -249,27 +247,80 @@ static uint8_t reply_status(SBGameBoyPrinter *p)
     return status;
 }
 
-// Break: the band printing is finished first, unless the paper is still feeding after one, and
-// the paper shows the bands done by then.
+// The first feed step at least SBP_BREAK_LEAD after `t`, for paper fed from `from`.
+static uint64_t next_step(uint64_t from, uint64_t phase, uint64_t t)
+{
+    uint64_t step = from + phase;
+    while (step < t + SBP_BREAK_LEAD) step += SBP_MARGIN_UNIT;
+    return step;
+}
+
+// Where a Break at `t` after the Print stops the job, and the full copies and bands of a
+// further copy printed by then. A band being printed is finished. Paper fed for a margin or
+// between bands stops at a feed step. In the feed before a copy's first band, an early Break
+// stops the paper as the band would start and a later one lets the band print; the feed between
+// copies ignores Break. False when the job ends first.
+static bool break_point(const SBGameBoyPrinter *p, uint64_t t, uint64_t *end, uint8_t *copies,
+                        uint8_t *bands)
+{
+    uint8_t count = bands_of(p->print_bytes);
+    uint64_t base = p->top_margin * SBP_MARGIN_UNIT;
+    *copies = *bands = 0;
+    if (!p->copies || !count) {
+        *end = next_step(0, SBP_BUSY_DELAY, t);
+        return *end < p->busy_until - p->print_start;
+    }
+    for (uint8_t copy = 0; copy < p->copies; copy++) {
+        uint64_t first = base + band_end(1) - SBP_BAND_PRINT;
+        *copies = copy;
+        if (t < base) {
+            if (copy) return false;
+            // The top margin.
+            uint64_t step = next_step(0, SBP_BUSY_DELAY, t);
+            *end = step < first ? step : first;
+            return true;
+        }
+        if (t < first && t < base + SBP_BREAK_LEAD_IN) {
+            *end = first;
+            return true;
+        }
+        for (uint8_t band = 1; band <= count; band++) {
+            uint64_t printed = base + band_end(band), printing = printed - SBP_BAND_PRINT;
+            if (t >= printed) continue;
+            *bands = band;
+            *end = printed;
+            if (band > 1u && t < printing) {
+                uint64_t step = next_step(base + band_end(band - 1u), SBP_STEP_PHASE, t);
+                if (step < printing) *end = step;
+                else if (printing - t >= SBP_BREAK_BEFORE_BAND) *end = printing;
+                if (*end != printed) *bands = band - 1u;
+            }
+            return true;
+        }
+        // The bottom margin. Its last step ends with it.
+        uint64_t last = base + band_end(count), copy_end = last + p->bottom_margin * SBP_MARGIN_UNIT;
+        uint64_t step = next_step(last, SBP_STEP_PHASE, t);
+        if (t < copy_end && step <= copy_end + SBP_STEP_PHASE) {
+            *copies = copy + 1u;
+            *bands = 0;
+            *end = step < copy_end ? step : copy_end;
+            return true;
+        }
+        base = copy_end + SBP_COPY_FEED;
+    }
+    return false;
+}
+
 static void stop(SBGameBoyPrinter *p)
 {
-    uint64_t elapsed = p->now - p->print_start, end = band_end(1);
-    uint8_t done = 1;
-    if (p->copies && p->print_bytes) {
-        while (end <= elapsed && done < bands_of(p->print_bytes)) {
-            if (elapsed - end < SBP_BETWEEN_BANDS) break;
-            end = band_end(++done);
-        }
-        if (end <= elapsed) {
-            end = elapsed + SBP_BREAK_FEED;
-            done--;
-        }
-        p->copies = 1;
-        p->print_bytes = (uint16_t)(done * SBP_SLOT_BYTES < p->print_bytes ? done * SBP_SLOT_BYTES : p->print_bytes);
+    uint64_t end;
+    uint8_t copies, bands;
+    if (!break_point(p, p->now - p->print_start, &end, &copies, &bands)) return;
+    p->busy_until = p->print_start + end;
+    if (p->copies) {
+        p->copies = copies;
+        p->partial_bands = bands;
     }
-    else end = elapsed + SBP_BREAK_FEED;
-    uint64_t until = p->print_start + end;
-    if (until < p->busy_until) p->busy_until = until;
 }
 
 // The checksum's second byte is in: the reply is prepared before the compare, so a bad
@@ -314,6 +365,7 @@ static void packet_done(SBGameBoyPrinter *p)
             p->palette = p->args[2] ? p->args[2] : 0xe4; // 0 means no remapping.
             p->exposure = p->args[3] > 0x7f ? 0x40 : p->args[3];
             p->print_bytes = p->image_bytes;
+            p->partial_bands = 0;
             p->status &= (uint8_t)~SBP_UNPROCESSED;
             p->printing = true;
             p->print_start = p->now;
@@ -331,7 +383,6 @@ static void packet_done(SBGameBoyPrinter *p)
 
 static void byte_in(SBGameBoyPrinter *p, uint8_t byte)
 {
-    sbp_advance(p, p->now);
     if (p->any_byte && p->now - p->last_byte > SBP_BYTE_TIMEOUT) {
         // The inter-byte timer ran out: the packet in progress is dropped and rolled back.
         if (p->phase != SBP_MAGIC1 && p->data_packet) p->image_bytes = p->saved_bytes;

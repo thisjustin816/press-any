@@ -71,16 +71,21 @@ static void end_rom(uint8_t *rom, size_t *pc)
     assert(*pc < 32768);
 }
 
-static SBInstance *boot(const uint8_t *rom)
+static SBInstance *boot_model(const uint8_t *rom, SBModel model)
 {
     uint8_t boot_rom[256] = {0xc3, 0xfc, 0};
     boot_rom[0xfc] = 0x3e; boot_rom[0xfd] = 1; boot_rom[0xfe] = 0xe0; boot_rom[0xff] = 0x50;
-    SBInstance *instance = SBCreate(SB_MODEL_DMG);
+    SBInstance *instance = SBCreate(model);
     assert(instance && SBLoadBootROM(instance, boot_rom, sizeof(boot_rom)));
     assert(SBLoadROM(instance, rom, 32768));
     SBSetPrinterConnected(instance, true);
     assert(SBSkipBootROM(instance, NULL, 0));
     return instance;
+}
+
+static SBInstance *boot(const uint8_t *rom)
+{
+    return boot_model(rom, SB_MODEL_DMG);
 }
 
 // The status byte the printer sent for a packet that ended at reply index `end` (exclusive).
@@ -98,6 +103,7 @@ static void fill_tiles(uint8_t *tiles, size_t count)
 }
 
 void test_printer(void);
+void test_printer_model(void);
 
 // The printer's own rules, from its firmware: Print needs the empty data packet first; a
 // pause of 125 ms between packets wipes what it holds; bytes more than 5.12 ms apart drop
@@ -174,6 +180,28 @@ static void test_printer_firmware_rules(void)
     assert(status_at(instance, 10) == 0x00);
     assert(SBReadMemory(instance, REPLIES + 10 + 18 - 2) == 0xff);
     SBDestroy(instance);
+
+    // A Super Game Boy runs its Game Boy about 2.4% fast, and the printer keeps its own time:
+    // nine copies of a band print for about 8.3 seconds, some 509 of the Super Game Boy's
+    // frames, where a printer timed by the core's clock would finish after about 497.
+    const uint8_t nine_copies[] = {9, 0x00, 0xe4, 0x40};
+    start_rom(rom, &pc);
+    packet(rom, &pc, 1, NULL, 0);
+    packet(rom, &pc, 4, tiles, sizeof(tiles));
+    packet(rom, &pc, 4, NULL, 0);
+    packet(rom, &pc, 2, nine_copies, sizeof(nine_copies));
+    end_rom(rom, &pc);
+    instance = boot_model(rom, SB_MODEL_SGB);
+    unsigned printing_frames = 0;
+    for (unsigned i = 0; i < 700; i++) {
+        (void)SBRunFrame(instance);
+        printing_frames += SBGetPrinterActivity(instance) == SB_PRINTER_PRINTING;
+    }
+    assert(printing_frames > 503 && printing_frames < 515);
+    unsigned copies = 0;
+    while (SBPopPrinterOutput(instance, &output)) copies++;
+    assert(copies == 9);
+    SBDestroy(instance);
     free(rom);
 }
 
@@ -241,4 +269,5 @@ void test_printer(void)
     assert(!SBPopPrinterOutput(instance, &output));
     SBDestroy(instance);
     test_printer_firmware_rules();
+    test_printer_model();
 }

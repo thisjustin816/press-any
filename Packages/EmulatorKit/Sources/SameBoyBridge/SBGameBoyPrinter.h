@@ -29,7 +29,6 @@ struct SBGameBoyPrinter {
     uint8_t in_byte, in_bits, out_byte, out_bit;
     bool any_byte;
     uint64_t last_byte;
-    uint64_t quiet; // Ticks without a byte while not printing.
     bool quiet_reset_done;
     bool sync_lost;
 
@@ -39,26 +38,25 @@ struct SBGameBoyPrinter {
     uint16_t length, remaining, checksum, received_checksum;
     uint8_t args[4];
     uint8_t reply[2];
-    uint8_t reply_count;
     bool packet_error;
     bool checksum_error_next; // Shown in the next reply.
-    bool data_packet, ignoring_payload;
+    bool data_packet;
 
     // Image memory.
     uint8_t memory[SBP_MEMORY];
     uint16_t image_bytes, saved_bytes;
     uint16_t rle_run;
-    bool rle_repeat, rle_have_byte;
-    uint8_t rle_byte;
+    bool rle_repeat;
 
     // Status and job flags.
     uint8_t status;
     bool end_mark, after_print, break_block, hide_full;
 
-    // The print in progress: busy from busy_from to busy_until, and its copies.
+    // The print in progress: busy from busy_from to busy_until, its copies, and the bands of a
+    // further copy that Break cut short.
     bool printing;
     uint64_t print_start, busy_from, busy_until;
-    uint8_t copies, top_margin, bottom_margin, palette, exposure;
+    uint8_t copies, partial_bands, top_margin, bottom_margin, palette, exposure;
     uint16_t print_bytes;
 };
 

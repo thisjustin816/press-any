@@ -33,10 +33,11 @@ ar rcs "$BUILD/libsameboy.a" "${objects[@]}"
 "${CC:-clang}" -std=gnu11 -D_GNU_SOURCE -DGB_INTERNAL \
   -DGB_VERSION='"1.0.3"' -DGB_COPYRIGHT_YEAR='"2026"' \
   -fsanitize=address -fno-omit-frame-pointer \
-  -I"$SAMEBOY" -I"$SAMEBOY/Core" -I"$BRIDGE/include" \
+  -I"$SAMEBOY" -I"$SAMEBOY/Core" -I"$BRIDGE" -I"$BRIDGE/include" \
   "$BRIDGE/SameBoyBridge.c" "$BRIDGE/SBGameBoyPrinter.c" "$ROOT_DIR/Scripts/tests/sameboy_bridge_smoke.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_camera_rgb.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_printer.c" \
+  "$ROOT_DIR/Scripts/tests/sameboy_printer_model.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_joypad.c" \
   "$BUILD/libsameboy.a" -lm -o "$BUILD/smoke"
 "$BUILD/smoke"

@@ -81,7 +81,7 @@ struct SBInstance {
     SBPrinterBuffer printer_readout;
     SBPrinterBuffer printer_queue[16];
     size_t printer_count;
-    // Every tick the core has run, the printer's clock.
+    // Every tick the core has run; sb_printer_time turns it into the printer's time.
     uint64_t ticks;
 };
 
@@ -103,9 +103,18 @@ static void sb_printer_print(void *context, const uint8_t *pixels, uint8_t heigh
     for (size_t i = 0; i < 160u * height; i++) output->luminance[i] = (uint8_t)(255u - pixels[i] * 85u);
 }
 
+// The printer keeps real time. The core counts twice its clock rate, which is faster on a Super
+// Game Boy than SBP_TICKS_PER_SECOND assumes.
+static uint64_t sb_printer_time(SBInstance *instance, uint64_t ticks)
+{
+    uint64_t rate = 2ull * GB_get_unmultiplied_clock_rate(instance->gb);
+    if (rate == SBP_TICKS_PER_SECOND) return ticks;
+    return ticks / rate * SBP_TICKS_PER_SECOND + ticks % rate * SBP_TICKS_PER_SECOND / rate;
+}
+
 static uint64_t sb_printer_now(SBInstance *instance)
 {
-    return instance->ticks + instance->gb->cycles_since_run;
+    return sb_printer_time(instance, instance->ticks + instance->gb->cycles_since_run);
 }
 
 static void sb_printer_bit_start(GB_gameboy_t *gb, bool bit)
@@ -135,7 +144,7 @@ void SBSetPrinterConnected(SBInstance *instance, bool connected)
     instance->printer_overflow = false;
     sbp_reset(&instance->printer, sb_printer_print, instance);
     if (!connected) return;
-    // Press Any's printer follows the printer's firmware (SBGameBoyPrinter.c) rather than the
+    // The printer here follows the printer's firmware (SBGameBoyPrinter.c) rather than the
     // core's own, which has no timeouts or packet errors.
     GB_set_serial_transfer_bit_start_callback(instance->gb, sb_printer_bit_start);
     GB_set_serial_transfer_bit_end_callback(instance->gb, sb_printer_bit_end);
@@ -548,7 +557,9 @@ SBFrameView SBRunFrame(SBInstance *instance)
     while (!instance->vblank) {
         ticks += sb_run(instance);
     }
-    if (instance->printer_connected) sbp_advance(&instance->printer, instance->ticks);
+    if (instance->printer_connected) {
+        sbp_advance(&instance->printer, sb_printer_time(instance, instance->ticks));
+    }
     // Uncorrected channels are a 5-bit value repeated into 8 bits, so the top 5 bits are the
     // value. The core's buffer is left as drawn, since it isn't redrawn while the LCD is off.
     if (instance->remaps_colors) {
@@ -604,21 +615,15 @@ bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame)
     // so preserve its latched image alongside the core state.
     SBCameraCapture camera = instance->camera;
     // The printer's state is outside the core's too.
-    SBGameBoyPrinter *printer = malloc(sizeof(*printer));
-    if (!printer) {
-        free(state);
-        return false;
-    }
-    *printer = instance->printer;
+    SBGameBoyPrinter printer = instance->printer;
     uint64_t ticks = instance->ticks;
     instance->previewing = true;
     *frame = SBRunFrame(instance);
     bool restored = SBLoadState(instance, state, size);
     instance->previewing = false;
     instance->camera = camera;
-    instance->printer = *printer;
+    instance->printer = printer;
     instance->ticks = ticks;
-    free(printer);
     instance->has_run = has_run;
     free(state);
     frame->emulated_nanoseconds = 0;
