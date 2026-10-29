@@ -11,6 +11,7 @@
 #endif
 
 #include "SameBoyBootPalettes.h"
+#include "SBGameBoyPrinter.h"
 
 #include <ctype.h>
 #include <stdatomic.h>
@@ -76,37 +77,56 @@ struct SBInstance {
     bool camera_pending;
     bool printer_connected;
     bool printer_overflow;
-    bool printer_pending;
-    SBPrinterBuffer printer_staging;
+    SBGameBoyPrinter printer;
     SBPrinterBuffer printer_readout;
     SBPrinterBuffer printer_queue[16];
     size_t printer_count;
+    // Every tick the core has run; sb_printer_time turns it into the printer's time.
+    uint64_t ticks;
 };
 
-static void sb_printer_image(GB_gameboy_t *gb, uint32_t *image, uint8_t height,
+// A finished copy, its pixels already through the print's palette: 0 white to 3 black.
+static void sb_printer_print(void *context, const uint8_t *pixels, uint8_t height,
                              uint8_t top, uint8_t bottom, uint8_t exposure)
 {
-    SBInstance *instance = GB_get_user_data(gb);
+    SBInstance *instance = context;
     if (!instance || instance->previewing || !height || height > 200) return;
-    SBPrinterBuffer *output = &instance->printer_staging;
-    output->height = height;
-    output->top_margin = top;
-    output->bottom_margin = bottom;
-    output->exposure = exposure;
-    for (size_t i = 0; i < 160u * height; i++) output->luminance[i] = image[i] & 0xff;
-    instance->printer_pending = true;
-}
-
-static void sb_printer_done(GB_gameboy_t *gb)
-{
-    SBInstance *instance = GB_get_user_data(gb);
-    if (!instance || instance->previewing || !instance->printer_pending) return;
-    instance->printer_pending = false;
     if (instance->printer_count == 16) {
         instance->printer_overflow = true;
         return;
     }
-    instance->printer_queue[instance->printer_count++] = instance->printer_staging;
+    SBPrinterBuffer *output = &instance->printer_queue[instance->printer_count++];
+    output->height = height;
+    output->top_margin = top;
+    output->bottom_margin = bottom;
+    output->exposure = exposure;
+    for (size_t i = 0; i < 160u * height; i++) output->luminance[i] = (uint8_t)(255u - pixels[i] * 85u);
+}
+
+// The printer keeps real time. The core counts twice its clock rate, which is faster on a Super
+// Game Boy than SBP_TICKS_PER_SECOND assumes.
+static uint64_t sb_printer_time(SBInstance *instance, uint64_t ticks)
+{
+    uint64_t rate = 2ull * GB_get_unmultiplied_clock_rate(instance->gb);
+    if (rate == SBP_TICKS_PER_SECOND) return ticks;
+    return ticks / rate * SBP_TICKS_PER_SECOND + ticks % rate * SBP_TICKS_PER_SECOND / rate;
+}
+
+static uint64_t sb_printer_now(SBInstance *instance)
+{
+    return sb_printer_time(instance, instance->ticks + instance->gb->cycles_since_run);
+}
+
+static void sb_printer_bit_start(GB_gameboy_t *gb, bool bit)
+{
+    SBInstance *instance = GB_get_user_data(gb);
+    if (instance) sbp_bit_from_game_boy(&instance->printer, sb_printer_now(instance), bit);
+}
+
+static bool sb_printer_bit_end(GB_gameboy_t *gb)
+{
+    SBInstance *instance = GB_get_user_data(gb);
+    return instance ? sbp_bit_to_game_boy(&instance->printer) : true;
 }
 
 void SBSetJoypadBouncing(SBInstance *instance, bool enabled)
@@ -121,19 +141,20 @@ void SBSetPrinterConnected(SBInstance *instance, bool connected)
     GB_disconnect_serial(instance->gb);
     instance->printer_connected = connected;
     instance->printer_count = 0;
-    instance->printer_pending = false;
     instance->printer_overflow = false;
-    if (connected) GB_connect_printer(instance->gb, sb_printer_image, sb_printer_done);
+    sbp_reset(&instance->printer, sb_printer_print, instance);
+    if (!connected) return;
+    // The printer here follows the printer's firmware (SBGameBoyPrinter.c) rather than the
+    // core's own, which has no timeouts or packet errors.
+    GB_set_serial_transfer_bit_start_callback(instance->gb, sb_printer_bit_start);
+    GB_set_serial_transfer_bit_end_callback(instance->gb, sb_printer_bit_end);
 }
 
 SBPrinterActivity SBGetPrinterActivity(SBInstance *instance)
 {
     if (!instance || !instance->printer_connected) return SB_PRINTER_IDLE;
-    if (instance->printer_pending) return SB_PRINTER_PRINTING;
-    GB_printer_t *printer = &instance->gb->printer;
-    if (printer->image_offset || (printer->command_id == GB_PRINTER_DATA_COMMAND &&
-        printer->command_state >= GB_PRINTER_COMMAND_DATA &&
-        printer->command_state <= GB_PRINTER_COMMAND_CHECKSUM_HIGH)) return SB_PRINTER_RECEIVING;
+    if (sbp_is_printing(&instance->printer)) return SB_PRINTER_PRINTING;
+    if (sbp_is_receiving(&instance->printer)) return SB_PRINTER_RECEIVING;
     return SB_PRINTER_IDLE;
 }
 
@@ -198,6 +219,7 @@ static void sb_camera_requested(GB_gameboy_t *gb)
 static unsigned sb_run(SBInstance *instance)
 {
     unsigned ticks = GB_run(instance->gb);
+    instance->ticks += ticks;
     // SameBoy sets the busy bit after calling the request callback, so completion must wait
     // until that CPU step returns. The shot stays fixed while the cartridge reads its tiles.
     if (instance->camera_pending) {
@@ -535,6 +557,9 @@ SBFrameView SBRunFrame(SBInstance *instance)
     while (!instance->vblank) {
         ticks += sb_run(instance);
     }
+    if (instance->printer_connected) {
+        sbp_advance(&instance->printer, sb_printer_time(instance, instance->ticks));
+    }
     // Uncorrected channels are a 5-bit value repeated into 8 bits, so the top 5 bits are the
     // value. The core's buffer is left as drawn, since it isn't redrawn while the LCD is off.
     if (instance->remaps_colors) {
@@ -589,11 +614,16 @@ bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame)
     // Sensor input is external to SameBoy's serialized state. A preview may trigger a shot,
     // so preserve its latched image alongside the core state.
     SBCameraCapture camera = instance->camera;
+    // The printer's state is outside the core's too.
+    SBGameBoyPrinter printer = instance->printer;
+    uint64_t ticks = instance->ticks;
     instance->previewing = true;
     *frame = SBRunFrame(instance);
     bool restored = SBLoadState(instance, state, size);
     instance->previewing = false;
     instance->camera = camera;
+    instance->printer = printer;
+    instance->ticks = ticks;
     instance->has_run = has_run;
     free(state);
     frame->emulated_nanoseconds = 0;

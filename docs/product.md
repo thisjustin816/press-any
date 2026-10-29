@@ -1502,11 +1502,25 @@ Game-provided feed margins are preserved, with space around the paper for its to
 Transparent exports retain alpha outside the paper. Save Image uses add-only Photos access; Save to
 Files and the other share actions use the system share sheet. Printer controls and export are free.
 
-`PrinterCapability` supplies completed PRINT commands through the core's serialized worker.
+`PrinterCapability` supplies each printed copy through the core's serialized worker.
 Attachment changes, resets and state loads clear the core queue; display-only frame refreshes
-preserve it. The host queue holds 16 commands and reports overflow. The app drains it every frame;
+preserve it. The host queue holds 16 copies and reports overflow. The app drains it every frame;
 a printer error reports a message without stopping gameplay. Exposure is retained as metadata;
 the slip renderer preserves the decoded print tones.
+
+The printer follows the Game Boy Printer's own firmware, not the core's simpler model. Bytes
+more than 5.12 ms apart drop the packet, which the game reads as 0xFF. About 125 ms without a
+byte while the printer is idle clears what it holds, as Init does. Print needs the empty data
+packet first. Status bits, the checksum flag that shows a packet late, packet errors, data sent
+while printing, and data after a print without Init all follow the firmware. A print stays busy
+as long as the paper takes: about 0.8 seconds to the end of the first 16-row band, 1.1 to 1.3
+seconds for each band after it, and 0.16 seconds for each unit of margin. The top margin feeds
+once and the bottom margin after every copy, and each copy after the first feeds about 0.1
+seconds before its bands. Break lets the band being printed finish or stops the paper at its
+next feed step, and the bands printed by then come out. The printer keeps its own time, so a
+Super Game Boy's faster clock does not shorten it. A game that breaks these rules fails here as
+it would on a printer. The timings come from the printer's firmware run in an emulator; how far
+a margin unit feeds the paper was not measured on a printer.
 
 The core reports idle, receiving and printing activity for an indeterminate progress display.
 Games that print several pages go idle between them, so the banner changes to **View Print** only

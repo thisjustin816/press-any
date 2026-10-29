@@ -122,11 +122,25 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
   and `lcd3x` asks for none. The author of any shader that ships later is credited the same way
   (see AGENTS.md).
 
+## Game Boy Printer firmware research
+
+- Project: Game-Boy-Printer-disassembly, by Raphaël Boichot
+- Upstream: https://github.com/Raphael-Boichot/Game-Boy-Printer-disassembly
+- Revision consulted: `990c3b6`
+- Usage: `Packages/EmulatorKit/Sources/SameBoyBridge/SBGameBoyPrinter.c` models the Game Boy
+  Printer from the protocol its firmware implements, as `Printer_protocol.md` documents it from
+  a disassembly of the printer's ROM, and from timings measured with its firmware emulator
+  (`emulator/gbprinter_emu.py`). The model is Press Any's own code: no source, ROM or binary
+  from the project is copied or shipped. Its replies were checked byte for byte against that
+  emulator running the printer's firmware; the check ran outside this repository.
+- License: the project states none. Nothing is copied; it is credited in Acknowledgements.
+
 ## In the app
 
 Settings > Acknowledgements lists the code, artwork and data used in the app. SameBoy's,
 GRDB.swift's and Corporatus's notices are bundled in `App/Acknowledgements/`; gbtoolsid, which is in
-the public domain, No-Intro and the libretro LCD shaders get a credit.
+the public domain, No-Intro, the libretro LCD shaders and the Game Boy Printer firmware research get
+a credit.
 
 ## Updating a dependency
 

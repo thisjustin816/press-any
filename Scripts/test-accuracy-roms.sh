@@ -66,7 +66,7 @@ while IFS= read -r source; do
 done < <(find "$SAMEBOY/Core" -maxdepth 1 -name '*.c' -print | sort)
 "$CC" -std=gnu11 -D_GNU_SOURCE -DGB_INTERNAL -DGB_VERSION='"1.0.3"' -DGB_COPYRIGHT_YEAR='"2026"' -O2 \
   -I"$SAMEBOY" -I"$SAMEBOY/Core" -I"$BRIDGE/include" \
-  "$BRIDGE/SameBoyBridge.c" "$ROOT_DIR/Scripts/tests/sameboy_test_roms.c" "${objects[@]}" -lm -o "$BUILD/run"
+  "$BRIDGE/SameBoyBridge.c" "$BRIDGE/SBGameBoyPrinter.c" "$ROOT_DIR/Scripts/tests/sameboy_test_roms.c" "${objects[@]}" -lm -o "$BUILD/run"
 
 # One line per run: model, mode, emulated seconds (with the boot ROM's few), ROM relative to $CACHE.
 {
