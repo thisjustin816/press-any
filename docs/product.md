@@ -1510,8 +1510,9 @@ selected one outlined. Transparent is the default until another background is ch
 then opens with the last one chosen, in any game. A remembered Game Artwork or Custom background
 that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered. Wood uses Dimitrios Savva's CC0 Wood Table
 photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements. **Printer** draws
-the slip coming out of a dark printer with the Press Any wordmark and "printer" on its front and a
-red power light; the slip's bottom edge goes into the serrated slot.
+the slip coming out of a printer's slot, between its black top section and a Game Boy gray front
+with "Press Any printer" in dark ink and a red power light; the paper goes into the slot behind
+the cutter's teeth.
 The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
 shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
 scale, without smoothing or simulated ink loss. Paper styling stays outside the printed content.

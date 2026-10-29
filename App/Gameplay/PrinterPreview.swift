@@ -403,7 +403,8 @@ private struct PrinterShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
-/// The Printer background's tile: paper rising out of a dark printer with its red light.
+/// The Printer background's tile: paper rising out of the slot between the black top and the
+/// gray front, with the red light.
 private struct PrinterSwatch: View {
     var body: some View {
         GeometryReader { geometry in
@@ -411,13 +412,18 @@ private struct PrinterSwatch: View {
             ZStack(alignment: .top) {
                 Color(white: 0.08)
                 Rectangle()
-                    .fill(Color(white: 0.97))
-                    .frame(width: size.width * 0.56, height: size.height * 0.62)
+                    .fill(Color(white: 0.04))
+                    .frame(width: size.width * 0.84, height: size.height * 0.66)
                     .offset(y: size.height * 0.06)
                 Rectangle()
-                    .fill(LinearGradient(colors: [Color(white: 0.2), Color(white: 0.12)], startPoint: .top, endPoint: .bottom))
-                    .frame(height: size.height * 0.36)
-                    .offset(y: size.height * 0.64)
+                    .fill(Color(white: 0.97))
+                    .frame(width: size.width * 0.56, height: size.height * 0.56)
+                    .offset(y: size.height * 0.12)
+                Rectangle()
+                    .fill(LinearGradient(colors: [Color(red: 0.79, green: 0.79, blue: 0.76), Color(red: 0.70, green: 0.70, blue: 0.67)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(height: size.height * 0.32)
+                    .offset(y: size.height * 0.68)
                 Circle()
                     .fill(Color.red)
                     .frame(width: size.width * 0.1)
