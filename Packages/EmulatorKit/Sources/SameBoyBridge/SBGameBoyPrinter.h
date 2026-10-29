@@ -16,13 +16,37 @@
 
 typedef struct SBGameBoyPrinter SBGameBoyPrinter;
 
+// What the printer made of the traffic, for a log a game's developer can read.
+typedef enum {
+    SBP_EVENT_PACKET = 0,     // A packet ended; `status` is the reply the Game Boy read.
+    SBP_EVENT_TIMEOUT = 1,    // Bytes came too far apart, so the packet in progress was dropped.
+    SBP_EVENT_IDLE_RESET = 2, // Idle long enough that the printer cleared the data it held.
+    SBP_EVENT_SYNC_LOST = 3,  // A packet began with `command` instead of 0x88; replies are 0xFF
+                              // until the line goes quiet.
+} SBPEventKind;
+
+typedef struct {
+    uint64_t time;
+    uint8_t kind, command, compression, status;
+    uint16_t length;
+    bool checksum_ok;
+    // Data sent while printing, which the firmware drops without flagging an error.
+    bool ignored;
+} SBPEvent;
+
+typedef void (*SBPEventCallback)(void *context, const SBPEvent *event);
+
 // One printed copy: pixel values 0-3 after the print's palette, 160 pixels a row.
 typedef void (*SBPPrintCallback)(void *context, const uint8_t *pixels, uint8_t height,
                                  uint8_t top_margin, uint8_t bottom_margin, uint8_t exposure);
 
 struct SBGameBoyPrinter {
     SBPPrintCallback on_print;
+    SBPEventCallback on_event;
     void *context;
+    // Status polls are reported only when the status changes.
+    uint8_t polled_status;
+    bool polled;
     uint64_t now;
 
     // Link layer.
@@ -41,6 +65,7 @@ struct SBGameBoyPrinter {
     bool packet_error;
     bool checksum_error_next; // Shown in the next reply.
     bool data_packet;
+    bool ignored_data; // Data that arrived while printing, which the firmware drops.
 
     // Image memory.
     uint8_t memory[SBP_MEMORY];
@@ -61,6 +86,8 @@ struct SBGameBoyPrinter {
 };
 
 void sbp_reset(SBGameBoyPrinter *printer, SBPPrintCallback on_print, void *context);
+// Reports events to `on_event` with the reset's context; NULL stops them.
+void sbp_set_event_callback(SBGameBoyPrinter *printer, SBPEventCallback on_event);
 // Each bit the Game Boy shifts out, at time now; after eight, the byte is taken.
 void sbp_bit_from_game_boy(SBGameBoyPrinter *printer, uint64_t now, bool bit);
 // The bit the printer shifts back for the same clock.

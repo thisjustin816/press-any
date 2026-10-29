@@ -25,6 +25,8 @@ protocol GameplayRuntime: AnyObject {
     func setPrinterConnected(_ connected: Bool) throws
     func drainPrinterOutput() throws -> [PrinterOutput]
     func printerActivity() throws -> PrinterActivity
+    /// What the printer made of the game's traffic since the last call.
+    func drainPrinterEvents() throws -> [PrinterEvent]
     var hasCamera: Bool { get }
     func setCameraFrame(_ frame: CameraFrame?) throws
 
@@ -49,6 +51,7 @@ extension GameplayRuntime {
     func setPrinterConnected(_ connected: Bool) throws {}
     func drainPrinterOutput() throws -> [PrinterOutput] { [] }
     func printerActivity() throws -> PrinterActivity { .idle }
+    func drainPrinterEvents() throws -> [PrinterEvent] { [] }
     var hasCamera: Bool { false }
     func setCameraFrame(_ frame: CameraFrame?) throws {}
 

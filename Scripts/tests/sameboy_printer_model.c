@@ -146,10 +146,51 @@ static void test_copies_take_their_time(void)
     assert(prints == 2 && last_height == 16);
 }
 
+static SBPEvent events[64];
+static unsigned event_count;
+
+static void on_event(void *context, const SBPEvent *event)
+{
+    (void)context;
+    if (event_count < 64) events[event_count++] = *event;
+}
+
+// Data sent while a print runs is dropped without an error bit, so the log marks it; status polls
+// are logged only when their answer changes.
+static void test_events_name_what_the_printer_dropped(void)
+{
+    start();
+    sbp_set_event_callback(&printer, on_event);
+    event_count = 0;
+    print_bands(1, print_one);
+    assert(event_count == 3);
+    assert(events[0].command == 4 && events[0].length == 640 && !events[0].ignored);
+    assert(events[2].command == 2 && events[2].checksum_ok);
+    wait_ms(200);
+    packet(15, 0, NULL, 0);
+    packet(15, 0, NULL, 0);
+    assert(event_count == 4 && events[3].command == 15 && (events[3].status & 0x02));
+    uint8_t status = packet(4, 0, tiles, sizeof(tiles));
+    assert(event_count == 5 && events[4].ignored && events[4].status == status);
+    assert(!(status & 0x10));
+
+    // A packet cut off mid-way is reported when the next byte arrives too late.
+    start();
+    sbp_set_event_callback(&printer, on_event);
+    event_count = 0;
+    exchange(0x88);
+    exchange(0x33);
+    exchange(4);
+    wait_ms(20);
+    exchange(0x88);
+    assert(event_count == 1 && events[0].kind == SBP_EVENT_TIMEOUT && events[0].command == 4);
+}
+
 void test_printer_model(void)
 {
     test_run_ends_with_its_band();
     test_idle_after_print();
     test_break_between_bands();
     test_copies_take_their_time();
+    test_events_name_what_the_printer_dropped();
 }

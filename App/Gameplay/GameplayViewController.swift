@@ -18,6 +18,9 @@ final class GameplayViewController: UIViewController {
     private let rumble = RumbleRouter()
     private var printerConnected = false
     private let printerFeed = GameplayPrinterFeed()
+    private let printerLog = GameplayPrinterLog()
+    /// When the last printer problem was shown, so a game repeating one isn't announced each frame.
+    private var lastPrinterProblem: (message: String, at: Date)?
     private let printerStatus = PrinterStatusView()
     private let camera: GameplayCamera
     private var renderer: MetalRenderer?
@@ -426,8 +429,11 @@ final class GameplayViewController: UIViewController {
             title: "View Prints", image: UIImage(systemName: "doc.richtext"),
             attributes: printerFeed.slips.isEmpty ? .disabled : []
         ) { [weak self] _ in self?.showPrinterPrints() }
+        let log = UIAction(title: "Printer Log", image: UIImage(systemName: "list.bullet.rectangle")) { [weak self] _ in
+            self?.showPrinterLog()
+        }
         return UIMenu(title: "Game Boy Printer", subtitle: printerConnected ? "Connected" : "Off",
-                      image: UIImage(systemName: "printer"), children: [connect, prints])
+                      image: UIImage(systemName: "printer"), children: [connect, prints, log])
     }
 
     private func showPrinterPrints() {
@@ -440,6 +446,24 @@ final class GameplayViewController: UIViewController {
         let sheet = PrinterPreviewController(rootView: preview)
         sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
         present(sheet, animated: true)
+    }
+
+    private func showPrinterLog() {
+        guard presentedViewController == nil else { return }
+        setCoveredBySheet(true)
+        let sheet = PrinterLogController(rootView: PrinterLogView(events: printerLog.events))
+        sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
+        present(sheet, animated: true)
+    }
+
+    /// A problem the printer reported, shown once and again only after a few seconds or when it
+    /// changes, with the status byte the game read.
+    private func announcePrinterProblem(_ event: PrinterEvent) {
+        guard let problem = event.problem else { return }
+        let message = event.kind == .packet ? "Printer: \(problem) Status \(String(format: "0x%02X", event.status))." : "Printer: \(problem)"
+        if let last = lastPrinterProblem, last.message == message, Date().timeIntervalSince(last.at) < 5 { return }
+        lastPrinterProblem = (message, Date())
+        showTransientMessage(message)
     }
 
     private func makeCaptureMenu() -> UIMenu {
@@ -765,6 +789,12 @@ final class GameplayViewController: UIViewController {
                         self?.showTransientMessage("This print is too long. Earlier prints are still available.")
                     }
                 }
+            }
+            let log = printerLog
+            driver.onPrinterEvents = { [weak self] events in
+                log.append(events)
+                guard let problem = events.last(where: { $0.problem != nil }) else { return }
+                DispatchQueue.main.async { self?.announcePrinterProblem(problem) }
             }
             driver.onPrinterActivity = { [weak self] activity in
                 DispatchQueue.main.async { self?.printerStatus.showActivity(activity) }

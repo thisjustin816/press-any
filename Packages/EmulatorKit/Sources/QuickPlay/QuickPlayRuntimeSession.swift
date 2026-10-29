@@ -189,6 +189,11 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         return try worker.perform { ($0 as? any PrinterCapability)?.printerActivity ?? .idle }
     }
 
+    public func drainPrinterEvents() throws -> [PrinterEvent] {
+        let worker = try activeWorker(requireRunning: false)
+        return try worker.perform { ($0 as? any PrinterCapability)?.drainPrinterEvents() ?? [] }
+    }
+
     public func drainPrinterOutput() throws -> [PrinterOutput] {
         let worker = try activeWorker(requireRunning: false)
         return try worker.perform { try ($0 as? any PrinterCapability)?.drainPrinterOutput() ?? [] }

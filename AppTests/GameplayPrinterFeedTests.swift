@@ -68,3 +68,18 @@ final class GameplayPrinterFeedTests: XCTestCase {
         XCTAssertNotEqual(feed.slips[1].id, first.id)
     }
 }
+
+final class GameplayPrinterLogTests: XCTestCase {
+    func testTheLogKeepsTheNewestAndReadsAsText() {
+        let log = GameplayPrinterLog()
+        let poll = PrinterEvent(time: 0.5, kind: .packet, command: 15, compressed: false, length: 0, status: 0)
+        log.append(Array(repeating: poll, count: GameplayPrinterLog.capacity))
+        let ignored = PrinterEvent(time: 1.25, kind: .packet, command: 4, compressed: false, length: 640, status: 0x0E,
+                                   ignoredWhilePrinting: true)
+        log.append([ignored])
+        XCTAssertEqual(log.events.count, GameplayPrinterLog.capacity)
+        XCTAssertEqual(log.events.last, ignored)
+        XCTAssertEqual(GameplayPrinterLog.text([ignored]),
+                       "   1.250 s  Data, 640 bytes → 0x0E busy, image full, unprocessed data\n           Data sent while printing was ignored.")
+    }
+}

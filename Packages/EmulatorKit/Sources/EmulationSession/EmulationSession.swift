@@ -475,6 +475,11 @@ public final class EmulationSession: @unchecked Sendable {
         return try worker.perform { ($0 as? any PrinterCapability)?.printerActivity ?? .idle }
     }
 
+    public func drainPrinterEvents() throws -> [PrinterEvent] {
+        let (worker, _, _) = try snapshotActive()
+        return try worker.perform { ($0 as? any PrinterCapability)?.drainPrinterEvents() ?? [] }
+    }
+
     public func drainPrinterOutput() throws -> [PrinterOutput] {
         let (worker, _, _) = try snapshotActive()
         return try worker.perform { try ($0 as? any PrinterCapability)?.drainPrinterOutput() ?? [] }

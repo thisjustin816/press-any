@@ -41,6 +41,7 @@ final class GameplayDriver: @unchecked Sendable {
     var onPrinterOutput: (@Sendable ([PrinterOutput]) -> Void)?
     var onPrinterError: ErrorHandler?
     var onPrinterActivity: (@Sendable (PrinterActivity) -> Void)?
+    var onPrinterEvents: (@Sendable ([PrinterEvent]) -> Void)?
     private var lastPrinterActivity = PrinterActivity.idle
     var onFrame: FrameHandler?
     var onAudio: AudioHandler?
@@ -189,6 +190,8 @@ final class GameplayDriver: @unchecked Sendable {
                 }
                 let prints = try runtime.drainPrinterOutput()
                 if !prints.isEmpty { onPrinterOutput?(prints) }
+                let events = try runtime.drainPrinterEvents()
+                if !events.isEmpty { onPrinterEvents?(events) }
             } catch { onPrinterError?(error) }
         }
         let samples = try runtime.drainAudio(maxFrames: 4096)

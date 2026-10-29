@@ -1541,6 +1541,16 @@ Super Game Boy's faster clock does not shorten it. A game that breaks these rule
 it would on a printer. The timings come from the printer's firmware run in an emulator; how far
 a margin unit feeds the paper was not measured on a printer.
 
+**Printer Log** in the game menu's Game Boy Printer menu lists what the printer made of the game's
+traffic this session, newest first: each packet with its command, size and the status byte the
+game read back, its flags named (busy, image full, unprocessed data, packet error and the rest), and
+a status check only when its answer changes. Packets the printer dropped or refused carry a line
+saying why: data sent while printing, which the printer ignores without an error bit; a packet
+error; a checksum that didn't match; bytes more than 5 ms apart; 125 ms idle with unprinted data
+cleared; or a packet that didn't begin with 0x88. Copy puts the log on the clipboard as text. It
+keeps the newest 200 until the game closes. When the printer reports a problem, a message says what
+and the status byte, at most once every few seconds for the same problem.
+
 The core reports idle, receiving and printing activity for an indeterminate progress display.
 Games that print several pages go idle between them, so the banner changes to **View Print** only
 after the printer stays idle for about a second and a half; more data in that time keeps the

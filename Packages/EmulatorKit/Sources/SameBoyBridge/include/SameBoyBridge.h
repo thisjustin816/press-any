@@ -148,6 +148,18 @@ bool SBPopPrinterOutput(SBInstance *instance, SBPrinterOutput *output);
 /// Returns and clears the queue-overflow flag.
 bool SBConsumePrinterOverflow(SBInstance *instance);
 
+/// What the printer made of the game's traffic: each packet with the status it answered (a status
+/// poll only when its answer changed), and packets it dropped. `kind` is 0 packet, 1 timeout,
+/// 2 idle reset, 3 lost sync. `ignored` marks data sent while printing, which the printer drops
+/// without an error. The newest 64 are kept; attachment changes, resets and state loads clear them.
+typedef struct {
+    double seconds;
+    uint8_t kind, command, compression, status;
+    uint16_t length;
+    bool checksum_ok, ignored;
+} SBPrinterEvent;
+bool SBPopPrinterEvent(SBInstance *instance, SBPrinterEvent *event);
+
 void SBReset(SBInstance *instance);
 
 /// Whether SameBoy reads code as a Game Genie (XXX-XXX or XXX-XXX-XXX) or GameShark (01VVAAAA)

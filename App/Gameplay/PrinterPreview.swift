@@ -4,8 +4,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 
+typealias PrinterPreviewController = PrinterSheetController<PrinterPreview>
+typealias PrinterLogController = PrinterSheetController<PrinterLogView>
+
+/// A printer sheet over the paused game, which tells the game when it has gone.
 @MainActor
-final class PrinterPreviewController: UIHostingController<PrinterPreview>, UIAdaptivePresentationControllerDelegate {
+final class PrinterSheetController<Content: View>: UIHostingController<Content>, UIAdaptivePresentationControllerDelegate {
     var onClose: (() -> Void)?
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
 

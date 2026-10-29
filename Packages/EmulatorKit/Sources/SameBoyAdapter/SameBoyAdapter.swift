@@ -63,6 +63,21 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         }
     }
 
+    public func drainPrinterEvents() -> [PrinterEvent] {
+        guard let instance else { return [] }
+        var result: [PrinterEvent] = []
+        var event = SBPrinterEvent()
+        while SBPopPrinterEvent(instance, &event) {
+            guard let kind = PrinterEvent.Kind(rawValue: event.kind) else { continue }
+            result.append(PrinterEvent(
+                time: event.seconds, kind: kind, command: event.command, compressed: event.compression != 0,
+                length: Int(event.length), status: event.status, checksumMatched: event.checksum_ok,
+                ignoredWhilePrinting: event.ignored
+            ))
+        }
+        return result
+    }
+
     public func drainPrinterOutput() throws -> [PrinterOutput] {
         guard let instance else { return [] }
         if SBConsumePrinterOverflow(instance) { throw SameBoyAdapterError.printerQueueOverflow }
