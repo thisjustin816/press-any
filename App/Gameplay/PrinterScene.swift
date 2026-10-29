@@ -21,7 +21,7 @@ enum PrinterScene {
     private static let panelInset: CGFloat = 40
     /// The body below the panel.
     private static let baseHeight: CGFloat = 380
-    /// The wider slab the body stands on, showing below it.
+    /// How far the darker base shows below the body.
     private static let baseStep: CGFloat = 24
     private static let windowTop: CGFloat = 30
     private static let windowInset: CGFloat = 150
@@ -81,11 +81,12 @@ enum PrinterScene {
         cg.restoreGState()
     }
 
-    /// The gray body, standing on a slightly wider slab.
+    /// The gray body on its darker base.
     private static func drawBody(in cg: CGContext, top: CGFloat, bottom: CGFloat) {
-        UIColor(red: 0.59, green: 0.58, blue: 0.56, alpha: 1).setFill()
-        UIBezierPath(roundedRect: CGRect(x: bodyInset - 12, y: bottom - 60, width: width - (bodyInset - 12) * 2, height: 60 + baseStep),
-                     cornerRadius: 40).fill()
+        // The base: a darker band as wide as the body, showing below it.
+        let base = CGRect(x: bodyInset + 4, y: bottom - 60, width: width - (bodyInset + 4) * 2, height: 60 + baseStep)
+        fill(UIBezierPath(roundedRect: base, cornerRadius: 36), in: cg, from: UIColor(red: 0.66, green: 0.65, blue: 0.63, alpha: 1),
+             to: UIColor(red: 0.54, green: 0.53, blue: 0.51, alpha: 1), over: base)
         let body = CGRect(x: bodyInset, y: top, width: width - bodyInset * 2, height: bottom - top)
         let path = UIBezierPath(roundedRect: body, cornerRadius: 48)
         // The same Game Boy gray as the Classic touch controller.
@@ -107,8 +108,8 @@ enum PrinterScene {
         let roll = CGRect(x: windowInset, y: lid.minY + 60, width: width - windowInset * 2, height: lid.height - 100)
         cg.saveGState()
         UIBezierPath(roundedRect: roll, cornerRadius: 40).addClip()
-        let rollColors = [UIColor(white: 0.55, alpha: 0.5).cgColor, UIColor(white: 0.85, alpha: 0.55).cgColor,
-                          UIColor(white: 0.5, alpha: 0.5).cgColor] as CFArray
+        let rollColors = [UIColor(white: 0.70, alpha: 0.65).cgColor, UIColor(white: 0.95, alpha: 0.72).cgColor,
+                          UIColor(white: 0.62, alpha: 0.65).cgColor] as CFArray
         if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: rollColors, locations: [0, 0.45, 1]) {
             cg.drawLinearGradient(gradient, start: CGPoint(x: 0, y: roll.minY), end: CGPoint(x: 0, y: roll.maxY), options: [])
         }
@@ -135,6 +136,9 @@ enum PrinterScene {
         let window = CGRect(x: windowInset, y: slotY, width: width - windowInset * 2, height: slotDepth + cutterBar + 40)
         UIColor.black.setFill()
         UIBezierPath(roundedRect: window, cornerRadius: 8).fill()
+        // The light paper guide inside the slot, behind the cutter; the paper covers its middle.
+        UIColor(red: 0.72, green: 0.72, blue: 0.71, alpha: 1).setFill()
+        cg.fill(CGRect(x: window.minX + 10, y: window.minY + 12, width: window.width - 20, height: slotDepth - 16))
 
         // The wordmark over "printer", their left edges lined up and the two centered together.
         let wordmarkHeight: CGFloat = 56
