@@ -156,18 +156,48 @@ enum PrinterScene {
         cg.restoreGState()
         label("FEED", size: 34, color: UIColor(white: 0.95, alpha: 0.9), center: CGPoint(x: feed.midX, y: feed.midY))
 
-        let switchWell = CGRect(x: width - 330, y: top + 120, width: 160, height: 110)
-        UIColor(red: 0.68, green: 0.66, blue: 0.64, alpha: 1).setFill()
-        UIBezierPath(roundedRect: switchWell, cornerRadius: 10).fill()
-        UIColor(red: 0.86, green: 0.84, blue: 0.82, alpha: 1).setFill()
-        cg.fillEllipse(in: CGRect(x: switchWell.midX - 32, y: switchWell.midY - 22, width: 64, height: 64))
-        label("POWER", size: 28, color: UIColor(white: 0.25, alpha: 1), center: CGPoint(x: switchWell.midX, y: switchWell.minY - 24))
+        drawPowerSwitch(in: cg, origin: CGPoint(x: width - 360, y: top + 100))
     }
 
-    /// The wordmark as it shows in Dark Mode, with its pink A, and the other letters in the panel's
-    /// light lettering.
+    /// The power switch: a plate in the body's gray that slides along a recessed, ridged track,
+    /// with POWER and a domed knob on it, and ON and OFF marked beside the track.
+    private static func drawPowerSwitch(in cg: CGContext, origin: CGPoint) {
+        let track = CGRect(x: origin.x, y: origin.y, width: 170, height: 150)
+        UIColor(white: 0.52, alpha: 1).setFill()
+        UIBezierPath(roundedRect: track, cornerRadius: 6).fill()
+        UIColor(white: 0.44, alpha: 1).setFill()
+        for x in stride(from: track.minX + 120, to: track.maxX - 6, by: 7) {
+            cg.fill(CGRect(x: x, y: track.minY + 10, width: 3, height: track.height - 20))
+        }
+        let plate = CGRect(x: track.minX + 6, y: track.minY + 6, width: 108, height: track.height - 12)
+        cg.saveGState()
+        cg.setShadow(offset: CGSize(width: 2, height: 3), blur: 4, color: UIColor(white: 0, alpha: 0.3).cgColor)
+        UIColor(red: 0.80, green: 0.79, blue: 0.76, alpha: 1).setFill()
+        UIBezierPath(roundedRect: plate, cornerRadius: 6).fill()
+        cg.restoreGState()
+        label("POWER", size: 22, color: UIColor(white: 0.45, alpha: 1), center: CGPoint(x: plate.midX, y: plate.minY + 26))
+        let knob = CGRect(x: plate.midX - 30, y: plate.minY + 52, width: 60, height: 60)
+        cg.saveGState()
+        cg.addEllipse(in: knob)
+        cg.clip()
+        let colors = [UIColor(white: 0.93, alpha: 1).cgColor, UIColor(white: 0.70, alpha: 1).cgColor] as CFArray
+        if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
+            cg.drawRadialGradient(gradient, startCenter: CGPoint(x: knob.midX - 10, y: knob.midY - 12), startRadius: 2,
+                                  endCenter: CGPoint(x: knob.midX, y: knob.midY), endRadius: 32, options: [])
+        }
+        cg.restoreGState()
+
+        let ink = UIColor(white: 0.45, alpha: 1)
+        label("ON", size: 24, color: ink, center: CGPoint(x: track.maxX + 36, y: track.midY - 22))
+        label("OFF", size: 24, color: ink, center: CGPoint(x: track.maxX + 36, y: track.midY + 22))
+        ink.setFill()
+        cg.fill(CGRect(x: track.maxX + 14, y: track.midY - 2, width: 44, height: 3))
+    }
+
+    /// The wordmark with the pink A it has in Light Mode, the same magenta as the A and B buttons,
+    /// and the other letters in the panel's light lettering.
     private static func wordmark(height: CGFloat) -> UIImage? {
-        let art = AppBrand.Wordmark.artwork(size: height, appearance: .dark)
+        let art = AppBrand.Wordmark.artwork(size: height, appearance: .light)
         guard let source = art.cgImage else { return nil }
         let width = source.width, rows = source.height
         var pixels = [UInt8](repeating: 0, count: width * rows * 4)
@@ -180,7 +210,7 @@ enum PrinterScene {
         lettering.getRed(&light.0, green: &light.1, blue: &light.2, alpha: &light.3)
         for i in stride(from: 0, to: pixels.count, by: 4) {
             let alpha = Int(pixels[i + 3])
-            // The pink A is much redder than green; the lavender letters aren't.
+            // The pink A is much redder than green; the navy letters aren't.
             guard alpha > 0, Int(pixels[i]) - Int(pixels[i + 1]) < alpha / 4 else { continue }
             pixels[i] = UInt8(light.0 * CGFloat(alpha))
             pixels[i + 1] = UInt8(light.1 * CGFloat(alpha))
