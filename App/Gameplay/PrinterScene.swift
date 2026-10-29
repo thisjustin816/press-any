@@ -69,8 +69,6 @@ enum PrinterScene {
             cg.drawLinearGradient(gradient, start: CGPoint(x: 0, y: shell.minY), end: CGPoint(x: 0, y: shell.maxY), options: [])
         }
         // A rounded lip along the bottom: a band of shade with light catching its upper edge.
-        cg.saveGState()
-        path.addClip()
         UIColor(white: 0, alpha: 0.12).setFill()
         cg.fill(CGRect(x: shell.minX, y: shell.maxY - 30, width: shell.width, height: 30))
         UIColor(white: 1, alpha: 0.35).setFill()

@@ -75,6 +75,23 @@ final class GameplayPrinterFeedTests: XCTestCase {
         XCTAssertEqual(image.size, CGSize(width: 160, height: 8 + 3 * 8))
     }
 
+    func testThePrinterBackgroundShowsATallPrintAboveThePrinter() throws {
+        let output = try PrinterOutput(height: 160, luminance: Data(repeating: 0xFF, count: 160 * 160), topMargin: 1, bottomMargin: 3, exposure: 64)
+        let image = try XCTUnwrap(PrinterScene.render(PrinterSlip(output: output))?.cgImage)
+        // The paper starts 40 px down, after its render's 96 px inset; 60 px into it is above the
+        // printer's body, which starts 576 px down for this print.
+        var pixel = [UInt8](repeating: 0, count: 4)
+        try pixel.withUnsafeMutableBytes { buffer in
+            let context = try XCTUnwrap(CGContext(
+                data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ))
+            let y = 40 + 96 + 60
+            context.draw(image, in: CGRect(x: -image.width / 2, y: y - image.height + 1, width: image.width, height: image.height))
+        }
+        XCTAssertGreaterThan(pixel[0], 200, "paper, not the dark background behind the printer")
+    }
+
     func testEndingARollPreservesItsPaperAndSeparatesTheNextDelivery() throws {
         let feed = GameplayPrinterFeed()
         let section = try PrinterOutput(height: 16, luminance: Data(count: 2560), topMargin: 0, bottomMargin: 0, exposure: 64)
