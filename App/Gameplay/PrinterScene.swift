@@ -211,7 +211,8 @@ enum PrinterScene {
         label("FEED", size: 40, color: UIColor(white: 1, alpha: 0.28), center: CGPoint(x: feed.midX, y: feed.midY + 2))
         label("FEED", size: 40, color: UIColor(red: 0.36, green: 0.06, blue: 0.21, alpha: 1), center: CGPoint(x: feed.midX, y: feed.midY))
 
-        drawPowerSwitch(in: cg, origin: CGPoint(x: width - bodyInset - 90 - 140 - 48 - 90, y: top + 120))
+        // As tall as Feed, and level with it.
+        drawPowerSwitch(in: cg, origin: CGPoint(x: width - bodyInset - 90 - 140 - 48 - 90, y: top + 245 - 96))
     }
 
     /// The raised badge under the panel, in the body's own gray, the way the printer carries its
@@ -235,7 +236,7 @@ enum PrinterScene {
     /// on its right, with POWER and a domed knob on it, and ON and OFF beside it under arrows that
     /// point the way to slide.
     private static func drawPowerSwitch(in cg: CGContext, origin: CGPoint) {
-        let plateSize = CGSize(width: 140, height: 236)
+        let plateSize = CGSize(width: 140, height: 180)
         let track = CGRect(x: origin.x, y: origin.y, width: plateSize.width + 60, height: plateSize.height + 12)
         UIColor(white: 0.52, alpha: 1).setFill()
         UIBezierPath(roundedRect: track, cornerRadius: 8).fill()
@@ -249,15 +250,15 @@ enum PrinterScene {
         UIColor(red: 0.80, green: 0.79, blue: 0.76, alpha: 1).setFill()
         UIBezierPath(roundedRect: plate, cornerRadius: 8).fill()
         cg.restoreGState()
-        label("POWER", size: 28, color: bodyInk, center: CGPoint(x: plate.midX, y: plate.minY + 36))
-        let knob = CGRect(x: plate.midX - 34, y: plate.minY + plate.height * 0.62 - 34, width: 68, height: 68)
+        label("POWER", size: 28, color: bodyInk, center: CGPoint(x: plate.midX, y: plate.minY + 32))
+        let knob = CGRect(x: plate.midX - 30, y: plate.minY + plate.height * 0.64 - 30, width: 60, height: 60)
         cg.saveGState()
         cg.addEllipse(in: knob)
         cg.clip()
         let colors = [UIColor(white: 0.93, alpha: 1).cgColor, UIColor(white: 0.70, alpha: 1).cgColor] as CFArray
         if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
-            cg.drawRadialGradient(gradient, startCenter: CGPoint(x: knob.midX - 11, y: knob.midY - 12), startRadius: 2,
-                                  endCenter: CGPoint(x: knob.midX, y: knob.midY), endRadius: 36, options: [])
+            cg.drawRadialGradient(gradient, startCenter: CGPoint(x: knob.midX - 10, y: knob.midY - 11), startRadius: 2,
+                                  endCenter: CGPoint(x: knob.midX, y: knob.midY), endRadius: 32, options: [])
         }
         cg.restoreGState()
 
