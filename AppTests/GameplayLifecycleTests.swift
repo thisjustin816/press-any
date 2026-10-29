@@ -137,6 +137,41 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(closes, 1)
     }
 
+    /// Twice on iOS 27.2, Close Game after a file shared from Files was imported over the game
+    /// crashed inside the menu's morph back to its button. A choice made in the menu waits even
+    /// when the button never recorded its menu opening.
+    func testCloseGameFromTheMenuWaitsEvenWhenTheButtonMissedItsMenuOpening() throws {
+        let (gameplay, runtime, _) = makeGameplay()
+        var closes = 0
+        gameplay.onClose = { closes += 1 }
+        gameplay.view.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+        gameplay.view.layoutIfNeeded()
+        let button = try XCTUnwrap(gameplay.view.subviews.compactMap { $0 as? GameMenuButton }.first)
+        let interaction = try XCTUnwrap(button.contextMenuInteraction)
+        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in UIMenu(children: []) }
+
+        try selectMenuAction("Close Game", in: gameplay)
+        XCTAssertEqual(runtime.stops, 0)
+        XCTAssertEqual(closes, 0, "the button must still be there for the menu to morph back into")
+        let animator = MenuDismissalAnimator()
+        button.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
+        XCTAssertEqual(closes, 0)
+        animator.complete()
+        XCTAssertEqual(runtime.stops, 1)
+        XCTAssertEqual(closes, 1)
+    }
+
+    func testCloseGameFromTheMenuClosesAfterASecondWhenNoDismissalIsReported() throws {
+        let (gameplay, runtime, _) = makeGameplay()
+        let closed = expectation(description: "closed")
+        gameplay.onClose = { closed.fulfill() }
+
+        try selectMenuAction("Close Game", in: gameplay)
+        XCTAssertEqual(runtime.stops, 0)
+        wait(for: [closed], timeout: 3)
+        XCTAssertEqual(runtime.stops, 1)
+    }
+
     func testCloseGameWithoutAnOpenMenuSavesAndClosesImmediately() {
         let (gameplay, runtime, _) = makeGameplay()
         var closes = 0

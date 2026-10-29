@@ -407,14 +407,14 @@ final class GameplayViewController: UIViewController {
         }
         if onAddToLibrary != nil {
             elements.append(UIAction(title: "Add to Library…", image: UIImage(systemName: "square.and.arrow.down.on.square")) { [weak self] _ in
-                self?.addToLibraryTapped()
+                self?.finishFromMenu(.addToLibrary)
             })
         }
         let restart = UIAction(title: "Restart", image: UIImage(systemName: "arrow.counterclockwise")) { [weak self] _ in
             self?.restartTapped()
         }
         let close = UIAction(title: "Close Game", image: UIImage(systemName: "xmark"), attributes: .destructive) { [weak self] _ in
-            self?.closeTapped()
+            self?.finishFromMenu(.close)
         }
         #if DEBUG
         elements.append(UIAction(title: "Crash App (Debug)", attributes: .destructive) { _ in
@@ -1322,8 +1322,21 @@ final class GameplayViewController: UIViewController {
         }
     }
 
-    private func addToLibraryTapped() {
-        finish(.addToLibrary)
+    /// Close Game and Add to Library, chosen in the game menu. The menu closes by morphing back
+    /// into its button, and leaving the game tears that button down, which crashed iOS 27.2 inside
+    /// the morph: twice on Close Game after a file shared from Files was imported over a running
+    /// game. `finish` waits while a button says its menu is open or closing, but a choice made in
+    /// the menu doesn't rely on that: it always waits for the menu to finish closing, or a second
+    /// if no button reports that it is closing.
+    private func finishFromMenu(_ exit: Exit) {
+        if pendingExit == nil { pendingExit = exit }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard let self, let exit = self.pendingExit,
+                  !self.menuButtons.contains(where: { $0.isMenuPresented || $0.isMenuDismissing }) else { return }
+            self.pendingExit = nil
+            self.finish(exit)
+        }
     }
 
     /// Saves and closes the game, then closes or adds it to the library. When saving fails the
