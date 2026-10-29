@@ -160,7 +160,10 @@ struct CapturesView: View {
                 Task { await model.load() }
             }
             .sheet(item: $opened) { item in
-                PrinterPreview(slips: [item.slip], gameArtworkURL: model.artworkURL(), keeping: .captured)
+                PrinterPreview(
+                    slips: [item.slip], gameArtworkURL: model.artworkURL(), keeping: .captured,
+                    onDiscard: { _ in Task { await model.delete(item) } }
+                )
             }
             .alert("Couldn’t Update Prints", isPresented: Binding(
                 get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } }

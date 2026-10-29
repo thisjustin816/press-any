@@ -18,6 +18,9 @@ final class GameplayViewController: UIViewController {
     private let rumble = RumbleRouter()
     private var printerConnected = false
     private let printerFeed = GameplayPrinterFeed()
+    private let printerLog = GameplayPrinterLog()
+    /// When the last printer problem was shown, so a game repeating one isn't announced each frame.
+    private var lastPrinterProblem: (message: String, at: Date)?
     private let printerStatus = PrinterStatusView()
     private let camera: GameplayCamera
     private var renderer: MetalRenderer?
@@ -77,6 +80,8 @@ final class GameplayViewController: UIViewController {
     /// lock as usual. Tests replace it.
     var setsScreenAwake: (Bool) -> Void = { UIApplication.shared.isIdleTimerDisabled = $0 }
     private var keepsScreenAwake = false
+    /// The phone's motion, for cartridges that sense tilt.
+    private var tilt: GameplayTilt?
 
     var onClose: (() -> Void)?
     /// Set for Quick Play: the menu then offers Add to Library, which closes the game and calls this.
@@ -188,6 +193,10 @@ final class GameplayViewController: UIViewController {
         installViews()
         configureRuntimeLoop()
         if runtime.hasCamera { driver.cameraFrames = camera.frames }
+        if runtime.hasTiltSensor {
+            tilt = GameplayTilt()
+            driver.tilt = tilt
+        }
         camera.onError = { [weak self] message in
             guard let self else { return }
             try? self.driver.clearCameraFrame()
@@ -371,6 +380,12 @@ final class GameplayViewController: UIViewController {
                 attributes: .disabled
             ) { _ in })
         }
+        if tilt != nil {
+            elements.append(UIAction(title: "Recenter Tilt", image: UIImage(systemName: "gyroscope")) { [weak self] _ in
+                self?.tilt?.recenter()
+                self?.showTransientMessage("Tilt recentered. Hold the phone the way you want to play.")
+            })
+        }
         elements.append(makeCaptureMenu())
         if runtime.hasCamera { elements.append(makeCameraMenu()) }
         if runtime.supportsPrinter { elements.append(makePrinterMenu()) }
@@ -426,8 +441,11 @@ final class GameplayViewController: UIViewController {
             title: "View Prints", image: UIImage(systemName: "doc.richtext"),
             attributes: printerFeed.slips.isEmpty ? .disabled : []
         ) { [weak self] _ in self?.showPrinterPrints() }
+        let log = UIAction(title: "Printer Log", image: UIImage(systemName: "list.bullet.rectangle")) { [weak self] _ in
+            self?.showPrinterLog()
+        }
         return UIMenu(title: "Game Boy Printer", subtitle: printerConnected ? "Connected" : "Off",
-                      image: UIImage(systemName: "printer"), children: [connect, prints])
+                      image: UIImage(systemName: "printer"), children: [connect, prints, log])
     }
 
     private func showPrinterPrints() {
@@ -437,9 +455,36 @@ final class GameplayViewController: UIViewController {
         var preview = PrinterPreview(slips: printerFeed.slips, gameArtworkURL: artworkTarget?.currentFileURL())
         preview.keeping = prints == nil ? .session : prints?.gameID == nil ? .quickPlay : .captures
         preview.makeCapturesView = makeCapturesView
+        preview.onDiscard = { [weak self] slip in self?.discardPrint(slip) }
         let sheet = PrinterPreviewController(rootView: preview)
         sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
         present(sheet, animated: true)
+    }
+
+    /// Takes a print out of the session's feed and out of wherever it is kept.
+    private func discardPrint(_ slip: PrinterSlip) {
+        printerFeed.discard(id: slip.id)
+        prints?.discard(slip.id) { [weak self] in
+            DispatchQueue.main.async { self?.showTransientMessage("Couldn’t discard this print. Delete it from the Game’s Captures.") }
+        }
+    }
+
+    private func showPrinterLog() {
+        guard presentedViewController == nil else { return }
+        setCoveredBySheet(true)
+        let sheet = PrinterLogController(rootView: PrinterLogView(events: printerLog.events))
+        sheet.onClose = { [weak self] in self?.setCoveredBySheet(false) }
+        present(sheet, animated: true)
+    }
+
+    /// A problem the printer reported, shown once and again only after a few seconds or when it
+    /// changes, with the status byte the game read.
+    private func announcePrinterProblem(_ event: PrinterEvent) {
+        guard let problem = event.problem else { return }
+        let message = event.kind == .packet ? "Printer: \(problem) Status \(String(format: "0x%02X", event.status))." : "Printer: \(problem)"
+        if let last = lastPrinterProblem, last.message == message, Date().timeIntervalSince(last.at) < 5 { return }
+        lastPrinterProblem = (message, Date())
+        showTransientMessage(message)
     }
 
     private func makeCaptureMenu() -> UIMenu {
@@ -493,12 +538,15 @@ final class GameplayViewController: UIViewController {
 
     private func updateScreenAwake() {
         let awake = driver.isRunning && !stopped && !halted
+        // Tilt reads the motion sensor exactly while the game runs too.
+        tilt?.setActive(awake)
         guard awake != keepsScreenAwake else { return }
         keepsScreenAwake = awake
         setsScreenAwake(awake)
     }
 
     private func updateCameraCapture() {
+        tilt?.setOrientation(viewIfLoaded?.window?.windowScene?.interfaceOrientation ?? .portrait)
         let angle: Double
         switch viewIfLoaded?.window?.windowScene?.interfaceOrientation {
         case .landscapeLeft: angle = 0
@@ -765,6 +813,12 @@ final class GameplayViewController: UIViewController {
                         self?.showTransientMessage("This print is too long. Earlier prints are still available.")
                     }
                 }
+            }
+            let log = printerLog
+            driver.onPrinterEvents = { [weak self] events in
+                log.append(events)
+                guard let problem = events.last(where: { $0.problem != nil }) else { return }
+                DispatchQueue.main.async { self?.announcePrinterProblem(problem) }
             }
             driver.onPrinterActivity = { [weak self] activity in
                 DispatchQueue.main.async { self?.printerStatus.showActivity(activity) }

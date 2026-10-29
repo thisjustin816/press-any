@@ -81,6 +81,8 @@ struct SBInstance {
     SBPrinterBuffer printer_readout;
     SBPrinterBuffer printer_queue[16];
     size_t printer_count;
+    SBPrinterEvent printer_events[64];
+    size_t printer_event_count;
     // Every tick the core has run; sb_printer_time turns it into the printer's time.
     uint64_t ticks;
 };
@@ -101,6 +103,22 @@ static void sb_printer_print(void *context, const uint8_t *pixels, uint8_t heigh
     output->bottom_margin = bottom;
     output->exposure = exposure;
     for (size_t i = 0; i < 160u * height; i++) output->luminance[i] = (uint8_t)(255u - pixels[i] * 85u);
+}
+
+// Keeps the newest events; the oldest goes when the log is full.
+static void sb_printer_event(void *context, const SBPEvent *event)
+{
+    SBInstance *instance = context;
+    if (!instance || instance->previewing) return;
+    if (instance->printer_event_count == 64) {
+        memmove(instance->printer_events, instance->printer_events + 1,
+                63 * sizeof(instance->printer_events[0]));
+        instance->printer_event_count--;
+    }
+    instance->printer_events[instance->printer_event_count++] = (SBPrinterEvent){
+        (double)event->time / (double)SBP_TICKS_PER_SECOND, event->kind, event->command,
+        event->compression, event->status, event->length, event->checksum_ok, event->ignored,
+    };
 }
 
 // The printer keeps real time. The core counts twice its clock rate, which is faster on a Super
@@ -141,8 +159,10 @@ void SBSetPrinterConnected(SBInstance *instance, bool connected)
     GB_disconnect_serial(instance->gb);
     instance->printer_connected = connected;
     instance->printer_count = 0;
+    instance->printer_event_count = 0;
     instance->printer_overflow = false;
     sbp_reset(&instance->printer, sb_printer_print, instance);
+    sbp_set_event_callback(&instance->printer, sb_printer_event);
     if (!connected) return;
     // The printer here follows the printer's firmware (SBGameBoyPrinter.c) rather than the
     // core's own, which has no timeouts or packet errors.
@@ -168,6 +188,16 @@ bool SBPopPrinterOutput(SBInstance *instance, SBPrinterOutput *output)
     instance->printer_count--;
     memmove(instance->printer_queue, instance->printer_queue + 1,
             instance->printer_count * sizeof(instance->printer_queue[0]));
+    return true;
+}
+
+bool SBPopPrinterEvent(SBInstance *instance, SBPrinterEvent *event)
+{
+    if (!instance || !event || !instance->printer_event_count) return false;
+    *event = instance->printer_events[0];
+    instance->printer_event_count--;
+    memmove(instance->printer_events, instance->printer_events + 1,
+            instance->printer_event_count * sizeof(instance->printer_events[0]));
     return true;
 }
 
@@ -232,6 +262,17 @@ static unsigned sb_run(SBInstance *instance)
 bool SBHasCamera(SBInstance *instance)
 {
     return instance && instance->gb && instance->gb->cartridge_type->mbc_type == GB_CAMERA;
+}
+
+bool SBHasAccelerometer(SBInstance *instance)
+{
+    return instance && instance->gb && GB_has_accelerometer(instance->gb);
+}
+
+void SBSetAccelerometer(SBInstance *instance, double x, double y)
+{
+    if (!instance || !instance->gb) return;
+    GB_set_accelerometer_values(instance->gb, x, y);
 }
 
 bool SBSetCameraFrame(SBInstance *instance, const uint8_t *bytes, size_t size)

@@ -95,6 +95,24 @@ final class PrinterTests: XCTestCase {
         XCTAssertEqual(feed.slips.count, 4)
     }
 
+    func testDiscardingTheNewestSlipKeepsLaterPaperOffTheSlipBeforeIt() throws {
+        let attached = try PrinterOutput(height: 16, luminance: Data(count: 2560), topMargin: 0, bottomMargin: 0, exposure: 64)
+        var feed = PrinterFeed()
+        try feed.receive(attached)
+        feed.endRoll()
+        try feed.receive(attached)
+        let kept = feed.slips[0], discarded = feed.slips[1]
+        feed.discard(id: discarded.id)
+        XCTAssertEqual(feed.slips, [kept])
+        try feed.receive(attached)
+        XCTAssertEqual(feed.slips.count, 2)
+        XCTAssertEqual(feed.slips[0], kept, "the paper after a discard starts a new slip")
+        feed.discard(id: kept.id)
+        try feed.receive(attached)
+        XCTAssertEqual(feed.slips.count, 1, "discarding an older slip leaves the newest one attached")
+        XCTAssertEqual(feed.slips[0].sections.count, 2)
+    }
+
     func testFeedBoundsMemoryAndRefusesOverlongPaperWithoutDiscardingIt() throws {
         let output = try PrinterOutput(height: 200, luminance: Data(count: 32000), topMargin: 0, bottomMargin: 0, exposure: 64)
         var feed = PrinterFeed()

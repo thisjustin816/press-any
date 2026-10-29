@@ -38,9 +38,12 @@ final class GameplayDriver: @unchecked Sendable {
     var willRunFrame: (@Sendable () -> Void)?
     /// Set before starting the driver, only for cartridges with a camera.
     var cameraFrames: CameraFrameBuffer?
+    /// Set before starting the driver, only for cartridges that sense tilt.
+    var tilt: GameplayTilt?
     var onPrinterOutput: (@Sendable ([PrinterOutput]) -> Void)?
     var onPrinterError: ErrorHandler?
     var onPrinterActivity: (@Sendable (PrinterActivity) -> Void)?
+    var onPrinterEvents: (@Sendable ([PrinterEvent]) -> Void)?
     private var lastPrinterActivity = PrinterActivity.idle
     var onFrame: FrameHandler?
     var onAudio: AudioHandler?
@@ -174,6 +177,10 @@ final class GameplayDriver: @unchecked Sendable {
     private func runFrame() throws -> EmulatorVideoFrame {
         willRunFrame?()
         if let frame = cameraFrames?.current { try runtime.setCameraFrame(frame) }
+        if let tilt {
+            let value = tilt.value
+            try runtime.setTilt(x: value.x, y: value.y)
+        }
         let frame = try runtime.stepFrame(input: input.current())
         emulatedNanosecondsSinceSavePoll &+= frame.emulatedNanoseconds
         if emulatedNanosecondsSinceSavePoll >= savePollNanoseconds {
@@ -189,6 +196,8 @@ final class GameplayDriver: @unchecked Sendable {
                 }
                 let prints = try runtime.drainPrinterOutput()
                 if !prints.isEmpty { onPrinterOutput?(prints) }
+                let events = try runtime.drainPrinterEvents()
+                if !events.isEmpty { onPrinterEvents?(events) }
             } catch { onPrinterError?(error) }
         }
         let samples = try runtime.drainAudio(maxFrames: 4096)

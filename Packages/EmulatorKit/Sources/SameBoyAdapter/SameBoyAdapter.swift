@@ -19,12 +19,16 @@ public enum SameBoyAdapterError: Error, Equatable {
 }
 
 public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability, ButtonBounceCapability,
-    CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability {
-    /// SameBoy at the master commit THIRD_PARTY_NOTICES.md records, after 1.0.4.
-    public static let coreDescriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.4")
-    /// The previous pin keeps the same state format and loads unchanged, so its Builds and states
-    /// move to this one.
-    public static let replacedCoreDescriptors: Set<CoreDescriptor> = [CoreDescriptor(identifier: "sameboy", version: "1.0.3")]
+    CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability, TiltCapability {
+    /// SameBoy at the master commit THIRD_PARTY_NOTICES.md records, 53 commits after the 1.0.4
+    /// release, labeled as a prerelease of the next one with the commit after `+`.
+    public static let coreDescriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.5-prerelease.53+19a7b14")
+    /// Earlier pins keep the same state format and load unchanged, so their Builds and states move
+    /// to this one. "1.0.4" is this same commit under the label it shipped with first.
+    public static let replacedCoreDescriptors: Set<CoreDescriptor> = [
+        CoreDescriptor(identifier: "sameboy", version: "1.0.3"),
+        CoreDescriptor(identifier: "sameboy", version: "1.0.4"),
+    ]
     public let descriptor = SameBoyAdapter.coreDescriptor
     public let replacedDescriptors = SameBoyAdapter.replacedCoreDescriptors
     public let supportedSystems: Set<GameSystem> = [.gameBoy, .gameBoyColor]
@@ -69,6 +73,21 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         }
     }
 
+    public func drainPrinterEvents() -> [PrinterEvent] {
+        guard let instance else { return [] }
+        var result: [PrinterEvent] = []
+        var event = SBPrinterEvent()
+        while SBPopPrinterEvent(instance, &event) {
+            guard let kind = PrinterEvent.Kind(rawValue: event.kind) else { continue }
+            result.append(PrinterEvent(
+                time: event.seconds, kind: kind, command: event.command, compressed: event.compression != 0,
+                length: Int(event.length), status: event.status, checksumMatched: event.checksum_ok,
+                ignoredWhilePrinting: event.ignored
+            ))
+        }
+        return result
+    }
+
     public func drainPrinterOutput() throws -> [PrinterOutput] {
         guard let instance else { return [] }
         if SBConsumePrinterOverflow(instance) { throw SameBoyAdapterError.printerQueueOverflow }
@@ -84,6 +103,16 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             ))
         }
         return result
+    }
+
+    public var hasTiltSensor: Bool {
+        guard let instance else { return false }
+        return SBHasAccelerometer(instance)
+    }
+
+    public func setTilt(x: Double, y: Double) {
+        guard let instance else { return }
+        SBSetAccelerometer(instance, x, y)
     }
 
     public var hasCamera: Bool {

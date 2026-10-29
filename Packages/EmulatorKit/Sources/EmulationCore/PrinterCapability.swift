@@ -35,8 +35,11 @@ public protocol PrinterCapability: AnyObject {
     func setPrinterConnected(_ connected: Bool)
     /// Completed commands in print order. A full host queue must be reported to the caller.
     func drainPrinterOutput() throws -> [PrinterOutput]
+    /// What the printer made of the traffic since the last call, oldest first.
+    func drainPrinterEvents() -> [PrinterEvent]
 }
 
 extension PrinterCapability {
     public var printerActivity: PrinterActivity { .idle }
+    public func drainPrinterEvents() -> [PrinterEvent] { [] }
 }

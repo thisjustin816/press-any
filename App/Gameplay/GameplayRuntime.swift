@@ -25,8 +25,12 @@ protocol GameplayRuntime: AnyObject {
     func setPrinterConnected(_ connected: Bool) throws
     func drainPrinterOutput() throws -> [PrinterOutput]
     func printerActivity() throws -> PrinterActivity
+    /// What the printer made of the game's traffic since the last call.
+    func drainPrinterEvents() throws -> [PrinterEvent]
     var hasCamera: Bool { get }
     func setCameraFrame(_ frame: CameraFrame?) throws
+    var hasTiltSensor: Bool { get }
+    func setTilt(x: Double, y: Double) throws
 
     func pause() throws
     func resume() throws
@@ -49,8 +53,11 @@ extension GameplayRuntime {
     func setPrinterConnected(_ connected: Bool) throws {}
     func drainPrinterOutput() throws -> [PrinterOutput] { [] }
     func printerActivity() throws -> PrinterActivity { .idle }
+    func drainPrinterEvents() throws -> [PrinterEvent] { [] }
     var hasCamera: Bool { false }
     func setCameraFrame(_ frame: CameraFrame?) throws {}
+    var hasTiltSensor: Bool { false }
+    func setTilt(x: Double, y: Double) throws {}
 
     /// Quick Play always runs on Automatic.
     func changedHardwareModel() -> HardwareModel? { nil }

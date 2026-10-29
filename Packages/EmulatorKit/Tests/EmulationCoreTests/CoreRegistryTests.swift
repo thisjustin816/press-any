@@ -17,6 +17,16 @@ final class CoreRegistryTests: XCTestCase {
         XCTAssertEqual(factory.descriptor.version, "1.1.0")
     }
 
+    func testAPrereleaseIsOlderThanItsReleaseAndOrderedByItsNumber() throws {
+        func latest(_ versions: [String]) throws -> String {
+            try CoreRegistry(factories: versions.map { FakeCoreFactory(descriptor: .init(identifier: "sameboy", version: $0)) })
+                .latestFactory(system: .gameBoy).descriptor.version
+        }
+        XCTAssertEqual(try latest(["1.0.5", "1.0.5-prerelease.53+19a7b14", "1.0.4"]), "1.0.5")
+        XCTAssertEqual(try latest(["1.0.5-prerelease.53+19a7b14", "1.0.5-prerelease.9+abc1234"]), "1.0.5-prerelease.53+19a7b14")
+        XCTAssertEqual(try latest(["1.0.4", "1.0.5-prerelease.9+19a7b14"]), "1.0.5-prerelease.9+19a7b14")
+    }
+
     func testABuildPinnedToAReplacedVersionRunsOnItsReplacementAndAnExactPinWins() throws {
         let old = CoreDescriptor(identifier: "sameboy", version: "1.0.3")
         let replacement = CoreRegistry(factories: [

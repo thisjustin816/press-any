@@ -55,6 +55,21 @@ void sbp_reset(SBGameBoyPrinter *p, SBPPrintCallback on_print, void *context)
     p->context = context;
 }
 
+void sbp_set_event_callback(SBGameBoyPrinter *p, SBPEventCallback on_event)
+{
+    p->on_event = on_event;
+}
+
+static void report(SBGameBoyPrinter *p, uint8_t kind, uint8_t command)
+{
+    if (!p->on_event) return;
+    SBPEvent event = {
+        .time = p->now, .kind = kind, .command = command, .compression = p->compression,
+        .status = p->reply[1], .length = p->length, .checksum_ok = true,
+    };
+    p->on_event(p->context, &event);
+}
+
 // From the start of a copy, after any top margin, to the end of each 16-row band. The bands
 // after the first take 1,117, 1,129 and 1,272 ms in turn, as the paper cam comes round.
 static const uint16_t band_end_ms[SBP_SLOTS] = {828, 1945, 3074, 4346, 5475, 6592, 7864, 8993, 10110};
@@ -126,6 +141,7 @@ void sbp_advance(SBGameBoyPrinter *p, uint64_t now)
     if (now - since >= SBP_IDLE_RESET) {
         // The activity timer only counts while the printer is idle; when it runs out, the
         // printer clears its memory and status as an Init does.
+        if (p->image_bytes && !p->after_print) report(p, SBP_EVENT_IDLE_RESET, 0);
         init(p);
         p->quiet_reset_done = true;
     }
@@ -183,10 +199,14 @@ static void header_done(SBGameBoyPrinter *p)
     // Only a data packet's payload is kept; any other payload fills args, and the rest of it
     // only counts toward the checksum.
     p->data_packet = false;
+    p->ignored_data = false;
     if (p->command != SBP_NUL) p->packet_error = false;
     switch (p->command) {
         case SBP_DATA:
-            if (p->printing) break; // Data while printing is ignored.
+            if (p->printing) { // Data while printing is ignored.
+                p->ignored_data = p->length > 0;
+                break;
+            }
             if (p->length >= 0x400u) {
                 if (!p->compression) p->packet_error = true;
                 break;
@@ -339,6 +359,19 @@ static void packet_done(SBGameBoyPrinter *p)
             p->end_mark = false;
         }
     }
+    if (p->on_event && (p->command != SBP_NUL || !p->polled || p->polled_status != p->reply[1])) {
+        if (p->command == SBP_NUL) {
+            p->polled = true;
+            p->polled_status = p->reply[1];
+        }
+        SBPEvent event = {
+            .time = p->now, .kind = SBP_EVENT_PACKET, .command = p->command,
+            .compression = p->compression, .status = p->reply[1], .length = p->length,
+            .checksum_ok = good,
+            .ignored = p->ignored_data,
+        };
+        p->on_event(p->context, &event);
+    }
     if (p->data_packet && (!good || p->packet_error)) p->image_bytes = p->saved_bytes;
     if (p->data_packet && p->compression && good && !p->packet_error) {
         // A compressed packet fills the rest of its slot with zeroes.
@@ -385,6 +418,9 @@ static void byte_in(SBGameBoyPrinter *p, uint8_t byte)
 {
     if (p->any_byte && p->now - p->last_byte > SBP_BYTE_TIMEOUT) {
         // The inter-byte timer ran out: the packet in progress is dropped and rolled back.
+        if (p->phase > SBP_MAGIC2 && p->phase < SBP_ALIVE) {
+            report(p, SBP_EVENT_TIMEOUT, p->phase > SBP_COMMAND ? p->command : 0);
+        }
         if (p->phase != SBP_MAGIC1 && p->data_packet) p->image_bytes = p->saved_bytes;
         p->phase = SBP_MAGIC1;
         p->data_packet = false;
@@ -403,6 +439,7 @@ static void byte_in(SBGameBoyPrinter *p, uint8_t byte)
             if (byte != 0x88) {
                 // A bad first byte: answer 0xFF until the line goes quiet, and re-init if idle.
                 if (!p->printing) init(p);
+                report(p, SBP_EVENT_SYNC_LOST, byte);
                 p->sync_lost = true;
                 p->out_byte = 0xff;
                 return;

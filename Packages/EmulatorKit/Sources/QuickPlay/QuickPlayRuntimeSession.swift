@@ -189,9 +189,24 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         return try worker.perform { ($0 as? any PrinterCapability)?.printerActivity ?? .idle }
     }
 
+    public func drainPrinterEvents() throws -> [PrinterEvent] {
+        let worker = try activeWorker(requireRunning: false)
+        return try worker.perform { ($0 as? any PrinterCapability)?.drainPrinterEvents() ?? [] }
+    }
+
     public func drainPrinterOutput() throws -> [PrinterOutput] {
         let worker = try activeWorker(requireRunning: false)
         return try worker.perform { try ($0 as? any PrinterCapability)?.drainPrinterOutput() ?? [] }
+    }
+
+    public var hasTiltSensor: Bool {
+        guard let worker = try? activeWorker(requireRunning: false) else { return false }
+        return (try? worker.perform { ($0 as? any TiltCapability)?.hasTiltSensor ?? false }) ?? false
+    }
+
+    public func setTilt(x: Double, y: Double) throws {
+        let worker = try activeWorker(requireRunning: false)
+        try worker.perform { ($0 as? any TiltCapability)?.setTilt(x: x, y: y) }
     }
 
     public var hasCamera: Bool {

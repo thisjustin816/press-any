@@ -112,6 +112,11 @@ size_t SBDrainAudio(SBInstance *instance, SBStereoSample *output, size_t max_fra
 double SBConsumeRumbleAmplitude(SBInstance *instance);
 
 bool SBHasCamera(SBInstance *instance);
+/// Whether the cartridge reads tilt, as MBC7 games such as Kirby Tilt 'n' Tumble do.
+bool SBHasAccelerometer(SBInstance *instance);
+/// Tilt in g along the screen's axes, read by the cartridge when the game next latches it. Kept
+/// through resets and state loads until changed.
+void SBSetAccelerometer(SBInstance *instance, double x, double y);
 /// Copies 128*112 luminance bytes for the next shot; NULL with size zero clears sensor images.
 /// Invalid sizes leave the current image alone. Serialized with all other instance calls.
 bool SBSetCameraFrame(SBInstance *instance, const uint8_t *bytes, size_t size);
@@ -147,6 +152,18 @@ SBPrinterActivity SBGetPrinterActivity(SBInstance *instance);
 bool SBPopPrinterOutput(SBInstance *instance, SBPrinterOutput *output);
 /// Returns and clears the queue-overflow flag.
 bool SBConsumePrinterOverflow(SBInstance *instance);
+
+/// What the printer made of the game's traffic: each packet with the status it answered (a status
+/// poll only when its answer changed), and packets it dropped. `kind` is 0 packet, 1 timeout,
+/// 2 idle reset, 3 lost sync. `ignored` marks data sent while printing, which the printer drops
+/// without an error. The newest 64 are kept; attachment changes, resets and state loads clear them.
+typedef struct {
+    double seconds;
+    uint8_t kind, command, compression, status;
+    uint16_t length;
+    bool checksum_ok, ignored;
+} SBPrinterEvent;
+bool SBPopPrinterEvent(SBInstance *instance, SBPrinterEvent *event);
 
 void SBReset(SBInstance *instance);
 

@@ -27,8 +27,10 @@ unfinished roadmap targets v2.0 tentatively; `docs/backlog.md` separates these s
 Game Boy Printer emulation with printed-slip image export is prioritized for v1.1.
 
 - iOS 17.4 or later, iPhone first. iPad keeps working but gets no special design until later.
-- SameBoy 1.0.4 for GB and GBC, at the master commit `THIRD_PARTY_NOTICES.md` records, built
-  from its `Core/` only. Builds pinned to the earlier 1.0.3 run on it, and their states load. SameBoy's `iOS/` directory needs its author's written permission to ship
+- SameBoy for GB and GBC, at the master commit after 1.0.4 that `THIRD_PARTY_NOTICES.md` records,
+  pinned as core version `1.0.5-prerelease.53+19a7b14` and built from its `Core/` only. Builds pinned
+  to the earlier 1.0.3, or to 1.0.4 (the same commit under its first label), run on it, and their
+  states load. SameBoy's `iOS/` directory needs its author's written permission to ship
   on the App Store, so none of its code, artwork or layouts are used.
 - GBA comes through an mGBA adapter in a later release, once GB/GBC is feature complete. Other
   systems aren't planned, but the library, storage, input and core abstractions
@@ -1144,6 +1146,14 @@ Quick Play keeps them temporary until Add to Library.
   default, surviving a brief trip to the background but never saved as a timeline; frame advance
   and a frame counter.
 
+### Tilt cartridges
+
+A cartridge with a tilt sensor (MBC7), such as Kirby Tilt 'n' Tumble, reads the iPhone's tilt
+while the game runs, in library play and Quick Play. The way the phone is held when play starts is
+level, and turning the screen to another orientation makes the new position level. **Recenter
+Tilt** in the game menu, shown only for these cartridges, makes the current position level. Tilt
+beyond 2 g reads as 2 g. The motion sensor runs only while the game runs and needs no permission.
+
 ### Controllers, haptics and rumble
 
 - Apple's GameController framework: Xbox, PlayStation, Switch-compatible, MFi and generic
@@ -1400,7 +1410,7 @@ list shows no model numbers. App Settings has it on the Playing page.
 - When a Game has prints, a **Captures** section after Save Profiles shows the newest as
   thumbnails with **Show All**. Captures shows them newest first in a grid with each print's
   paper and margins, and a Build menu when more than one Build printed. Tapping a print opens the
-  print preview with its backgrounds and Save or Share. Touch and hold to **Pin** or **Delete**.
+  print preview with its backgrounds, Save or Share and Discard. Touch and hold to **Pin** or **Delete**.
   Prints are stored as the printer's rows, so any background still applies later. A Game keeps
   its newest 50 unpinned prints; an older one goes to Recently Deleted, in one "Cleaned-up Prints"
   entry, and pinned prints never count. Deleting a Game takes its prints; deleting a Build or
@@ -1504,17 +1514,27 @@ kept with the session and moves to the Game's Captures, with the new Build, on A
 print that can't move keeps the session, and the promotion says so. A print that can't be kept
 shows a message once per session, and the slip stays in the preview to save or share.
 
+**Discard** removes the print shown, after asking. In library play it moves to Recently Deleted;
+in Quick Play, or with nowhere to keep prints, it is gone. Paper the game feeds after a discard
+starts a new slip, and a discarded print is never saved again. A print the game stopped partway,
+by sending Break, comes out as the paper fed before the stop, as on the printer, and Discard
+removes it like any other.
+
 **Save or Share** exports a PNG with a **Transparent**, **Light**, **Dark**, **Wood**, **Printer**,
 **Game Artwork** or **Custom** background, shown as a row of previews under the print with the
 selected one outlined. Transparent is the default until another background is chosen; the preview
 then opens with the last one chosen, in any game. A remembered Game Artwork or Custom background
 that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered. Wood uses Dimitrios Savva's CC0 Wood Table
 photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements. **Printer** draws
-the slip coming out of a printer laid out like the Game Boy Printer: a smoked lid with the paper
-roll showing through, a black panel with the slot, its serrated cutter in front of the paper with teeth the shape of the paper's torn edge, the Press Any
-wordmark with its A in the buttons' magenta over "printer" in light lettering and a red power light, and a body in the
-Classic controller's Game Boy gray with an embossed, race-track-shaped PRESS ANY badge, a Feed button in the A and B buttons' magenta with FEED pressed into it and a POWER slide switch
-marked ON and OFF.
+the slip coming out of a squat, stylized Game Boy Printer that keeps the machine's features. A
+smoked lid with the paper roll showing through and a darker rim rises above a body in the
+Classic controller's Game Boy gray. Under the lid, a black panel holds the slot window, with a serrated cutter in front of
+the paper whose teeth are the shape of the paper's torn edge. The Press Any wordmark, with its A
+in the buttons' magenta, sits over a larger "printer" in light lettering, the two centered
+together, with a red power light and BATT. at the panel's right. Below the panel are an
+embossed, race-track-shaped PRESS ANY badge, a Feed button in the A and B buttons' magenta with
+FEED pressed into it, and a POWER slide switch with ON and OFF arrows.
+A short slip comes out under the lid; a long one rises above the printer.
 The image includes near-white thermal paper with torn feed edges, subtle grain, slight bottom-edge
 shading and a soft shadow. The printed content keeps its pixel grid and four tones at 4x integer
 scale, without smoothing or simulated ink loss. Paper styling stays outside the printed content.
@@ -1541,6 +1561,16 @@ next feed step, and the bands printed by then come out. The printer keeps its ow
 Super Game Boy's faster clock does not shorten it. A game that breaks these rules fails here as
 it would on a printer. The timings come from the printer's firmware run in an emulator; how far
 a margin unit feeds the paper was not measured on a printer.
+
+**Printer Log** in the game menu's Game Boy Printer menu lists what the printer made of the game's
+traffic this session, newest first: each packet with its command, size and the status byte the
+game read back, its flags named (busy, image full, unprocessed data, packet error and the rest), and
+a status check only when its answer changes. Packets the printer dropped or refused carry a line
+saying why: data sent while printing, which the printer ignores without an error bit; a packet
+error; a checksum that didn't match; bytes more than 5 ms apart; 125 ms idle with unprinted data
+cleared; or a packet that didn't begin with 0x88. Copy puts the log on the clipboard as text. It
+keeps the newest 200 until the game closes. When the printer reports a problem, a message says what
+and the status byte, at most once every few seconds for the same problem.
 
 The core reports idle, receiving and printing activity for an indeterminate progress display.
 Games that print several pages go idle between them, so the banner changes to **View Print** only

@@ -132,6 +132,40 @@ static void test_cartridge_rumble(void)
     SBDestroy(instance);
 }
 
+// An MBC7 cartridge (type $22) reads tilt; an ordinary one doesn't, and setting tilt on it is
+// harmless.
+static void test_tilt_cartridge(void)
+{
+    static uint8_t rom[65536];
+    memset(rom, 0, sizeof(rom));
+    rom[0x100] = 0x18;
+    rom[0x101] = 0xfe;
+    memcpy(&rom[0x134], "TILT", 4);
+    rom[0x147] = 0x22;
+    rom[0x148] = 0x01;
+    uint8_t checksum = 0;
+    for (size_t i = 0x134; i <= 0x14c; i++) checksum = checksum - rom[i] - 1;
+    rom[0x14d] = checksum;
+    uint8_t boot[256] = {0};
+    boot[0] = 0xc3; boot[1] = 0x00; boot[2] = 0x01; // jp $0100
+
+    SBInstance *instance = SBCreate(SB_MODEL_DMG);
+    assert(SBLoadBootROM(instance, boot, sizeof(boot)));
+    assert(SBLoadROM(instance, rom, sizeof(rom)));
+    assert(SBHasAccelerometer(instance));
+    SBSetAccelerometer(instance, 0.5, -0.25);
+    (void)SBRunFrame(instance);
+    SBDestroy(instance);
+
+    rom[0x147] = 0x00;
+    instance = SBCreate(SB_MODEL_DMG);
+    assert(SBLoadBootROM(instance, boot, sizeof(boot)));
+    assert(SBLoadROM(instance, rom, sizeof(rom)));
+    assert(!SBHasAccelerometer(instance));
+    SBSetAccelerometer(instance, 1, 1);
+    SBDestroy(instance);
+}
+
 // A save one byte longer than the cartridge's 8 KiB of RAM. SameBoy reads an RTC trailer's worth
 // of bytes after the RAM whatever the file's length, so this catches a read past the caller's
 // buffer when built with AddressSanitizer.
@@ -347,6 +381,7 @@ int main(void)
     test_boot_skip(rom, sizeof(rom));
     test_every_model(rom, sizeof(rom));
     test_cartridge_rumble();
+    test_tilt_cartridge();
     test_oversized_battery();
     test_rom_size_limit();
     test_cheats(rom, sizeof(rom));

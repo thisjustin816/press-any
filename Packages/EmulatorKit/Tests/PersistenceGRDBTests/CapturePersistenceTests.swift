@@ -95,6 +95,20 @@ import Testing
         #expect(try library.repos.deletions.fetchTombstones().contains { $0.recordID == capture.id && $0.kind == .capture })
     }
 
+    @Test func aDiscardedPrintGoesToRecentlyDeletedAndAnUnsavedOneIsIgnored() throws {
+        let library = try RestoreLibrary()
+        defer { library.remove() }
+        let prints = library.prints()
+        let slip = try Self.slip(rows: 8)
+        try prints.save(slip, gameID: library.rom.game.id, buildID: nil, saveProfileID: nil)
+
+        try prints.delete(captureID: slip.id)
+        #expect(try prints.captures(gameID: library.rom.game.id).isEmpty)
+        #expect(try library.deletion(prints: true).recentlyDeleted().map(\.title) == ["Print"])
+        #expect(try prints.save(slip, gameID: library.rom.game.id, buildID: nil, saveProfileID: nil) == nil)
+        try prints.delete(captureID: UUID())
+    }
+
     @Test func aGameTakesItsPrintsAndAPrintDeletedOnItsOwnGoesWhenTheGameIsPurged() throws {
         let library = try RestoreLibrary()
         defer { library.remove() }
@@ -164,6 +178,10 @@ import Testing
         try sessionPrints.save(first)
         let second = try Self.slip(rows: 16, shade: 0x55)
         try sessionPrints.save(second)
+        #expect(try sessionPrints.slips().map(\.slip) == [first, second])
+        let discarded = try Self.slip(rows: 8, shade: 0xAA)
+        try sessionPrints.save(discarded)
+        try sessionPrints.discard(id: discarded.id)
         #expect(try sessionPrints.slips().map(\.slip) == [first, second])
 
         let analyzer = ROMImportAnalyzer(builds: library.repos.builds, games: library.repos.games,

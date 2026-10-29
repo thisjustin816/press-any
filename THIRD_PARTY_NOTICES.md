@@ -155,8 +155,14 @@ if it changed, run the platform-independent tests and the device checks in
 core migration candidate: existing Builds keep their pinned core until they are migrated
 deliberately. An update that keeps the state format and the behavior saves depend on, checked by
 loading states from the previous pin, can instead name the previous version in the core's
-`replacedDescriptors`: Builds pinned to it then run on the new one and their states load. 1.0.4
-replaces 1.0.3 this way.
+`replacedDescriptors`: Builds pinned to it then run on the new one and their states load.
+`1.0.5-prerelease.53+19a7b14` replaces 1.0.3 this way, and 1.0.4, the label this commit first
+shipped under.
+
+A pin on a release tag takes that version as its core version, such as `1.0.5`. A pin between
+releases takes the next patch version as a prerelease numbered by the commits since the last tag,
+with the commit after `+`: `1.0.5-prerelease.53+19a7b14` is 53 commits after `v1.0.4`. It sorts
+before the release it leads to and after earlier pins, and never claims to be a release.
 
 
 ## Printer wood background
