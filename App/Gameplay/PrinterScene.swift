@@ -164,10 +164,10 @@ enum PrinterScene {
         label("POWER", size: 28, color: UIColor(white: 0.25, alpha: 1), center: CGPoint(x: switchWell.midX, y: switchWell.minY - 24))
     }
 
-    /// The wordmark as it shows in Dark Mode, with its pink A, and the other letters in the panel's
-    /// light lettering.
+    /// The wordmark with the pink A it has in Light Mode, the same magenta as the A and B buttons,
+    /// and the other letters in the panel's light lettering.
     private static func wordmark(height: CGFloat) -> UIImage? {
-        let art = AppBrand.Wordmark.artwork(size: height, appearance: .dark)
+        let art = AppBrand.Wordmark.artwork(size: height, appearance: .light)
         guard let source = art.cgImage else { return nil }
         let width = source.width, rows = source.height
         var pixels = [UInt8](repeating: 0, count: width * rows * 4)
@@ -180,7 +180,7 @@ enum PrinterScene {
         lettering.getRed(&light.0, green: &light.1, blue: &light.2, alpha: &light.3)
         for i in stride(from: 0, to: pixels.count, by: 4) {
             let alpha = Int(pixels[i + 3])
-            // The pink A is much redder than green; the lavender letters aren't.
+            // The pink A is much redder than green; the navy letters aren't.
             guard alpha > 0, Int(pixels[i]) - Int(pixels[i + 1]) < alpha / 4 else { continue }
             pixels[i] = UInt8(light.0 * CGFloat(alpha))
             pixels[i + 1] = UInt8(light.1 * CGFloat(alpha))
