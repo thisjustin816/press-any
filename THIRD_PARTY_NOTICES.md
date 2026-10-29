@@ -153,7 +153,10 @@ Updating a pin is an explicit change: update it, copy its license into `App/Ackn
 if it changed, run the platform-independent tests and the device checks in
 `docs/mvp-verification.md`, and record the reason here. A SameBoy update is a
 core migration candidate: existing Builds keep their pinned core until they are migrated
-deliberately.
+deliberately. An update that keeps the state format and the behavior saves depend on, checked by
+loading states from the previous pin, can instead name the previous version in the core's
+`replacedDescriptors`: Builds pinned to it then run on the new one and their states load. 1.0.4
+replaces 1.0.3 this way.
 
 
 ## Printer wood background

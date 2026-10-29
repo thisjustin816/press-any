@@ -3,6 +3,9 @@ import Foundation
 
 public protocol EmulatorCore: AnyObject {
     var descriptor: CoreDescriptor { get }
+    /// Earlier versions this core replaces with the same behavior for saves and the same state
+    /// format: Builds pinned to them run on it, and their states load.
+    var replacedDescriptors: Set<CoreDescriptor> { get }
     var supportedSystems: Set<GameSystem> { get }
     var stateSerializationVersion: String { get }
 
@@ -74,6 +77,21 @@ public struct StateNeedsOtherHardware: Error, Equatable, LocalizedError {
 
 public protocol EmulatorCoreFactory: Sendable {
     var descriptor: CoreDescriptor { get }
+    /// Earlier versions whose pinned Builds this factory's core runs; see `EmulatorCore`.
+    var replacedDescriptors: Set<CoreDescriptor> { get }
     var supportedSystems: Set<GameSystem> { get }
     func makeCore() throws -> any EmulatorCore
+}
+
+extension EmulatorCore {
+    public var replacedDescriptors: Set<CoreDescriptor> { [] }
+
+    /// Whether a state or pin made with `other` belongs to this core.
+    public func serves(_ other: CoreDescriptor) -> Bool {
+        other == descriptor || replacedDescriptors.contains(other)
+    }
+}
+
+extension EmulatorCoreFactory {
+    public var replacedDescriptors: Set<CoreDescriptor> { [] }
 }

@@ -35,7 +35,7 @@ The product is Press Any; `docs/NAMING.md` is the reference.
 
 - Minimum deployment target: iOS 17.4.
 - iPhone-first. iPad-specific UX is later work.
-- GB/GBC core: SameBoy 1.0.3. GBA is a later mGBA adapter, not a SameBoy replacement.
+- GB/GBC core: SameBoy 1.0.4 at the master commit THIRD_PARTY_NOTICES.md records. GBA is a later mGBA adapter, not a SameBoy replacement.
 - Library identity is `Game -> Builds -> Save Profiles`; a ROM file is not a Game identity.
 - Build ROM identity is immutable. Editing a patch stack produces a new Build/result.
 - Battery saves belong to Save Profiles. Save states are scoped to exact Build + Save Profile + core serialization context.

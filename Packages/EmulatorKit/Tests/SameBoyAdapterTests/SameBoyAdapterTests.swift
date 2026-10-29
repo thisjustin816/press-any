@@ -10,8 +10,11 @@ final class SameBoyAdapterTests: XCTestCase {
         let factory = SameBoyCoreFactory()
 
         XCTAssertEqual(factory.descriptor.identifier, "sameboy")
-        XCTAssertEqual(factory.descriptor.version, "1.0.3")
+        XCTAssertEqual(factory.descriptor.version, "1.0.4")
+        XCTAssertEqual(factory.replacedDescriptors, [CoreDescriptor(identifier: "sameboy", version: "1.0.3")])
         XCTAssertEqual(factory.supportedSystems, [.gameBoy, .gameBoyColor])
+        let pinned = CoreRegistry(factories: [factory])
+        XCTAssertEqual(try pinned.factory(for: CoreDescriptor(identifier: "sameboy", version: "1.0.3")).descriptor.version, "1.0.4")
     }
 
     // These run the real boot ROMs, which `make bootroms` generates. They skip only when the ROMs
