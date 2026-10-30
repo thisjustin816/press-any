@@ -93,7 +93,7 @@ Verify with a user-supplied legal ROM:
 - [x] Settings > Acknowledgements lists SameBoy, GRDB.swift and gbtoolsid, and each opens its license text or credit.
 - [x] Controller Theme: Classic shows dark status bar text and Dark light text, and Match System follows Light and Dark Mode. The library behind the game keeps its own appearance.
 - [x] A library game shows the boot logo by default; with Settings > Skip Boot Logo on, it opens on the game.
-- [ ] In a game that reads the joypad more than once per frame (PictoCode v0.100.220 menu), tap Down 30 times with Button Bounce on: some taps can move twice. Turn Button Bounce off for that Game: every tap moves once. Check the same in Quick Play with the App setting off.
+- [ ] In a menu of a game that reads the joypad more than once per frame, tap Down 30 times with Button Bounce on: some taps can move twice. Turn Button Bounce off for that Game: every tap moves once. Check the same in Quick Play with the App setting off.
 - [x] From a Build's long-press menu, open Build Details and Edit Notes. Save several lines containing literal Markdown and spaces: they appear as plain text. Edit and Cancel, then reopen and relaunch: the stored note stays. Save an empty note: it clears.
 - [x] Play Build A, background and foreground twice, then Close Game. Build Details shows the accumulated playtime. Download the container and verify Build A and its Save Profile gained the same time, each interval counted once. Play Build B with the same profile: only B gains that interval, and the profile adds it. Reopen the app and confirm both Build totals remain.
 - [ ] Play two Games for different lengths of time, closing each. Check Title, Recently Played, Recently Added, Playtime and System under Sort By in the library's More menu, with an unplayed Game present. Recently Played uses the later of date added and last played. Import a new Game and check that it appears first, then play another Game and close it: that Game moves ahead of the import. Playtime puts the longest first and unplayed Games last. System puts Game Boy before Game Boy Color; ties use title order. In list view, check each sort's second line: system, relative played time, date added or playtime. Search and Favorites Only keep that order; relaunch keeps the sort choice. Game Details shows Playtime, Sessions and Last Played. Played profiles show playtime and last played under their names. An unplayed Game has no Statistics section or profile play line. Play again and close: both screens refresh.
@@ -339,7 +339,7 @@ Those checks remain unchecked above.
 - [ ] Print, disconnect, restart and load a state. Completed slips stay available until closing
   the game; output from another run starts new paper. Closing and reopening clears the feed.
 - [ ] While receiving and printing, verify the progress banner is visible. When output arrives,
-  tap View Print directly, without opening the game menu. With a multi-page print (PictoCode),
+  tap View Print directly, without opening the game menu. With a game's multi-part print,
   confirm the banner stays on Receiving/Printing until the last page, then shows View Print once, with page numbers from the second page. Dismiss a ready banner and print again;
   the new progress and View Print action appear. Repeat after pausing and resuming, and in landscape.
 - [ ] Generate more than 10 separate prints and confirm the oldest leaves the session feed.
