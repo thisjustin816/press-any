@@ -6,16 +6,19 @@
 // milliseconds since the test began.
 static SBGameBoyPrinter printer;
 static unsigned prints;
-static uint8_t last_height, last_first_pixel;
+static uint8_t last_height, last_first_pixel, last_top, last_bottom, last_exposure;
 static uint64_t now_ms;
 
 static void on_print(void *context, const uint8_t *pixels, uint8_t height, uint8_t top,
                      uint8_t bottom, uint8_t exposure)
 {
-    (void)context; (void)top; (void)bottom; (void)exposure;
+    (void)context;
     prints++;
     last_height = height;
     last_first_pixel = pixels[0];
+    last_top = top;
+    last_bottom = bottom;
+    last_exposure = exposure;
 }
 
 static uint64_t ticks(uint64_t ms)
@@ -144,6 +147,83 @@ static void test_data_after_a_print_waits_for_an_init(void)
     assert(prints == 2 && last_height == 16 && last_first_pixel == 3);
 }
 
+// A job in parts, as games send one: an Init before each later part, whose reply still shows the
+// last part's image full (04), and no feed margin where the parts meet.
+static void test_parts_open_with_an_init(void)
+{
+    const uint8_t first[] = {1, 0x10, 0xe4, 0x40}, last[] = {1, 0x03, 0xe4, 0x40};
+    start();
+    uint64_t printed = print_bands(1, first);
+    poll_until(printed, 1500);
+    assert(prints == 1 && last_top == 1 && last_bottom == 0);
+
+    assert(packet(1, 0, NULL, 0) == 0x04);
+    printed = print_bands(1, last);
+    poll_until(printed, 1500);
+    assert(prints == 2 && last_height == 16 && last_top == 0 && last_bottom == 3);
+}
+
+// After a print, 125 ms without a byte resets the printer as an Init does: an Init then answers
+// 00, and data needs no Init at all. The second half follows the firmware's idle reset; no
+// physical printer has been checked for it.
+static void test_idle_reset_after_a_print(void)
+{
+    uint8_t black[640];
+    memset(black, 0xff, sizeof(black));
+    start();
+    uint64_t printed = print_bands(1, print_one);
+    poll_until(printed, 1500);
+    wait_ms(200);
+    assert(packet(1, 0, NULL, 0) == 0x00);
+
+    start();
+    printed = print_bands(1, print_one);
+    poll_until(printed, 1500);
+    wait_ms(200);
+    assert(!(packet(4, 0, black, sizeof(black)) & 0x10));
+    packet(4, 0, NULL, 0);
+    packet(2, 0, print_one, sizeof(print_one));
+    poll_until(now_ms, 1500);
+    assert(prints == 2 && last_first_pixel == 3);
+}
+
+// An Init sent while the last job still prints is refused and marks the data unprocessed, so the
+// data that follows the print still needs an Init of its own.
+static void test_init_while_printing_leaves_data_blocked(void)
+{
+    start();
+    uint64_t printed = print_bands(2, print_one);
+    poll_until(printed, 300);
+    assert(packet(1, 0, NULL, 0) == 0x0e);
+    poll_until(printed, 2500);
+    assert(!sbp_is_printing(&printer));
+    assert(packet(4, 0, tiles, sizeof(tiles)) == 0x14);
+    packet(1, 0, NULL, 0);
+    assert(packet(4, 0, tiles, sizeof(tiles)) == 0x00);
+}
+
+// Palette 0 prints as E4, 1B inverts the shades, and an exposure above 7F prints as 40.
+static void test_palette_and_exposure(void)
+{
+    const uint8_t no_palette[] = {1, 0x00, 0x00, 0x80}, inverted[] = {1, 0x00, 0x1b, 0x7f};
+    uint8_t black[640];
+    memset(black, 0xff, sizeof(black));
+
+    start();
+    packet(4, 0, black, sizeof(black));
+    packet(4, 0, NULL, 0);
+    packet(2, 0, no_palette, sizeof(no_palette));
+    poll_until(now_ms, 1500);
+    assert(prints == 1 && last_first_pixel == 3 && last_exposure == 0x40);
+
+    start();
+    packet(4, 0, black, sizeof(black));
+    packet(4, 0, NULL, 0);
+    packet(2, 0, inverted, sizeof(inverted));
+    poll_until(now_ms, 1500);
+    assert(prints == 1 && last_first_pixel == 0 && last_exposure == 0x7f);
+}
+
 // Times from the printer's firmware run in its emulator: a Break while the paper feeds between
 // bands stops it at the next feed step, and the band already printed comes out.
 static void test_break_between_bands(void)
@@ -215,6 +295,10 @@ void test_printer_model(void)
     test_run_ends_with_its_band();
     test_idle_after_print();
     test_data_after_a_print_waits_for_an_init();
+    test_parts_open_with_an_init();
+    test_idle_reset_after_a_print();
+    test_init_while_printing_leaves_data_blocked();
+    test_palette_and_exposure();
     test_break_between_bands();
     test_copies_take_their_time();
     test_events_name_what_the_printer_dropped();
