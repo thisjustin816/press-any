@@ -33,7 +33,7 @@ final class PrinterSheetController<Content: View>: UIHostingController<Content>,
     }
 }
 
-private enum PrinterPreviewBackground: String, CaseIterable, Sendable {
+enum PrinterPreviewBackground: String, CaseIterable, Sendable {
     case transparent, light, dark, wood, printer, gameArtwork, custom
     var title: String {
         switch self {
@@ -53,6 +53,20 @@ private enum PrinterPreviewBackground: String, CaseIterable, Sendable {
         default: .light
         }
     }
+    /// Transparent, Light and Dark stay free.
+    var needsPlus: Bool {
+        switch self {
+        case .transparent, .light, .dark: false
+        case .wood, .printer, .gameArtwork, .custom: true
+        }
+    }
+
+    /// The background a print shows and exports: the remembered choice, or Transparent where it
+    /// isn't offered, as for Game Artwork in Quick Play, or needs Plus. The remembered choice
+    /// itself is kept for when it's offered again.
+    static func shown(_ chosen: Self, available: [Self], gate: PlusGate) -> Self {
+        available.contains(chosen) && !gate.isLocked(chosen.needsPlus) ? chosen : .transparent
+    }
 }
 
 struct PrinterPreview: View {
@@ -70,6 +84,8 @@ struct PrinterPreview: View {
 
     let backgrounds = PrinterBackgroundStore()
     let slips: [PrinterSlip]
+    /// Wood, Printer, Game Artwork and Custom need Plus.
+    @ObservedObject var plus: PlusStore
     /// The Game's library artwork file, when it has one.
     var gameArtworkURL: URL?
     var keeping = Keeping.session
@@ -81,6 +97,7 @@ struct PrinterPreview: View {
     @State private var discarded: Set<UUID> = []
     @State private var confirmsDiscard = false
     @State private var showsCaptures = false
+    @State private var showsPlus = false
     @Environment(\.dismiss) private var dismiss
     @State private var selected = 0
     /// The last background chosen, kept between previews and games.
@@ -125,9 +142,9 @@ struct PrinterPreview: View {
             }
         }
     }
-    /// The remembered choice, or Transparent where it isn't offered, as for Game Artwork in Quick Play.
-    /// The remembered choice itself is kept for the next game that offers it.
-    private var background: PrinterPreviewBackground { available.contains(chosen) ? chosen : .transparent }
+    private var background: PrinterPreviewBackground {
+        PrinterPreviewBackground.shown(chosen, available: available, gate: plus.gate)
+    }
 
     var body: some View {
         NavigationStack {
@@ -220,6 +237,7 @@ struct PrinterPreview: View {
                 Text("The image could not be saved for sharing. Check available storage and try again.")
             }
             .sheet(item: $shared) { image in PrinterShareSheet(image: image) }
+            .plusSheet(isPresented: $showsPlus, store: plus)
         }
     }
 
@@ -234,20 +252,22 @@ struct PrinterPreview: View {
                     ForEach(available.filter { $0 != .custom }, id: \.self) { swatchButton($0) }
                     if customImage != nil {
                         swatchButton(.custom).contextMenu {
-                            sourceButtons(photos: "Replace from Photos…", files: "Replace from Files…")
+                            if !plus.gate.isLocked(PrinterPreviewBackground.custom.needsPlus) {
+                                sourceButtons(photos: "Replace from Photos…", files: "Replace from Files…")
+                            }
                             Button(role: .destructive) { removeCustom() } label: {
                                 Label("Remove Background", systemImage: "trash")
                             }
                         }
+                    } else if plus.gate.isLocked(PrinterPreviewBackground.custom.needsPlus) {
+                        Button { showsPlus = true } label: { emptyCustomTile(locked: true) }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Custom background, Plus feature")
                     } else {
                         Menu {
                             sourceButtons(photos: "From Photos…", files: "From Files…")
                         } label: {
-                            swatchLabel(PrinterPreviewBackground.custom.title) {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                    .overlay { Image(systemName: "plus").font(.title3).foregroundStyle(.tint) }
-                            }
+                            emptyCustomTile(locked: false)
                         }
                         .accessibilityLabel("Custom background")
                         .accessibilityHint("Choose an image from Photos or Files")
@@ -263,10 +283,19 @@ struct PrinterPreview: View {
         }
     }
 
+    /// Without Plus, a Plus background stays listed with the Plus badge, and choosing it opens the
+    /// Plus screen and saves nothing.
     private func swatchButton(_ option: PrinterPreviewBackground) -> some View {
         let isSelected = option == background
-        return Button { chosen = option } label: {
-            swatchLabel(option.title, isSelected: isSelected) {
+        let locked = plus.gate.isLocked(option.needsPlus)
+        return Button {
+            if locked {
+                showsPlus = true
+            } else {
+                chosen = option
+            }
+        } label: {
+            swatchLabel(option.title, isSelected: isSelected, locked: locked) {
                 swatchFill(option)
                     .overlay {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -275,15 +304,29 @@ struct PrinterPreview: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(option.title) background")
+        .accessibilityLabel(locked ? "\(option.title) background, Plus feature" : "\(option.title) background")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    private func swatchLabel(_ title: String, isSelected: Bool = false, @ViewBuilder tile: () -> some View) -> some View {
+    /// The Custom slot before an image is chosen.
+    private func emptyCustomTile(locked: Bool) -> some View {
+        swatchLabel(PrinterPreviewBackground.custom.title, locked: locked) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                .overlay { Image(systemName: "plus").font(.title3).foregroundStyle(.tint) }
+        }
+    }
+
+    private func swatchLabel(
+        _ title: String, isSelected: Bool = false, locked: Bool = false, @ViewBuilder tile: () -> some View
+    ) -> some View {
         VStack(spacing: 4) {
             tile()
                 .frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(alignment: .bottom) {
+                    if locked { PlusBadge().padding(.bottom, 4) }
+                }
             Text(title)
                 .font(.caption)
                 .foregroundStyle(isSelected ? .primary : .secondary)

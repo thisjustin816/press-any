@@ -15,6 +15,8 @@ enum PlusRoadmap {
         Item(title: "Auto State History", detail: "Keep 3, 5 or 10 Auto States for each save. Without Plus, the latest is kept."),
         Item(title: "Timed States", detail: "An Auto State every 1, 2, 5 or 10 minutes of play. Pausing restarts the interval."),
         Item(title: "Model", detail: "Run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, with Super Game Boy colors."),
+        Item(title: "Print Backgrounds", detail: "Wood, Printer, Game Artwork and Custom backgrounds for Game Boy Printer prints. Transparent, Light and Dark are free."),
+        Item(title: "Print History", detail: "Keep 25, 50 or 100 prints for each Game. Without Plus, the latest 10 are kept."),
     ]
 
     static let upcoming = [

@@ -47,6 +47,8 @@ final class CapturesModel: ObservableObject {
 
     @Published private(set) var items: [Item] = []
     @Published private(set) var builds: [Build] = []
+    /// Unpinned prints the Game keeps, or nil when the setting can't be read and all are kept.
+    @Published private(set) var keptPrints: Int?
     @Published var errorMessage: String?
     let gameID: UUID
     private let container: AppContainer
@@ -65,6 +67,7 @@ final class CapturesModel: ObservableObject {
             }.value
             items = loaded
             builds = (try? container.repositories.builds.fetchBuilds(gameID: gameID)) ?? []
+            keptPrints = prints.keptPrints()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -90,6 +93,8 @@ final class CapturesModel: ObservableObject {
         }
         await load()
     }
+
+    var plus: PlusStore { container.plus }
 
     func artworkURL() -> URL? {
         guard let game = try? container.repositories.games.fetchGame(id: gameID) else { return nil }
@@ -134,10 +139,12 @@ struct CapturesView: View {
                             ForEach(shown) { item in cell(item) }
                         }
                         .padding()
-                        Text("The newest \(Capture.keepCount) prints are kept. Older ones go to Recently Deleted; pinned prints stay.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal)
+                        if let kept = model.keptPrints {
+                            Text("The newest \(kept) prints are kept. Older ones go to Recently Deleted at the next print; pinned prints stay.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal)
+                        }
                     }
                 }
             }
@@ -161,7 +168,7 @@ struct CapturesView: View {
             }
             .sheet(item: $opened) { item in
                 PrinterPreview(
-                    slips: [item.slip], gameArtworkURL: model.artworkURL(), keeping: .captured,
+                    slips: [item.slip], plus: model.plus, gameArtworkURL: model.artworkURL(), keeping: .captured,
                     onDiscard: { _ in Task { await model.delete(item) } }
                 )
             }

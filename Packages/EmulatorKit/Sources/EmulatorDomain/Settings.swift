@@ -84,6 +84,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case keepSaveStates
     /// `KeepAutoStates`, App scope only; unset means `.five`.
     case keepAutoStates
+    /// `KeepPrints`, App scope only; unset means `.fifty`.
+    case keepPrints
     /// `TimedStates`, unset means `.off`.
     case timedStates
     /// `HardwareModel`, unset means `.automatic`. Read when a game starts or restarts.
@@ -99,7 +101,7 @@ public enum SettingKey: String, Sendable, CaseIterable {
 
     public var isAppOnly: Bool {
         switch self {
-        case .saveStateSlots, .nameNewStates, .keepSaveStates, .keepAutoStates: true
+        case .saveStateSlots, .nameNewStates, .keepSaveStates, .keepAutoStates, .keepPrints: true
         default: false
         }
     }
@@ -418,6 +420,19 @@ public enum KeepAutoStates: Int, Codable, Sendable, CaseIterable {
     case three = 3
     case five = 5
     case ten = 10
+
+    public var displayName: String { String(rawValue) }
+}
+
+/// How many unpinned prints each Game keeps in its Captures while it keeps print history.
+public enum KeepPrints: Int, Codable, Sendable, CaseIterable {
+    case twentyFive = 25
+    case fifty = 50
+    case oneHundred = 100
+
+    public static let defaultValue: Self = .fifty
+    /// Unpinned prints a Game keeps without print history.
+    public static let withoutHistory = 10
 
     public var displayName: String { String(rawValue) }
 }

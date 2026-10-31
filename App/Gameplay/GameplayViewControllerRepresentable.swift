@@ -28,6 +28,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
     var artworkTarget: GameplayArtworkTarget?
     var prints: GameplayPrints?
     var makeCapturesView: (() -> AnyView)?
+    var plus: PlusStore?
 
     func makeUIViewController(context: Context) -> GameplayViewController {
         let controller = GameplayViewController(
@@ -63,6 +64,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
         controller.artworkTarget = artworkTarget
         controller.prints = prints
         controller.makeCapturesView = makeCapturesView
+        controller.plus = plus
         return controller
     }
 

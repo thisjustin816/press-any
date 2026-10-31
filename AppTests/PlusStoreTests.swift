@@ -140,10 +140,20 @@ final class PlusStoreTests: XCTestCase {
         let plus = PlusStore(provider: ControllableEntitlementProvider())
         XCTAssertFalse(plus.ownership.isOwned)
         XCTAssertFalse(plus.ownership.isResolved)
-        XCTAssertTrue(plus.ownership.keepsAutoStateHistory, "an unanswered question deletes nothing")
+        XCTAssertTrue(plus.ownership.keepsHistory, "an unanswered question deletes nothing")
         await plus.refreshOwnership()
         XCTAssertTrue(plus.ownership.isResolved)
-        XCTAssertFalse(plus.ownership.keepsAutoStateHistory)
+        XCTAssertFalse(plus.ownership.keepsHistory)
+    }
+
+    func testPrintHistoryIsKeptUntilTheStoreHasAnswered() async throws {
+        let plus = PlusStore(provider: ControllableEntitlementProvider())
+        let fixture = try LCDFixture(plus: plus)
+        defer { fixture.remove() }
+        try fixture.container.repositories.settings.set(KeepPrints.oneHundred, key: SettingKey.keepPrints.rawValue, scope: .app)
+        XCTAssertEqual(fixture.container.printCaptures.keptPrints(), 100, "an unanswered question doesn't prune to the latest 10")
+        await plus.refreshOwnership()
+        XCTAssertEqual(fixture.container.printCaptures.keptPrints(), KeepPrints.withoutHistory)
     }
 
     private func waitUntil(_ condition: () -> Bool) async throws {

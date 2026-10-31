@@ -168,7 +168,8 @@ struct RootView: View {
                 onSoundModeChange: { try bootstrap.container?.setSoundMode($0) },
                 artworkTarget: gameplayArtworkTarget(presentation),
                 prints: presentation.prints,
-                makeCapturesView: capturesView(presentation)
+                makeCapturesView: capturesView(presentation),
+                plus: bootstrap.container?.plus
             )
             .ignoresSafeArea()
             // The status bar sits on the controller's body: dark text on Classic, light on Dark.

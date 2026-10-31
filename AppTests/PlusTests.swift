@@ -11,7 +11,7 @@ import XCTest
 final class PlusTests: XCTestCase {
     func testRoadmapListsWhatPlusHoldsAndWhatsComing() {
         XCTAssertFalse(PlusRoadmap.upcoming.isEmpty)
-        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History", "Timed States", "Model"])
+        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History", "Timed States", "Model", "Print Backgrounds", "Print History"])
         XCTAssertFalse(PlusRoadmap.upcoming.contains { $0.title.contains("Timed") || $0.title == "Model" })
         XCTAssertEqual(PlusRoadmap.alsoPlanned.map(\.title), ["Game Boy Advance"])
         let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming + PlusRoadmap.alsoPlanned
@@ -79,6 +79,45 @@ final class PlusTests: XCTestCase {
         XCTAssertFalse(PlayingSettingsPage.saveStatesFooter(PlusGate(isUnlocked: true)).contains("Without Plus"))
     }
 
+    func testKeepPrintsKeepsTheLatestTenWithoutPlusAndKeepsTheStoredChoice() throws {
+        let locked = PlusGate(isUnlocked: false)
+        for choice in KeepPrints.allCases {
+            XCTAssertTrue(locked.isLocked(choice.needsPlus), "\(choice) opens the Plus screen")
+            XCTAssertEqual(locked.keptPrints(choice), 10)
+            XCTAssertEqual(PlusGate(isUnlocked: true).keptPrints(choice), choice.rawValue)
+        }
+        XCTAssertEqual(locked.label(KeepPrints.oneHundred.displayName, needsPlus: true), "100 (Plus)")
+        XCTAssertTrue(PlayingSettingsPage.printerFooter(locked).hasPrefix("Without Plus, each Game keeps its latest 10 prints."))
+        XCTAssertFalse(PlayingSettingsPage.printerFooter(PlusGate(isUnlocked: true)).contains("Without Plus"))
+
+        let fixture = try LCDFixture(plus: .fixed(ownsPlus: false))
+        defer { fixture.remove() }
+        let storage = AppSettingsStorage(store: fixture.container.repositories.settings)
+        XCTAssertEqual(fixture.container.printCaptures.keptPrints(), 10)
+        XCTAssertNil(storage.save(KeepPrints.oneHundred, .keepPrints))
+        XCTAssertEqual(fixture.container.printCaptures.keptPrints(), 10, "a stored choice reads as 10 without Plus")
+        XCTAssertEqual(storage.value(KeepPrints.self, .keepPrints), .oneHundred, "the stored choice is kept")
+
+        let owner = try AppContainer(rootURL: fixture.root, plus: .fixed(ownsPlus: true))
+        XCTAssertEqual(owner.printCaptures.keptPrints(), 100, "Plus brings the stored choice back")
+    }
+
+    func testPrintBackgroundsNeedPlusExceptTransparentLightAndDark() {
+        let free: Set<PrinterPreviewBackground> = [.transparent, .light, .dark]
+        let all = PrinterPreviewBackground.allCases
+        let locked = PlusGate(isUnlocked: false)
+        let unlocked = PlusGate(isUnlocked: true)
+        for option in all {
+            XCTAssertEqual(option.needsPlus, !free.contains(option), "\(option)")
+            XCTAssertEqual(PrinterPreviewBackground.shown(option, available: all, gate: locked),
+                option.needsPlus ? .transparent : option, "\(option) shows and exports as Transparent without Plus")
+            XCTAssertEqual(PrinterPreviewBackground.shown(option, available: all, gate: unlocked), option,
+                "Plus brings the stored \(option) back")
+        }
+        XCTAssertEqual(PrinterPreviewBackground.shown(.gameArtwork, available: all.filter { $0 != .gameArtwork }, gate: unlocked),
+            .transparent, "a background that isn't offered shows Transparent")
+    }
+
     func testTimedStatesAreLockedWithoutPlusAndKeepTheStoredInterval() throws {
         let fixture = try LCDFixture(plus: .fixed(ownsPlus: false))
         defer { fixture.remove() }
@@ -129,16 +168,16 @@ final class PlusTests: XCTestCase {
     func testAutoStateHistoryIsKeptUntilStoreKitHasAnswered() {
         let unasked = PlusOwnership(false, resolved: false)
         XCTAssertFalse(unasked.isOwned)
-        XCTAssertTrue(unasked.keepsAutoStateHistory, "an unanswered question deletes nothing")
+        XCTAssertTrue(unasked.keepsHistory, "an unanswered question deletes nothing")
         unasked.set(false)
-        XCTAssertFalse(unasked.keepsAutoStateHistory, "a refund or no purchase prunes to the newest")
+        XCTAssertFalse(unasked.keepsHistory, "a refund or no purchase prunes to the newest")
         unasked.set(true)
-        XCTAssertTrue(unasked.keepsAutoStateHistory)
-        XCTAssertTrue(PlusStore.fixed(ownsPlus: true).ownership.keepsAutoStateHistory)
+        XCTAssertTrue(unasked.keepsHistory)
+        XCTAssertTrue(PlusStore.fixed(ownsPlus: true).ownership.keepsHistory)
         XCTAssertTrue(PlusOwnership(false, resolved: false).appliesHardwareModel, "an owner's game starts on its Model before StoreKit answers")
         XCTAssertFalse(PlusOwnership(false).appliesHardwareModel)
         XCTAssertTrue(PlusOwnership(true).appliesHardwareModel)
-        XCTAssertFalse(PlusStore.fixed(ownsPlus: false).ownership.keepsAutoStateHistory)
+        XCTAssertFalse(PlusStore.fixed(ownsPlus: false).ownership.keepsHistory)
     }
 
     func testAppIconsNeedPlusExceptTheDefaultAndAreBundled() throws {

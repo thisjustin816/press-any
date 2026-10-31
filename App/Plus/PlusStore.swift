@@ -116,7 +116,8 @@ final class PlusStore: ObservableObject {
     }
 }
 
-/// Plus ownership behind a lock, so a game session's thread can check it at each Auto State write.
+/// Plus ownership behind a lock, so a game session's thread can check it at each Auto State or print
+/// write.
 final class PlusOwnership: @unchecked Sendable {
     private let lock = NSLock()
     private var owned: Bool
@@ -132,9 +133,11 @@ final class PlusOwnership: @unchecked Sendable {
     /// Whether the provider has answered yet. Until it has, `isOwned` only means "not asked".
     var isResolved: Bool { lock.withLock { resolved } }
 
-    /// Whether to keep more than the newest Auto State. Deleting a paying owner's states because
-    /// StoreKit hasn't answered yet at launch can't be undone, so an unanswered question keeps them.
-    var keepsAutoStateHistory: Bool { lock.withLock { owned || !resolved } }
+    /// Whether to keep the Auto States and prints that Keep Auto States and Keep Prints choose,
+    /// rather than the newest Auto State and `KeepPrints.withoutHistory` prints. Pruning a paying
+    /// owner's history because StoreKit hasn't answered yet at launch would remove what they chose
+    /// to keep, so an unanswered question keeps it.
+    var keepsHistory: Bool { lock.withLock { owned || !resolved } }
 
     /// Whether a game starts on its stored Model. Starting an owner's game on Automatic because
     /// StoreKit hasn't answered yet refuses its resume point, so an unanswered question keeps it.
@@ -165,6 +168,12 @@ struct PlusGate: Equatable {
     /// How many unpinned Auto States a game keeps: the chosen number with Plus, the newest without.
     func keptAutoStates(_ choice: KeepAutoStates) -> Int {
         isLocked(choice.needsPlus) ? 1 : choice.rawValue
+    }
+
+    /// How many unpinned prints each Game keeps: the chosen number with Plus,
+    /// `KeepPrints.withoutHistory` without.
+    func keptPrints(_ choice: KeepPrints) -> Int {
+        isLocked(choice.needsPlus) ? KeepPrints.withoutHistory : choice.rawValue
     }
 
     func timedStates(_ choice: TimedStates) -> TimedStates {

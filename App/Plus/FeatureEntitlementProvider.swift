@@ -133,6 +133,12 @@ extension KeepAutoStates {
     var needsPlus: Bool { true }
 }
 
+extension KeepPrints {
+    /// Keeping more than `KeepPrints.withoutHistory` prints is a Plus feature, so every choice here
+    /// needs it.
+    var needsPlus: Bool { true }
+}
+
 extension TimedStates {
     var needsPlus: Bool { self != .off }
 }

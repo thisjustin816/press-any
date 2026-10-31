@@ -10,9 +10,6 @@ public enum CaptureKind: String, Codable, Sendable {
 /// as the printer's own rows in the managed file `assetID` names, so any background can be chosen
 /// when it is exported.
 public struct Capture: Identifiable, Codable, Equatable, Sendable {
-    /// Unpinned prints a Game keeps; older ones go to Recently Deleted.
-    public static let keepCount = 50
-
     public let id: UUID
     public let gameID: UUID
     public let buildID: UUID?

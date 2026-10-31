@@ -74,10 +74,15 @@ In the v1.1 development build, Plus includes:
 - **Model**: run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy,
   Super Game Boy 2, Game Boy Color, Game Boy Advance or Game Boy Player (see Settings). Without Plus, games play on Automatic
   and a stored choice is kept.
+- **Print backgrounds**: Wood, Printer, Game Artwork and Custom backgrounds for Game Boy Printer
+  prints (see Game Boy Printer). Transparent, Light and Dark are free.
+- **Print history**: Keep Prints at 25, 50 or 100 prints per Game (see Library). Without Plus a
+  Game keeps its latest 10.
 
 Everything else is free: play, saves, manual, Quick and slot states, close and background Auto
 States, Library Backup and every export, patches, cheats, controllers, landscape, Quick Play,
-Fast Forward, Frame Blending, Screen Colors and the layouts.
+Fast Forward, Frame Blending, Screen Colors, the layouts, and the Game Boy Printer with its
+Transparent, Light and Dark backgrounds, Save or Share, Captures, pins and the Printer Log.
 
 Plus also includes everything on its roadmap and anything added later, at no extra cost. Some of
 it will be free for everyone, too. The roadmap on the Plus screen is the v2.0 list above, without
@@ -97,14 +102,16 @@ Plus follows these rules:
 - Without Plus, Plus choices stay listed. Choosing one opens the Plus screen once and saves
   nothing; nothing reminds the player after it closes.
 - A stored Plus choice is kept without Plus, so buying or restoring brings it back. A stored LCD
-  filter plays as Off, Timed States stops writing, and Keep Auto States reads 1.
+  filter plays as Off, Timed States stops writing, Keep Auto States reads 1, a stored print
+  background shows and exports as Transparent, and Keep Prints reads 10.
 - Losing Plus, through a refund, a revocation or leaving Family Sharing, deletes nothing at that
-  moment. The next Auto State write prunes to the latest unpinned one, as pruning always does. The
+  moment. The next Auto State write prunes to the latest unpinned one, as pruning always does, and
+  a Game's next print moves its unpinned prints past the latest 10 to Recently Deleted. The
   chosen app icon stays until the player changes it, since iOS shows an alert for every icon
   change; the picker just locks.
-- Until the App Store has answered at launch, Auto State history is kept, so a state written in
-  that moment never prunes a paying player's history. Without an answer, features still show
-  locked.
+- Until the App Store has answered at launch, Auto State and print history are kept, so a state
+  or print written in that moment never prunes a paying player's history. Without an answer,
+  features still show locked.
 
 The Plus screen lists what Plus includes now, the roadmap with its promise, and, until it's owned,
 the price with Buy and Restore Purchases and a line saying the price goes up when v1.1 ships. Once
@@ -1216,7 +1223,7 @@ Game's or Build's settings use:
 - **Controls**: Controller Layout and Controller Theme; Touch Haptics and Tap Game for Menu under
   Touch; Hide Touch Controls under With a Controller.
 - **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games, Skip Boot Logo and Button
-  Bounce; Save States
+  Bounce; Keep Prints under Game Boy Printer (App-only, needs Plus); Save States
   (Slots, Name New States, Keep Save States and Keep Auto States, all App-only; Timed States is
   inheritable and needs Plus).
 - **App Icon** (Plus): the default icon and its colorways, each with a preview.
@@ -1413,8 +1420,12 @@ list shows no model numbers. App Settings has it on the Playing page.
   paper and margins, and a Build menu when more than one Build printed. Tapping a print opens the
   print preview with its backgrounds, Save or Share and Discard. Touch and hold to **Pin** or **Delete**.
   Prints are stored as the printer's rows, so any background still applies later. A Game keeps
-  its newest 50 unpinned prints; an older one goes to Recently Deleted, in one "Cleaned-up Prints"
-  entry, and pinned prints never count. Deleting a Game takes its prints; deleting a Build or
+  its newest 10 unpinned prints. With Plus, Keep Prints in Settings > Playing keeps 25, 50 (the
+  default) or 100 for every Game; without it the row reads 10 with a Plus badge, choosing a number
+  opens the Plus screen, and the stored choice is kept for when Plus returns. A Game's next
+  print moves its oldest unpinned prints past the limit to Recently Deleted, in one
+  "Cleaned-up Prints" entry, and pinned prints never count. Changing Keep Prints, losing Plus or
+  unpinning a print removes nothing until then. Deleting a Game takes its prints; deleting a Build or
   profile leaves them with the Game. Storage lists them as Captures.
 - Once a Game has been played, a Statistics section after Save Profiles shows Playtime, Sessions
   and Last Played. Playtime uses the same abbreviated hours, minutes and seconds as Build Details.
@@ -1525,7 +1536,11 @@ removes it like any other.
 **Game Artwork** or **Custom** background, shown as a row of previews under the print with the
 selected one outlined. Transparent is the default until another background is chosen; the preview
 then opens with the last one chosen, in any game. A remembered Game Artwork or Custom background
-that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered. Wood uses Dimitrios Savva's CC0 Wood Table
+that isn't offered, as in Quick Play or after removal, shows Transparent and stays remembered.
+Wood, Printer, Game Artwork and Custom need Plus (see Pricing). Without it they stay in the row
+with a Plus badge, and choosing one, or the empty Custom tile, opens the Plus screen and saves
+nothing. A remembered Plus background shows and exports as Transparent and comes back with Plus;
+a saved Custom image can still be removed, not replaced. Wood uses Dimitrios Savva's CC0 Wood Table
 photograph from Poly Haven, bundled for offline use with its license and credit in Acknowledgements. **Printer** draws
 the slip coming out of a squat, stylized Game Boy Printer that keeps the machine's features. A
 smoked lid with the paper roll showing through and a darker rim rises above a body in the
@@ -1541,7 +1556,8 @@ shading and a soft shadow. The printed content keeps its pixel grid and four ton
 scale, without smoothing or simulated ink loss. Paper styling stays outside the printed content.
 Game-provided feed margins are preserved, with space around the paper for its torn edges and shadow.
 Transparent exports retain alpha outside the paper. Save Image uses add-only Photos access; Save to
-Files and the other share actions use the system share sheet. Printer controls and export are free.
+Files and the other share actions use the system share sheet. Printer controls, export, Captures
+and the Printer Log are free.
 
 `PrinterCapability` supplies each printed copy through the core's serialized worker.
 Attachment changes, resets and state loads clear the core queue; display-only frame refreshes
