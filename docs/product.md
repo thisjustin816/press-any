@@ -56,9 +56,8 @@ features, so change it with this paragraph (see Pricing).
 ## Pricing
 
 Press Any is free to download and play. **Press Any Plus** is one non-consumable in-app purchase,
-product ID `com.thisjustin816.PressAny.plus`, with Family Sharing on. It costs $0.99 during v1 and
-$2.99 once v1.1 ships. The price lives in App Store Connect, never in code: the app shows the App
-Store's localized price.
+product ID `com.thisjustin816.PressAny.plus`, with Family Sharing on. It costs $0.99. The price
+lives in App Store Connect, never in code: the app shows the App Store's localized price.
 
 In the v1.1 development build, Plus includes:
 
@@ -114,8 +113,7 @@ Plus follows these rules:
   features still show locked.
 
 The Plus screen lists what Plus includes now, the roadmap with its promise, and, until it's owned,
-the price with Buy and Restore Purchases and a line saying the price goes up when v1.1 ships. Once
-owned it thanks the player. If the product can't load, offline or without an App Store account,
+the price with Buy and Restore Purchases. Once owned it thanks the player. If the product can't load, offline or without an App Store account,
 it says so calmly with Try Again.
 
 Ownership comes from StoreKit 2: `Transaction.currentEntitlements` at launch, then

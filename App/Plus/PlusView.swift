@@ -102,7 +102,7 @@ struct PlusView: View {
                     .foregroundStyle(.secondary)
             }
         } footer: {
-            Text("Buy once and keep it on every device signed in to your Apple Account, and share it with Family Sharing. The price goes up when version 1.1 ships.")
+            Text("Buy once and keep it on every device signed in to your Apple Account, and share it with Family Sharing.")
         }
     }
 }
