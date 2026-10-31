@@ -118,6 +118,7 @@ final class MenuScreenshots: XCTestCase {
         menu.tap()
         let resume = app.buttons["Resume"]
         XCTAssertTrue(resume.waitForExistence(timeout: 5))
+        scrollMenu(to: app.buttons["Close Game"], in: app)
         try expect(app.buttons["Close Game"], then: "menu-gameplay-landscape")
         app.buttons["Close Game"].tap()
         XCTAssertTrue(app.buttons["library.addMenu"].waitForExistence(timeout: 10))
@@ -137,6 +138,7 @@ final class MenuScreenshots: XCTestCase {
         try waitForPlay(menu, before: "play-landscape-gamepad")
         try expect(menu, then: "play-landscape-gamepad")
         menu.tap()
+        scrollMenu(to: app.buttons["Add to Library…"], in: app)
         try expect(app.buttons["Add to Library…"], then: "menu-quick-play-landscape")
     }
 
@@ -177,6 +179,21 @@ final class MenuScreenshots: XCTestCase {
         try XCTUnwrap(visibleSettings.first).tap()
         waitForOrientation(in: app, landscape: false)
         try expect(app.navigationBars["Game Settings"], then: "settings-over-game-portrait")
+    }
+
+    /// In landscape the game menu is taller than the screen, and a row past its bottom edge isn't
+    /// in the accessibility tree until the menu scrolls to it. This swipes the menu up from its
+    /// first row, Resume, until the item can be tapped, and lists the buttons shown when it can't.
+    private func scrollMenu(to item: XCUIElement, in app: XCUIApplication) {
+        let resume = app.buttons["Resume"]
+        _ = resume.waitForExistence(timeout: 5)
+        for _ in 0..<3 where !(item.exists && item.isHittable) {
+            guard resume.exists, resume.isHittable else { break }
+            resume.swipeUp()
+        }
+        guard !(item.exists && item.isHittable) else { return }
+        let shown = app.buttons.allElementsBoundByIndex.map(\.label).joined(separator: ", ")
+        XCTFail("\(item.description) isn't on screen after scrolling the menu; buttons: \(shown)")
     }
 
     private func waitForOrientation(in app: XCUIApplication, landscape: Bool) {
