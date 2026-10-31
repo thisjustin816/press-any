@@ -1,4 +1,4 @@
-"""A small App Store Connect API client, shared by the TestFlight scripts.
+"""A small App Store Connect API client, shared by the TestFlight and App Store scripts.
 
 Signs requests with the team API key in APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID and
 APP_STORE_CONNECT_PRIVATE_KEY. Standard library and the openssl command only.
@@ -38,6 +38,15 @@ def der_to_raw(signature):
         raw += value.rjust(32, b"\0")
         offset += 2 + length
     return raw
+
+
+def describe(error):
+    """The details App Store Connect gives for a failed request, from its error body."""
+    try:
+        errors = json.loads(error.read())["errors"]
+        return "; ".join(e.get("detail") or e.get("title", "") for e in errors)
+    except Exception:
+        return str(error)
 
 
 def token(key_id, issuer_id, key_path):

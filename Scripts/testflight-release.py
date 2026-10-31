@@ -12,12 +12,11 @@ tags each main upload). Standard library only.
 """
 
 import argparse
-import json
 import sys
 import urllib.error
 import urllib.parse
 
-from appstoreconnect import client_from_environment
+from appstoreconnect import client_from_environment, describe
 from changelog import change_titles, fit, git, nearest_tag
 
 
@@ -42,14 +41,6 @@ def build_for(tag):
     if not upload:
         sys.exit(f"No TestFlight upload is at or before {tag}.")
     return upload.removeprefix("testflight/"), git("rev-list", "-n", "1", upload).strip()
-
-
-def describe(error):
-    try:
-        errors = json.loads(error.read())["errors"]
-        return "; ".join(e.get("detail") or e.get("title", "") for e in errors)
-    except Exception:
-        return str(error)
 
 
 def beta_command(args):

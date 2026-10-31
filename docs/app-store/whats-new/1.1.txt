@@ -1,0 +1,31 @@
+Game Boy Printer
+Games that print now work. The slip comes out of a drawn printer, and you can save or share it as a PNG with a transparent, light or dark background. The Wood, Printer, Game Artwork and Custom backgrounds and a longer print history are part of Plus. Prints are kept with each Game in Captures, and a Printer Log helps when a game does not print.
+
+Game Boy Camera
+Camera cartridges see through your iPhone's camera, with color capture on compatible ROMs. Choose the rear camera, the front camera or none in Settings or the game menu.
+
+Tilt games
+Cartridges with a motion sensor follow how you tilt your iPhone. Recenter Tilt is in the game menu.
+
+Model (Plus)
+Run games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, each with its own boot ROM.
+
+Artwork
+After you import a recognized game, Press Any can find its artwork and ask you to review what it found. Turn this off in Settings.
+
+Also new
+- A new wordmark and app icons
+- A grouped Build menu
+- Playtiles controls in landscape, and Playtiles turns off with an explanation on iPhones too small for it
+- A warning before you launch an older Build on a newer save, and a copy of the save kept before you switch Builds
+- A fade and chevron on lists with more below
+- The screen stays awake while a game runs
+- An updated SameBoy core with camera and clock fixes
+
+Fixes
+- Import names and matching after restoring a backup
+- New imports appear first in Recently Played
+- On-screen buttons resume a paused game
+- Saving a shared screenshot to Photos
+- Game menu ordering and dismissal
+- Fast Forward counts real time as playtime

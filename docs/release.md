@@ -20,7 +20,8 @@ build number. A successful upload does not prove the physical-device checks.
 Publishing a GitHub pre-release sends its build to the public TestFlight group through Beta App
 Review; see "Release a beta" in [TestFlight](testflight.md). An App Store release also needs the
 store listing, screenshots, age rating, App Privacy answers for the shipped app, and the rights
-and disclosures in `docs/acceptance-matrix.md` under Release.
+and disclosures in `docs/acceptance-matrix.md` under Release. Its What's New text is a file in this
+repository; see "App Store What's New" in [TestFlight](testflight.md).
 
 ## Refreshing the No-Intro data
 
