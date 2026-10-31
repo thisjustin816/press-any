@@ -108,13 +108,13 @@ public struct PrintCaptures: Sendable {
         try deletion.delete(deletion.planCaptureDeletion(captureIDs: [captureID]))
     }
 
-    /// A pinned print never counts toward the cap. Unpinning one can push the oldest past it.
+    /// A pinned print never counts toward the cap. Unpinning one removes nothing, even when that
+    /// puts the Game past the cap; the next print does the cleanup.
     public func setPinned(_ isPinned: Bool, captureID: UUID) throws {
         guard var capture = try captures.fetchCapture(id: captureID) else { throw LibraryDeletionError.captureNotFound(captureID) }
         guard capture.isPinned != isPinned else { return }
         capture.isPinned = isPinned
         try captures.updateCapture(capture)
-        if !isPinned { try cleanUp(gameID: capture.gameID) }
     }
 
     /// How many unpinned prints a Game keeps, or nil when the Keep Prints setting can't be read,

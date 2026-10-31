@@ -65,8 +65,13 @@ import Testing
         #expect(cleaned.kind == .capture && cleaned.title == "Cleaned-up Prints")
         #expect(cleaned.records == LibraryRecordSet(captureIDs: [saved[0].id]))
 
-        // Unpinning the old one puts it past the cap.
+        // Unpinning the old one puts the Game past the cap, but removes nothing by itself.
         try prints.setPinned(false, captureID: pinned.id)
+        #expect(try prints.captures(gameID: gameID).count == 51)
+        #expect(try prints.captures(gameID: gameID).contains { $0.id == pinned.id })
+
+        // The next print moves the oldest unpinned prints past the cap to Recently Deleted.
+        _ = try #require(try prints.save(Self.slip(rows: 8), gameID: gameID, buildID: nil, saveProfileID: nil))
         #expect(try prints.captures(gameID: gameID).count == 50)
         #expect(!(try prints.captures(gameID: gameID)).contains { $0.id == pinned.id })
     }

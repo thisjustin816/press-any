@@ -1422,10 +1422,10 @@ list shows no model numbers. App Settings has it on the Playing page.
   Prints are stored as the printer's rows, so any background still applies later. A Game keeps
   its newest 10 unpinned prints. With Plus, Keep Prints in Settings > Playing keeps 25, 50 (the
   default) or 100 for every Game; without it the row reads 10 with a Plus badge, choosing a number
-  opens the Plus screen, and the stored choice is kept for when Plus returns. A new print, or
-  unpinning one, moves the oldest unpinned prints past the limit to Recently Deleted, in one
-  "Cleaned-up Prints" entry, and pinned prints never count. Changing Keep Prints or losing Plus
-  removes nothing until then. Deleting a Game takes its prints; deleting a Build or
+  opens the Plus screen, and the stored choice is kept for when Plus returns. A Game's next
+  print moves its oldest unpinned prints past the limit to Recently Deleted, in one
+  "Cleaned-up Prints" entry, and pinned prints never count. Changing Keep Prints, losing Plus or
+  unpinning a print removes nothing until then. Deleting a Game takes its prints; deleting a Build or
   profile leaves them with the Game. Storage lists them as Captures.
 - Once a Game has been played, a Statistics section after Save Profiles shows Playtime, Sessions
   and Last Played. Playtime uses the same abbreviated hours, minutes and seconds as Build Details.
