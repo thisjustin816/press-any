@@ -137,6 +137,8 @@ bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size);
 typedef struct {
     const uint8_t *luminance;
     uint8_t height, top_margin, bottom_margin, exposure;
+    /// A later copy of the same Print, fed on the same paper after the copy before it.
+    bool follows_copy;
 } SBPrinterOutput;
 
 /// Attachment changes, resets and state loads clear the host queue. Calls use the core's serialized worker.

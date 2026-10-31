@@ -7,12 +7,21 @@
 static SBGameBoyPrinter printer;
 static unsigned prints;
 static uint8_t last_height, last_first_pixel, last_top, last_bottom, last_exposure;
+// Each print's height and margins, in the order the printer reported them.
+static uint8_t heights[16], tops[16], bottoms[16];
+static bool follows[16];
 static uint64_t now_ms;
 
 static void on_print(void *context, const uint8_t *pixels, uint8_t height, uint8_t top,
-                     uint8_t bottom, uint8_t exposure)
+                     uint8_t bottom, uint8_t exposure, bool follows_copy)
 {
     (void)context;
+    if (prints < 16u) {
+        heights[prints] = height;
+        tops[prints] = top;
+        bottoms[prints] = bottom;
+        follows[prints] = follows_copy;
+    }
     prints++;
     last_height = height;
     last_first_pixel = pixels[0];
@@ -250,6 +259,50 @@ static void test_copies_take_their_time(void)
     assert(prints == 2 && last_height == 16);
 }
 
+// The paper is one strip: only the first copy carries the top margin, every copy its bottom
+// margin. A single copy keeps both.
+static void test_copies_share_the_top_margin(void)
+{
+    const uint8_t one_copy[] = {1, 0x13, 0xe4, 0x40}, two_copies[] = {2, 0x13, 0xe4, 0x40},
+                  three_copies[] = {3, 0x13, 0xe4, 0x40};
+    start();
+    poll_until(print_bands(1, one_copy), 2000);
+    assert(prints == 1 && heights[0] == 16 && tops[0] == 1 && bottoms[0] == 3 && !follows[0]);
+
+    start();
+    poll_until(print_bands(2, two_copies), 6000);
+    assert(prints == 2);
+    assert(heights[0] == 32 && tops[0] == 1 && bottoms[0] == 3 && !follows[0]);
+    assert(heights[1] == 32 && tops[1] == 0 && bottoms[1] == 3 && follows[1]);
+
+    start();
+    poll_until(print_bands(1, three_copies), 5000);
+    assert(prints == 3);
+    assert(tops[0] == 1 && tops[1] == 0 && tops[2] == 0);
+    assert(bottoms[0] == 3 && bottoms[1] == 3 && bottoms[2] == 3);
+    assert(!follows[0] && follows[1] && follows[2]);
+
+    // A second Print is a new job: its top margin feeds again.
+    packet(1, 0, NULL, 0);
+    poll_until(print_bands(1, one_copy), 2000);
+    assert(prints == 4 && tops[3] == 1 && bottoms[3] == 3 && !follows[3]);
+}
+
+// A Break in the second copy's second band: the first copy comes out whole, and the band of the
+// second printed by then follows it on the same paper.
+static void test_break_in_a_later_copy(void)
+{
+    const uint8_t two_copies[] = {2, 0x10, 0xe4, 0x40};
+    start();
+    uint64_t printed = print_bands(2, two_copies);
+    poll_until(printed, 3100);
+    packet(8, 0, NULL, 0);
+    poll_until(printed, 6000);
+    assert(prints == 2);
+    assert(heights[0] == 32 && tops[0] == 1 && !follows[0]);
+    assert(heights[1] == 16 && tops[1] == 0 && follows[1]);
+}
+
 static SBPEvent events[64];
 static unsigned event_count;
 
@@ -301,5 +354,7 @@ void test_printer_model(void)
     test_palette_and_exposure();
     test_break_between_bands();
     test_copies_take_their_time();
+    test_copies_share_the_top_margin();
+    test_break_in_a_later_copy();
     test_events_name_what_the_printer_dropped();
 }

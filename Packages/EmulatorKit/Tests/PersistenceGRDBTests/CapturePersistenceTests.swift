@@ -20,6 +20,14 @@ import Testing
             topMargin: 0, bottomMargin: 3, exposure: 40))
         let decoded = try PrinterSlipArchive.decode(try PrinterSlipArchive.encode(longer), id: longer.id)
         #expect(decoded == longer)
+        try longer.append(try PrinterOutput(height: 8, luminance: Data(repeating: 0xAA, count: 160 * 8),
+            topMargin: 0, bottomMargin: 3, exposure: 40, followsCopy: true))
+        #expect(try PrinterSlipArchive.decode(try PrinterSlipArchive.encode(longer), id: longer.id) == longer)
+        let single = PrinterSlip(output: try PrinterOutput(height: 1, luminance: Data(count: 160),
+            topMargin: 1, bottomMargin: 3, exposure: 64))
+        let rows = Data(count: 160).base64EncodedString()
+        #expect(String(decoding: try PrinterSlipArchive.encode(single), as: UTF8.self)
+            == #"{"sections":[{"bottomMargin":3,"exposure":64,"height":1,"rows":"\#(rows)","topMargin":1}],"version":1}"#)
         #expect(throws: PrinterSlipArchive.ArchiveError.invalidRows) {
             try PrinterSlipArchive.decode(Data(#"{"version":1,"sections":[{"height":2,"topMargin":0,"bottomMargin":0,"exposure":0,"rows":"AAAA"}]}"#.utf8), id: UUID())
         }

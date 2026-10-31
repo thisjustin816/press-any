@@ -119,12 +119,12 @@ static void deliver(SBGameBoyPrinter *p)
         }
     }
     for (uint8_t copy = 0; copy < p->copies; copy++) {
-        p->on_print(p->context, pixels, (uint8_t)(bands * 16u), p->top_margin, p->bottom_margin,
-                    p->exposure);
+        p->on_print(p->context, pixels, (uint8_t)(bands * 16u), copy ? 0 : p->top_margin,
+                    p->bottom_margin, p->exposure, copy > 0);
     }
     if (p->partial_bands) {
-        p->on_print(p->context, pixels, (uint8_t)(p->partial_bands * 16u), p->top_margin,
-                    p->bottom_margin, p->exposure);
+        p->on_print(p->context, pixels, (uint8_t)(p->partial_bands * 16u),
+                    p->copies ? 0 : p->top_margin, p->bottom_margin, p->exposure, p->copies > 0);
     }
 }
 

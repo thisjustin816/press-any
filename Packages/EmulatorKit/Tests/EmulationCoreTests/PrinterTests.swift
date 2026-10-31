@@ -95,6 +95,44 @@ final class PrinterTests: XCTestCase {
         XCTAssertEqual(feed.slips.count, 4)
     }
 
+    /// A Print's copies come out as one strip: its top margin once, then each copy with its bottom
+    /// margin after it.
+    func testCopiesOfOnePrintFeedOneStrip() throws {
+        func copy(top: Int = 0, bottom: Int = 0, follows: Bool = false) throws -> PrinterOutput {
+            try PrinterOutput(height: 16, luminance: Data(count: 2560), topMargin: top, bottomMargin: bottom,
+                              exposure: 64, followsCopy: follows)
+        }
+        for count in [2, 3] {
+            var feed = PrinterFeed()
+            try feed.receive(copy(top: 1, bottom: 3))
+            for _ in 1..<count { try feed.receive(copy(bottom: 3, follows: true)) }
+            XCTAssertEqual(feed.slips.count, 1)
+            let slip = feed.slips[0]
+            XCTAssertEqual(slip.sections.map(\.topMargin), [1] + Array(repeating: 0, count: count - 1))
+            XCTAssertEqual(slip.sections.map(\.bottomMargin), Array(repeating: 3, count: count))
+            XCTAssertEqual(slip.feedHeight, 8 + count * (16 + 24))
+
+            let image = PrinterSlipRenderer.render(slip)
+            XCTAssertEqual(image.height, (8 + count * 40 + 72) * PrinterSlipRenderer.scale)
+            let ink: [UInt8] = [27, 29, 30, 255]
+            for index in 0..<count {
+                let first = 36 + 8 + index * 40
+                for (row, printed) in [(first - 1, false), (first, true), (first + 15, true), (first + 16, false)] {
+                    let i = (row * PrinterSlipRenderer.scale * image.width + PrinterSlipRenderer.printOriginX) * 4
+                    XCTAssertEqual(Array(image.bgra8888[i..<i + 4]) == ink, printed, "copy \(index), row \(row)")
+                }
+            }
+
+            try feed.receive(copy(top: 1, bottom: 3))
+            XCTAssertEqual(feed.slips.count, 2, "another Print feeds its own top margin onto new paper")
+            try feed.receive(copy(bottom: 3))
+            XCTAssertEqual(feed.slips.count, 3, "another Print after a bottom margin starts a new slip")
+            feed.endRoll()
+            try feed.receive(copy(bottom: 3, follows: true))
+            XCTAssertEqual(feed.slips.count, 4, "a copy after a reset starts a new slip")
+        }
+    }
+
     func testDiscardingTheNewestSlipKeepsLaterPaperOffTheSlipBeforeIt() throws {
         let attached = try PrinterOutput(height: 16, luminance: Data(count: 2560), topMargin: 0, bottomMargin: 0, exposure: 64)
         var feed = PrinterFeed()

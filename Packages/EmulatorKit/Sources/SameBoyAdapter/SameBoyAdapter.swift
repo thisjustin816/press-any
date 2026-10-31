@@ -99,7 +99,8 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             let luminance = Data(bytes: pixels, count: count)
             result.append(try PrinterOutput(
                 height: Int(output.height), luminance: luminance,
-                topMargin: Int(output.top_margin), bottomMargin: Int(output.bottom_margin), exposure: output.exposure
+                topMargin: Int(output.top_margin), bottomMargin: Int(output.bottom_margin), exposure: output.exposure,
+                followsCopy: output.follows_copy
             ))
         }
         return result
