@@ -379,14 +379,13 @@ review. Until then, Settings > Press Any Plus says the App Store isn't available
      notes: "Settings > Press Any Plus shows what Plus includes, the price, Buy and Restore
      Purchases. Plus turns on LCD 1× and LCD 3× (Settings > Display), app icon colors (Settings >
      App Icon), Auto State history and Timed States (Settings > Playing > Keep Auto States and
-     Timed States), and Model, which runs a game on other Game Boy hardware (Settings > Playing >
-     Model). Everything else is free and works without it."
+     Timed States), Model, which runs a game on other Game Boy hardware (Settings > Playing >
+     Model), and, for Game Boy Printer games, the Wood, Printer, Game Artwork and Custom print
+     backgrounds in the print preview and a longer print history (Settings > Playing > Keep
+     Prints). Everything else is free and works without it."
 4. **Submit it with the first build that uses it.** A first in-app purchase goes to review with an
    app version: on the version page, under **In-App Purchases and Subscriptions**, select Press Any
    Plus before **Add for Review**. Later changes to it can go on their own.
-5. **Raise the price for v1.1.** When v1.1 is ready, add a price change to $2.99 in the purchase's
-   Price Schedule, starting the day v1.1 is released. The app reads the price from the App Store,
-   so no build changes.
 
 TestFlight builds buy Plus in Apple's sandbox with the tester's own Apple Account. These
 purchases are free, and they don't carry over to the App Store: a tester who installs the App
