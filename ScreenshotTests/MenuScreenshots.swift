@@ -118,7 +118,7 @@ final class MenuScreenshots: XCTestCase {
         menu.tap()
         let resume = app.buttons["Resume"]
         XCTAssertTrue(resume.waitForExistence(timeout: 5))
-        scrollMenu(to: app.buttons["Close Game"], in: app)
+        scrollMenu(to: app.buttons["Close Game"], openedFrom: menu, in: app)
         try expect(app.buttons["Close Game"], then: "menu-gameplay-landscape")
         app.buttons["Close Game"].tap()
         XCTAssertTrue(app.buttons["library.addMenu"].waitForExistence(timeout: 10))
@@ -138,7 +138,7 @@ final class MenuScreenshots: XCTestCase {
         try waitForPlay(menu, before: "play-landscape-gamepad")
         try expect(menu, then: "play-landscape-gamepad")
         menu.tap()
-        scrollMenu(to: app.buttons["Add to Library…"], in: app)
+        scrollMenu(to: app.buttons["Add to Library…"], openedFrom: menu, in: app)
         try expect(app.buttons["Add to Library…"], then: "menu-quick-play-landscape")
     }
 
@@ -181,19 +181,30 @@ final class MenuScreenshots: XCTestCase {
         try expect(app.navigationBars["Game Settings"], then: "settings-over-game-portrait")
     }
 
-    /// In landscape the game menu is taller than the screen, and a row past its bottom edge isn't
-    /// in the accessibility tree until the menu scrolls to it. This swipes the menu up from its
-    /// first row, Resume, until the item can be tapped, and lists the buttons shown when it can't.
-    private func scrollMenu(to item: XCUIElement, in app: XCUIApplication) {
-        let resume = app.buttons["Resume"]
-        _ = resume.waitForExistence(timeout: 5)
-        for _ in 0..<3 where !(item.exists && item.isHittable) {
-            guard resume.exists, resume.isHittable else { break }
-            resume.swipeUp()
+    /// In landscape the game menu is taller than the screen, and a row below its bottom edge isn't
+    /// in the accessibility tree until the menu scrolls to it. This lets the menu finish opening,
+    /// then swipes it up from its first row, Resume, until the item can be tapped, opening the menu
+    /// again from `button` if it has closed. A failure lists each step and the buttons on screen.
+    private func scrollMenu(to item: XCUIElement, openedFrom button: XCUIElement, in app: XCUIApplication) {
+        func state(_ element: XCUIElement) -> String {
+            element.exists ? (element.isHittable ? "shown" : "offscreen") : "missing"
         }
-        guard !(item.exists && item.isHittable) else { return }
+        let resume = app.buttons["Resume"]
+        var steps: [String] = []
+        for step in 1...4 {
+            _ = resume.waitForExistence(timeout: 5)
+            Thread.sleep(forTimeInterval: 1)
+            steps.append("\(step): item \(state(item)), Resume \(state(resume))")
+            if state(item) == "shown" { return }
+            if state(resume) == "shown" {
+                resume.swipeUp()
+            } else if !resume.exists, !item.exists, !app.buttons["Restart"].exists {
+                steps.append("reopened")
+                button.tap()
+            }
+        }
         let shown = app.buttons.allElementsBoundByIndex.map(\.label).joined(separator: ", ")
-        XCTFail("\(item.description) isn't on screen after scrolling the menu; buttons: \(shown)")
+        XCTFail("\(item.description) isn't on screen. Steps: \(steps.joined(separator: "; ")). Buttons: \(shown)")
     }
 
     private func waitForOrientation(in app: XCUIApplication, landscape: Bool) {
