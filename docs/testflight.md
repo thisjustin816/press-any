@@ -252,6 +252,34 @@ existing tag, and it uses only the workflow's own token, without the App Store C
 signing secrets. Its release doesn't start the Release workflow. If the tag is created but the
 release fails, publish the release from that tag by hand.
 
+### App Store What's New
+
+An App Store version's **What's New in This Version** text is the file
+`docs/app-store/whats-new/<version>.txt`, such as `1.1.txt` for version 1.1. Change it in a pull
+request like any other file. Write plain text, which the App Store shows as written: no Markdown,
+no tabs, no blank line at the start or end, and at most 4,000 characters. Put a heading on a line
+of its own and start a list item with `- `.
+
+After the pull request merges, open **Actions → What's New → Run workflow** on `main`
+(`.github/workflows/whats-new.yml`):
+
+1. Enter the version, such as `1.1`, and leave **apply** off. This previews: the run finds the iOS
+   version in App Store Connect and checks that it can still change. Its log and summary show the
+   version's state, the length of the current and new text, and the new text. It writes nothing.
+2. If the preview is right, run it again with **apply** on. The run writes the text to the
+   version's English (U.S.) localization. Submitting the version for review stays manual.
+
+Each run names the `main` commit its text came from. If the file changed on `main` between the
+preview and the apply, preview again.
+
+The run uses the three `APP_STORE_CONNECT_*` secrets from section 5 and starts only from `main`,
+so only reviewed text and the reviewed script reach the key. It writes nothing when the text
+breaks a rule above, when the version has no English (U.S.) localization, when more than one
+version or localization matches, or when the version is in any state other than Prepare for
+Submission, Rejected, Metadata Rejected, Developer Rejected or Invalid Binary. A live version, or
+one waiting for or in review, is never changed. When App Store Connect already has the same text,
+the run writes nothing.
+
 ## 8. Download screenshots for App Store Connect
 
 Open **Actions → Screenshots → Run workflow**. The defaults take the App Store listing set:
@@ -401,6 +429,7 @@ and the Paid Apps agreement is active; it doesn't need review first. Runs from X
 | TestFlight job is skipped | For `main`, the iOS build run on that push failed or was canceled by a newer push; otherwise dispatch it from a repository branch, not a tag |
 | Run succeeds but uploads nothing | The push changed only docs, workflows or Markdown since the previous upload; the run summary says so |
 | What to Test is empty | The Set What to Test step's log; Apple may not have finished processing within its wait |
+| What's New refuses the version | The version exists in App Store Connect for iOS, is in Prepare for Submission or a rejected state, and has an English (U.S.) localization |
 | `Missing ...` | The matching repository secret is present with the exact name |
 | OpenSSL rejects the certificate or key | `.cer` is Apple's original DER file; the private key matches the CSR used for it |
 | No matching provisioning profile / signing identity | Profile includes this certificate, is for `com.thisjustin816.PressAny`, and is App Store distribution; regenerate expired credentials |
