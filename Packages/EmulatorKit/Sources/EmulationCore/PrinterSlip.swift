@@ -33,7 +33,8 @@ public struct PrinterSlip: Identifiable, Equatable, Sendable {
     }
 }
 
-/// Keeps a bounded session feed. A zero bottom margin leaves the paper attached for another command.
+/// Keeps a bounded session feed. A zero bottom margin leaves the paper attached for another command,
+/// and a command's later copies stay on the paper of its first.
 public struct PrinterFeed: Sendable {
     public private(set) var slips: [PrinterSlip] = []
     public static let retention = 10
@@ -41,7 +42,8 @@ public struct PrinterFeed: Sendable {
     public init() {}
 
     public mutating func receive(_ output: PrinterOutput) throws {
-        if !startsNewRoll, let last = slips.last, last.acceptsContinuation, output.topMargin == 0 {
+        if !startsNewRoll, let last = slips.last,
+           output.followsCopy || (last.acceptsContinuation && output.topMargin == 0) {
             try slips[slips.count - 1].append(output)
         } else {
             slips.append(PrinterSlip(output: output))

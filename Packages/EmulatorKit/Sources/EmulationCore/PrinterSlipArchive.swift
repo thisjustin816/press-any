@@ -22,12 +22,14 @@ public enum PrinterSlipArchive {
         let exposure: UInt8
         /// One luminance byte per pixel, 160 to a row, in base64.
         let rows: Data
+        /// Written only for a later copy of a command, as true.
+        let followsCopy: Bool?
     }
 
     public static func encode(_ slip: PrinterSlip) throws -> Data {
         let file = File(version: version, sections: slip.sections.map {
             Section(height: $0.height, topMargin: $0.topMargin, bottomMargin: $0.bottomMargin,
-                    exposure: $0.exposure, rows: $0.luminance)
+                    exposure: $0.exposure, rows: $0.luminance, followsCopy: $0.followsCopy ? true : nil)
         })
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -41,7 +43,8 @@ public enum PrinterSlipArchive {
             do {
                 return try PrinterOutput(
                     height: section.height, luminance: section.rows, topMargin: section.topMargin,
-                    bottomMargin: section.bottomMargin, exposure: section.exposure
+                    bottomMargin: section.bottomMargin, exposure: section.exposure,
+                    followsCopy: section.followsCopy ?? false
                 )
             } catch {
                 throw ArchiveError.invalidRows

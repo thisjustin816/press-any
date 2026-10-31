@@ -1,6 +1,6 @@
 import Foundation
 
-/// One completed PRINT command. Margins are measured in eight-pixel feed rows.
+/// One printed copy of a PRINT command. Margins are measured in eight-pixel feed rows.
 public struct PrinterOutput: Equatable, Sendable {
     public static let width = 160
     public let height: Int
@@ -8,10 +8,14 @@ public struct PrinterOutput: Equatable, Sendable {
     public let topMargin: Int
     public let bottomMargin: Int
     public let exposure: UInt8
+    /// A later copy of the same command, fed on the same paper after the copy before it. The top
+    /// margin feeds once per command, so only the first copy has one.
+    public let followsCopy: Bool
 
     public enum ValidationError: Error { case invalidOutput }
 
-    public init(height: Int, luminance: Data, topMargin: Int, bottomMargin: Int, exposure: UInt8) throws {
+    public init(height: Int, luminance: Data, topMargin: Int, bottomMargin: Int, exposure: UInt8,
+                followsCopy: Bool = false) throws {
         guard (1...200).contains(height), luminance.count == Self.width * height,
               (0...15).contains(topMargin), (0...15).contains(bottomMargin), exposure <= 127 else {
             throw ValidationError.invalidOutput
@@ -21,6 +25,7 @@ public struct PrinterOutput: Equatable, Sendable {
         self.topMargin = topMargin
         self.bottomMargin = bottomMargin
         self.exposure = exposure
+        self.followsCopy = followsCopy
     }
 }
 

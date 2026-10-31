@@ -46,6 +46,7 @@ typedef struct {
 typedef struct {
     uint8_t luminance[SB_PRINTER_MAX_PIXELS];
     uint8_t height, top_margin, bottom_margin, exposure;
+    bool follows_copy;
 } SBPrinterBuffer;
 
 struct SBInstance {
@@ -89,7 +90,7 @@ struct SBInstance {
 
 // A finished copy, its pixels already through the print's palette: 0 white to 3 black.
 static void sb_printer_print(void *context, const uint8_t *pixels, uint8_t height,
-                             uint8_t top, uint8_t bottom, uint8_t exposure)
+                             uint8_t top, uint8_t bottom, uint8_t exposure, bool follows_copy)
 {
     SBInstance *instance = context;
     if (!instance || instance->previewing || !height || height > 200) return;
@@ -102,6 +103,7 @@ static void sb_printer_print(void *context, const uint8_t *pixels, uint8_t heigh
     output->top_margin = top;
     output->bottom_margin = bottom;
     output->exposure = exposure;
+    output->follows_copy = follows_copy;
     for (size_t i = 0; i < 160u * height; i++) output->luminance[i] = (uint8_t)(255u - pixels[i] * 85u);
 }
 
@@ -184,7 +186,7 @@ bool SBPopPrinterOutput(SBInstance *instance, SBPrinterOutput *output)
     instance->printer_readout = instance->printer_queue[0];
     SBPrinterBuffer *readout = &instance->printer_readout;
     *output = (SBPrinterOutput){readout->luminance, readout->height, readout->top_margin,
-                                readout->bottom_margin, readout->exposure};
+                                readout->bottom_margin, readout->exposure, readout->follows_copy};
     instance->printer_count--;
     memmove(instance->printer_queue, instance->printer_queue + 1,
             instance->printer_count * sizeof(instance->printer_queue[0]));

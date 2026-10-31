@@ -199,7 +199,10 @@ static void test_printer_firmware_rules(void)
     }
     assert(printing_frames > 503 && printing_frames < 515);
     unsigned copies = 0;
-    while (SBPopPrinterOutput(instance, &output)) copies++;
+    while (SBPopPrinterOutput(instance, &output)) {
+        assert(output.follows_copy == (copies > 0));
+        copies++;
+    }
     assert(copies == 9);
     SBDestroy(instance);
     free(rom);
@@ -240,7 +243,7 @@ void test_printer(void)
     assert(SBRefreshFrame(instance, &preview));
     assert(SBPopPrinterOutput(instance, &output));
     assert(output.height == 16 && output.top_margin == 2 && output.bottom_margin == 3);
-    assert(output.exposure == 64);
+    assert(output.exposure == 64 && !output.follows_copy);
     for (size_t i = 0; i < 160u * output.height; i++) {
         assert(output.luminance[i] == 255 - (i % 4) * 85);
     }

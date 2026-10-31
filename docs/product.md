@@ -1513,8 +1513,9 @@ running until that action is tapped. The ready banner stays until viewed or dism
 **View Prints** in the game menu also opens the preview over the paused game. Closing the preview leaves the game paused until Resume.
 
 The preview shows the session's latest 10 slips. Commands with no bottom feed margin
-join the next command when it has no top margin. A new top margin, a disconnect, a reset or a
-state load starts another slip. A slip is limited to 2,048 native feed rows; a longer print reports
+join the next command when it has no top margin. A command's copies stay on one slip, with its top
+margin before the first copy only and its bottom margin after each copy. A new top margin, a
+disconnect, a reset or a state load starts another slip. A slip is limited to 2,048 native feed rows; a longer print reports
 an error and keeps the paper already received. Later prints in the same delivery are retained.
 
 Each slip is also kept as soon as paper comes out, and kept again when the game feeds more paper
@@ -1574,7 +1575,8 @@ firmware has it start a new image. A print stays busy
 as long as the paper takes: about 0.8 seconds to the end of the first 16-row band, 1.1 to 1.3
 seconds for each band after it, and 0.16 seconds for each unit of margin. The top margin feeds
 once and the bottom margin after every copy, and each copy after the first feeds about 0.1
-seconds before its bands. Break lets the band being printed finish or stops the paper at its
+seconds before its bands. The slip draws margins only, so that short feed, like the feed before
+every copy's first band, adds no paper. Break lets the band being printed finish or stops the paper at its
 next feed step, and the bands printed by then come out. The printer keeps its own time, so a
 Super Game Boy's faster clock does not shorten it. A game that breaks these rules fails here as
 it would on a printer. The timings come from the printer's firmware run in an emulator; how far

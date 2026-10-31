@@ -36,9 +36,12 @@ typedef struct {
 
 typedef void (*SBPEventCallback)(void *context, const SBPEvent *event);
 
-// One printed copy: pixel values 0-3 after the print's palette, 160 pixels a row.
+// One printed copy: pixel values 0-3 after the print's palette, 160 pixels a row. The top margin
+// feeds once per Print, so a copy that follows another copy of the same Print, on the same paper,
+// reports `follows_copy` and no top margin.
 typedef void (*SBPPrintCallback)(void *context, const uint8_t *pixels, uint8_t height,
-                                 uint8_t top_margin, uint8_t bottom_margin, uint8_t exposure);
+                                 uint8_t top_margin, uint8_t bottom_margin, uint8_t exposure,
+                                 bool follows_copy);
 
 struct SBGameBoyPrinter {
     SBPPrintCallback on_print;
