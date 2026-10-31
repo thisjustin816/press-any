@@ -16,7 +16,8 @@ roadmap; its final scope and timing are not fixed.
   capture; Playtiles landscape controls and compatibility checks; and the fixes listed below.
   ZIP globals attachment, grouped Build menus and list overflow cues are built for this release,
   as are the older-version save warning and the copy kept before switching Builds.
-  Game Boy Printer emulation with printed-slip preview and image export is planned for v1.1.
+  Game Boy Printer emulation is built for this release, with a printed-slip preview, image
+  export, a Printer Log and prints kept in each Game's Captures. Its device checks remain pending.
 - **v2.0:** the larger unfinished roadmap, including save migration, broader multi-asset
   import, documents, rewind, skins, sync and catalog services. Partial rows describe what
   is already built and what remains for this target.
@@ -59,10 +60,12 @@ GameShark cheats.
 Game Boy Camera, including Photo! DX color capture, is built for v1.1. Its physical-camera checks
 remain pending in `docs/mvp-verification.md`.
 
-Game Boy Printer emulation is the next prioritized play feature for v1.1, with preview, save and
-share. The renderer produces thermal-paper slips with torn edges and a shadow, and Light, Dark or
-Transparent backgrounds. The printed pixel grid and feed spacing are preserved. Core and session
-integration are implemented; Apple preview and export checks remain pending.
+Game Boy Printer emulation is built for v1.1, with a preview, Save and Share, a Printer Log and
+prints kept in each Game's Captures. The renderer produces thermal-paper slips with torn edges and
+a shadow, on Transparent, Light, Dark, Wood, Printer, Game Artwork or Custom backgrounds, the last
+four with Plus. The printed pixel grid and feed spacing are preserved. Its device checks remain
+pending in `docs/mvp-verification.md`. A multi-copy Print draws its top margin on every copy, which
+the "Copies feed their top margin once" row tracks.
 
 v1.0 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
 The v1.1 artwork work adds automatic Libretro lookup after import and a reviewed manual
