@@ -35,7 +35,8 @@ struct LibraryView: View {
     @State private var quickPlayToResume: QuickPlaySession?
     @State private var screenshotGameID: UUID?
     @State private var screenshotBuildInfo: Build?
-    @State private var screenshotBuildInfoShown = false
+    @State private var screenshotPrint: CapturedPrint?
+    @State private var screenshotSheetShown = false
     @State private var gameToRename: Game?
     @State private var renameTitle = ""
     /// Drag handles in the list, for the Manual sort.
@@ -235,11 +236,10 @@ struct LibraryView: View {
             }
             .sheet(item: $screenshotBuildInfo) { build in
                 BuildTechnicalInfoView(build: build, container: container)
-                    .onAppear {
-                        guard !screenshotBuildInfoShown else { return }
-                        screenshotBuildInfoShown = true
-                        ScreenshotScene.log(ScreenshotScene.readyMessage)
-                    }
+                    .onAppear(perform: screenshotSheetAppeared)
+            }
+            .sheet(item: $screenshotPrint) { item in
+                screenshotPrintPreview(item).onAppear(perform: screenshotSheetAppeared)
             }
             // Quick Play promotion adds Games from sheets this screen doesn't own.
             .onReceive(NotificationCenter.default.publisher(for: .libraryDidChange)) { _ in model.reload() }
@@ -478,7 +478,10 @@ struct LibraryView: View {
             screenshotGameID = ScreenshotScene.build(romFile: file, in: container)?.gameID
         case .buildInfo(let file):
             guard let build = ScreenshotScene.build(romFile: file, in: container) else { return }
-            await showScreenshotBuildInfo(build)
+            await showScreenshotSheet { screenshotBuildInfo = $0 ? build : nil }
+        case .printPreview(let file):
+            guard let seeded = ScreenshotSeeder.seedPrint(romFile: file, in: container) else { return }
+            await showScreenshotSheet { screenshotPrint = $0 ? seeded : nil }
         case .importReview(let file):
             openImportReview(at: ScreenshotScene.romURL(file))
         default:
@@ -487,16 +490,33 @@ struct LibraryView: View {
     }
 
     /// A sheet asked for while the library is still appearing can be dropped, leaving the library
-    /// on screen, so Technical Info is asked for again until it shows.
-    private func showScreenshotBuildInfo(_ build: Build) async {
+    /// on screen, so a scene's sheet is asked for again until it shows. `present` asks for the
+    /// sheet when passed true and withdraws it when passed false.
+    private func showScreenshotSheet(_ present: (Bool) -> Void) async {
         for _ in 0..<5 {
-            screenshotBuildInfo = build
+            present(true)
             try? await Task.sleep(for: .seconds(2))
-            guard !screenshotBuildInfoShown, !Task.isCancelled else { return }
-            ScreenshotScene.log("Technical Info didn't show; asking again.")
-            screenshotBuildInfo = nil
+            guard !screenshotSheetShown, !Task.isCancelled else { return }
+            ScreenshotScene.log("The scene's sheet didn't show; asking again.")
+            present(false)
             try? await Task.sleep(for: .milliseconds(500))
         }
+    }
+
+    /// The print preview as a Game's Captures opens it.
+    private func screenshotPrintPreview(_ item: CapturedPrint) -> PrinterPreview {
+        let game = try? container.repositories.games.fetchGame(id: item.capture.gameID)
+        return PrinterPreview(
+            slips: [item.slip], plus: container.plus, gameArtworkURL: game.flatMap { container.artworkURL(for: $0) },
+            keeping: .captured, onDiscard: { _ in try? container.printCaptures.delete(captureID: item.id) }
+        )
+    }
+
+    /// Reports the scene ready the first time its sheet shows.
+    private func screenshotSheetAppeared() {
+        guard !screenshotSheetShown else { return }
+        screenshotSheetShown = true
+        ScreenshotScene.log(ScreenshotScene.readyMessage)
     }
 
     private func handleImportSelection(_ result: Result<[URL], Error>) {

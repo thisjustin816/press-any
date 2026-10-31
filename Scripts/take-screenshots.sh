@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Captures the library, game, Build info, gameplay, import review, and Quick Play screens on an
-# iOS simulator, seeded from TestROMs/. Needs macOS with Xcode, after `make bootstrap`.
+# Captures the library, game, Build info, print preview, gameplay, import review, and Quick Play
+# screens on an iOS simulator, seeded from TestROMs/. Needs macOS with Xcode, after
+# `make bootstrap`.
 #
 #   Scripts/take-screenshots.sh [ROMS] [OUTPUT_DIR]
 #
 # ROMS is `hero` (the default), `all`, or a comma-separated list of manifest tags and filenames.
-# Optional environment: SHOTS (`listing`, the default: the nine App Store screenshots, numbered in
+# Optional environment: SHOTS (`listing`, the default: the ten App Store screenshots, numbered in
 # listing order; `summary`: one of each screen and every menu, for review; `every-rom`: summary
 # plus each ROM's game, Technical Info and gameplay), DEVICE (simulator name), APPEARANCE (light or dark),
 # TEXT_SIZE (`default`, or a `simctl ui content_size` value such as
@@ -141,10 +142,13 @@ if shots == "listing" and game:
 if shots == "listing":
     # Captured in a practical order (the first launch seeds the library, so it goes first and
     # waits longest), then renumbered in App Store order: the first three show in search
-    # results, so they carry gameplay, the library and a Game's Builds and saves.
+    # results, so they carry gameplay, the library and a Game's Builds and saves, and a print
+    # on the Printer background follows them.
     shot("library", 8, "library")
     shot(f"game:{game_rom}", 4, "game")
     shot(f"build-info:{first(lambda r: 'gbstudio' in r['tags']) or names[0]}", 4, "build-info", ready="ready")
+    # After the game shot, so the print it seeds never shows in a Game's Captures there.
+    shot(f"print:{gbc}", 5, "print", "-GrantPlus YES", ready="ready")
     # With a button script, each gameplay shot waits for it to play, then for its own wait.
     play = lambda scene, name, flags="-": shot(scene, waits.get(name, 1) if script else 10, name, flags,
                                                "input" if script else "-")
@@ -158,8 +162,8 @@ if shots == "listing":
     if script:
         lines.append(f"input\t{script}")
         lines.append("waits\t" + " ".join(f"{n}={waits.get(n, 1):g}" for n in ("play-landscape", "play-landscape-gamepad")))
-    lines.append("order\t" + " ".join(["play", "library", "game", "play-landscape", "import-review",
-        "play-lcd", "build-info", "quick-play", "play-landscape-gamepad"]))
+    lines.append("order\t" + " ".join(["play", "library", "game", "print", "play-landscape",
+        "import-review", "play-lcd", "build-info", "quick-play", "play-landscape-gamepad"]))
     print("\n".join(lines))
     sys.exit()
 # The first launch seeds the library, so it waits longest.
@@ -189,6 +193,7 @@ playtiles_rom = first(lambda r: r["system"] == "GBC") or names[0]
 shot(f"play:{playtiles_rom}", 10, "playtiles", "-ScreenshotLayout playtiles")
 shot(f"play:{playtiles_rom}", 10, "playtiles-gamepad", "-ScreenshotLayout playtiles -ScreenshotGamepad YES")
 shot(f"import:unimported/{import_rom}", 4, "import-review")
+shot(f"print:{gbc}", 5, "print", "-GrantPlus YES", ready="ready")
 shot(f"quick-play:{names[0]}", 10, "quick-play")
 shot(f"quick-play-info:{names[0]}", 4, "quick-play-info")
 print("\n".join(lines))
