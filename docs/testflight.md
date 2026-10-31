@@ -265,18 +265,19 @@ Open **Actions → Screenshots → Run workflow**. The defaults take the App Sto
 | text_size | default |
 | import_rom | zgb-dmg.gb |
 
-The **listing** set is nine screenshots, numbered in the order to upload them. The first three
+The **listing** set is ten screenshots, numbered in the order to upload them. The first three
 appear in search results.
 
 1. Gameplay
 2. The library
 3. A Game with its Builds and saves
-4. Gameplay in landscape
-5. Import Review
-6. Gameplay with the LCD effect
-7. Technical Info, showing what a game was made with
-8. Quick Play
-9. Gameplay in landscape with a controller connected
+4. A print on the Printer background, a picture drawn for the shot and kept in a Game's Captures
+5. Gameplay in landscape
+6. Import Review
+7. Gameplay with the LCD effect
+8. Technical Info, showing what a game was made with
+9. Quick Play
+10. Gameplay in landscape with a controller connected
 
 **summary** takes every screen and menu for checking layouts, and **every-rom** adds each ROM's
 own screens. `gbdk450-badsum.gb` as the import ROM shows Import Review's checksum warning.

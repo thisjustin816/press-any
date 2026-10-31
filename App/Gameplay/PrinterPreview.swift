@@ -35,6 +35,8 @@ final class PrinterSheetController<Content: View>: UIHostingController<Content>,
 
 enum PrinterPreviewBackground: String, CaseIterable, Sendable {
     case transparent, light, dark, wood, printer, gameArtwork, custom
+    /// Where the last background chosen is kept.
+    static let storageKey = "printer.background"
     var title: String {
         switch self {
         case .transparent: "Transparent"
@@ -101,7 +103,7 @@ struct PrinterPreview: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selected = 0
     /// The last background chosen, kept between previews and games.
-    @AppStorage("printer.background") private var chosen = PrinterPreviewBackground.transparent
+    @AppStorage(PrinterPreviewBackground.storageKey) private var chosen = PrinterPreviewBackground.transparent
     @State private var thumbnails: [PrinterPreviewBackground: UIImage] = [:]
     @State private var customVersion = 0
     @State private var png: Data?

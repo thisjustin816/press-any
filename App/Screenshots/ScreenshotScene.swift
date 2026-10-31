@@ -1,3 +1,4 @@
+import EmulationCore
 import EmulatorApplication
 import EmulatorDomain
 import Foundation
@@ -14,6 +15,7 @@ enum ScreenshotScene: Equatable {
     case game(romFile: String)
     case buildInfo(romFile: String)
     case importReview(romFile: String)
+    case printPreview(romFile: String)
     case play(romFile: String)
     case quickPlay(romFile: String)
     case quickPlayInfo(romFile: String)
@@ -78,10 +80,10 @@ enum ScreenshotScene: Equatable {
         #endif
     }()
 
-    /// Logged once a scene that takes time to settle is ready: Technical Info is showing, or
-    /// gameplay's button script has played. `Scripts/take-screenshots.sh` waits for it before the
-    /// scene's own wait. Gameplay also puts it in the game menu button's accessibility value, where
-    /// the screenshot UI tests look for it.
+    /// Logged once a scene that takes time to settle is ready: Technical Info or the print preview
+    /// is showing, or gameplay's button script has played. `Scripts/take-screenshots.sh` waits for
+    /// it before the scene's own wait. Gameplay also puts it in the game menu button's
+    /// accessibility value, where the screenshot UI tests look for it.
     static let readyMessage = "Screenshot scene ready"
     /// Logged with the reason when the button script can't be read, which stops the screenshot run.
     static let inputErrorMessage = "Couldn't read -ScreenshotInput"
@@ -121,6 +123,7 @@ enum ScreenshotScene: Equatable {
         case ("game", let file?): self = .game(romFile: file)
         case ("build-info", let file?): self = .buildInfo(romFile: file)
         case ("import", let file?): self = .importReview(romFile: file)
+        case ("print", let file?): self = .printPreview(romFile: file)
         case ("play", let file?): self = .play(romFile: file)
         case ("quick-play", let file?): self = .quickPlay(romFile: file)
         case ("quick-play-info", let file?): self = .quickPlayInfo(romFile: file)
@@ -206,7 +209,8 @@ struct ScreenshotManifest: Decodable {
 
 /// Fills an empty library from the fixture directory before the first screen appears. Each ROM
 /// becomes a Game named after its manifest entry, except a patch's target, which joins its
-/// source's Game as another Build. A patch whose target wasn't copied makes a patched Build.
+/// source's Game as another Build. A patch whose target wasn't copied makes a patched Build. The
+/// `print` scene also has it add a print to a Game's Captures.
 @MainActor
 enum ScreenshotSeeder {
     static func seedIfRequested(_ container: AppContainer) {
@@ -217,6 +221,85 @@ enum ScreenshotSeeder {
         } catch {
             ScreenshotScene.log("Screenshot seeding failed: \(error)")
         }
+    }
+
+    /// The print the `print` scene shows: a picture drawn by `drawnSlip()`, saved to the Game's
+    /// Captures as a print from the Build when the Game has none, then read back as Captures reads
+    /// it. The scene picks the Printer background, which shows only with Plus.
+    static func seedPrint(romFile: String, in container: AppContainer) -> CapturedPrint? {
+        guard let build = ScreenshotScene.build(romFile: romFile, in: container) else {
+            ScreenshotScene.log("Couldn't seed a print: \(romFile) wasn't seeded.")
+            return nil
+        }
+        let prints = container.printCaptures
+        do {
+            if try prints.captures(gameID: build.gameID).isEmpty {
+                try prints.save(drawnSlip(), gameID: build.gameID, buildID: build.id, saveProfileID: nil)
+                ScreenshotScene.log("Seeded a print")
+            }
+            UserDefaults.standard.set(PrinterPreviewBackground.printer.rawValue, forKey: PrinterPreviewBackground.storageKey)
+            guard let capture = try prints.captures(gameID: build.gameID).first,
+                  let seeded = CapturedPrint.read(capture, from: prints) else {
+                ScreenshotScene.log("Couldn't seed a print: the saved print can't be read.")
+                return nil
+            }
+            return seeded
+        } catch {
+            ScreenshotScene.log("Couldn't seed a print: \(error)")
+            return nil
+        }
+    }
+
+    /// A 160 by 96 picture in the printer's four shades, drawn here so the listing shows no game's
+    /// art: a D-pad, two round buttons and two small ones on a striped ground, in a frame.
+    private static func drawnSlip() throws -> PrinterSlip {
+        let width = PrinterOutput.width, height = 96
+        let (white, light, dark, black): (UInt8, UInt8, UInt8, UInt8) = (0xFF, 0xAA, 0x55, 0x00)
+        var pixels = [UInt8](repeating: white, count: width * height)
+        func paint(_ shade: UInt8, where inside: (Int, Int) -> Bool) {
+            for y in 0..<height {
+                for x in 0..<width where inside(x, y) { pixels[y * width + x] = shade }
+            }
+        }
+        func inFrame(_ x: Int, _ y: Int, inset: Int) -> Bool {
+            x >= inset && y >= inset && x < width - inset && y < height - inset
+        }
+        func dPad(_ x: Int, _ y: Int, inset: Int = 0) -> Bool {
+            let dx = abs(x - 46), dy = abs(y - 48)
+            return (dx < 8 - inset && dy < 24 - inset) || (dx < 24 - inset && dy < 8 - inset)
+        }
+        func disc(_ x: Int, _ y: Int, center: (x: Int, y: Int), radius: Int) -> Bool {
+            (x - center.x) * (x - center.x) + (y - center.y) * (y - center.y) < radius * radius
+        }
+        func pill(_ x: Int, _ y: Int, centerX: Int) -> Bool {
+            let dx = abs(x - centerX), dy = abs(y - 82)
+            return dx < 7 && dy < 3 && dx + dy < 8
+        }
+        let buttons = [(x: 108, y: 58), (x: 132, y: 40)]
+        let pills = [70, 90]
+
+        paint(light) { x, y in (x + y) % 6 == 0 }
+        paint(black) { x, y in !inFrame(x, y, inset: 3) }
+        paint(dark) { x, y in inFrame(x, y, inset: 6) && !inFrame(x, y, inset: 7) }
+        // Shadows down and to the right, then each control's outline, face and lit top-left edge.
+        paint(dark) { x, y in
+            dPad(x - 3, y - 3) || buttons.contains { disc(x - 3, y - 3, center: $0, radius: 12) }
+                || pills.contains { pill(x - 2, y - 2, centerX: $0) }
+        }
+        paint(black) { x, y in
+            dPad(x, y) || buttons.contains { disc(x, y, center: $0, radius: 12) } || pills.contains { pill(x, y, centerX: $0) }
+        }
+        paint(dark) { x, y in dPad(x, y, inset: 2) || buttons.contains { disc(x, y, center: $0, radius: 10) } }
+        paint(light) { x, y in
+            (dPad(x, y, inset: 2) && !dPad(x - 2, y - 2, inset: 2))
+                || buttons.contains { disc(x, y, center: $0, radius: 10) && !disc(x - 3, y - 3, center: $0, radius: 10) }
+        }
+        paint(black) { x, y in disc(x, y, center: (46, 48), radius: 4) }
+        paint(white) { x, y in buttons.contains { disc(x, y, center: ($0.x - 5, $0.y - 5), radius: 3) } }
+
+        return PrinterSlip(output: try PrinterOutput(
+            height: height, luminance: Data(pixels), topMargin: 1, bottomMargin: 3, exposure: 64
+        ))
     }
 
     private static func seed(_ container: AppContainer, manifest: ScreenshotManifest) throws {
