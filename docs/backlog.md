@@ -7,9 +7,9 @@ roadmap; its final scope and timing are not fixed.
 
 ## Release scope
 
-- **v1.0:** the initial App Store candidate, build 110 at `3c4a76f`, submitted for review.
-  `app-store-review/1.0-build-110` identifies that candidate. The stable release follows
-  publication on the App Store. Submission tags follow `docs/testflight.md`.
+- **v1.0:** published on the App Store: build 110 at `3c4a76f`. Its submission tag is
+  `app-store-review/1.0-build-110`, and its stable release, `v1.0.0`, is at the same commit.
+  Submission and stable release tags follow `docs/testflight.md`.
 - **v1.1:** work completed after build 110. This includes revised branding and app icons;
   the Model setting and hardware-family checks; automatic artwork previews, missing-artwork
   review, provenance and grouped Library settings; Game Boy Camera with Photo! DX color
@@ -30,7 +30,7 @@ in its table row; this list records its v1.1 updates.
 
 ## Suggested order
 
-The v1.1 release follows the submitted v1.0 candidate. The larger open roadmap targets v2.0.
+The v1.1 release follows v1.0, build 110. The larger open roadmap targets v2.0.
 
 The MVP is complete and working. Its device checklist remains a regression record.
 
@@ -86,7 +86,7 @@ Open items in each area are in the table, finished ones on the line under it.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | TestFlight then App Store release path (signing, rights, disclosures gate) | v1.0 | TestFlight upload on every main build; a GitHub pre-release adds its build to the public group and submits it for Beta App Review, with notes since the previous release (docs/testflight.md); the initial app and Plus purchase are submitted for App Store review; approval and final release remain manual |
+| done | TestFlight then App Store release path (signing, rights, disclosures gate) | v1.0 | TestFlight upload on every main build; a GitHub pre-release adds its build to the public group and submits it for Beta App Review, with notes since the previous release (docs/testflight.md); v1.0, submitted with the Plus purchase, is published on the App Store; App Store submission stays manual, and Tag release publishes the stable GitHub release at the published build's commit |
 | done | Timed States, a Plus feature | v1.0 | Off or every 1/2/5/10 minutes of running wall time, inherited at App/System/Game/Build; shares Auto State history and pinned retention, stops without Plus, and excludes Quick Play. Clock, persistence, backup and app tests cover it; device check in docs/mvp-verification.md |
 | done | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1.0 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; the first game shows "Tap Press Any for the menu" once. v1.0 has nothing to opt into: crash reports and usage counts (v2.0) bring their own opt-in screens, and Developer Mode its introductions |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v2.0 | none |

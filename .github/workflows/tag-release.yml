@@ -1,0 +1,153 @@
+name: Tag release
+run-name: Tag release ${{ inputs.tag }}
+
+# Publishes a stable release at a TestFlight upload chosen by commit, such as the build the App
+# Store published after main has moved on. Release's stable option takes main's newest upload
+# instead. A release made with the workflow's own token doesn't start other workflows, so Release
+# doesn't run for it.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable version tag, such as v1.0.0
+        type: string
+        required: true
+      commit:
+        description: Full 40-character commit of the published build (git rev-parse 'testflight/<build>^{commit}')
+        type: string
+        required: true
+      notes:
+        description: Release description. Leave empty for the changes since the previous stable release
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# Shared with Release, which also creates version tags.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag the build and publish the release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Refuse a branch other than main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run Tag release from main; another branch's copy of this workflow isn't reviewed."
+          exit 1
+      - name: Check the inputs
+        env:
+          TAG: ${{ inputs.tag }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          if [[ ! $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::The tag must be a stable version such as v1.0.0, with no suffix."
+            exit 1
+          fi
+          if [[ ! $COMMIT =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::The commit must be a full 40-character lowercase SHA."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          # History and tags, to check the commit and write the notes.
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: Scripts
+      # Every check runs before anything is written.
+      - name: Check the commit and tag
+        id: check
+        env:
+          TAG: ${{ inputs.tag }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+          git cat-file -e "$COMMIT^{commit}" 2>/dev/null || fail "$COMMIT isn't a commit in this repository."
+          git merge-base --is-ancestor "$COMMIT" origin/main || fail "$COMMIT isn't on main."
+          upload="$(git tag --points-at "$COMMIT" --list 'testflight/*' | sort -V | tail -n 1)"
+          [[ -n $upload ]] || fail "$COMMIT has no testflight/<build> tag, so no TestFlight build came from it."
+          build="${upload#testflight/}"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            fail "$TAG already exists at $(git rev-parse "$TAG^{commit}"). Tags are never moved."
+          fi
+          released="$(git tag --points-at "$COMMIT" --list 'v*' | grep -v -- - || true)"
+          [[ -z $released ]] || fail "Build $build is already released as $released."
+
+          version="$(git show "$COMMIT:project.yml" | sed -n 's/^ *MARKETING_VERSION: *"\{0,1\}\([0-9.]*\)"\{0,1\} *$/\1/p' | head -n 1)"
+          full="$version"
+          if [[ $full =~ ^[0-9]+\.[0-9]+$ ]]; then full="$full.0"; fi
+          if [[ ! $full =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            fail "Couldn't read MARKETING_VERSION from project.yml at $COMMIT."
+          fi
+          [[ $TAG == "v$full" ]] || fail "Build $build is version $version, so its tag is v$full, not $TAG."
+
+          review="app-store-review/$version-build-$build"
+          if git rev-parse -q --verify "refs/tags/$review" >/dev/null; then
+            reviewed="$(git rev-parse "$review^{commit}")"
+            [[ $reviewed == "$COMMIT" ]] || fail "$review is at $reviewed, not $COMMIT."
+            review_note="$review is at the same commit."
+          else
+            echo "::warning::There's no $review tag, so build $build may not have been submitted for App Store review."
+            review_note="There's no $review tag."
+          fi
+
+          # A release for an older version than one already out doesn't become Latest.
+          newest="$({ git tag --list 'v*' | grep -v -- - || true; echo "$TAG"; } | sort -V | tail -n 1)"
+          latest=false
+          if [[ $newest == "$TAG" ]]; then latest=true; fi
+
+          {
+            echo "version=$version"
+            echo "build=$build"
+            echo "latest=$latest"
+            echo "review_note=$review_note"
+          } >>"$GITHUB_OUTPUT"
+          echo "Build $build ($version) at $COMMIT is on main and has no stable tag yet."
+      - name: Write the description
+        env:
+          TAG: ${{ inputs.tag }}
+          COMMIT: ${{ inputs.commit }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          if [[ -n $NOTES ]]; then
+            printf '%s\n' "$NOTES" >"$RUNNER_TEMP/notes.txt"
+          else
+            # A local tag for the notes script to count from; it isn't pushed.
+            git tag "$TAG" "$COMMIT"
+            ./Scripts/testflight-release.py notes --tag "$TAG" --output "$RUNNER_TEMP/notes.txt" >/dev/null
+          fi
+      - name: Create the tag and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          COMMIT: ${{ inputs.commit }}
+          VERSION: ${{ steps.check.outputs.version }}
+          BUILD: ${{ steps.check.outputs.build }}
+          LATEST: ${{ steps.check.outputs.latest }}
+          REVIEW_NOTE: ${{ steps.check.outputs.review_note }}
+        run: |
+          tag_object="$(gh api "repos/$GITHUB_REPOSITORY/git/tags" -f "tag=$TAG" -f "object=$COMMIT" -f type=commit \
+            -f "message=Released on the App Store: $VERSION ($BUILD)" --jq .sha)"
+          # GitHub refuses to create a ref that exists, so a tag made since the checkout isn't moved.
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$tag_object" >/dev/null
+          url="$(gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/notes.txt" "--latest=$LATEST")" || {
+            echo "::error::$TAG is created, but its release isn't. Publish the release from the existing tag by hand."
+            exit 1
+          }
+          {
+            echo "Tagged build $BUILD ($VERSION) at \`$COMMIT\` as \`$TAG\` and published the release: $url"
+            echo
+            echo "$REVIEW_NOTE"
+          } >>"$GITHUB_STEP_SUMMARY"
