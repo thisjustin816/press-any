@@ -12,6 +12,13 @@ final class PhysicalControllerMonitorTests: XCTestCase {
         XCTAssertTrue(profiles.contains { $0["ProfileName"] == "ExtendedGamepad" })
     }
 
+    func testTheAppIsAGameThatIsEligibleForGameMode() throws {
+        let bundle = Bundle(for: GameplayViewController.self)
+        XCTAssertEqual(bundle.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String, "public.app-category.games")
+        XCTAssertEqual(bundle.object(forInfoDictionaryKey: "LSSupportsGameMode") as? Bool, true)
+        XCTAssertEqual(bundle.object(forInfoDictionaryKey: "GCSupportsGameMode") as? Bool, true)
+    }
+
     func testTheControllersAAndBButtonsAreGameBoyAAndB() throws {
         try assertInput(.init(a: true)) { $0.buttonA.setValue(1) }
         try assertInput(.init(b: true)) { $0.buttonB.setValue(1) }

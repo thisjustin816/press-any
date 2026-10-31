@@ -828,6 +828,10 @@ claims reliability from just an old ROM, old save and new ROM.
 - **Screen lock.** While the game runs, the phone doesn't dim or lock on its own, even when play
   goes untouched for a while or comes from a controller. Paused, closed, or stopped by an error,
   Auto-Lock works as usual.
+- **Game Mode.** The app is categorized as a game and declares support for Game Mode
+  (`LSSupportsGameMode`, with `GCSupportsGameMode` for iOS 18.0 to 18.5), which minimizes background
+  activity on iPhones running iOS 18 or later. Declaring it makes the app eligible; iOS decides when
+  to turn it on, so Press Any never turns it on itself or shows a setting for it.
 - **Crash recovery.** During library play, one hidden `SaveStateKind.crashRecovery` checkpoint
   for the exact Build and Save Profile refreshes about once a minute of play, replacing the
   previous one in the existing state storage. A successful Auto State or clean close removes it.
