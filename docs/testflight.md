@@ -151,7 +151,7 @@ group with **automatic distribution** turned on receives each processed build; o
 groups get a build once it is added to them in App Store Connect.
 
 The marketing version comes from `MARKETING_VERSION` in `project.yml` (currently
-`1.0`), and TestFlight shows it with the build number beside it, as `1.0 (57)`.
+`1.1`), and TestFlight shows it with the build number beside it, as `1.0 (57)`.
 The version changes only when that value is edited. The build number is the
 workflow's run number; a retried run adds its attempt, as `57.2`, because Apple
 refuses a second binary with the same build number. Builds uploaded before this
@@ -185,7 +185,7 @@ Set up once:
 
 Then open **Actions → Release → Run workflow** on `main` and choose **beta**. The run tags
 `main`'s newest TestFlight upload with the next beta tag for the version in `project.yml`, such as
-`v1.0.0-beta.1` and then `v1.0.0-beta.2`, publishes the pre-release, adds the build to the group
+`v1.1.0-beta.1` and then `v1.1.0-beta.2`, publishes the pre-release, adds the build to the group
 and submits it for Beta App Review. It refuses a build that's already released. Testers get it once
 Apple approves it: the first build of a version can take a day, and later ones are often quicker.
 
@@ -198,12 +198,12 @@ and mark it **Set as a pre-release**. Its build is the nearest `testflight/<buil
 before its commit, and an empty description gets one written for it. A release whose commit isn't
 on `main` is refused, since it would run that commit's scripts with the API key.
 
-Choosing **stable** tags the newest upload `v<version>`, such as `v1.0.0`, with the changes since
+Choosing **stable** tags the newest upload `v<version>`, such as `v1.1.0`, with the changes since
 the previous stable release as its description. Use it after App Store publication, when that
-newest upload is the published candidate. If development has advanced, publish the stable GitHub
-release at the submitted candidate's exact commit instead. A version is released as stable once;
-raise `MARKETING_VERSION` for the next. App Store submission remains manual. The earlier
-`v0.1.0-beta.N` tags stay; beta numbering starts again at 1 for each version.
+newest upload is the published candidate. If `main` has newer uploads, use Tag release instead
+(below). A version is released as stable once; raise `MARKETING_VERSION` for the next. App Store
+submission remains manual. The earlier `v0.1.0-beta.N` tags stay; beta numbering starts again at 1
+for each version.
 
 ### App Store submission tags
 
@@ -226,11 +226,31 @@ for its new build number; retain earlier submission tags and never move them. If
 exists, check its commit rather than recreating it. Creating this tag triggers neither Release
 nor TestFlight and does not publish a GitHub release.
 
-After the owner confirms App Store publication, create the stable version tag and GitHub release
-at that same candidate commit, such as `v1.0.0` for 1.0 (110). Check the peeled commit of the stable
-and submission tags matches before publishing. A GitHub release at the exact candidate commit
-uses the existing Release workflow, even if `main` has newer TestFlight builds. The backlog uses
-the submitted candidate as the boundary between that release and subsequent development.
+After the owner confirms App Store publication, publish the stable release at that same candidate
+commit, such as `v1.0.0` for 1.0 (110), even if `main` has newer TestFlight builds. Tag release
+(below) does this. The backlog uses the submitted candidate as the boundary between that release
+and subsequent development.
+
+### Stable release at an earlier build
+
+The **Tag release** workflow (`.github/workflows/tag-release.yml`) creates an annotated stable tag
+and a published GitHub release at a commit you choose. Use it when the App Store build is older
+than `main`'s newest upload, which Release's **stable** option would tag. Open **Actions → Tag
+release → Run workflow** on `main`:
+
+| Input | Value |
+|---|---|
+| tag | The stable version, such as `v1.0.0` |
+| commit | The full commit of the published build, from `git rev-parse 'testflight/110^{commit}'` |
+| notes | The release description. Left empty, it's the changes since the previous stable release |
+
+Before it writes anything, the run checks that the commit is on `main` and has a
+`testflight/<build>` tag, that the tag is new, and that it matches `MARKETING_VERSION` in
+`project.yml` at that commit. If the build has an `app-store-review/<version>-build-<build>` tag,
+that tag must be at the same commit, and the run summary names it. The run never moves an
+existing tag, and it uses only the workflow's own token, without the App Store Connect key or
+signing secrets. Its release doesn't start the Release workflow. If the tag is created but the
+release fails, publish the release from that tag by hand.
 
 ## 8. Download screenshots for App Store Connect
 

@@ -21,9 +21,9 @@ change. There is no separate decision log.
 
 ## Platform and releases
 
-The submitted v1.0 App Store candidate is build 110, identified by
-`app-store-review/1.0-build-110`. Development after that candidate targets v1.1. The larger
-unfinished roadmap targets v2.0 tentatively; `docs/backlog.md` separates these scopes.
+v1.0 is published on the App Store: build 110, tagged `app-store-review/1.0-build-110` and
+`v1.0.0`. Development after that build targets v1.1. The larger unfinished roadmap targets v2.0
+tentatively; `docs/backlog.md` separates these scopes.
 Game Boy Printer emulation with printed-slip image export is prioritized for v1.1.
 
 - iOS 17.4 or later, iPhone first. iPad keeps working but gets no special design until later.

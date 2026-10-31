@@ -2,7 +2,8 @@
 
 Workflows live in `.github/workflows/`. Every action is pinned to a commit SHA, every
 workflow runs with `contents: read`, and a fork pull request gets the same read-only token.
-TestFlight's tag job and Release's tag/description jobs use `contents: write` without signing secrets.
+TestFlight's tag job, Release's tag/description jobs and Tag release's job use `contents: write`
+without signing secrets.
 CI and iOS build skip a pull request or push that changes only `docs/` or Markdown files, so docs
 merge without waiting on runners. Pull-request checks use no secrets. The TestFlight workflow,
 which runs for pushes to `main` and when started by hand, uses repository secrets for Apple
@@ -21,6 +22,7 @@ signing and upload, as described in `docs/testflight.md`.
 | `screenshots.yml` | Simulator screenshots (manual only) | Selects iPhone 17 Pro (default, verified 1206 × 2622 PNGs for App Store Connect's 6.1-inch and 6.3-inch slot), iPhone 17 Pro Max (verified 1320 × 2868, 6.9-inch) or iPhone 14 Plus (verified 1284 × 2778, 6.5-inch). Creates the simulator if needed, seeds the library from `TestROMs/`, captures the app, menu, and GB/GBC LCD 1×/3× effects, and uploads PNGs and logs as light/dark artifacts. See `docs/testflight.md` for downloading and uploading selected PNGs |
 | `testflight.yml` | Archive and upload to TestFlight | Automatic for each push to `main` once iOS build and CI pass on it, skipping docs- and workflow-only pushes; manual from any repository branch. Sets What to Test from the commits since the previous upload and tags `main` uploads `testflight/<build>`. `make bootstrap`, then `Scripts/upload-testflight.sh`: validates the distribution certificate and App Store profile, signs a Release archive in a temporary keychain, verifies its privacy manifest, exports an IPA and uploads it with an App Store Connect team API key. Needs the six secrets in `docs/testflight.md`; uploads share one queue across branches |
 | `release.yml` | Publish a release (manual dispatch or published release) | Manual dispatch on main tags its newest TestFlight upload and publishes a beta or stable GitHub release. A release published by hand gets an empty description filled from the changes since the previous release. Tagging and description jobs have write access without signing secrets. A pre-release on `main` adds its TestFlight build, the nearest `testflight/<build>` tag, to the group in the `TESTFLIGHT_PUBLIC_GROUP` variable and submits it for Beta App Review with the description as What to Test, using `Scripts/testflight-release.py`. A stable release names the build to submit to the App Store by hand |
+| `tag-release.yml` | Tag the build and publish the release (manual only, from `main`) | Creates an annotated stable tag and a published GitHub release at a given commit, for an App Store build older than `main`'s newest upload. Before writing, checks that the commit is on `main` with a `testflight/<build>` tag, that the tag is new and matches `MARKETING_VERSION` at that commit, and that any `app-store-review/<version>-build-<build>` tag for the build is at the same commit. Uses only the workflow token with `contents: write`; see `docs/testflight.md` |
 
 The Linux Swift jobs run in the `swift:6.1.2-noble` image, whose tag is not pinned by digest.
 The image has no SQLite headers, so each Swift job installs `libsqlite3-dev` first; GRDB needs
