@@ -252,7 +252,7 @@ public struct LibraryDeletionOperations: Sendable {
 
     /// Keeps the Game's newest `keepCount` unpinned prints and moves the rest to Recently Deleted
     /// together.
-    public func cleanCaptures(gameID: UUID, keepCount: Int = Capture.keepCount) throws {
+    public func cleanCaptures(gameID: UUID, keepCount: Int) throws {
         guard let captures else { return }
         let unpinned = try captures.fetchCaptures(gameID: gameID).filter { !$0.isPinned }
         let expired = Array(unpinned.dropFirst(max(0, keepCount)))

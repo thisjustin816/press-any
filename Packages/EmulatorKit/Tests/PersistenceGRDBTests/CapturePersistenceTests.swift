@@ -71,6 +71,94 @@ import Testing
         #expect(!(try prints.captures(gameID: gameID)).contains { $0.id == pinned.id })
     }
 
+    @Test func withoutPrintHistoryAGameKeepsItsLatestTenAndTheRestCanBeRestored() throws {
+        let library = try RestoreLibrary()
+        defer { library.remove() }
+        let prints = library.prints(history: PrintHistorySwitch(false))
+        let deletion = library.deletion(prints: true)
+        let gameID = library.rom.game.id
+        let pinned = try #require(try prints.save(Self.slip(rows: 8), gameID: gameID, buildID: nil, saveProfileID: nil))
+        try prints.setPinned(true, captureID: pinned.id)
+        var saved: [Capture] = []
+        for _ in 0..<12 {
+            saved.append(try #require(try prints.save(Self.slip(rows: 8), gameID: gameID, buildID: nil, saveProfileID: nil)))
+        }
+
+        let kept = try prints.captures(gameID: gameID)
+        #expect(kept.filter { !$0.isPinned }.map(\.id) == saved.suffix(10).reversed().map(\.id))
+        #expect(kept.contains { $0.id == pinned.id })
+        let cleaned = try deletion.recentlyDeleted()
+        #expect(cleaned.allSatisfy { $0.kind == .capture && $0.title == "Cleaned-up Prints" })
+        #expect(Set(cleaned.flatMap(\.records.captureIDs)) == Set(saved.prefix(2).map(\.id)))
+
+        try deletion.restore(deletionID: try #require(cleaned.first).id)
+        #expect(try prints.captures(gameID: gameID).count == 12, "a restored print stays until the next print")
+    }
+
+    @Test(arguments: KeepPrints.allCases)
+    func withPrintHistoryAGameKeepsTheChosenNumber(keep: KeepPrints) throws {
+        let library = try RestoreLibrary()
+        defer { library.remove() }
+        try library.repos.settings.set(keep, key: SettingKey.keepPrints.rawValue, scope: .app)
+        let prints = library.prints()
+        let gameID = library.rom.game.id
+        #expect(prints.keptPrints() == keep.rawValue)
+        for _ in 0..<(keep.rawValue + 2) {
+            try prints.save(Self.slip(rows: 8), gameID: gameID, buildID: nil, saveProfileID: nil)
+        }
+        #expect(try prints.captures(gameID: gameID).count == keep.rawValue)
+    }
+
+    @Test func losingPrintHistoryRemovesNothingUntilTheNextPrintAndKeepsTheChoice() throws {
+        let library = try RestoreLibrary()
+        defer { library.remove() }
+        try library.repos.settings.set(KeepPrints.oneHundred, key: SettingKey.keepPrints.rawValue, scope: .app)
+        let history = PrintHistorySwitch(true)
+        let prints = library.prints(history: history)
+        let deletion = library.deletion(prints: true)
+        let gameID = library.rom.game.id
+        var saved: [Capture] = []
+        for _ in 0..<12 {
+            saved.append(try #require(try prints.save(Self.slip(rows: 8), gameID: gameID, buildID: nil, saveProfileID: nil)))
+        }
+        try prints.setPinned(true, captureID: saved[0].id)
+
+        history.set(false)
+        #expect(prints.keptPrints() == KeepPrints.withoutHistory)
+        #expect(try prints.captures(gameID: gameID).count == 12, "losing print history removes nothing by itself")
+        #expect(try deletion.recentlyDeleted().isEmpty)
+
+        let newest = try #require(try prints.save(Self.slip(rows: 8), gameID: gameID, buildID: nil, saveProfileID: nil))
+        let unpinned = try prints.captures(gameID: gameID).filter { !$0.isPinned }
+        #expect(unpinned.count == 10 && unpinned.first?.id == newest.id)
+        #expect(try prints.captures(gameID: gameID).contains { $0.id == saved[0].id }, "pinned prints stay")
+        let cleaned = try deletion.recentlyDeleted()
+        #expect(cleaned.count == 1 && cleaned.first?.title == "Cleaned-up Prints")
+        #expect(Set(cleaned.first?.records.captureIDs ?? []) == Set([saved[1].id, saved[2].id]))
+        #expect(try SettingsResolver(store: library.repos.settings).appValue(KeepPrints.self, key: .keepPrints) == .oneHundred,
+            "the stored choice is kept")
+
+        history.set(true)
+        #expect(prints.keptPrints() == 100)
+        try deletion.restore(deletionID: try #require(cleaned.first).id)
+        try prints.save(Self.slip(rows: 8), gameID: gameID, buildID: nil, saveProfileID: nil)
+        #expect(try prints.captures(gameID: gameID).filter { !$0.isPinned }.count == 13)
+    }
+
+    @Test func anUnreadableKeepPrintsSettingKeepsEveryPrint() throws {
+        let library = try RestoreLibrary()
+        defer { library.remove() }
+        try library.repos.settings.setValueJSON("invalid", key: SettingKey.keepPrints.rawValue, scope: .app)
+        let prints = library.prints()
+        let gameID = library.rom.game.id
+        #expect(prints.keptPrints() == nil)
+        for _ in 0..<(KeepPrints.defaultValue.rawValue + 1) {
+            try prints.save(Self.slip(rows: 8), gameID: gameID, buildID: nil, saveProfileID: nil)
+        }
+        #expect(try prints.captures(gameID: gameID).count == KeepPrints.defaultValue.rawValue + 1)
+        #expect(library.prints(history: PrintHistorySwitch(false)).keptPrints() == KeepPrints.withoutHistory)
+    }
+
     @Test func aDeletedPrintComesBackOrIsPurgedWithItsFile() throws {
         let library = try RestoreLibrary()
         defer { library.remove() }
@@ -218,6 +306,17 @@ final class SteppingClock: @unchecked Sendable {
     func next() -> Date { lock.withLock { seconds += 1; return Date(timeIntervalSince1970: seconds) } }
 }
 
+/// Whether a Game keeps print history, changed between prints as an entitlement would be.
+final class PrintHistorySwitch: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Bool
+
+    init(_ isOn: Bool) { value = isOn }
+
+    var isOn: Bool { lock.withLock { value } }
+    func set(_ isOn: Bool) { lock.withLock { value = isOn } }
+}
+
 extension RestoreLibrary {
     func deletion(prints: Bool) -> LibraryDeletionOperations {
         LibraryDeletionOperations(games: repos.games, builds: repos.builds, profiles: repos.saveProfiles,
@@ -225,8 +324,9 @@ extension RestoreLibrary {
             deletions: repos.deletions, assetStore: store, transactions: repos.transactions)
     }
 
-    func prints(clock: SteppingClock = SteppingClock()) -> PrintCaptures {
+    func prints(clock: SteppingClock = SteppingClock(), history: PrintHistorySwitch = PrintHistorySwitch(true)) -> PrintCaptures {
         PrintCaptures(captures: repos.captures, assets: repos.assets, assetStore: store,
-            transactions: repos.transactions, deletion: deletion(prints: true), now: clock.next)
+            transactions: repos.transactions, deletion: deletion(prints: true),
+            settings: SettingsResolver(store: repos.settings), keepsPrintHistory: { history.isOn }, now: clock.next)
     }
 }

@@ -224,6 +224,7 @@ struct PlayingSettingsPage: View {
     @State private var nameNewStates: Bool
     @State private var keepSaveStates: KeepSaveStates
     @State private var keepAutoStates: KeepAutoStates
+    @State private var keepPrints: KeepPrints
     @State private var timedStates: TimedStates
     @State private var hardwareModel: HardwareModel
     @State private var gameBoyCamera: GameBoyCamera
@@ -236,6 +237,7 @@ struct PlayingSettingsPage: View {
         _nameNewStates = State(initialValue: storage.value(Bool.self, .nameNewStates) ?? false)
         _keepSaveStates = State(initialValue: storage.value(KeepSaveStates.self, .keepSaveStates) ?? .all)
         _keepAutoStates = State(initialValue: storage.value(KeepAutoStates.self, .keepAutoStates) ?? .five)
+        _keepPrints = State(initialValue: storage.value(KeepPrints.self, .keepPrints) ?? .defaultValue)
         _timedStates = State(initialValue: storage.value(TimedStates.self, .timedStates) ?? .off)
         _soundMode = State(initialValue: storage.value(SoundMode.self, .soundMode) ?? .followSilentSwitch)
         _fastForwardSpeed = State(initialValue: storage.value(FastForwardSpeed.self, .fastForwardSpeed) ?? .x2)
@@ -305,6 +307,17 @@ struct PlayingSettingsPage: View {
             }
 
             Section {
+                keepCountControl(
+                    "Keep Prints", selection: $keepPrints, choices: KeepPrints.allCases, name: { $0.displayName },
+                    kept: plus.gate.keptPrints(keepPrints), isLocked: plus.gate.isLocked(keepPrints.needsPlus)
+                )
+            } header: {
+                Text("Game Boy Printer")
+            } footer: {
+                Text(Self.printerFooter(plus.gate))
+            }
+
+            Section {
                 Picker("Slots", selection: $saveStateSlots) {
                     ForEach(SaveStateSlots.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
@@ -312,7 +325,10 @@ struct PlayingSettingsPage: View {
                 Picker("Keep Save States", selection: $keepSaveStates) {
                     ForEach(KeepSaveStates.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
-                keepAutoStatesControl
+                keepCountControl(
+                    "Keep Auto States", selection: $keepAutoStates, choices: KeepAutoStates.allCases, name: { $0.displayName },
+                    kept: plus.gate.keptAutoStates(keepAutoStates), isLocked: plus.gate.isLocked(keepAutoStates.needsPlus)
+                )
                 timedStatesControl
             } header: {
                 Text("Save States")
@@ -332,6 +348,7 @@ struct PlayingSettingsPage: View {
         .onChange(of: nameNewStates) { _, newValue in save(newValue, .nameNewStates) }
         .onChange(of: keepSaveStates) { _, newValue in save(newValue, .keepSaveStates) }
         .onChange(of: keepAutoStates) { _, newValue in save(newValue, .keepAutoStates) }
+        .onChange(of: keepPrints) { _, newValue in save(newValue, .keepPrints) }
         .onChange(of: timedStates) { _, newValue in save(newValue, .timedStates) }
         .onChange(of: soundMode) { _, newValue in save(newValue, .soundMode) }
         .onChange(of: fastForwardSpeed) { _, newValue in save(newValue, .fastForwardSpeed) }
@@ -424,29 +441,33 @@ struct PlayingSettingsPage: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    /// Without Plus the newest Auto State is kept, so the row shows 1 and each number opens the
-    /// Plus screen. The stored choice is left alone for when Plus returns.
-    @ViewBuilder private var keepAutoStatesControl: some View {
-        if plus.gate.isLocked(keepAutoStates.needsPlus) {
+    /// A number to keep whose every choice needs Plus. Without Plus the row shows the number kept
+    /// instead, and each choice opens the Plus screen. The stored choice is left alone for when
+    /// Plus returns.
+    @ViewBuilder private func keepCountControl<Choice: Hashable>(
+        _ title: String, selection: Binding<Choice>, choices: [Choice], name: @escaping (Choice) -> String,
+        kept: Int, isLocked: Bool
+    ) -> some View {
+        if isLocked {
             Menu {
-                ForEach(KeepAutoStates.allCases, id: \.self) { keep in
-                    Button(plus.gate.label(keep.displayName, needsPlus: keep.needsPlus)) { showsPlus = true }
+                ForEach(choices, id: \.self) { choice in
+                    Button(plus.gate.label(name(choice), needsPlus: true)) { showsPlus = true }
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Text("Keep Auto States")
+                    Text(title)
                         .foregroundStyle(Color.primary)
                     PlusBadge()
                     Spacer()
-                    Text(String(plus.gate.keptAutoStates(keepAutoStates)))
+                    Text(String(kept))
                         .foregroundStyle(Color.secondary)
                 }
             }
-            .accessibilityLabel("Keep Auto States")
-            .accessibilityValue("\(plus.gate.keptAutoStates(keepAutoStates)), Plus feature")
+            .accessibilityLabel(title)
+            .accessibilityValue("\(kept), Plus feature")
         } else {
-            Picker("Keep Auto States", selection: $keepAutoStates) {
-                ForEach(KeepAutoStates.allCases, id: \.self) { Text($0.displayName).tag($0) }
+            Picker(title, selection: selection) {
+                ForEach(choices, id: \.self) { Text(name($0)).tag($0) }
             }
         }
     }
@@ -471,6 +492,12 @@ struct PlayingSettingsPage: View {
         let cleanup = "Pinned states are never cleaned up. Cleaned-up save states go to Recently Deleted. Auto States are removed permanently. Changes apply after the next save of that kind. Timed States uses running play time. Pausing restarts its interval."
         guard gate.isLocked(KeepAutoStates.five.needsPlus) else { return cleanup }
         return "Without Plus, \(AppBrand.displayName) keeps your latest Auto State. " + cleanup
+    }
+
+    static func printerFooter(_ gate: PlusGate) -> String {
+        let cleanup = "Keep Prints is how many prints each Game keeps in its Captures. After the next print, older ones go to Recently Deleted. Pinned prints are never cleaned up."
+        guard gate.isLocked(KeepPrints.defaultValue.needsPlus) else { return cleanup }
+        return "Without Plus, each Game keeps its latest \(KeepPrints.withoutHistory) prints. " + cleanup
     }
 
     private func save(_ value: some Encodable, _ key: SettingKey) {

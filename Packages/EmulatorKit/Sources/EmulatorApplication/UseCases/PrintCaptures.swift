@@ -4,13 +4,18 @@ import Foundation
 
 /// Keeps prints in their Game's Captures. A print is saved as soon as paper comes out, and saved
 /// again under the same ID when the game feeds more paper onto it. Each new print may push the
-/// Game's oldest unpinned print past `Capture.keepCount` into Recently Deleted.
+/// Game's oldest unpinned prints past the number it keeps into Recently Deleted: the Keep Prints
+/// setting while `keepsPrintHistory` holds, and `KeepPrints.withoutHistory` otherwise. Only a new
+/// print or an unpin prunes, so losing print history or changing the setting removes nothing by
+/// itself.
 public struct PrintCaptures: Sendable {
     private let captures: any CaptureRepository
     private let assets: any ManagedAssetRepository
     private let assetStore: any AssetStore
     private let transactions: any LibraryTransactionRunner
     private let deletion: LibraryDeletionOperations
+    private let settings: SettingsResolver?
+    private let keepsPrintHistory: @Sendable () -> Bool
     private let now: @Sendable () -> Date
 
     public init(
@@ -19,6 +24,8 @@ public struct PrintCaptures: Sendable {
         assetStore: any AssetStore,
         transactions: any LibraryTransactionRunner,
         deletion: LibraryDeletionOperations,
+        settings: SettingsResolver? = nil,
+        keepsPrintHistory: @escaping @Sendable () -> Bool = { true },
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.captures = captures
@@ -26,6 +33,8 @@ public struct PrintCaptures: Sendable {
         self.assetStore = assetStore
         self.transactions = transactions
         self.deletion = deletion
+        self.settings = settings
+        self.keepsPrintHistory = keepsPrintHistory
         self.now = now
     }
 
@@ -77,7 +86,7 @@ public struct PrintCaptures: Sendable {
             try? assetStore.removeIfExists(url)
             throw error
         }
-        try deletion.cleanCaptures(gameID: gameID)
+        try cleanUp(gameID: gameID)
         return capture
     }
 
@@ -105,6 +114,22 @@ public struct PrintCaptures: Sendable {
         guard capture.isPinned != isPinned else { return }
         capture.isPinned = isPinned
         try captures.updateCapture(capture)
-        if !isPinned { try deletion.cleanCaptures(gameID: capture.gameID) }
+        if !isPinned { try cleanUp(gameID: capture.gameID) }
+    }
+
+    /// How many unpinned prints a Game keeps, or nil when the Keep Prints setting can't be read,
+    /// which keeps them all until it can.
+    public func keptPrints() -> Int? {
+        guard keepsPrintHistory() else { return KeepPrints.withoutHistory }
+        do {
+            return (try settings?.appValue(KeepPrints.self, key: .keepPrints) ?? .defaultValue).rawValue
+        } catch {
+            return nil
+        }
+    }
+
+    private func cleanUp(gameID: UUID) throws {
+        guard let keepCount = keptPrints() else { return }
+        try deletion.cleanCaptures(gameID: gameID, keepCount: keepCount)
     }
 }

@@ -58,7 +58,7 @@ final class AppContainer {
     let coreRegistry: CoreRegistry
     let settingsResolver: SettingsResolver
     let launchHistory: SessionLaunchHistory
-    /// Plus ownership. LCD filters and Auto State history follow it; nothing else here does.
+    /// Plus ownership. LCD filters, Model, Timed States, and Auto State and print history follow it.
     let plus: PlusStore
     /// Files an import or the running game is using, which cache trimming and Check Library Files
     /// leave alone.
@@ -167,12 +167,15 @@ final class AppContainer {
             transactions: repositories.transactions,
             settings: SettingsResolver(store: repositories.settings)
         )
+        let ownership = self.plus.ownership
         printCaptures = PrintCaptures(
             captures: repositories.captures,
             assets: repositories.assets,
             assetStore: fileStore,
             transactions: repositories.transactions,
-            deletion: libraryDeletion
+            deletion: libraryDeletion,
+            settings: SettingsResolver(store: repositories.settings),
+            keepsPrintHistory: { ownership.keepsHistory }
         )
         duplicateSaveProfile = DuplicateSaveProfile(
             profiles: repositories.saveProfiles,
@@ -531,7 +534,7 @@ final class AppContainer {
             deletion: libraryDeletion,
             inFlight: inFlightFiles,
             cheats: repositories.cheats,
-            keepsAutoStateHistory: { ownership.keepsAutoStateHistory },
+            keepsAutoStateHistory: { ownership.keepsHistory },
             writesTimedStates: { ownership.isOwned },
             choosesHardwareModel: { ownership.appliesHardwareModel }
         )

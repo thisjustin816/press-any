@@ -19,7 +19,8 @@ struct SaveStateSlotsAndRetentionTests {
         #expect(try resolver.appValue(Bool.self, key: .nameNewStates) == nil)
         #expect(try resolver.appValue(KeepSaveStates.self, key: .keepSaveStates) == nil)
         #expect(try resolver.appValue(KeepAutoStates.self, key: .keepAutoStates) == nil)
-        for key in [SettingKey.saveStateSlots, .nameNewStates, .keepSaveStates, .keepAutoStates] {
+        #expect(try resolver.appValue(KeepPrints.self, key: .keepPrints) == nil)
+        for key in [SettingKey.saveStateSlots, .nameNewStates, .keepSaveStates, .keepAutoStates, .keepPrints] {
             try f.settings.setValueJSON("10", key: key.rawValue, scope: .build(f.context.buildID))
             #expect(try resolver.resolve(key: key.rawValue, system: .gameBoy, gameID: f.context.gameID, buildID: f.context.buildID) == nil)
             #expect(throws: SettingsResolverError.self) {

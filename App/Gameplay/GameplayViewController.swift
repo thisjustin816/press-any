@@ -104,6 +104,8 @@ final class GameplayViewController: UIViewController {
     var prints: GameplayPrints?
     /// Opens the Game's Captures from the Prints sheet, in library play.
     var makeCapturesView: (() -> AnyView)?
+    /// Plus ownership, for the Prints sheet's backgrounds. Without it they show as without Plus.
+    var plus: PlusStore?
 
     init(
         runtime: any GameplayRuntime,
@@ -452,7 +454,9 @@ final class GameplayViewController: UIViewController {
         guard presentedViewController == nil, !printerFeed.slips.isEmpty else { return }
         setCoveredBySheet(true)
         printerStatus.dismissReadyPrint()
-        var preview = PrinterPreview(slips: printerFeed.slips, gameArtworkURL: artworkTarget?.currentFileURL())
+        var preview = PrinterPreview(
+            slips: printerFeed.slips, plus: plus ?? .fixed(ownsPlus: false), gameArtworkURL: artworkTarget?.currentFileURL()
+        )
         preview.keeping = prints == nil ? .session : prints?.gameID == nil ? .quickPlay : .captures
         preview.makeCapturesView = makeCapturesView
         preview.onDiscard = { [weak self] slip in self?.discardPrint(slip) }
