@@ -33,6 +33,18 @@ final class GameplayPresetSettingsTests: XCTestCase {
         )
     }
 
+    func testAllDisplayFiltersAreSelectableOnEveryHardwareModel() {
+        for hardware in HardwareModel.allCases {
+            XCTAssertEqual(DisplayFilter.selectable(for: hardware), DisplayFilter.allCases, "\(hardware)")
+        }
+    }
+
+    func testCRTTreatmentsUseSignalBasedDisplayNames() {
+        XCTAssertEqual(DisplayFilter.crt240p.displayName, "CRT 240p")
+        XCTAssertEqual(DisplayFilter.gameCubeTV.displayName, "CRT 480i")
+        XCTAssertEqual(DisplayFilter.gameCubeTV.rawValue, "gameCubeTV", "persisted identifier must stay compatible")
+    }
+
     func testApplyingPresetAndManualChangeDeriveAccurateCustomAndAccurateAgain() throws {
         let store = InMemorySettingsStore()
         let presets = GameplayPresetSettings(store: store)
