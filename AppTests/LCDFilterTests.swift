@@ -60,20 +60,49 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
-    func testTVFiltersUseDistinctBeamStrengths() throws {
-        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice(), "TV filter rendering requires Metal")
+    func testCRTFiltersShowVisibleStructureInBothSamplingModes() throws {
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice(), "CRT rendering requires Metal")
         let library = try device.makeDefaultLibrary(bundle: Bundle(for: GameplayViewController.self))
         for fragment in ["gameplayTextureFragment", "gameplaySharpFragment"] {
-            let crt = try render(.crt240p, fragment: fragment, device: device, library: library)
-            let tv = try render(.gameCubeTV, fragment: fragment, device: device, library: library)
-            let edge = pixel(12, 1)
-            let center = pixel(12, 12)
-            let crtDrop = Int(crt[center]) - Int(crt[edge])
-            let tvDrop = Int(tv[center]) - Int(tv[edge])
-            XCTAssertGreaterThan(crtDrop, 0, "CRT 240p must show a visible beam profile")
-            XCTAssertGreaterThan(tvDrop, 0, "GameCube TV keeps a restrained beam profile")
-            XCTAssertGreaterThan(crtDrop, tvDrop, "CRT 240p must be stronger than GameCube TV")
-            XCTAssertNotEqual(crt, tv)
+            let off = try render(
+                .off, fragment: fragment, device: device, library: library,
+                sourceWidth: 8, sourceHeight: 8
+            )
+            let crt240 = try render(
+                .crt240p, fragment: fragment, device: device, library: library,
+                sourceWidth: 8, sourceHeight: 8
+            )
+            let crt480 = try render(
+                .gameCubeTV, fragment: fragment, device: device, library: library,
+                sourceWidth: 8, sourceHeight: 8
+            )
+
+            XCTAssertNotEqual(crt240, off, "CRT 240p must visibly differ from Off")
+            XCTAssertNotEqual(crt480, off, "CRT 480i must visibly differ from Off")
+            XCTAssertNotEqual(crt240, crt480, "240p and 480i CRT tuning must remain distinct")
+
+            let center240 = columnBrightness(crt240, x: 12, yRange: 5..<19)
+            let center480 = columnBrightness(crt480, x: 12, yRange: 5..<19)
+            XCTAssertGreaterThan(
+                (center240.max() ?? 0) - (center240.min() ?? 0), 20,
+                "CRT 240p must have visible scanline/beam variation"
+            )
+            XCTAssertGreaterThan(
+                (center480.max() ?? 0) - (center480.min() ?? 0), 12,
+                "CRT 480i must retain visible denser scanline/beam variation"
+            )
+
+            let center = brightestPixel(crt240, xRange: 8..<16, yRange: 8..<16)
+            XCTAssertLessThan(
+                brightness(crt240, at: pixel(1, 1)), center,
+                "curved CRT glass must darken/feather the raster near its corners"
+            )
+            let maskIndex = pixel(12, 12)
+            let maskChannels = [crt240[maskIndex], crt240[maskIndex + 1], crt240[maskIndex + 2]]
+            XCTAssertGreaterThan(
+                Int(maskChannels.max() ?? 0) - Int(maskChannels.min() ?? 0), 8,
+                "CRT output must include a visible RGB phosphor mask"
+            )
         }
     }
 
@@ -104,10 +133,23 @@ final class LCDFilterTests: XCTestCase {
 
     private func pixel(_ x: Int, _ y: Int) -> Int { (y * 24 + x) * 4 }
 
-    /// Renders 1×1 gray `frames`, newest first, scaled to 24×24 by `fragment`.
+    private func brightness(_ pixels: [UInt8], at index: Int) -> Int {
+        Int(pixels[index]) + Int(pixels[index + 1]) + Int(pixels[index + 2])
+    }
+
+    private func columnBrightness(_ pixels: [UInt8], x: Int, yRange: Range<Int>) -> [Int] {
+        yRange.map { brightness(pixels, at: pixel(x, $0)) }
+    }
+
+    private func brightestPixel(_ pixels: [UInt8], xRange: Range<Int>, yRange: Range<Int>) -> Int {
+        yRange.flatMap { y in xRange.map { x in brightness(pixels, at: pixel(x, y)) } }.max() ?? 0
+    }
+
+    /// Renders solid gray `frames`, newest first, scaled to 24×24 by `fragment`.
     private func render(
         _ filter: DisplayFilter, fragment: String, device: any MTLDevice, library: any MTLLibrary,
-        frames: [UInt8] = [255], weights: SIMD4<Float> = SIMD4(1, 0, 0, 0)
+        frames: [UInt8] = [255], weights: SIMD4<Float> = SIMD4(1, 0, 0, 0),
+        sourceWidth: Int = 1, sourceHeight: Int = 1
     ) throws -> [UInt8] {
         let descriptor = MTLRenderPipelineDescriptor()
         descriptor.vertexFunction = try XCTUnwrap(library.makeFunction(name: "gameplayFullscreenVertex"))
@@ -115,15 +157,22 @@ final class LCDFilterTests: XCTestCase {
         descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
         let pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
         let sourceDescriptor = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: .bgra8Unorm, width: 1, height: 1, mipmapped: false
+            pixelFormat: .bgra8Unorm, width: sourceWidth, height: sourceHeight, mipmapped: false
         )
         sourceDescriptor.storageMode = .shared
         sourceDescriptor.usage = .shaderRead
         let sources = try frames.map { gray in
             let source = try XCTUnwrap(device.makeTexture(descriptor: sourceDescriptor))
-            let color: [UInt8] = [gray, gray, gray, 255]
+            var color = [UInt8]()
+            color.reserveCapacity(sourceWidth * sourceHeight * 4)
+            for _ in 0..<(sourceWidth * sourceHeight) {
+                color.append(contentsOf: [gray, gray, gray, 255])
+            }
             color.withUnsafeBytes {
-                source.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: $0.baseAddress!, bytesPerRow: 4)
+                source.replace(
+                    region: MTLRegionMake2D(0, 0, sourceWidth, sourceHeight), mipmapLevel: 0,
+                    withBytes: $0.baseAddress!, bytesPerRow: sourceWidth * 4
+                )
             }
             return source
         }
