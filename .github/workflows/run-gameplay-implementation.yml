@@ -54,3 +54,5 @@ jobs:
           git add App AppTests Packages/EmulatorKit README.md docs
           git commit -m "Add gameplay presets and TV display filters"
           git push origin HEAD:feature/gameplay-presets
+
+# Temporary branch-only workspace; removed before the pull request is opened.
