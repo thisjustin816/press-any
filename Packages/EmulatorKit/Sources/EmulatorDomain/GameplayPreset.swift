@@ -7,17 +7,9 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
     case crt240p
     case gameCubeTV
 
-    public static let handheldCases: [Self] = [.off, .lcd1x, .lcd3x]
-
-    /// Filters that make sense for the resolved hardware model. The older LCD effects stay
-    /// available on television-output models so saved custom setups remain editable.
-    public static func selectable(for hardware: HardwareModel) -> [Self] {
-        switch hardware {
-        case .superGameBoy, .superGameBoy2: [.off, .crt240p, .lcd1x, .lcd3x]
-        case .gameBoyPlayer: [.off, .gameCubeTV, .lcd1x, .lcd3x]
-        case .automatic, .gameBoy, .gameBoyPocket, .gameBoyColor, .gameBoyAdvance: handheldCases
-        }
-    }
+    /// Every display treatment is available on every hardware model. Built-in presets still choose
+    /// the historically appropriate treatment; manual choices are intentionally unrestricted.
+    public static func selectable(for _: HardwareModel) -> [Self] { allCases }
 
     public var displayName: String {
         switch self {
