@@ -53,10 +53,10 @@ final class GameplayPresetSettingsTests: XCTestCase {
         let presets = GameplayPresetSettings(store: store)
         let gameID = UUID(), buildID = UUID()
 
-        try presets.apply(.raw, at: .app, hardware: .gameBoyColor)
+        try presets.apply(.clean, at: .app, hardware: .gameBoyColor)
         XCTAssertEqual(
             try presets.resolvedPreset(system: .gameBoyColor, gameID: gameID, buildID: buildID, hardware: .gameBoyColor),
-            .raw
+            .clean
         )
 
         try presets.apply(.accurate, at: .game(gameID), hardware: .gameBoyColor)
@@ -68,7 +68,7 @@ final class GameplayPresetSettingsTests: XCTestCase {
         try presets.reset(at: .game(gameID))
         XCTAssertEqual(
             try presets.resolvedPreset(system: .gameBoyColor, gameID: gameID, buildID: buildID, hardware: .gameBoyColor),
-            .raw
+            .clean
         )
     }
 
@@ -79,16 +79,23 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(try presets.resolvedPreset(system: .gameBoyColor, hardware: .gameBoyColor), .custom)
     }
 
-    func testRawRemovesDisplayAndInputAuthenticityEffects() throws {
-        let gbc = try XCTUnwrap(GameplayPresetValues.values(for: .raw, hardware: .gameBoyColor))
+    func testCleanRemovesDisplayAndInputAuthenticityEffects() throws {
+        let gbc = try XCTUnwrap(GameplayPresetValues.values(for: .clean, hardware: .gameBoyColor))
         XCTAssertEqual(gbc.displayFilter, .off)
         XCTAssertEqual(gbc.colorCorrection, .off)
         XCTAssertEqual(gbc.frameBlending, .off)
         XCTAssertFalse(gbc.buttonBounce)
 
-        let gbp = try XCTUnwrap(GameplayPresetValues.values(for: .raw, hardware: .gameBoyPlayer))
+        let gbp = try XCTUnwrap(GameplayPresetValues.values(for: .clean, hardware: .gameBoyPlayer))
         XCTAssertEqual(gbp.displayFilter, .off)
         XCTAssertEqual(gbp.advanceColors, .gameBoyColor)
         XCTAssertFalse(gbp.buttonBounce)
+    }
+
+    func testControlledKeysAreExactlyTheCustomGameplayEditor() {
+        XCTAssertEqual(
+            GameplayPresetSettings.controlledKeys,
+            [.lcdFilter, .frameBlending, .buttonBounce, .colorCorrection, .dmgPalette, .advanceColors]
+        )
     }
 }
