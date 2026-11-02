@@ -6,6 +6,7 @@ on:
       - feature/gameplay-presets
     paths:
       - Scripts/implement-gameplay-presets.py
+      - Scripts/fixup-gameplay-implementation.py
       - .github/workflows/run-gameplay-implementation.yml
 
 permissions:
@@ -22,6 +23,8 @@ jobs:
           submodules: true
       - name: Install build tools
         run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev bison cmake g++ git libpng-dev make pkg-config python3
+      - name: Align implementation script with current sources
+        run: python3 Scripts/fixup-gameplay-implementation.py
       - name: Apply implementation
         run: python3 Scripts/implement-gameplay-presets.py
       - name: Build RGBDS and open boot ROMs
