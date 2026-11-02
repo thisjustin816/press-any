@@ -68,7 +68,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(AutoResumePolicy.allCases.map(\.rawValue), ["always", "ask", "never"])
         XCTAssertEqual(SoundMode.allCases.map(\.rawValue), ["followSilentSwitch", "alwaysOn", "alwaysOff"])
         XCTAssertEqual(TouchHaptics.allCases.map(\.rawValue), ["off", "light", "medium"])
-        XCTAssertEqual(LCDFilter.allCases.map(\.rawValue), ["off", "lcd1x", "lcd3x"])
+        XCTAssertEqual(LCDFilter.allCases.map(\.rawValue), ["off", "lcd1x", "lcd3x", "crt240p", "gameCubeTV"])
         XCTAssertEqual(FastForwardSpeed.allCases.map(\.rawValue), ["x1_5", "x2", "x3", "x4", "x8", "unlimited"])
         XCTAssertEqual(FastForwardAudio.allCases.map(\.rawValue), ["muted", "accelerated"])
         XCTAssertEqual(FastForwardSpeed.allCases.map(\.multiplier), [1.5, 2, 3, 4, 8, nil])
