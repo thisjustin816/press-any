@@ -107,7 +107,7 @@ struct ScopedSettingsView: View {
         } header: {
             Text("Gameplay")
         } footer: {
-            Text("Raw removes display and input authenticity effects. Accurate uses a curated setup for the selected Model. Changing any controlled setting below makes the result Custom.")
+            Text("Clean removes hardware and display effects. Accurate uses a curated setup for the selected Model. Both presets are free; manually changing preset-controlled settings requires Plus and makes the result Custom.")
         }
     }
 
@@ -148,7 +148,6 @@ struct ScopedSettingsView: View {
                 key: .lcdFilter,
                 defaultValue: DisplayFilter.off,
                 options: DisplayFilter.selectable(for: resolvedHardware).map { ($0, $0.displayName) },
-                needsPlus: \.needsPlus,
                 reloadToken: settingsRevision,
                 context: context
             )
@@ -427,6 +426,10 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     @State private var errorMessage: String?
     @ScaledMetric(relativeTo: .body) private var checkmarkWidth: CGFloat = 20
 
+    private var editNeedsPlus: Bool {
+        GameplayPresetSettings.controlledKeys.contains(key)
+    }
+
     var body: some View {
         Group {
             if let listSections {
@@ -438,10 +441,10 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
             } else {
                 Menu {
                     Picker(title, selection: Binding(get: { choice }, set: { choose($0) })) {
-                        Text("\(inheritNote) (\(label(for: inheritedValue)))")
+                        Text(context.plus.label("\(inheritNote) (\(label(for: inheritedValue)))", needsPlus: editNeedsPlus))
                             .tag(Choice.inherit)
                         ForEach(options.indices, id: \.self) { index in
-                            Text(context.plus.label(options[index].1, needsPlus: needsPlus(options[index].0)))
+                            Text(context.plus.label(options[index].1, needsPlus: editNeedsPlus || needsPlus(options[index].0)))
                                 .tag(Choice.value(options[index].0))
                                 .disabled(!isAvailable(options[index].0))
                         }
@@ -463,7 +466,8 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                 HStack(spacing: 6) {
                     Text(title)
                         .foregroundStyle(Color.primary)
-                    if options.contains(where: { context.plus.isLocked(needsPlus($0.0)) }) {
+                    if context.plus.isLocked(editNeedsPlus)
+                        || options.contains(where: { context.plus.isLocked(needsPlus($0.0)) }) {
                         PlusBadge()
                     }
                 }
@@ -490,14 +494,24 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     private func selectionList(sections: [SettingOptionSection<Value>]) -> some View {
         Form {
             Section {
-                selectionButton(.inherit, title: inheritNote, subtitle: label(for: inheritedValue), value: inheritedValue)
+                selectionButton(
+                    .inherit,
+                    title: inheritNote,
+                    subtitle: label(for: inheritedValue),
+                    value: inheritedValue,
+                    locked: context.plus.isLocked(editNeedsPlus)
+                )
             }
             ForEach(sections.indices, id: \.self) { index in
                 Section {
                     ForEach(sections[index].values, id: \.self) { value in
-                        selectionButton(.value(value), title: optionTitle?(value) ?? label(for: value),
-                                        subtitle: optionSubtitle?(value), value: value,
-                                        locked: context.plus.isLocked(needsPlus(value)))
+                        selectionButton(
+                            .value(value),
+                            title: optionTitle?(value) ?? label(for: value),
+                            subtitle: optionSubtitle?(value),
+                            value: value,
+                            locked: context.plus.isLocked(editNeedsPlus || needsPlus(value))
+                        )
                     }
                 } header: {
                     if let title = sections[index].title {
@@ -581,8 +595,13 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         return context.plus.isLocked(needsPlus(effectiveValue)) ? "\(source). \(label(for: defaultValue)) without Plus" : source
     }
 
-    /// A Plus value without Plus opens the Plus screen and leaves the choice as it was.
+    /// Preset-controlled settings are the Custom editor and require Plus. Other value-specific
+    /// Plus rules keep their existing behavior.
     private func choose(_ newChoice: Choice) {
+        if context.plus.isLocked(editNeedsPlus) {
+            context.openPlus()
+            return
+        }
         if case .value(let value) = newChoice, !isAvailable(value) { return }
         if case .value(let value) = newChoice, context.plus.isLocked(needsPlus(value)) {
             context.openPlus()
