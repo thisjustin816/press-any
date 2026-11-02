@@ -11,7 +11,7 @@ import XCTest
 final class PlusTests: XCTestCase {
     func testRoadmapListsWhatPlusHoldsAndWhatsComing() {
         XCTAssertFalse(PlusRoadmap.upcoming.isEmpty)
-        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["Display Filters", "App Icons", "Auto State History", "Timed States", "Model", "Print Backgrounds", "Print History"])
+        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["Custom Gameplay Tuning", "App Icons", "Auto State History", "Timed States", "Model", "Print Backgrounds", "Print History"])
         XCTAssertFalse(PlusRoadmap.upcoming.contains { $0.title.contains("Timed") || $0.title == "Model" })
         XCTAssertEqual(PlusRoadmap.alsoPlanned.map(\.title), ["Game Boy Advance"])
         let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming + PlusRoadmap.alsoPlanned
@@ -21,15 +21,15 @@ final class PlusTests: XCTestCase {
         }
     }
 
-    func testStoredLCDFilterPlaysAsOffWithoutPlusAndIsKept() throws {
+    func testStoredDisplayFilterRendersWithoutPlus() throws {
         let fixture = try LCDFixture(plus: .fixed(ownsPlus: false))
         defer { fixture.remove() }
-        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .off)
-        XCTAssertEqual(fixture.container.lcdFilter(system: .gameBoy), .off)
-        XCTAssertEqual(try fixture.storedFilter(), .lcd1x, "the stored choice isn't deleted")
+        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .lcd1x)
+        XCTAssertEqual(fixture.container.lcdFilter(system: .gameBoy), .lcd1x)
+        XCTAssertEqual(try fixture.storedFilter(), .lcd1x)
 
         let owner = try AppContainer(rootURL: fixture.root, plus: .fixed(ownsPlus: true))
-        XCTAssertEqual(owner.lcdFilter(for: fixture.context), .lcd1x, "Plus brings the stored filter back")
+        XCTAssertEqual(owner.lcdFilter(for: fixture.context), .lcd1x)
     }
 
     func testChoosingTheModelNeedsPlusAndAutomaticStaysFree() {
@@ -49,21 +49,16 @@ final class PlusTests: XCTestCase {
         )
     }
 
-    func testLockedOptionsAreMarkedAndOffStaysFree() {
+    func testPresetFiltersAreFreeButCustomEditingIsAPlusFeature() {
         let locked = PlusGate(isUnlocked: false)
-        XCTAssertTrue(locked.isLocked(DisplayFilter.lcd1x.needsPlus))
-        XCTAssertTrue(locked.isLocked(DisplayFilter.lcd3x.needsPlus))
-        XCTAssertFalse(locked.isLocked(DisplayFilter.off.needsPlus))
-        XCTAssertEqual(locked.label("LCD 1×", needsPlus: true), "LCD 1× (Plus)")
-        XCTAssertEqual(locked.label("Off", needsPlus: false), "Off")
-
-        let unlocked = PlusGate(isUnlocked: true)
-        XCTAssertFalse(unlocked.isLocked(DisplayFilter.lcd3x.needsPlus))
-        XCTAssertEqual(unlocked.label("LCD 1×", needsPlus: true), "LCD 1×")
-        XCTAssertEqual(PlusStore.fixed(ownsPlus: false).effective(.lcd3x), .off)
+        XCTAssertEqual(PlusStore.fixed(ownsPlus: false).effective(.lcd3x), .lcd3x)
         XCTAssertEqual(PlusStore.fixed(ownsPlus: true).effective(.lcd3x), .lcd3x)
-        XCTAssertTrue(DisplaySettingsPage.effectsFooter(locked).contains("a filter you already chose is kept"))
-        XCTAssertFalse(DisplaySettingsPage.effectsFooter(PlusGate(isUnlocked: true)).contains("Plus"))
+        XCTAssertTrue(GameplayPresetSettings.controlledKeys.contains(.lcdFilter))
+        XCTAssertTrue(GameplayPresetSettings.controlledKeys.contains(.frameBlending))
+        XCTAssertTrue(GameplayPresetSettings.controlledKeys.contains(.buttonBounce))
+        XCTAssertEqual(locked.label("Custom", needsPlus: true), "Custom (Plus)")
+        XCTAssertTrue(DisplaySettingsPage.effectsFooter(locked).contains("Changing them manually requires"))
+        XCTAssertFalse(DisplaySettingsPage.effectsFooter(PlusGate(isUnlocked: true)).contains("requires"))
     }
 
     func testKeepAutoStatesIsLockedToTheNewestWithoutPlus() {
