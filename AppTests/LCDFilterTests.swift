@@ -61,9 +61,8 @@ final class LCDFilterTests: XCTestCase {
     }
 
     func testTVFiltersUseDistinctBeamStrengths() throws {
-        guard let device = MTLCreateSystemDefaultDevice(), let library = device.makeDefaultLibrary() else {
-            throw XCTSkip("Metal isn't available")
-        }
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice(), "TV filter rendering requires Metal")
+        let library = try device.makeDefaultLibrary(bundle: Bundle(for: GameplayViewController.self))
         for fragment in ["gameplayTextureFragment", "gameplaySharpFragment"] {
             let crt = try render(.crt240p, fragment: fragment, device: device, library: library)
             let tv = try render(.gameCubeTV, fragment: fragment, device: device, library: library)
