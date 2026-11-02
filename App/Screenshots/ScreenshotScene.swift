@@ -43,7 +43,7 @@ enum ScreenshotScene: Equatable {
         #endif
     }()
 
-    /// `-ScreenshotLCDFilter lcd1x|lcd3x|off` changes a capture without changing saved settings.
+    /// `-ScreenshotLCDFilter` accepts a DisplayFilter raw value without changing saved settings.
     static let lcdFilterOverride: DisplayFilter? = {
         #if DEBUG
         guard current != nil else { return nil }

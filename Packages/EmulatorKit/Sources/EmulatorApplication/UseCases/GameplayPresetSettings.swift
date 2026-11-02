@@ -2,7 +2,7 @@ import EmulatorDomain
 import Foundation
 
 /// Applies and recognizes gameplay presets without adding a persisted preset setting. The existing
-/// low-level settings remain the source of truth, so old installs keep their exact behavior.
+/// low-level settings remain the source of truth and existing overrides remain decodable.
 public struct GameplayPresetSettings: Sendable {
     private let store: any SettingsStore
     private let resolver: SettingsResolver
@@ -14,6 +14,19 @@ public struct GameplayPresetSettings: Sendable {
     public init(store: any SettingsStore) {
         self.store = store
         self.resolver = SettingsResolver(store: store)
+    }
+
+    public func retargetBuiltInPreset(
+        from oldHardware: HardwareModel,
+        to newHardware: HardwareModel,
+        at scope: SettingsScope,
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil
+    ) throws {
+        guard oldHardware != newHardware else { return }
+        let preset = try resolvedPreset(system: system, gameID: gameID, buildID: buildID, hardware: oldHardware)
+        if preset != .custom { try apply(preset, at: scope, hardware: newHardware) }
     }
 
     public func resolvedPreset(
@@ -68,7 +81,7 @@ public struct GameplayPresetSettings: Sendable {
             DisplayFilter.self, key: SettingKey.lcdFilter.rawValue,
             system: system, gameID: gameID, buildID: buildID
         ) ?? .off
-        guard filter == expected.displayFilter else { return false }
+        guard filter.selectionValue == expected.displayFilter else { return false }
 
         let blending = try resolver.decode(
             FrameBlending.self, key: SettingKey.frameBlending.rawValue,

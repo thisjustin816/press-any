@@ -30,8 +30,8 @@ struct AcknowledgementsView: View {
         Component(
             name: "SameBoy",
             use: """
-            Game Boy, Super Game Boy, Game Boy Color and Game Boy Advance emulation, boot ROMs and
-            boot palettes by Lior Halphon.
+            Game Boy, Super Game Boy, Game Boy Color and Game Boy Advance emulation, boot ROMs,
+            boot palettes and monochrome/color LCD shaders by Lior Halphon.
             Source: https://github.com/LIJI32/SameBoy
             """,
             license: .bundled(file: "SameBoy-LICENSE")
@@ -56,14 +56,19 @@ struct AcknowledgementsView: View {
             """)
         ),
         Component(
-            name: "libretro LCD shaders",
-            use: "The idea behind the LCD 1× and LCD 3× display filters",
-            license: .publicDomain(credit: """
-            \(AppBrand.displayName)’s LCD 1× and LCD 3× filters are its own shader code, modelled \
-            on the LCD shaders in libretro’s slang-shaders collection for RetroArch \
-            (https://github.com/libretro/slang-shaders), among them lcd3x by Gigaherz, which is in \
-            the public domain. No shader code was copied from them. They are credited here anyway.
-            """)
+            name: "Authentic GBC",
+            use: "Game Boy Color subpixel display by fishku (fishcu), ported to Metal from version 2.2. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/authentic_gbc",
+            license: .bundled(file: "AuthenticGBC-LICENSE")
+        ),
+        Component(
+            name: "CRT-Lottes",
+            use: "Television display shader by Timothy Lottes, ported to Metal. Source: https://github.com/libretro/slang-shaders/blob/master/crt/shaders/crt-lottes.slang",
+            license: .bundled(file: "DisplayShaders-PublicDomain")
+        ),
+        Component(
+            name: "GBA and SP101 color profiles",
+            use: "Device color profiles by Pokefan531 and hunterk, optimized by crashGG. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/color",
+            license: .bundled(file: "DisplayShaders-PublicDomain")
         ),
         Component(
             name: "Game Boy Printer disassembly",

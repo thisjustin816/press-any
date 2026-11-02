@@ -7,14 +7,14 @@ import XCTest
 /// run on the CI simulator (docs/mvp-verification.md).
 @MainActor
 final class PlusStoreTests: XCTestCase {
-    func testBuyingPlusUnlocksTheStoredLCDFilter() async throws {
+    func testBuyingPlusPreservesTheFreeStoredDisplayFilter() async throws {
         let provider = ControllableEntitlementProvider()
         let fixture = try LCDFixture(plus: PlusStore(provider: provider))
         defer { fixture.remove() }
         let plus = fixture.container.plus
         await plus.refreshOwnership()
         XCTAssertFalse(plus.isUnlocked)
-        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .off)
+        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .lcd1x)
 
         await plus.loadOffer()
         XCTAssertEqual(plus.offer, .available(price: "$0.99"), "the price comes from the store")
@@ -88,7 +88,7 @@ final class PlusStoreTests: XCTestCase {
         XCTAssertNil(plus.notice)
     }
 
-    func testRefundLocksPlusAgainAndKeepsTheStoredFilter() async throws {
+    func testRefundLocksCustomEditingAndKeepsTheFreeStoredFilter() async throws {
         let provider = ControllableEntitlementProvider()
         let fixture = try LCDFixture(plus: PlusStore(provider: provider))
         defer { fixture.remove() }
@@ -101,7 +101,7 @@ final class PlusStoreTests: XCTestCase {
         try await waitUntil { !plus.isUnlocked }
 
         XCTAssertFalse(plus.ownership.isOwned)
-        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .off)
+        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .lcd1x)
         XCTAssertEqual(try fixture.storedFilter(), .lcd1x, "a refund doesn't delete the choice")
     }
 

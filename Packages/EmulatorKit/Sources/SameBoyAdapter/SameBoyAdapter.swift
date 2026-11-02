@@ -205,11 +205,11 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     private static func bridgeModel(_ model: HardwareModel) -> SBModel {
         switch model {
         case .automatic, .gameBoy: SB_MODEL_DMG
-        case .gameBoyPocket: SB_MODEL_MGB
+        case .gameBoyPocket, .gameBoyLight: SB_MODEL_MGB
         case .superGameBoy: SB_MODEL_SGB
         case .superGameBoy2: SB_MODEL_SGB2
         case .gameBoyColor: SB_MODEL_CGB
-        case .gameBoyAdvance: SB_MODEL_AGB
+        case .gameBoyAdvance, .gameBoyAdvanceSP101: SB_MODEL_AGB
         case .gameBoyPlayer: SB_MODEL_GBP
         }
     }
@@ -450,11 +450,11 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     private static func loadBootROM(for model: HardwareModel) throws -> Data {
         let resourceName = switch model {
         case .automatic, .gameBoy: "dmg_boot"
-        case .gameBoyPocket: "mgb_boot"
+        case .gameBoyPocket, .gameBoyLight: "mgb_boot"
         case .superGameBoy: "sgb_boot"
         case .superGameBoy2: "sgb2_boot"
         case .gameBoyColor: "cgb_boot"
-        case .gameBoyAdvance, .gameBoyPlayer: "agb_boot"
+        case .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer: "agb_boot"
         }
         guard let data = bundledBootROM(named: resourceName) else {
             throw SameBoyAdapterError.bootROMUnavailable("\(resourceName).bin")

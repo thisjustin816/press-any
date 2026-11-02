@@ -8,7 +8,7 @@ Tilt games
 Cartridges with a motion sensor follow how you tilt your iPhone. Recenter Tilt is in the game menu.
 
 Model (Plus)
-Run games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, each with its own boot ROM.
+Choose Game Boy, Pocket, Light, Super Game Boy, Game Boy Color, Game Boy Advance, the backlit SP display or Game Boy Player, with a curated Accurate display for each.
 
 Artwork
 After you import a recognized game, Press Any can find its artwork and ask you to review what it found. Turn this off in Settings.

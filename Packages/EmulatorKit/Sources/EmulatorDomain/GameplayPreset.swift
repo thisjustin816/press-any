@@ -4,19 +4,29 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
     case off
     case lcd1x
     case lcd3x
+    case authenticGBC
+    case gbaLCD
+    case sp101LCD
     case crt240p
     /// Legacy persisted identifier retained for compatibility. The user-facing treatment is CRT 480i.
     case gameCubeTV
 
     /// Every display treatment is available on every hardware model. Built-in presets still choose
     /// the historically appropriate treatment; manual choices are intentionally unrestricted.
-    public static func selectable(for _: HardwareModel) -> [Self] { allCases }
+    public static func selectable(for _: HardwareModel) -> [Self] {
+        allCases.filter { $0 != .lcd3x }
+    }
+
+    public var selectionValue: Self { self == .lcd3x ? .authenticGBC : self }
 
     public var displayName: String {
         switch self {
         case .off: "Off"
-        case .lcd1x: "LCD 1×"
-        case .lcd3x: "LCD 3×"
+        case .lcd1x: "SameBoy Monochrome LCD"
+        case .lcd3x: "Authentic GBC"
+        case .authenticGBC: "Authentic GBC"
+        case .gbaLCD: "Game Boy Advance LCD"
+        case .sp101LCD: "GBA SP AGS-101 LCD"
         case .crt240p: "CRT 240p"
         case .gameCubeTV: "CRT 480i"
         }
@@ -72,13 +82,13 @@ public struct GameplayPresetValues: Equatable, Sendable {
             return nil
         case .clean:
             switch hardware {
-            case .automatic, .gameBoy, .gameBoyPocket:
-                return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false, dmgPalette: .cgbLeftB)
+            case .automatic, .gameBoy, .gameBoyPocket, .gameBoyLight:
+                return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false, colorCorrection: .off, dmgPalette: .cgbLeftB)
             case .superGameBoy, .superGameBoy2:
-                return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false)
+                return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false, colorCorrection: .off)
             case .gameBoyColor:
                 return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false, colorCorrection: .off)
-            case .gameBoyAdvance, .gameBoyPlayer:
+            case .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer:
                 return Self(
                     displayFilter: .off,
                     frameBlending: .off,
@@ -90,20 +100,22 @@ public struct GameplayPresetValues: Equatable, Sendable {
         case .accurate:
             switch hardware {
             case .automatic, .gameBoy:
-                return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, dmgPalette: .dmgGreen)
+                return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .off, dmgPalette: .dmgGreen)
             case .gameBoyPocket:
-                return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, dmgPalette: .pocket)
+                return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .off, dmgPalette: .pocket)
+            case .gameBoyLight:
+                return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .off, dmgPalette: .light)
             case .superGameBoy, .superGameBoy2:
-                return Self(displayFilter: .crt240p, frameBlending: .off, buttonBounce: false)
+                return Self(displayFilter: .crt240p, frameBlending: .off, buttonBounce: false, colorCorrection: .accurate)
             case .gameBoyColor:
-                return Self(displayFilter: .lcd3x, frameBlending: .blend, buttonBounce: true, colorCorrection: .accurate)
-            case .gameBoyAdvance:
+                return Self(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, colorCorrection: .lowContrast)
+            case .gameBoyAdvance, .gameBoyAdvanceSP101:
                 return Self(
-                    displayFilter: .lcd3x,
+                    displayFilter: hardware == .gameBoyAdvanceSP101 ? .sp101LCD : .gbaLCD,
                     frameBlending: .blend,
                     buttonBounce: true,
-                    colorCorrection: .accurate,
-                    advanceColors: .gameBoyAdvance
+                    colorCorrection: .off,
+                    advanceColors: .gameBoyColor
                 )
             case .gameBoyPlayer:
                 return Self(

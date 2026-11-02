@@ -115,17 +115,35 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
 - Usage: `Scripts/test-accuracy-roms.sh` fetches and builds them at run time to check the core's
   results. None of them is committed here or ships in the app.
 
-## LCD display filters
+## Device display shaders
 
-- Code: `App/Gameplay/Shaders.metal`, the LCD 1x and LCD 3x filters. Press Any's own shader code,
-  written for this project. No code is copied from the shaders below; their formulas differ.
-- Inspiration: the LCD shaders in libretro's slang-shaders collection
-  (https://github.com/libretro/slang-shaders), RetroArch's shader set. `lcd3x`, by Gigaherz, is
-  the closest. Its header says "License: Public domain". The collection's other LCD shaders, such
-  as `lcd-grid-v2`, carry no author or license header, and Press Any does not use them.
-- Credit: the app credits the libretro shaders in Acknowledgements even though nothing is copied
-  and `lcd3x` asks for none. The author of any shader that ships later is credited the same way
-  (see AGENTS.md).
+- SameBoy Monochrome LCD and LCD by Lior Halphon: ported from `Shaders/MonoLCD.fsh`,
+  `Shaders/LCD.fsh` and the gamma wrapper in `Shaders/MasterShader.metal` at the existing
+  SameBoy pin. These are outside its restricted `iOS/` directory and use its Expat license.
+  The bundled `App/Acknowledgements/SameBoy-LICENSE.txt` applies. The constants retain the
+  upstream defaults. Source: https://github.com/LIJI32/SameBoy/tree/19a7b14cfb10bb20b0f931b3d77359c11f866e17/Shaders.
+- Authentic GBC v2.2 by fishku (fishcu), copyright 2024-2025: CC0. The Metal port uses the
+  single-pass preset, shared notched-subpixel geometry and analytical coverage helpers with
+  default brightness 0.6, smoothing 0.3 and display-subpixel rendering disabled. Its original
+  license declaration and CC0 text are bundled in `App/Acknowledgements/AuthenticGBC-LICENSE.txt`.
+- CRT-Lottes by Timothy Lottes: public domain. The Metal port retains the upstream default
+  reconstruction kernels, beam, bloom, shadow mask and sRGB transfer. The app adds edge
+  feathering/falloff and a current/previous-field adapter for its denser GBP television raster.
+  This is a curated RGB CRT approximation, not a composite decoder or an emulation of a named TV.
+- GBA and SP101 color shaders by Pokefan531 and hunterk, optimized by crashGG: public domain.
+  The ports use the upstream sRGB matrices, luminance and zero screen-darkening defaults.
+  AGB uses the GBA profile; backlit AGS-101 uses SP101. Core color
+  correction is disabled for these configurations so the profile is applied only once.
+- Libretro sources above are pinned to `53deb2efcb79f4fc3e94e9602d5974b4b64e8f94` in `slang-shaders`:
+  https://github.com/libretro/slang-shaders/tree/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94.
+  Paths: `handheld/shaders/authentic_gbc/`, `misc/shaders/coverage/coverage.inc`,
+  `crt/shaders/crt-lottes.slang`, `handheld/shaders/color/gba-color.slang` and
+  `handheld/shaders/color/sp101-color.slang`. Public-domain declarations and source URLs are
+  bundled in `App/Acknowledgements/DisplayShaders-PublicDomain.txt`.
+- The app credits each author in Settings > Acknowledgements. `App/Gameplay/DisplayShaders.h`
+  contains the Metal adaptations. Neither GPL LCD1x nor GPL CRT shader code is included.
+- Legacy `lcd1x` and `lcd3x` setting identifiers remain decodable. Their menu treatments are
+  SameBoy Monochrome LCD and Authentic GBC respectively; retired LCD3x is omitted from the menu.
 
 ## Game Boy Printer firmware research
 
@@ -146,8 +164,8 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
 
 Settings > Acknowledgements lists the code, artwork and data used in the app. SameBoy's,
 GRDB.swift's and Corporatus's notices are bundled in `App/Acknowledgements/`; gbtoolsid, which is in
-the public domain, No-Intro, the libretro LCD shaders and the Game Boy Printer firmware research get
-a credit.
+the public domain, No-Intro and the Game Boy Printer firmware research get a credit. Device shader notices are
+bundled with the app and their authors are listed in Acknowledgements.
 
 ## Updating a dependency
 

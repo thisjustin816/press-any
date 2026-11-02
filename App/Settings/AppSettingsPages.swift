@@ -126,7 +126,7 @@ struct DisplaySettingsPage: View {
         _plus = ObservedObject(wrappedValue: plus)
         _orientation = State(initialValue: storage.value(ScreenOrientation.self, .orientation) ?? .automatic)
         _screenScaling = State(initialValue: storage.value(ScreenScaling.self, .screenScaling) ?? .integer)
-        _lcdFilter = State(initialValue: storage.value(DisplayFilter.self, .lcdFilter) ?? .off)
+        _lcdFilter = State(initialValue: (storage.value(DisplayFilter.self, .lcdFilter) ?? .off).selectionValue)
         _frameBlending = State(initialValue: storage.value(FrameBlending.self, .frameBlending) ?? .off)
     }
 
@@ -151,31 +151,17 @@ struct DisplaySettingsPage: View {
                 Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
             }
 
-            Section {
-                Picker(selection: Binding(get: { lcdFilter }, set: { chooseLCDFilter($0) })) {
-                    ForEach(DisplayFilter.handheldCases, id: \.self) { filter in
-                        Text(plus.gate.label(filter.displayName, needsPlus: true)).tag(filter)
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("Display Filter")
-                        if !plus.isUnlocked { PlusBadge() }
-                    }
+            NavigationLink {
+                Form {
+                    displayEffectsSection
                 }
-                Picker(selection: Binding(get: { frameBlending }, set: { chooseFrameBlending($0) })) {
-                    ForEach(FrameBlending.allCases, id: \.self) { blending in
-                        Text(plus.gate.label(blending.displayName, needsPlus: true)).tag(blending)
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("Frame Blending")
-                        if !plus.isUnlocked { PlusBadge() }
-                    }
+                .navigationTitle("Customize Display Defaults")
+                .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                HStack {
+                    Text("Customize Display Defaults")
+                    if !plus.isUnlocked { PlusBadge() }
                 }
-            } header: {
-                Text("Effects")
-            } footer: {
-                Text(Self.effectsFooter(plus.gate))
             }
 
             if let errorMessage {
@@ -192,8 +178,37 @@ struct DisplaySettingsPage: View {
         .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
     }
 
+    private var displayEffectsSection: some View {
+        Section {
+            Picker(selection: Binding(get: { lcdFilter }, set: { chooseLCDFilter($0) })) {
+                ForEach(DisplayFilter.selectable(for: .automatic), id: \.self) { filter in
+                    Text(plus.gate.label(filter.displayName, needsPlus: true)).tag(filter)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Display Filter")
+                    if !plus.isUnlocked { PlusBadge() }
+                }
+            }
+            Picker(selection: Binding(get: { frameBlending }, set: { chooseFrameBlending($0) })) {
+                ForEach(FrameBlending.allCases, id: \.self) { blending in
+                    Text(plus.gate.label(blending.displayName, needsPlus: true)).tag(blending)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Frame Blending")
+                    if !plus.isUnlocked { PlusBadge() }
+                }
+            }
+        } header: {
+            Text("Effects")
+        } footer: {
+            Text(Self.effectsFooter(plus.gate))
+        }
+    }
+
     static func effectsFooter(_ gate: PlusGate) -> String {
-        let effects = "LCD 1× adds a subtle pixel grid and LCD 3× red, green and blue subpixels, at the same screen size. Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things."
+        let effects = "The device treatments reproduce monochrome LCDs, GBC subpixels, GBA/SP colors and CRT output at the same screen size. Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things."
         guard gate.isLocked(true) else { return effects }
         return effects + " Clean and Accurate can use these effects for everyone. Changing them manually requires \(PlusProduct.name) and creates a Custom setup."
     }
@@ -297,9 +312,20 @@ struct PlayingSettingsPage: View {
                     Text("Never").tag(AutoResumePolicy.never)
                 }
                 Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
-                Toggle(isOn: Binding(get: { buttonBounce }, set: { chooseButtonBounce($0) })) {
-                    HStack(spacing: 6) {
-                        Text("Button Bounce")
+                NavigationLink {
+                    Form {
+                        Toggle(isOn: Binding(get: { buttonBounce }, set: { chooseButtonBounce($0) })) {
+                            HStack(spacing: 6) {
+                                Text("Button Bounce")
+                                if !plus.isUnlocked { PlusBadge() }
+                            }
+                        }
+                        Text(ScopedSettingsView.buttonBounceExplanation).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .navigationTitle("Customize Input Defaults")
+                } label: {
+                    HStack {
+                        Text("Customize Input Defaults")
                         if !plus.isUnlocked { PlusBadge() }
                     }
                 }

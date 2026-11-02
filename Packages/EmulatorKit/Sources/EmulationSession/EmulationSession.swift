@@ -419,6 +419,13 @@ public final class EmulationSession: @unchecked Sendable {
         lock.withLock { playtime.setSpeed(speed) }
     }
 
+    public func setButtonBounce(_ enabled: Bool) throws {
+        let (worker, _, _) = try snapshotActive()
+        try worker.perform { core in
+            (core as? any ButtonBounceCapability)?.setButtonBounce(enabled)
+        }
+    }
+
     @discardableResult
     public func setDisplaySettings(
         colorCorrection: ColorCorrection,

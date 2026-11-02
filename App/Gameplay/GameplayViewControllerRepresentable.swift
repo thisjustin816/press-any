@@ -46,6 +46,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             dmgPalette: display.dmgPalette,
             advanceColors: display.advanceColors,
             frameBlending: display.frameBlending,
+            buttonBounce: display.buttonBounce,
             fastForwardSpeed: display.fastForwardSpeed,
             fastForwardAudio: display.fastForwardAudio,
             controllerTheme: controllerTheme,
@@ -81,6 +82,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             dmgPalette: display.dmgPalette,
             advanceColors: display.advanceColors,
             frameBlending: display.frameBlending,
+            buttonBounce: display.buttonBounce,
             fastForwardSpeed: display.fastForwardSpeed,
             fastForwardAudio: display.fastForwardAudio
         )

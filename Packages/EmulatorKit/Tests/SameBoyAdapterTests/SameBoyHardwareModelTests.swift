@@ -6,6 +6,26 @@ import XCTest
 @testable import SameBoyAdapter
 
 final class SameBoyHardwareModelTests: XCTestCase {
+    func testSGBModelsShareTheirDisplayPresetButKeepTheirOwnClock() throws {
+        try SameBoyAdapterTests.requireGeneratedBootROMs()
+        XCTAssertEqual(
+            GameplayPresetValues.values(for: .accurate, hardware: .superGameBoy),
+            GameplayPresetValues.values(for: .accurate, hardware: .superGameBoy2)
+        )
+        func frameDuration(_ model: HardwareModel) throws -> UInt64 {
+            let core = SameBoyAdapter()
+            try core.setHardwareModel(model)
+            try core.loadImage(TestROM.make(title: "SGB CLOCK"), system: .gameBoy)
+            XCTAssertTrue(try core.skipBootAnimation())
+            _ = try core.runFrame(input: .init())
+            return try core.runFrame(input: .init()).emulatedNanoseconds
+        }
+        let sgb1 = try frameDuration(.superGameBoy)
+        let sgb2 = try frameDuration(.superGameBoy2)
+        XCTAssertLessThan(Double(sgb1), Double(sgb2) * 0.99)
+        XCTAssertEqual(Double(sgb2) / Double(sgb1), 1.0241, accuracy: 0.001)
+    }
+
     /// Each boot ROM hands off with registers that tell the hardware apart, as games read them:
     /// A is 0x01 on DMG and SGB, 0xFF on Pocket and SGB2, and 0x11 on GBC and GBA; B's lowest bit
     /// is set only on a GBA.
@@ -14,10 +34,12 @@ final class SameBoyHardwareModelTests: XCTestCase {
         let expected: [(HardwareModel, a: UInt8, gba: Bool)] = [
             (.gameBoy, 0x01, false),
             (.gameBoyPocket, 0xff, false),
+            (.gameBoyLight, 0xff, false),
             (.superGameBoy, 0x01, false),
             (.superGameBoy2, 0xff, false),
             (.gameBoyColor, 0x11, false),
             (.gameBoyAdvance, 0x11, true),
+            (.gameBoyAdvanceSP101, 0x11, true),
             (.gameBoyPlayer, 0x11, true),
         ]
         for (model, a, gba) in expected {
@@ -120,7 +142,7 @@ final class SameBoyHardwareModelTests: XCTestCase {
         XCTAssertNil(SameBoyAdapter.stateFamily(Data([1, 2, 3])))
         XCTAssertEqual(
             StateNeedsOtherHardware(family: .gameBoyColor).errorDescription,
-            "It was made on a Game Boy Color, Game Boy Advance or Game Boy Player. Set Model to one of those to load it."
+            "It was made on a Game Boy Color, Game Boy Advance, Game Boy Advance SP (AGS-101) or Game Boy Player. Set Model to one of those to load it."
         )
     }
 

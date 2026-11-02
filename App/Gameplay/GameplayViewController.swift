@@ -48,6 +48,7 @@ final class GameplayViewController: UIViewController {
     private var colorCorrection: ColorCorrection
     private var advanceColors: AdvanceColors
     private var dmgPalette: DMGPalette
+    private var buttonBounce: Bool
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
     private var fastForwardAudio: FastForwardAudio
@@ -122,6 +123,7 @@ final class GameplayViewController: UIViewController {
         dmgPalette: DMGPalette = .defaultValue,
         advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending = .off,
+        buttonBounce: Bool = true,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted,
         controllerTheme: ControllerTheme = .matchSystem,
@@ -147,6 +149,7 @@ final class GameplayViewController: UIViewController {
         self.dmgPalette = dmgPalette
         self.advanceColors = advanceColors
         self.frameBlending = frameBlending
+        self.buttonBounce = buttonBounce
         self.fastForwardSpeed = fastForwardSpeed
         self.fastForwardAudio = fastForwardAudio
         self.screenScaling = screenScaling
@@ -1035,9 +1038,18 @@ final class GameplayViewController: UIViewController {
         dmgPalette: DMGPalette = .defaultValue,
         advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending,
+        buttonBounce: Bool = true,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted
     ) {
+        if buttonBounce != self.buttonBounce {
+            do {
+                try runtime.setButtonBounce(buttonBounce)
+                self.buttonBounce = buttonBounce
+            } catch {
+                showTransientMessage("Could not update button bounce: \(error.localizedDescription)")
+            }
+        }
         if colorCorrection != self.colorCorrection || dmgPalette != self.dmgPalette || advanceColors != self.advanceColors {
             self.colorCorrection = colorCorrection
             self.dmgPalette = dmgPalette

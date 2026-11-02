@@ -71,7 +71,7 @@ In the v1.1 development build, Plus includes:
 - **Timed States**: an Auto State every 1, 2, 5 or 10 minutes of library play, with Off as the
   default. Pausing restarts the interval (see Auto State).
 - **Model**: run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy,
-  Super Game Boy 2, Game Boy Color, Game Boy Advance or Game Boy Player (see Settings). Without Plus, games play on Automatic
+  Super Game Boy 2, Game Boy Light, Game Boy Color, Game Boy Advance, Game Boy Advance SP (AGS-101), or Game Boy Player (see Settings). Without Plus, games play on Automatic
   and a stored choice is kept.
 - **Print backgrounds**: Wood, Printer, Game Artwork and Custom backgrounds for Game Boy Printer
   prints (see Game Boy Printer). Transparent, Light and Dark are free.
@@ -1067,15 +1067,32 @@ Quick Play keeps them temporary until Add to Library.
 
 ### Picture
 
-From System settings down through Game and Build, **Gameplay Preset** groups the authenticity
-settings without replacing them. **Clean** removes display filtering, frame blending, display color
-correction and button-contact bounce. **Accurate** writes a curated combination for the selected
-Model: handheld models use their matching LCD treatment and screen colors, Super Game Boy models
-use a restrained consumer 240p CRT treatment, and Game Boy Player uses a cleaner GameCube-era TV
-treatment. Clean and Accurate are free. Manually changing a controlled setting requires Plus and
-makes the displayed preset **Custom**; returning every value to a built-in combination recognizes
-Clean or Accurate again. The preset itself is not stored, so existing settings and App -> System ->
-Game -> Build inheritance keep their behavior.
+From System settings down through Game and Build, **Gameplay** starts with Preset, Model and
+Customize. **Clean** disables filtering, frame blending, color correction and button-contact
+bounce. **Accurate** selects one curated configuration for the chosen device. Both are free.
+**Customize** opens the low-level screen colors, display treatment, frame blending and Button
+Bounce controls; changing them requires Plus and derives **Custom**. Every curated treatment
+can be used on every Model in Custom. Returning all values to a built-in combination recognizes
+that preset again. The preset itself is not stored; existing App -> System -> Game -> Build
+overrides remain the source of truth.
+
+| Device | Accurate display configuration |
+|---|---|
+| Game Boy | SameBoy Monochrome LCD, DMG palette, frame blending, button bounce |
+| Game Boy Pocket | SameBoy Monochrome LCD, Pocket palette, frame blending, button bounce |
+| Game Boy Light | SameBoy Monochrome LCD, Light palette, frame blending, button bounce |
+| Game Boy Color | Authentic GBC, SameBoy Low Contrast color correction, frame blending, button bounce |
+| Game Boy Advance | SameBoy color LCD plus the upstream GBA sRGB color profile, frame blending, button bounce |
+| Game Boy Advance SP AGS-101 | SameBoy color LCD plus the upstream SP101 sRGB color profile, frame blending, button bounce |
+| Super Game Boy / SGB2 | CRT-Lottes 240p, SGB color correction, no handheld blending or bounce |
+| Game Boy Player | CRT-Lottes with a denser woven-field raster, original colors, no handheld blending or bounce |
+
+The source choices and limits are documented in [Device display presets](display-presets.md).
+
+These are the app's reference configurations for stock displays. The original GBA and backlit SP use their separate published color profiles. A phone cannot
+reproduce a reflective screen under every ambient light or a specific TV/connection. Device
+appearance and performance checks remain in the verification checklist. The GBA models here
+run GB/GBC cartridges; native GBA emulation is still later work.
 
 - **Screen Scaling** (App, System, Game or Build; Integer by default). Integer draws each Game Boy
   pixel as the largest whole number of device pixels that fits, centered on device pixels, falling
@@ -1091,7 +1108,7 @@ Game -> Build inheritance keep their behavior.
   its source, or says Default when no parent sets it. A checkmark marks the selected row; choosing
   a value keeps the list open so the paused picture stays visible above the half-height sheet.
   - Original Game Boy games choose Green (DMG, the default), Olive (Pocket), Teal (Light),
-    twelve free button-combo boot palettes, and six game palettes: Olive & Orange (Mole Mania),
+    twelve button-combo boot palettes, and six game palettes: Olive & Orange (Mole Mania),
     Red & Green (Link's Awakening), Tan & Red (Super Mario Land), Pastel & Orange (Super Mario
     Land 2), Blue & Orange (Donkey Kong Land), and Amber (Game Boy Camera). Donkey Kong Land
     1, 2 and 3 share the same combination. The list groups Console Palettes, Button Palettes
@@ -1104,8 +1121,7 @@ Game -> Build inheritance keep their behavior.
     background, OBJ0 and OBJ1 colors, work with Skip Boot Logo on or off, and use the resolved
     color correction setting. Game Boy Color games keep their own colors and correction choices.
   - Game Boy Color games have a Color Correction list and choose how their colors are adjusted
-    for a modern screen: Balanced (the default, SameBoy's Modern Balanced), Accurate (Modern
-    Accurate), Boost Contrast, Reduce Contrast, Low Contrast, or Original, which shows the colors
+    for a modern screen: Balanced (the default, SameBoy's Modern Balanced), Modern Accurate, Boost Contrast, Reduce Contrast, Low Contrast, or Original, which shows the colors
     as the game stores them.
 
   Both change the open picture at once, including behind a paused Settings sheet, and stay
@@ -1114,9 +1130,10 @@ Game -> Build inheritance keep their behavior.
   choice. It does not change the emulated hardware, battery save or state format. Palette and
   correction values inherit App -> System -> Game -> Build, including stored App values; the
   Screen Colors lists stay in System, Game and Build settings.
-- **LCD filter** (Plus): LCD 1× and LCD 3×, the first of the display effects. Without Plus both
-  stay listed with a Plus badge wherever the filter is chosen, and choosing one opens the Plus
-  screen. A stored filter plays as Off and comes back with Plus, changing an open game at once.
+- **Display treatment**: each device has one curated Accurate choice, implemented with credited
+  SameBoy, Authentic GBC and CRT-Lottes shaders. All current treatments are available across
+  Models in Customize. The retired LCD3x identifier still loads as Authentic GBC.
+  Stored filters render with or without Plus; Plus gates manual edits, including Off.
 - **Frame Blending** (inheritable, Off by default): Blend averages each frame with the one before,
   as the slow LCD does, so a sprite drawn on alternate frames stays steady; LCD Ghosting weights
   the newest frame 0.5 and the two before 0.3 and 0.2. Both mix emulated frames, so 60 Hz and
@@ -1130,7 +1147,7 @@ Game -> Build inheritance keep their behavior.
   is serious or critical it's held to 60 Hz, and returns to 120 Hz when that ends, with no restart.
   The game's speed is the same either way.
 - v2.0: a curated, RetroArch-compatible shader library chosen after a community survey and device
-  comparison (LCD1x, LCD3x and pixel-transparency variants are candidates; PT-SkyWalker541 is a
+  comparison (pixel-transparency variants are candidates; PT-SkyWalker541 is a
   candidate to audit), downloaded from pinned, license-checked sources with hashes and preserved
   licenses; independent inheritance of pipeline components and parameters; named presets; live
   switching from Quick Actions; a system-authentic default with raw pixels a tap away. Arbitrary

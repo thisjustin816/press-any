@@ -49,17 +49,17 @@ final class PersistedIdentifierTests: XCTestCase {
     }
 
     func testHardwareModelValuesAreStableAndAutomaticFollowsTheSystem() {
-        XCTAssertEqual(HardwareModel.allCases.map(\.rawValue), ["automatic", "dmg", "mgb", "sgb", "sgb2", "cgb", "agb", "gbp"])
+        XCTAssertEqual(HardwareModel.allCases.map(\.rawValue), ["automatic", "dmg", "mgb", "mgl", "sgb", "sgb2", "cgb", "agb", "ags101", "gbp"])
         XCTAssertEqual(HardwareModel.automatic.resolved(for: .gameBoy), .gameBoy)
         XCTAssertEqual(HardwareModel.automatic.resolved(for: .gameBoyColor), .gameBoyColor)
         XCTAssertEqual(HardwareModel.superGameBoy.resolved(for: .gameBoyColor), .superGameBoy, "a chosen model is kept")
-        XCTAssertEqual(HardwareFamily.gameBoy.models, [.gameBoy, .gameBoyPocket])
+        XCTAssertEqual(HardwareFamily.gameBoy.models, [.gameBoy, .gameBoyPocket, .gameBoyLight])
         XCTAssertEqual(HardwareFamily.superGameBoy.models, [.superGameBoy, .superGameBoy2])
-        XCTAssertEqual(HardwareFamily.gameBoyColor.models, [.gameBoyColor, .gameBoyAdvance, .gameBoyPlayer])
-        XCTAssertEqual(HardwareModel.allCases.filter(\.isGameBoyAdvance), [.gameBoyAdvance, .gameBoyPlayer])
-        XCTAssertEqual(HardwareConsole.gameBoy.models, [.gameBoy, .gameBoyPocket, .superGameBoy, .superGameBoy2])
+        XCTAssertEqual(HardwareFamily.gameBoyColor.models, [.gameBoyColor, .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer])
+        XCTAssertEqual(HardwareModel.allCases.filter(\.isGameBoyAdvance), [.gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer])
+        XCTAssertEqual(HardwareConsole.gameBoy.models, [.gameBoy, .gameBoyPocket, .gameBoyLight, .superGameBoy, .superGameBoy2])
         XCTAssertEqual(HardwareConsole.gameBoyColor.models, [.gameBoyColor])
-        XCTAssertEqual(HardwareConsole.gameBoyAdvance.models, [.gameBoyAdvance, .gameBoyPlayer])
+        XCTAssertEqual(HardwareConsole.gameBoyAdvance.models, [.gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer])
         XCTAssertEqual(HardwareConsole.allCases.flatMap(\.models).count, HardwareModel.allCases.count - 1, "every model but Automatic has a console")
         XCTAssertEqual(AdvanceColors.allCases.map(\.rawValue), ["gameBoyAdvance", "gameBoyColor"])
     }
@@ -68,7 +68,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(AutoResumePolicy.allCases.map(\.rawValue), ["always", "ask", "never"])
         XCTAssertEqual(SoundMode.allCases.map(\.rawValue), ["followSilentSwitch", "alwaysOn", "alwaysOff"])
         XCTAssertEqual(TouchHaptics.allCases.map(\.rawValue), ["off", "light", "medium"])
-        XCTAssertEqual(DisplayFilter.allCases.map(\.rawValue), ["off", "lcd1x", "lcd3x", "crt240p", "gameCubeTV"])
+        XCTAssertEqual(DisplayFilter.allCases.map(\.rawValue), ["off", "lcd1x", "lcd3x", "authenticGBC", "gbaLCD", "sp101LCD", "crt240p", "gameCubeTV"])
         XCTAssertEqual(FastForwardSpeed.allCases.map(\.rawValue), ["x1_5", "x2", "x3", "x4", "x8", "unlimited"])
         XCTAssertEqual(FastForwardAudio.allCases.map(\.rawValue), ["muted", "accelerated"])
         XCTAssertEqual(FastForwardSpeed.allCases.map(\.multiplier), [1.5, 2, 3, 4, 8, nil])

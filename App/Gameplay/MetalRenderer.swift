@@ -14,6 +14,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     /// The newest frames, oldest overwritten first, so frame blending can mix earlier ones in.
     private var textures: [MTLTexture] = []
     private var newest = 0
+    private var fieldParity: UInt32 = 0
     /// How many of `textures` hold a frame of the current size.
     private var heldFrames = 0
     private var textureSize = (width: 0, height: 0)
@@ -62,6 +63,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         if replacesHistory { heldFrames = 0 }
         ensureTextures(width: frame.width, height: frame.height)
         guard !textures.isEmpty else { return }
+        if !replacesHistory { fieldParity ^= 1 }
         newest = (newest + 1) % textures.count
         heldFrames = min(heldFrames + 1, textures.count)
         let texture = textures[newest]
@@ -115,16 +117,19 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             zfar: 1
         ))
         encoder.setRenderPipelineState(scaling == .integer ? nearestPipeline : sharpPipeline)
-        // The newest frame first. An unused slot repeats the newest, with no weight.
+        // Interlaced CRT output needs the preceding field even when LCD frame blending is Off.
+        // A slot without a captured frame repeats the newest.
         let weights = frameBlending.weights(heldFrames: heldFrames)
         for age in 0..<textures.count {
-            let texture = weights[age] > 0 ? textures[(newest - age + textures.count) % textures.count] : textures[newest]
+            let texture = age < heldFrames ? textures[(newest - age + textures.count) % textures.count] : textures[newest]
             encoder.setFragmentTexture(texture, index: age)
         }
         var filter = lcdFilter.shaderMode
         encoder.setFragmentBytes(&filter, length: MemoryLayout<UInt32>.size, index: 0)
         var blendWeights = SIMD4<Float>(Float(weights[0]), Float(weights[1]), Float(weights[2]), 0)
         encoder.setFragmentBytes(&blendWeights, length: MemoryLayout<SIMD4<Float>>.size, index: 1)
+        var parity = fieldParity
+        encoder.setFragmentBytes(&parity, length: MemoryLayout<UInt32>.size, index: 2)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
         commandBuffer.present(drawable)
@@ -155,7 +160,9 @@ extension DisplayFilter {
         switch self {
         case .off: 0
         case .lcd1x: 1
-        case .lcd3x: 3
+        case .lcd3x, .authenticGBC: 6
+        case .gbaLCD: 7
+        case .sp101LCD: 8
         case .crt240p: 4
         case .gameCubeTV: 5
         }

@@ -2,6 +2,7 @@ import EmulatorApplication
 import EmulatorDomain
 import Importing
 import Metal
+import UIKit
 import XCTest
 @testable import PressAny
 
@@ -44,7 +45,7 @@ final class LCDFilterTests: XCTestCase {
             XCTAssertTrue(raw.allSatisfy { $0 == 255 }, "Off must preserve the original white pixel")
 
             let grid = try render(.lcd1x, fragment: fragment, device: device, library: library)
-            XCTAssertLessThan(grid[pixel(0, 12)], grid[pixel(12, 12)], "LCD 1× must darken cell edges")
+            XCTAssertLessThan(grid[pixel(0, 12)], grid[pixel(12, 12)], "Monochrome LCD must darken cell edges")
             for offset in stride(from: 0, to: grid.count, by: 4) {
                 XCTAssertEqual(grid[offset], grid[offset + 1], "The pixel grid must not tint colors")
                 XCTAssertEqual(grid[offset + 1], grid[offset + 2])
@@ -131,6 +132,92 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
+    func testDeviceTreatmentsUseContinuousCoordinatesInBothScalingPaths() throws {
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice())
+        let library = try device.makeDefaultLibrary(bundle: Bundle(for: GameplayViewController.self))
+        for filter in DisplayFilter.selectable(for: .automatic) where filter != .off {
+            for (width, height) in [(480, 432), (523, 471)] {
+                let integer = try render(
+                    filter, fragment: "gameplayTextureFragment", device: device, library: library,
+                    sourceWidth: 160, sourceHeight: 144, outputWidth: width, outputHeight: height
+                )
+                let fill = try render(
+                    filter, fragment: "gameplaySharpFragment", device: device, library: library,
+                    sourceWidth: 160, sourceHeight: 144, outputWidth: width, outputHeight: height
+                )
+                XCTAssertEqual(integer, fill, "\(filter) reconstructs the same physical display in either path")
+                XCTAssertTrue(stride(from: 3, to: fill.count, by: 4).allSatisfy { fill[$0] == 255 })
+            }
+        }
+    }
+
+    func testInterlacedCRTUsesThePreviousFieldForMovingContent() throws {
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice())
+        let library = try device.makeDefaultLibrary(bundle: Bundle(for: GameplayViewController.self))
+        let even = try render(
+            .gameCubeTV, fragment: "gameplayTextureFragment", device: device, library: library,
+            frames: [255, 0], sourceWidth: 16, sourceHeight: 16,
+            outputWidth: 160, outputHeight: 160, fieldParity: 0
+        )
+        let odd = try render(
+            .gameCubeTV, fragment: "gameplayTextureFragment", device: device, library: library,
+            frames: [255, 0], sourceWidth: 16, sourceHeight: 16,
+            outputWidth: 160, outputHeight: 160, fieldParity: 1
+        )
+        XCTAssertNotEqual(even, odd, "moving content must alternate which raster lines retain the previous field")
+        let progressiveEven = try render(.crt240p, fragment: "gameplayTextureFragment", device: device, library: library, fieldParity: 0)
+        let progressiveOdd = try render(.crt240p, fragment: "gameplayTextureFragment", device: device, library: library, fieldParity: 1)
+        XCTAssertEqual(progressiveEven, progressiveOdd, "240p does not alternate fields")
+    }
+
+    func testCRTGlowsBeyondAnIsolatedBrightPixelWithoutLightingTheWholeScreen() throws {
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice())
+        let library = try device.makeDefaultLibrary(bundle: Bundle(for: GameplayViewController.self))
+        var pixels = [UInt8](repeating: 0, count: 9 * 9 * 4)
+        for offset in stride(from: 3, to: pixels.count, by: 4) { pixels[offset] = 255 }
+        let center = (4 * 9 + 4) * 4
+        pixels.replaceSubrange(center..<(center + 4), with: [255, 255, 255, 255])
+        let crt = try render(
+            .crt240p, fragment: "gameplayTextureFragment", device: device, library: library,
+            sourceWidth: 9, sourceHeight: 9, outputWidth: 180, outputHeight: 180, sourcePixels: pixels
+        )
+        let glow = (90 * 180 + 113) * 4
+        XCTAssertGreaterThan(Int(crt[glow]) + Int(crt[glow + 1]) + Int(crt[glow + 2]), 0)
+        XCTAssertEqual(Array(crt[0..<3]), [0, 0, 0])
+    }
+
+    func testCuratedDeviceReferenceCaptures() throws {
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice())
+        let library = try device.makeDefaultLibrary(bundle: Bundle(for: GameplayViewController.self))
+        let width = 160, height = 144, outWidth = 640, outHeight = 576
+        var fixture = [UInt8]()
+        for y in 0..<height {
+            for x in 0..<width {
+                let checker = ((x / 8 + y / 8) % 2) == 0
+                fixture += [UInt8(x * 255 / (width - 1)), UInt8(y * 255 / (height - 1)), checker ? 255 : 32, 255]
+            }
+        }
+        for filter in DisplayFilter.selectable(for: .automatic) {
+            let pixels = try render(
+                filter, fragment: "gameplayTextureFragment", device: device, library: library,
+                sourceWidth: width, sourceHeight: height, outputWidth: outWidth, outputHeight: outHeight,
+                sourcePixels: fixture
+            )
+            let image = pixels.withUnsafeBytes { bytes -> UIImage? in
+                guard let context = CGContext(
+                    data: UnsafeMutableRawPointer(mutating: bytes.baseAddress), width: outWidth, height: outHeight,
+                    bitsPerComponent: 8, bytesPerRow: outWidth * 4, space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+                ), let cgImage = context.makeImage() else { return nil }
+                return UIImage(cgImage: cgImage)
+            }
+            let attachment = XCTAttachment(image: try XCTUnwrap(image))
+            attachment.name = "device-display-\(filter.rawValue)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+    }
+
     private func pixel(_ x: Int, _ y: Int) -> Int { (y * 24 + x) * 4 }
 
     private func brightness(_ pixels: [UInt8], at index: Int) -> Int {
@@ -149,7 +236,9 @@ final class LCDFilterTests: XCTestCase {
     private func render(
         _ filter: DisplayFilter, fragment: String, device: any MTLDevice, library: any MTLLibrary,
         frames: [UInt8] = [255], weights: SIMD4<Float> = SIMD4(1, 0, 0, 0),
-        sourceWidth: Int = 1, sourceHeight: Int = 1
+        sourceWidth: Int = 1, sourceHeight: Int = 1,
+        outputWidth: Int = 24, outputHeight: Int = 24,
+        sourcePixels: [UInt8]? = nil, fieldParity: UInt32 = 0
     ) throws -> [UInt8] {
         let descriptor = MTLRenderPipelineDescriptor()
         descriptor.vertexFunction = try XCTUnwrap(library.makeFunction(name: "gameplayFullscreenVertex"))
@@ -168,6 +257,7 @@ final class LCDFilterTests: XCTestCase {
             for _ in 0..<(sourceWidth * sourceHeight) {
                 color.append(contentsOf: [gray, gray, gray, 255])
             }
+            if let sourcePixels { color = sourcePixels }
             color.withUnsafeBytes {
                 source.replace(
                     region: MTLRegionMake2D(0, 0, sourceWidth, sourceHeight), mipmapLevel: 0,
@@ -177,7 +267,7 @@ final class LCDFilterTests: XCTestCase {
             return source
         }
         let targetDescriptor = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: .bgra8Unorm, width: 24, height: 24, mipmapped: false
+            pixelFormat: .bgra8Unorm, width: outputWidth, height: outputHeight, mipmapped: false
         )
         targetDescriptor.storageMode = .shared
         targetDescriptor.usage = .renderTarget
@@ -197,14 +287,16 @@ final class LCDFilterTests: XCTestCase {
         encoder.setFragmentBytes(&mode, length: MemoryLayout<UInt32>.size, index: 0)
         var blendWeights = weights
         encoder.setFragmentBytes(&blendWeights, length: MemoryLayout<SIMD4<Float>>.size, index: 1)
+        var parity = fieldParity
+        encoder.setFragmentBytes(&parity, length: MemoryLayout<UInt32>.size, index: 2)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
         commands.commit()
         commands.waitUntilCompleted()
         XCTAssertEqual(commands.status, .completed, commands.error?.localizedDescription ?? "GPU render failed")
-        var pixels = [UInt8](repeating: 0, count: 24 * 24 * 4)
+        var pixels = [UInt8](repeating: 0, count: outputWidth * outputHeight * 4)
         pixels.withUnsafeMutableBytes {
-            target.getBytes($0.baseAddress!, bytesPerRow: 24 * 4, from: MTLRegionMake2D(0, 0, 24, 24), mipmapLevel: 0)
+            target.getBytes($0.baseAddress!, bytesPerRow: outputWidth * 4, from: MTLRegionMake2D(0, 0, outputWidth, outputHeight), mipmapLevel: 0)
         }
         return pixels
     }

@@ -406,7 +406,7 @@ review. Until then, Settings > Press Any Plus says the App Store isn't available
      `LCD filters, app icons, Auto State history and more.`
    - **Review Information**: a screenshot of Settings > Press Any Plus from an iPhone, and these
      notes: "Settings > Press Any Plus shows what Plus includes, the price, Buy and Restore
-     Purchases. Plus turns on LCD 1× and LCD 3× (Settings > Display), app icon colors (Settings >
+     Purchases. Plus unlocks manual gameplay customization (System > Customize), app icon colors (Settings >
      App Icon), Auto State history and Timed States (Settings > Playing > Keep Auto States and
      Timed States), Model, which runs a game on other Game Boy hardware (Settings > Playing >
      Model), and, for Game Boy Printer games, the Wood, Printer, Game Artwork and Custom print

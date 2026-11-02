@@ -91,7 +91,7 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// `HardwareModel`, unset means `.automatic`. Read when a game starts or restarts.
     case hardwareModel
     /// Bool, unset means true. A button chatters briefly after each press and release, as the
-    /// hardware's contacts do. Read when a game starts or restarts.
+    /// hardware's contacts do. Also applied to an open game when its settings change.
     case buttonBounce
     /// `AdvanceColors`, unset means `.gameBoyAdvance`.
     case advanceColors
@@ -171,7 +171,7 @@ public enum ColorCorrection: String, Codable, Sendable, CaseIterable {
     public var displayName: String {
         switch self {
         case .balanced: "Balanced"
-        case .accurate: "Accurate"
+        case .accurate: "Modern Accurate"
         case .boostContrast: "Boost Contrast"
         case .reduceContrast: "Reduce Contrast"
         case .lowContrast: "Low Contrast"
@@ -444,10 +444,12 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     case automatic
     case gameBoy = "dmg"
     case gameBoyPocket = "mgb"
+    case gameBoyLight = "mgl"
     case superGameBoy = "sgb"
     case superGameBoy2 = "sgb2"
     case gameBoyColor = "cgb"
     case gameBoyAdvance = "agb"
+    case gameBoyAdvanceSP101 = "ags101"
     /// A Game Boy Advance inside the GameCube's Game Boy Player.
     case gameBoyPlayer = "gbp"
 
@@ -464,10 +466,12 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
         case .automatic: "Automatic"
         case .gameBoy: "Game Boy"
         case .gameBoyPocket: "Game Boy Pocket"
+        case .gameBoyLight: "Game Boy Light"
         case .superGameBoy: "Super Game Boy"
         case .superGameBoy2: "Super Game Boy 2"
         case .gameBoyColor: "Game Boy Color"
         case .gameBoyAdvance: "Game Boy Advance"
+        case .gameBoyAdvanceSP101: "Game Boy Advance SP (AGS-101)"
         case .gameBoyPlayer: "Game Boy Player"
         }
     }
@@ -485,16 +489,16 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     public var console: HardwareConsole? {
         switch self {
         case .automatic: nil
-        case .gameBoy, .gameBoyPocket, .superGameBoy, .superGameBoy2: .gameBoy
+        case .gameBoy, .gameBoyPocket, .gameBoyLight, .superGameBoy, .superGameBoy2: .gameBoy
         case .gameBoyColor: .gameBoyColor
-        case .gameBoyAdvance, .gameBoyPlayer: .gameBoyAdvance
+        case .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer: .gameBoyAdvance
         }
     }
 
     /// A Game Boy Advance, alone or in a Game Boy Player, whose darker screen Game Boy Advance
     /// Colors can undo.
     public var isGameBoyAdvance: Bool {
-        self == .gameBoyAdvance || self == .gameBoyPlayer
+        console == .gameBoyAdvance
     }
 
     /// Models whose save states load on one another. A state made on one family doesn't load on
@@ -502,9 +506,9 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     public var family: HardwareFamily? {
         switch self {
         case .automatic: nil
-        case .gameBoy, .gameBoyPocket: .gameBoy
+        case .gameBoy, .gameBoyPocket, .gameBoyLight: .gameBoy
         case .superGameBoy, .superGameBoy2: .superGameBoy
-        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: .gameBoyColor
+        case .gameBoyColor, .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer: .gameBoyColor
         }
     }
 }
@@ -557,7 +561,7 @@ public enum HardwareFamily: Sendable {
         HardwareModel.allCases.filter { $0.family == self }
     }
 
-    /// "Game Boy Color, Game Boy Advance or Game Boy Player".
+    /// Names every compatible model for a state-load message.
     public var modelList: String {
         let names = models.map(\.displayName)
         return names.dropLast().joined(separator: ", ") + " or " + names.last!

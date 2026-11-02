@@ -34,6 +34,7 @@ struct ScopedSettingsView: View {
     /// Advance Colors shows. Read again after each change.
     @State private var hardware: HardwareModel?
     @State private var settingsRevision = 0
+    @State private var presetError: String?
 
     var body: some View {
         if inSheet {
@@ -52,6 +53,7 @@ struct ScopedSettingsView: View {
     private var form: some View {
         Form {
             gameplayPresetSection
+            if let presetError { Section { Text(presetError).foregroundStyle(.red) } }
             displaySection
             controlsSection
             fastForwardSection
@@ -68,6 +70,22 @@ struct ScopedSettingsView: View {
 
     private func refreshModel() {
         hardware = currentHardware()
+    }
+
+    private func settingsChanged() {
+        let previous = hardware ?? currentHardware()
+        let current = currentHardware()
+        do {
+            try GameplayPresetSettings(store: store).retargetBuiltInPreset(
+                from: previous, to: current, at: scope, system: system, gameID: gameID, buildID: buildID
+            )
+            presetError = nil
+        } catch {
+            presetError = "Could not apply the preset to this Model: \(error.localizedDescription)"
+        }
+        hardware = current
+        settingsRevision += 1
+        onChange?()
     }
 
     /// Never Automatic: that resolves to the system's own hardware. Without Plus every game plays
@@ -104,14 +122,86 @@ struct ScopedSettingsView: View {
                     onChange?()
                 }
             )
+            modelSetting
+            NavigationLink {
+                Form {
+                    Section {
+                        customGameplayRows
+                    } footer: {
+                        Text("Changing these values requires Plus. Every display treatment works with every Model. " + Self.buttonBounceExplanation)
+                    }
+                }
+                .navigationTitle("Customize Gameplay")
+                .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                HStack {
+                    Text("Customize")
+                    if !plus.isUnlocked { PlusBadge() }
+                }
+            }
         } header: {
             Text("Gameplay")
         } footer: {
-            Text("Clean removes hardware and display effects. Accurate uses a curated setup for the selected Model. Both presets are free; manually changing preset-controlled settings requires Plus and makes the result Custom.")
+            Text("Clean shows the unfiltered output. Accurate uses the selected device's curated display and input configuration. Both are free. Open Customize to adjust individual settings with Plus.")
         }
     }
 
-    // Separate properties keep each section small enough for the compiler to type-check quickly.
+    private var modelSetting: some View {
+        InheritableSettingRow(
+            title: "Model",
+            key: .hardwareModel,
+            defaultValue: HardwareModel.automatic,
+            options: HardwareModel.allCases.map { ($0, $0.displayName) },
+            optionSubtitle: { $0 == .automatic ? HardwareModel.automaticSummary : nil },
+            listSections: modelSections,
+            explanation: plus.isUnlocked ? HardwareModel.settingExplanation : HardwareModel.lockedExplanation,
+            needsPlus: \.needsPlus,
+            reloadToken: settingsRevision,
+            context: context
+        )
+    }
+
+    @ViewBuilder private var customGameplayRows: some View {
+        screenColors
+        if resolvedHardware.isGameBoyAdvance {
+            InheritableSettingRow(
+                title: "Game Boy Advance Colors",
+                key: .advanceColors,
+                defaultValue: AdvanceColors.gameBoyAdvance,
+                options: AdvanceColors.allCases.map { ($0, $0.displayName) },
+                listSections: [SettingOptionSection(title: "Game Boy Advance Colors", values: AdvanceColors.allCases)],
+                explanation: AdvanceColors.explanation,
+                reloadToken: settingsRevision,
+                context: context
+            )
+        }
+        InheritableSettingRow(
+            title: "Display Filter",
+            key: .lcdFilter,
+            defaultValue: DisplayFilter.off,
+            options: DisplayFilter.selectable(for: resolvedHardware).map { ($0, $0.displayName) },
+            normalizeValue: { $0.selectionValue },
+            reloadToken: settingsRevision,
+            context: context
+        )
+        InheritableSettingRow(
+            title: "Frame Blending",
+            key: .frameBlending,
+            defaultValue: FrameBlending.off,
+            options: FrameBlending.allCases.map { ($0, $0.displayName) },
+            reloadToken: settingsRevision,
+            context: context
+        )
+        InheritableSettingRow(
+            title: "Button Bounce",
+            key: .buttonBounce,
+            defaultValue: true,
+            options: [(true, "On"), (false, "Off")],
+            reloadToken: settingsRevision,
+            context: context
+        )
+    }
+
     private var displaySection: some View {
         Section {
             InheritableSettingRow(
@@ -127,35 +217,6 @@ struct ScopedSettingsView: View {
                 key: .screenScaling,
                 defaultValue: ScreenScaling.integer,
                 options: [(.integer, "Integer"), (.fill, "Fill")],
-                reloadToken: settingsRevision,
-                context: context
-            )
-            screenColors
-            if resolvedHardware.isGameBoyAdvance {
-                InheritableSettingRow(
-                    title: "Game Boy Advance Colors",
-                    key: .advanceColors,
-                    defaultValue: AdvanceColors.gameBoyAdvance,
-                    options: AdvanceColors.allCases.map { ($0, $0.displayName) },
-                    listSections: [SettingOptionSection(title: "Game Boy Advance Colors", values: AdvanceColors.allCases)],
-                    explanation: AdvanceColors.explanation,
-                    reloadToken: settingsRevision,
-                    context: context
-                )
-            }
-            InheritableSettingRow(
-                title: "Display Filter",
-                key: .lcdFilter,
-                defaultValue: DisplayFilter.off,
-                options: DisplayFilter.selectable(for: resolvedHardware).map { ($0, $0.displayName) },
-                reloadToken: settingsRevision,
-                context: context
-            )
-            InheritableSettingRow(
-                title: "Frame Blending",
-                key: .frameBlending,
-                defaultValue: FrameBlending.off,
-                options: FrameBlending.allCases.map { ($0, $0.displayName) },
                 reloadToken: settingsRevision,
                 context: context
             )
@@ -233,31 +294,10 @@ struct ScopedSettingsView: View {
                 reloadToken: settingsRevision,
                 context: context
             )
-            InheritableSettingRow(
-                title: "Button Bounce",
-                key: .buttonBounce,
-                defaultValue: true,
-                options: [(true, "On"), (false, "Off")],
-                reloadToken: settingsRevision,
-                context: context
-            )
-            InheritableSettingRow(
-                title: "Model",
-                key: .hardwareModel,
-                defaultValue: HardwareModel.automatic,
-                options: HardwareModel.allCases.map { ($0, $0.displayName) },
-                optionSubtitle: { $0 == .automatic ? HardwareModel.automaticSummary : nil },
-                listSections: modelSections,
-                explanation: plus.isUnlocked ? HardwareModel.settingExplanation : HardwareModel.lockedExplanation,
-                needsPlus: \.needsPlus,
-                reloadToken: settingsRevision,
-                context: context
-            )
         } header: {
             Text("Playing")
         } footer: {
-            // A menu row shows no explanation of its own, so Button Bounce's goes here.
-            Text(Self.buttonBounceExplanation + " " + HardwareModel.settingSummary)
+            Text("Resume Games and Skip Boot Logo do not change the Gameplay preset.")
         }
     }
 
@@ -344,11 +384,7 @@ struct ScopedSettingsView: View {
             gameID: gameID,
             buildID: buildID,
             store: store,
-            onChange: {
-                settingsRevision += 1
-                onChange?()
-                refreshModel()
-            },
+            onChange: settingsChanged,
             plus: plus.gate,
             openPlus: { showsPlus = true }
         )
@@ -365,9 +401,9 @@ enum ScreenColorChoices: Equatable {
     /// `hardware` is resolved, so Automatic doesn't arrive here.
     init(hardware: HardwareModel) {
         switch hardware {
-        case .automatic, .gameBoy, .gameBoyPocket: self = .dmg(DMGPalette.selectableCases)
+        case .automatic, .gameBoy, .gameBoyPocket, .gameBoyLight: self = .dmg(DMGPalette.selectableCases)
         case .superGameBoy, .superGameBoy2: self = .superGameBoy
-        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: self = .correction(ColorCorrection.allCases)
+        case .gameBoyColor, .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer: self = .correction(ColorCorrection.allCases)
         }
     }
 }

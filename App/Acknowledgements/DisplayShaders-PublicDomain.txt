@@ -1,0 +1,23 @@
+CRT-Lottes
+Author: Timothy Lottes
+Source: https://github.com/libretro/slang-shaders/blob/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94/crt/shaders/crt-lottes.slang
+
+PUBLIC DOMAIN CRT STYLED SCAN-LINE SHADER
+by Timothy Lottes
+Please take and use, change, or whatever.
+
+GBA and SP101 color profiles
+Shader Modified: Pokefan531
+Color Mangler
+Author: hunterk
+Optimized by: crashGG
+License: Public domain
+Sources:
+https://github.com/libretro/slang-shaders/blob/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94/handheld/shaders/color/gba-color.slang
+https://github.com/libretro/slang-shaders/blob/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94/handheld/shaders/color/sp101-color.slang
+
+The app ports these algorithms to Metal. CRT-Lottes retains the upstream default
+Gaussian reconstruction, beam, bloom, mask and sRGB transfer settings. The app
+adds raster-edge feathering, edge falloff, frame blending and a woven-field
+adapter for its Game Boy Player presentation. Device color profiles use the
+upstream sRGB matrices and default luminance without additional darkening.

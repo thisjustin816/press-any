@@ -692,6 +692,21 @@ extension EmulationSessionTests {
         XCTAssertEqual(try skipsOnStart(harness.contextA), 0, "an unreadable value shows the logo")
     }
 
+    func testButtonBounceChangesOnThePausedCoreWithoutRestarting() throws {
+        let harness = try SessionHarness.make()
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        try session.pause()
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        XCTAssertTrue(core.buttonBounce)
+        try session.setButtonBounce(false)
+        XCTAssertFalse(core.buttonBounce)
+        try session.setButtonBounce(true)
+        XCTAssertTrue(core.buttonBounce)
+        XCTAssertEqual(harness.factory.cores.count, 1)
+        try session.stop(createAutoState: false)
+    }
+
     func testButtonBounceStaysOnUnlessTheResolvedSettingTurnsItOff() throws {
         let harness = try SessionHarness.make()
         let settings = InMemorySettingsStore()

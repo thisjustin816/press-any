@@ -1,5 +1,6 @@
 PROJECT_NAME ?= PressAny
 DESTINATION ?= platform=iOS Simulator,name=iPhone 17 Pro
+TEST_OPTIONS ?=
 
 .PHONY: bootstrap generate build test test-share-ui test-package-ios test-core test-sameboy-bridge bootroms known-dumps
 
@@ -16,7 +17,7 @@ build:
 	xcodebuild -project $(PROJECT_NAME).xcodeproj -scheme $(PROJECT_NAME) -destination '$(DESTINATION)' build
 
 test:
-	xcodebuild -project $(PROJECT_NAME).xcodeproj -scheme $(PROJECT_NAME) -destination '$(DESTINATION)' test
+	xcodebuild -project $(PROJECT_NAME).xcodeproj -scheme $(PROJECT_NAME) -destination '$(DESTINATION)' $(TEST_OPTIONS) test
 
 test-share-ui:
 	./Scripts/test-share-ui.sh

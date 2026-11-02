@@ -746,6 +746,7 @@ final class AppContainer {
             dmgPalette: dmgPalette(system: target.system, gameID: target.gameID, buildID: target.buildID),
             advanceColors: advanceColors(system: target.system, gameID: target.gameID, buildID: target.buildID),
             frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            buttonBounce: launchSetting(Bool.self, .buttonBounce, system: target.system, gameID: target.gameID, buildID: target.buildID) ?? true,
             fastForwardSpeed: fastForwardSpeed(system: target.system, gameID: target.gameID, buildID: target.buildID),
             fastForwardAudio: fastForwardAudio(system: target.system, gameID: target.gameID, buildID: target.buildID),
             camera: gameBoyCamera(system: target.system, gameID: target.gameID, buildID: target.buildID)
@@ -861,6 +862,7 @@ struct GameplayDisplaySettings: Equatable {
     var dmgPalette: DMGPalette
     var advanceColors: AdvanceColors = .gameBoyAdvance
     var frameBlending: FrameBlending
+    var buttonBounce: Bool = true
     var fastForwardSpeed: FastForwardSpeed
     var fastForwardAudio: FastForwardAudio
     /// Only camera cartridges read it.

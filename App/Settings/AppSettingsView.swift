@@ -33,6 +33,27 @@ struct AppSettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    ForEach(GameSystem.allCases, id: \.self) { system in
+                        NavigationLink(system.displayName) {
+                            ScopedSettingsView(
+                                title: "\(system.displayName) Settings",
+                                scope: .system(system),
+                                system: system,
+                                gameID: nil,
+                                buildID: nil,
+                                store: store,
+                                plus: plus,
+                                inSheet: false
+                            )
+                        }
+                    }
+                } header: {
+                    Text("Gameplay")
+                } footer: {
+                    Text("Choose Clean or Accurate for each system, then open Customize for individual settings. A Game or Build can still override these defaults.")
+                }
+
                 // The same order as a system's, Game's or Build's settings.
                 Section {
                     NavigationLink {
@@ -58,27 +79,6 @@ struct AppSettingsView: View {
                             if !plus.isUnlocked { PlusBadge() }
                         }
                     }
-                }
-
-                Section {
-                    ForEach(GameSystem.allCases, id: \.self) { system in
-                        NavigationLink(system.displayName) {
-                            ScopedSettingsView(
-                                title: "\(system.displayName) Settings",
-                                scope: .system(system),
-                                system: system,
-                                gameID: nil,
-                                buildID: nil,
-                                store: store,
-                                plus: plus,
-                                inSheet: false
-                            )
-                        }
-                    }
-                } header: {
-                    Text("Systems")
-                } footer: {
-                    Text("Settings for every game on one system, including its Screen Colors. A Game or Build can still set its own.")
                 }
 
                 if (libraryDeletion != nil && games != nil) || integrityChecker != nil || libraryStorageContext != nil {

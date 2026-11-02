@@ -201,6 +201,9 @@ Set up the product in App Store Connect first (`docs/testflight.md`). A TestFlig
 Apple's sandbox with the tester's own Apple Account, for free, and the purchase doesn't carry over
 to the App Store. These checks passed on a physical iPhone and remain as regression coverage.
 
+The checked purchase/filter results below record the v1.0 build. Its LCD entitlement behavior
+is superseded by the v1.1 preset checks at the end of this document; it is not a current requirement.
+
 - [x] Without Plus, set LCD Filter to LCD 1× before installing this build, or restore a backup that has it. The game plays with Off, and Settings shows LCD 1× (Plus). Choosing LCD 3× in App, Game Boy, Game, Build and game-menu settings opens the Plus screen once each time and saves nothing. No Plus screen ever opens at launch or during play.
 - [x] Settings > Press Any Plus shows the sandbox price from the App Store, not a fixed one. Buy Plus: the screen thanks you, the stored LCD 1× plays at once, also in a game left open behind its settings sheet, and Keep Auto States offers 3, 5 and 10 again with the earlier choice.
 - [x] Settings > App Icon: change to Grape and back to Default. iOS confirms each change, and the home screen shows the icon in Light, Dark and Tinted.
@@ -391,5 +394,16 @@ These checks need Plus. The Press Any Plus device checks cover the backgrounds w
 - [ ] On GB, Pocket, GBC and GBA models, choose Accurate and confirm the advanced rows immediately show the documented LCD/color/blending/button values; change one and confirm the preset becomes Custom.
 - [ ] Choose Clean, confirm Display Filter and Frame Blending are Off and Button Bounce is Off, then reset the preset and confirm inherited values return.
 - [ ] On Super Game Boy/Super Game Boy 2, Accurate shows CRT 240p with visible but restrained scanlines/softness and no handheld LCD subpixel pattern.
-- [ ] On Game Boy Player, Accurate shows the cleaner GameCube TV treatment, visibly distinct from CRT 240p and without assuming a curved or flat CRT.
+- [ ] On Game Boy Player, Accurate shows the CRT 480i treatment, visibly distinct from CRT 240p and without assuming a curved or flat CRT.
 - [ ] Without Plus, Clean and Accurate remain selectable and apply their effects. Trying to change a preset-controlled advanced setting opens Press Any Plus and leaves the stored value unchanged.
+
+- [ ] Verify DMG, Pocket and Light each select the monochrome shader with their own palette;
+  GBC selects Authentic GBC; GBA selects the GBA profile; SP AGS-101 selects SP101.
+- [ ] Select another Model, then Accurate. Compare each stock-device reference in portrait and
+  landscape at normal phone brightness. Record the phone, OS, commit and lighting conditions.
+- [ ] Start a game with Button Bounce on, select Clean in its settings, then Accurate. Verify
+  bounce changes without restarting in library play and Quick Play.
+- [ ] Run `LCDFilterTests.testCuratedDeviceReferenceCaptures` on an Apple Metal device/simulator.
+  Preserve its named attachments and review both CRT variants for readable text, glow and edges.
+- [ ] Compare CRT 480i moving content across successive fields and both Integer/Fill paths.
+  Confirm performance and energy use on a physical iPhone; these remain manual checks.
