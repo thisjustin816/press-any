@@ -7,6 +7,10 @@ public struct GameplayPresetSettings: Sendable {
     private let store: any SettingsStore
     private let resolver: SettingsResolver
 
+    public static let controlledKeys: Set<SettingKey> = [
+        .lcdFilter, .frameBlending, .buttonBounce, .colorCorrection, .dmgPalette, .advanceColors,
+    ]
+
     public init(store: any SettingsStore) {
         self.store = store
         self.resolver = SettingsResolver(store: store)
@@ -18,9 +22,9 @@ public struct GameplayPresetSettings: Sendable {
         buildID: UUID? = nil,
         hardware: HardwareModel
     ) throws -> GameplayPreset {
-        if let raw = GameplayPresetValues.values(for: .raw, hardware: hardware),
-           try matches(raw, system: system, gameID: gameID, buildID: buildID) {
-            return .raw
+        if let clean = GameplayPresetValues.values(for: .clean, hardware: hardware),
+           try matches(clean, system: system, gameID: gameID, buildID: buildID) {
+            return .clean
         }
         if let accurate = GameplayPresetValues.values(for: .accurate, hardware: hardware),
            try matches(accurate, system: system, gameID: gameID, buildID: buildID) {
@@ -29,8 +33,8 @@ public struct GameplayPresetSettings: Sendable {
         return .custom
     }
 
-    /// Writes the built-in preset at exactly this scope. Custom is a derived state and cannot be
-    /// applied directly; edit any controlled advanced setting to make a preset Custom.
+    /// Writes a built-in preset at exactly this scope. Custom is a derived state and cannot be
+    /// applied directly; editing any controlled setting makes the result Custom.
     public func apply(_ preset: GameplayPreset, at scope: SettingsScope, hardware: HardwareModel) throws {
         guard let values = GameplayPresetValues.values(for: preset, hardware: hardware) else { return }
         try store.set(values.displayFilter, key: SettingKey.lcdFilter.rawValue, scope: scope)
@@ -101,8 +105,4 @@ public struct GameplayPresetSettings: Sendable {
         }
         return true
     }
-
-    private static let controlledKeys: [SettingKey] = [
-        .lcdFilter, .frameBlending, .buttonBounce, .colorCorrection, .dmgPalette, .advanceColors,
-    ]
 }
