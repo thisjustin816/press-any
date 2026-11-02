@@ -154,7 +154,7 @@ struct DisplaySettingsPage: View {
             Section {
                 Picker(selection: Binding(get: { lcdFilter }, set: { chooseLCDFilter($0) })) {
                     ForEach(DisplayFilter.handheldCases, id: \.self) { filter in
-                        Text(plus.gate.label(filter.displayName, needsPlus: filter.needsPlus)).tag(filter)
+                        Text(plus.gate.label(filter.displayName, needsPlus: true)).tag(filter)
                     }
                 } label: {
                     HStack(spacing: 6) {
@@ -162,9 +162,14 @@ struct DisplaySettingsPage: View {
                         if !plus.isUnlocked { PlusBadge() }
                     }
                 }
-                Picker("Frame Blending", selection: $frameBlending) {
+                Picker(selection: Binding(get: { frameBlending }, set: { chooseFrameBlending($0) })) {
                     ForEach(FrameBlending.allCases, id: \.self) { blending in
-                        Text(blending.displayName).tag(blending)
+                        Text(plus.gate.label(blending.displayName, needsPlus: true)).tag(blending)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Frame Blending")
+                        if !plus.isUnlocked { PlusBadge() }
                     }
                 }
             } header: {
@@ -190,15 +195,22 @@ struct DisplaySettingsPage: View {
     static func effectsFooter(_ gate: PlusGate) -> String {
         let effects = "LCD 1× adds a subtle pixel grid and LCD 3× red, green and blue subpixels, at the same screen size. Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things."
         guard gate.isLocked(true) else { return effects }
-        return effects + " Display filters come with \(PlusProduct.name). Without it a game shows Off, and a filter you already chose is kept."
+        return effects + " Clean and Accurate can use these effects for everyone. Changing them manually requires \(PlusProduct.name) and creates a Custom setup."
     }
 
-    /// A Plus filter without Plus opens the Plus screen and leaves the choice as it was.
     private func chooseLCDFilter(_ filter: DisplayFilter) {
-        if plus.gate.isLocked(filter.needsPlus) {
+        if plus.gate.isLocked(true) {
             showsPlus = true
         } else {
             lcdFilter = filter
+        }
+    }
+
+    private func chooseFrameBlending(_ blending: FrameBlending) {
+        if plus.gate.isLocked(true) {
+            showsPlus = true
+        } else {
+            frameBlending = blending
         }
     }
 
@@ -285,7 +297,12 @@ struct PlayingSettingsPage: View {
                     Text("Never").tag(AutoResumePolicy.never)
                 }
                 Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
-                Toggle("Button Bounce", isOn: $buttonBounce)
+                Toggle(isOn: Binding(get: { buttonBounce }, set: { chooseButtonBounce($0) })) {
+                    HStack(spacing: 6) {
+                        Text("Button Bounce")
+                        if !plus.isUnlocked { PlusBadge() }
+                    }
+                }
             } footer: {
                 Text("Resume Games picks up where you left off when you open a game again or return to the app. Skip Boot Logo opens library games on the game; Quick Play always skips it. " + ScopedSettingsView.buttonBounceExplanation)
             }
@@ -498,6 +515,14 @@ struct PlayingSettingsPage: View {
         let cleanup = "Keep Prints is how many prints each Game keeps in its Captures. After the next print, older ones go to Recently Deleted. Pinned prints are never cleaned up."
         guard gate.isLocked(KeepPrints.defaultValue.needsPlus) else { return cleanup }
         return "Without Plus, each Game keeps its latest \(KeepPrints.withoutHistory) prints. " + cleanup
+    }
+
+    private func chooseButtonBounce(_ enabled: Bool) {
+        if plus.gate.isLocked(true) {
+            showsPlus = true
+        } else {
+            buttonBounce = enabled
+        }
     }
 
     private func save(_ value: some Encodable, _ key: SettingKey) {
