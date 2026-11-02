@@ -16,64 +16,39 @@ permissions:
 jobs:
   implement:
     runs-on: ubuntu-24.04
-    container: swift:6.1.2-noble
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: true
-      - name: Install build tools
-        run: apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev bison cmake g++ git libpng-dev make pkg-config python3
-      - name: Align implementation script with current sources
-        run: python3 Scripts/fixup-gameplay-implementation.py
-      - name: Apply implementation
-        run: python3 Scripts/implement-gameplay-presets.py
-      - name: Normalize generated whitespace
+      - name: Generate and validate in Swift container
         shell: bash
         run: |
-          python3 - <<'PY'
-          import os
-          import pathlib
-          import subprocess
-
-          root = pathlib.Path(os.environ["GITHUB_WORKSPACE"])
-          names = subprocess.check_output(
-              ["git", "-C", str(root), "diff", "--name-only"],
-              text=True,
-          ).splitlines()
-          for name in names:
-              path = root / name
-              try:
-                  text = path.read_text()
-              except (UnicodeDecodeError, IsADirectoryError):
-                  continue
-              normalized = "\n".join(line.rstrip() for line in text.splitlines())
-              if text.endswith("\n"):
-                  normalized += "\n"
-              if normalized != text:
-                  path.write_text(normalized)
-          PY
-      - name: Build RGBDS and open boot ROMs
-        shell: bash
-        run: |
-          git clone -q --depth 1 --branch v0.9.0 https://github.com/gbdev/rgbds /tmp/rgbds
-          cmake -S /tmp/rgbds -B /tmp/rgbds/build -DCMAKE_BUILD_TYPE=Release >/dev/null
-          cmake --build /tmp/rgbds/build -j "$(nproc)" >/dev/null
-          cmake --install /tmp/rgbds/build >/dev/null
-          make bootroms
-      - name: Run portable package tests
-        run: swift test --package-path Packages/EmulatorKit
-      - name: Parse changed app Swift
-        shell: bash
-        run: |
-          swiftc -frontend -parse App/Settings/GameplayPresetRow.swift
-          swiftc -frontend -parse App/Settings/ScopedSettingsView.swift
-          swiftc -frontend -parse App/Settings/AppSettingsPages.swift
-          swiftc -frontend -parse App/Gameplay/MetalRenderer.swift
-          swiftc -frontend -parse App/AppContainer.swift
-          swiftc -frontend -parse App/Screenshots/ScreenshotScene.swift
-          swiftc -frontend -parse AppTests/LCDFilterTests.swift
-      - name: Check diff
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            swift:6.1.2-noble \
+            bash -lc '
+              set -euo pipefail
+              apt-get update
+              apt-get install -y --no-install-recommends libsqlite3-dev bison cmake g++ git libpng-dev make pkg-config python3
+              python3 Scripts/fixup-gameplay-implementation.py
+              python3 Scripts/implement-gameplay-presets.py
+              git clone -q --depth 1 --branch v0.9.0 https://github.com/gbdev/rgbds /tmp/rgbds
+              cmake -S /tmp/rgbds -B /tmp/rgbds/build -DCMAKE_BUILD_TYPE=Release >/dev/null
+              cmake --build /tmp/rgbds/build -j "$(nproc)" >/dev/null
+              cmake --install /tmp/rgbds/build >/dev/null
+              make bootroms
+              swift test --package-path Packages/EmulatorKit
+              swiftc -frontend -parse App/Settings/GameplayPresetRow.swift
+              swiftc -frontend -parse App/Settings/ScopedSettingsView.swift
+              swiftc -frontend -parse App/Settings/AppSettingsPages.swift
+              swiftc -frontend -parse App/Gameplay/MetalRenderer.swift
+              swiftc -frontend -parse App/AppContainer.swift
+              swiftc -frontend -parse App/Screenshots/ScreenshotScene.swift
+              swiftc -frontend -parse AppTests/LCDFilterTests.swift
+            '
+      - name: Check generated diff
         run: git diff --check
       - name: Commit implementation
         shell: bash
