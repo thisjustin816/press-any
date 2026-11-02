@@ -33,13 +33,13 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
 /// A high-level gameplay presentation. Custom is derived when the controlled low-level settings
 /// do not exactly match either built-in preset; it is never stored independently.
 public enum GameplayPreset: String, Codable, Sendable, CaseIterable {
-    case raw
+    case clean
     case accurate
     case custom
 
     public var displayName: String {
         switch self {
-        case .raw: "Raw"
+        case .clean: "Clean"
         case .accurate: "Accurate"
         case .custom: "Custom"
         }
@@ -77,7 +77,7 @@ public struct GameplayPresetValues: Equatable, Sendable {
         switch preset {
         case .custom:
             return nil
-        case .raw:
+        case .clean:
             switch hardware {
             case .automatic, .gameBoy, .gameBoyPocket:
                 return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false, dmgPalette: .cgbLeftB)
