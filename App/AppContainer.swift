@@ -620,7 +620,7 @@ final class AppContainer {
         launchSetting(ScreenScaling.self, .screenScaling, for: context) ?? .integer
     }
 
-    /// Off without Plus, whatever is stored.
+    /// Stored display filters render for everyone; Settings gates manual Custom editing behind Plus.
     func lcdFilter(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> DisplayFilter {
         ScreenshotScene.lcdFilterOverride
             ?? plus.effective(launchSetting(DisplayFilter.self, .lcdFilter, system: system, gameID: gameID, buildID: buildID) ?? .off)

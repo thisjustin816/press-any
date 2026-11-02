@@ -389,7 +389,7 @@ These checks need Plus. The Press Any Plus device checks cover the backgrounds w
 ## v1.1 gameplay presets and television filters
 
 - [ ] On GB, Pocket, GBC and GBA models, choose Accurate and confirm the advanced rows immediately show the documented LCD/color/blending/button values; change one and confirm the preset becomes Custom.
-- [ ] Choose Raw, confirm Display Filter and Frame Blending are Off and Button Bounce is Off, then reset the preset and confirm inherited values return.
+- [ ] Choose Clean, confirm Display Filter and Frame Blending are Off and Button Bounce is Off, then reset the preset and confirm inherited values return.
 - [ ] On Super Game Boy/Super Game Boy 2, Accurate shows CRT 240p with visible but restrained scanlines/softness and no handheld LCD subpixel pattern.
 - [ ] On Game Boy Player, Accurate shows the cleaner GameCube TV treatment, visibly distinct from CRT 240p and without assuming a curved or flat CRT.
-- [ ] Without Plus, choosing Accurate opens Press Any Plus and does not change the stored low-level settings. Raw remains selectable.
+- [ ] Without Plus, Clean and Accurate remain selectable and apply their effects. Trying to change a preset-controlled advanced setting opens Press Any Plus and leaves the stored value unchanged.

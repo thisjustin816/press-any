@@ -11,7 +11,7 @@ roadmap; its final scope and timing are not fixed.
   `app-store-review/1.0-build-110`, and its stable release, `v1.0.0`, is at the same commit.
   Submission and stable release tags follow `docs/testflight.md`.
 - **v1.1:** work completed after build 110. This includes revised branding and app icons;
-  the Model setting and hardware-family checks; Raw/Accurate/Custom gameplay presets and model-specific display filters; automatic artwork previews, missing-artwork
+  the Model setting and hardware-family checks; Clean/Accurate/Custom gameplay presets and model-specific display filters; automatic artwork previews, missing-artwork
   review, provenance and grouped Library settings; Game Boy Camera with Photo! DX color
   capture; Playtiles landscape controls and compatibility checks; and the fixes listed below.
   ZIP globals attachment, grouped Build menus and list overflow cues are built for this release,
