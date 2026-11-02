@@ -28,6 +28,25 @@ jobs:
         run: python3 Scripts/fixup-gameplay-implementation.py
       - name: Apply implementation
         run: python3 Scripts/implement-gameplay-presets.py
+      - name: Normalize generated whitespace
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import subprocess
+
+          for name in subprocess.check_output(["git", "diff", "--name-only"], text=True).splitlines():
+              path = pathlib.Path(name)
+              try:
+                  text = path.read_text()
+              except (UnicodeDecodeError, IsADirectoryError):
+                  continue
+              normalized = "\n".join(line.rstrip() for line in text.splitlines())
+              if text.endswith("\n"):
+                  normalized += "\n"
+              if normalized != text:
+                  path.write_text(normalized)
+          PY
       - name: Build RGBDS and open boot ROMs
         shell: bash
         run: |
