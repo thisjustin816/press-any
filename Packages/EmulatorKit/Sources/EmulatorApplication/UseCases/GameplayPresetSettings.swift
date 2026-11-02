@@ -7,7 +7,7 @@ public struct GameplayPresetSettings: Sendable {
     private let store: any SettingsStore
     private let resolver: SettingsResolver
 
-    public static let controlledKeys: Set<SettingKey> = [
+    public static let controlledKeys: [SettingKey] = [
         .lcdFilter, .frameBlending, .buttonBounce, .colorCorrection, .dmgPalette, .advanceColors,
     ]
 
