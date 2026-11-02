@@ -87,7 +87,8 @@ float4 crtColor(texture2d<float> newest, texture2d<float> previous, texture2d<fl
                 sampler s, float2 coord, float2 size, float2 outputPixel,
                 float3 weights, uint mode) {
     bool is240p = mode == 4;
-    float curvature = is240p ? 0.075 : 0.055;
+    // Game Boy Player targets a later flat-face CRT look: visibly CRT, but much flatter than SGB.
+    float curvature = is240p ? 0.075 : 0.028;
     float2 warped = crtWarp(coord, curvature);
     if (any(warped < float2(0.0)) || any(warped > float2(1.0))) {
         return float4(0.0, 0.0, 0.0, 1.0);
