@@ -16,15 +16,12 @@ struct GameplayPresetRow: View {
 
     @State private var preset: GameplayPreset = .custom
     @State private var errorMessage: String?
-    @State private var showsPlus = false
 
     var body: some View {
         Menu {
-            Button(GameplayPreset.raw.displayName) { choose(.raw) }
-            Button(plus.gate.label(GameplayPreset.accurate.displayName, needsPlus: accurateNeedsPlus)) {
-                choose(.accurate)
-            }
-            Button(GameplayPreset.custom.displayName) {}
+            Button(GameplayPreset.clean.displayName) { choose(.clean) }
+            Button(GameplayPreset.accurate.displayName) { choose(.accurate) }
+            Button(plus.gate.label(GameplayPreset.custom.displayName, needsPlus: true)) {}
                 .disabled(true)
             Divider()
             Button("Reset to Inherited") { reset() }
@@ -33,7 +30,7 @@ struct GameplayPresetRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text("Preset").foregroundStyle(Color.primary)
-                        if plus.gate.isLocked(accurateNeedsPlus) { PlusBadge() }
+                        if preset == .custom, !plus.isUnlocked { PlusBadge() }
                     }
                     Text(errorMessage ?? detail)
                         .font(.subheadline)
@@ -41,7 +38,7 @@ struct GameplayPresetRow: View {
                 }
                 Spacer(minLength: 12)
                 HStack(spacing: 4) {
-                    Text(plus.gate.label(preset.displayName, needsPlus: preset == .accurate && accurateNeedsPlus))
+                    Text(plus.gate.label(preset.displayName, needsPlus: preset == .custom))
                     Image(systemName: "chevron.up.chevron.down").imageScale(.small)
                 }
                 .foregroundStyle(Color.secondary)
@@ -50,30 +47,22 @@ struct GameplayPresetRow: View {
         }
         .accessibilityLabel("Gameplay Preset")
         .accessibilityValue("\(preset.displayName), \(errorMessage ?? detail)")
-        .plusSheet(isPresented: $showsPlus, store: plus)
         .onAppear(perform: load)
         .onChange(of: refreshToken) { load() }
         .onChange(of: hardware) { load() }
     }
 
-    private var accurateNeedsPlus: Bool {
-        GameplayPresetValues.values(for: .accurate, hardware: hardware)?.displayFilter.needsPlus ?? false
-    }
-
     private var detail: String {
         switch preset {
-        case .raw: "Unfiltered emulated output"
+        case .clean: "No hardware or display effects"
         case .accurate: "Matched to \(hardware.displayName)"
-        case .custom: "Advanced settings differ from Raw or Accurate"
+        case .custom:
+            plus.isUnlocked ? "Advanced settings differ from Clean or Accurate" : "Manual tuning requires \(PlusProduct.name)"
         }
     }
 
     private func choose(_ newPreset: GameplayPreset) {
         guard newPreset != .custom else { return }
-        if newPreset == .accurate, plus.gate.isLocked(accurateNeedsPlus) {
-            showsPlus = true
-            return
-        }
         do {
             try GameplayPresetSettings(store: store).apply(newPreset, at: scope, hardware: hardware)
             preset = newPreset
