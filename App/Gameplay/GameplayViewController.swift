@@ -44,7 +44,7 @@ final class GameplayViewController: UIViewController {
     private var halted = false
     private var controlStyle: TouchControlStyle
     private var orientation: ScreenOrientation
-    private var lcdFilter: LCDFilter
+    private var lcdFilter: DisplayFilter
     private var colorCorrection: ColorCorrection
     private var advanceColors: AdvanceColors
     private var dmgPalette: DMGPalette
@@ -117,7 +117,7 @@ final class GameplayViewController: UIViewController {
         controlStyle: TouchControlStyle = .gameBoy,
         orientation: ScreenOrientation = .automatic,
         screenScaling: ScreenScaling = .integer,
-        lcdFilter: LCDFilter = .off,
+        lcdFilter: DisplayFilter = .off,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
         advanceColors: AdvanceColors = .gameBoyAdvance,
@@ -1030,7 +1030,7 @@ final class GameplayViewController: UIViewController {
         controlStyle: TouchControlStyle,
         orientation: ScreenOrientation = .automatic,
         screenScaling: ScreenScaling,
-        lcdFilter: LCDFilter,
+        lcdFilter: DisplayFilter,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
         advanceColors: AdvanceColors = .gameBoyAdvance,

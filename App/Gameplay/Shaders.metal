@@ -60,6 +60,32 @@ float4 blendedSample(texture2d<float> newest, texture2d<float> previous, texture
     return color;
 }
 
+
+// Television-output presets are deliberately restrained. CRT 240p models a consumer TV with
+// visible beam structure and mild horizontal bleed; GameCube TV stays cleaner because Game Boy
+// Player could be used through either interlaced or progressive GameCube output.
+float4 tvColor(texture2d<float> newest, texture2d<float> previous, texture2d<float> older,
+               sampler s, float2 coord, float2 texel, float2 size,
+               float3 weights, uint mode) {
+    float2 dx = float2(0.55 / max(size.x, 1.0), 0.0);
+    float4 center = blendedSample(newest, previous, older, s, coord, weights);
+    float4 neighbors = 0.5 * (
+        blendedSample(newest, previous, older, s, coord - dx, weights) +
+        blendedSample(newest, previous, older, s, coord + dx, weights)
+    );
+    float softness = mode == 4 ? 0.28 : 0.12;
+    float4 color = mix(center, neighbors, softness);
+
+    float cellY = fract(texel.y);
+    float beam = smoothstep(0.0, 0.35, cellY) * (1.0 - smoothstep(0.65, 1.0, cellY));
+    float beamAmount = mode == 4 ? 0.20 : 0.055;
+    float luminance = 1.0 - beamAmount * (1.0 - beam);
+    if (mode == 4) {
+        luminance *= 0.975 + 0.025 * cos((texel.x + 0.5) * 6.2831853);
+    }
+    return float4(color.rgb * luminance, color.a);
+}
+
 fragment float4 gameplayTextureFragment(VertexOut in [[stage_in]], texture2d<float> source [[texture(0)]],
                                        texture2d<float> previous [[texture(1)]],
                                        texture2d<float> oldest [[texture(2)]],
@@ -67,8 +93,12 @@ fragment float4 gameplayTextureFragment(VertexOut in [[stage_in]], texture2d<flo
                                        constant float4 &blendWeights [[buffer(1)]]) {
     constexpr sampler nearestSampler(coord::normalized, address::clamp_to_edge, filter::nearest);
     float2 size = float2(source.get_width(), source.get_height());
+    float2 texel = in.texCoord * size;
+    if (lcdMode == 4 || lcdMode == 5) {
+        return tvColor(source, previous, oldest, nearestSampler, in.texCoord, texel, size, blendWeights.xyz, lcdMode);
+    }
     float4 color = blendedSample(source, previous, oldest, nearestSampler, in.texCoord, blendWeights.xyz);
-    return lcdColor(color, in.texCoord * size, lcdMode);
+    return lcdColor(color, texel, lcdMode);
 }
 
 /// Fill scaling. At a scale that isn't a whole number, nearest sampling makes some Game Boy pixels
@@ -85,6 +115,11 @@ fragment float4 gameplaySharpFragment(VertexOut in [[stage_in]], texture2d<float
     float2 edge = floor(texel + 0.5);
     float2 texelsPerScreenPixel = max(fwidth(texel), float2(1e-5));
     texel = edge + clamp((texel - edge) / texelsPerScreenPixel, -0.5, 0.5);
-    float4 color = blendedSample(source, previous, oldest, linearSampler, texel / size, blendWeights.xyz);
-    return lcdColor(color, in.texCoord * size, lcdMode);
+    float2 sampleCoord = texel / size;
+    float2 displayTexel = in.texCoord * size;
+    if (lcdMode == 4 || lcdMode == 5) {
+        return tvColor(source, previous, oldest, linearSampler, sampleCoord, displayTexel, size, blendWeights.xyz, lcdMode);
+    }
+    float4 color = blendedSample(source, previous, oldest, linearSampler, sampleCoord, blendWeights.xyz);
+    return lcdColor(color, displayTexel, lcdMode);
 }

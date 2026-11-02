@@ -23,12 +23,12 @@ final class LCDFilterTests: XCTestCase {
         XCTAssertEqual(container.lcdFilter(system: .gameBoy), .off)
         let settings = container.repositories.settings
         let key = SettingKey.lcdFilter.rawValue
-        try settings.set(LCDFilter.lcd3x, key: key, scope: .app)
-        try settings.set(LCDFilter.lcd1x, key: key, scope: .system(.gameBoy))
+        try settings.set(DisplayFilter.lcd3x, key: key, scope: .app)
+        try settings.set(DisplayFilter.lcd1x, key: key, scope: .system(.gameBoy))
         XCTAssertEqual(container.lcdFilter(for: context), .lcd1x)
         XCTAssertEqual(container.lcdFilter(system: .gameBoy), .lcd1x)
         XCTAssertEqual(container.lcdFilter(system: .gameBoyColor), .lcd3x)
-        try settings.set(LCDFilter.off, key: key, scope: .build(result.build.id))
+        try settings.set(DisplayFilter.off, key: key, scope: .build(result.build.id))
         let reopened = try AppContainer(rootURL: root, plus: .fixed(ownsPlus: true))
         XCTAssertEqual(reopened.lcdFilter(for: context), .off)
         XCTAssertEqual(reopened.lcdFilter(system: .gameBoy), .lcd1x)
@@ -57,6 +57,24 @@ final class LCDFilterTests: XCTestCase {
             XCTAssertGreaterThan(subpixels[green + 1], subpixels[green], "Middle band is green")
             XCTAssertGreaterThan(subpixels[blue], subpixels[blue + 2], "Last band is blue")
             XCTAssertNotEqual(subpixels, grid)
+        }
+    }
+
+    func testTVFiltersUseDistinctBeamStrengths() throws {
+        guard let device = MTLCreateSystemDefaultDevice(), let library = device.makeDefaultLibrary() else {
+            throw XCTSkip("Metal isn't available")
+        }
+        for fragment in ["gameplayTextureFragment", "gameplaySharpFragment"] {
+            let crt = try render(.crt240p, fragment: fragment, device: device, library: library)
+            let tv = try render(.gameCubeTV, fragment: fragment, device: device, library: library)
+            let edge = pixel(12, 1)
+            let center = pixel(12, 12)
+            let crtDrop = Int(crt[center]) - Int(crt[edge])
+            let tvDrop = Int(tv[center]) - Int(tv[edge])
+            XCTAssertGreaterThan(crtDrop, 0, "CRT 240p must show a visible beam profile")
+            XCTAssertGreaterThan(tvDrop, 0, "GameCube TV keeps a restrained beam profile")
+            XCTAssertGreaterThan(crtDrop, tvDrop, "CRT 240p must be stronger than GameCube TV")
+            XCTAssertNotEqual(crt, tv)
         }
     }
 
@@ -89,7 +107,7 @@ final class LCDFilterTests: XCTestCase {
 
     /// Renders 1×1 gray `frames`, newest first, scaled to 24×24 by `fragment`.
     private func render(
-        _ filter: LCDFilter, fragment: String, device: any MTLDevice, library: any MTLLibrary,
+        _ filter: DisplayFilter, fragment: String, device: any MTLDevice, library: any MTLLibrary,
         frames: [UInt8] = [255], weights: SIMD4<Float> = SIMD4(1, 0, 0, 0)
     ) throws -> [UInt8] {
         let descriptor = MTLRenderPipelineDescriptor()

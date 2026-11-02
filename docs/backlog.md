@@ -11,7 +11,7 @@ roadmap; its final scope and timing are not fixed.
   `app-store-review/1.0-build-110`, and its stable release, `v1.0.0`, is at the same commit.
   Submission and stable release tags follow `docs/testflight.md`.
 - **v1.1:** work completed after build 110. This includes revised branding and app icons;
-  the Model setting and hardware-family checks; automatic artwork previews, missing-artwork
+  the Model setting and hardware-family checks; Raw/Accurate/Custom gameplay presets and model-specific display filters; automatic artwork previews, missing-artwork
   review, provenance and grouped Library settings; Game Boy Camera with Photo! DX color
   capture; Playtiles landscape controls and compatibility checks; and the fixes listed below.
   ZIP globals attachment, grouped Build menus and list overflow cues are built for this release,
@@ -413,7 +413,7 @@ released. Directional input leaves it paused.
 | done | Free built-in palettes for original Game Boy games | v1.0 | Twelve button-combo palettes and six game palettes (Mole Mania, Link's Awakening, Super Mario Land, Super Mario Land 2, Donkey Kong Land and Game Boy Camera), alongside DMG/Pocket/Light; grouped palette list with color names, combo subtitles and BG/OBJ0/OBJ1 previews, one Black & White choice; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors lists, including in-game Settings |
 | missing | Custom Game Boy palettes and GBC game-palette selection | v2.0 | Specify separate background/OBJ0/OBJ1 colors, enter a GBC boot-ROM palette combination number (such as 17), or select a recognized game (such as Mole Mania) to use its built-in colors; include color previews |
 | done | Adaptive presentation on high-refresh displays | v1.0 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check passed |
-| partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v2.0 | LCD 1× pixel grid and LCD 3× RGB subpixel effects implemented as Press Any's own code, modelled on the libretro LCD shaders and credited to them; remaining effects and catalog missing; each shader that ships is credited by author in Acknowledgements and `THIRD_PARTY_NOTICES.md` |
+| partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v2.0 | v1.1 has Press Any's own LCD 1×/3× filters plus curated CRT 240p for Super Game Boy and GameCube TV for Game Boy Player; modelled on the libretro LCD shaders and credited to them; remaining effects and catalog missing; each shader that ships is credited by author in Acknowledgements and `THIRD_PARTY_NOTICES.md` |
 | partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v2.0 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v2.0 |  |
 | missing | Thermal-aware degradation of optional work | v2.0 |  |

@@ -21,7 +21,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     /// Where the controller layout puts the game picture, in the view's points. Nil fills the view.
     var screenRect: CGRect?
     var scaling: ScreenScaling = .integer
-    var lcdFilter: LCDFilter = .off
+    var lcdFilter: DisplayFilter = .off
     var frameBlending: FrameBlending = .off
 
     init?(view: MTKView) {
@@ -150,12 +150,14 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     }
 }
 
-extension LCDFilter {
+extension DisplayFilter {
     var shaderMode: UInt32 {
         switch self {
         case .off: 0
         case .lcd1x: 1
         case .lcd3x: 3
+        case .crt240p: 4
+        case .gameCubeTV: 5
         }
     }
 }

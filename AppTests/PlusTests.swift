@@ -11,7 +11,7 @@ import XCTest
 final class PlusTests: XCTestCase {
     func testRoadmapListsWhatPlusHoldsAndWhatsComing() {
         XCTAssertFalse(PlusRoadmap.upcoming.isEmpty)
-        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["LCD Filters", "App Icons", "Auto State History", "Timed States", "Model", "Print Backgrounds", "Print History"])
+        XCTAssertEqual(PlusRoadmap.includedToday.map(\.title), ["Display Filters", "App Icons", "Auto State History", "Timed States", "Model", "Print Backgrounds", "Print History"])
         XCTAssertFalse(PlusRoadmap.upcoming.contains { $0.title.contains("Timed") || $0.title == "Model" })
         XCTAssertEqual(PlusRoadmap.alsoPlanned.map(\.title), ["Game Boy Advance"])
         let items = PlusRoadmap.includedToday + PlusRoadmap.upcoming + PlusRoadmap.alsoPlanned
@@ -51,14 +51,14 @@ final class PlusTests: XCTestCase {
 
     func testLockedOptionsAreMarkedAndOffStaysFree() {
         let locked = PlusGate(isUnlocked: false)
-        XCTAssertTrue(locked.isLocked(LCDFilter.lcd1x.needsPlus))
-        XCTAssertTrue(locked.isLocked(LCDFilter.lcd3x.needsPlus))
-        XCTAssertFalse(locked.isLocked(LCDFilter.off.needsPlus))
+        XCTAssertTrue(locked.isLocked(DisplayFilter.lcd1x.needsPlus))
+        XCTAssertTrue(locked.isLocked(DisplayFilter.lcd3x.needsPlus))
+        XCTAssertFalse(locked.isLocked(DisplayFilter.off.needsPlus))
         XCTAssertEqual(locked.label("LCD 1×", needsPlus: true), "LCD 1× (Plus)")
         XCTAssertEqual(locked.label("Off", needsPlus: false), "Off")
 
         let unlocked = PlusGate(isUnlocked: true)
-        XCTAssertFalse(unlocked.isLocked(LCDFilter.lcd3x.needsPlus))
+        XCTAssertFalse(unlocked.isLocked(DisplayFilter.lcd3x.needsPlus))
         XCTAssertEqual(unlocked.label("LCD 1×", needsPlus: true), "LCD 1×")
         XCTAssertEqual(PlusStore.fixed(ownsPlus: false).effective(.lcd3x), .off)
         XCTAssertEqual(PlusStore.fixed(ownsPlus: true).effective(.lcd3x), .lcd3x)
@@ -218,11 +218,11 @@ struct LCDFixture {
             buildDisplayName: "Original", markAsBase: true
         ))
         context = LaunchContext(gameID: result.build.gameID, buildID: result.build.id, saveProfileID: UUID())
-        try container.repositories.settings.set(LCDFilter.lcd1x, key: SettingKey.lcdFilter.rawValue, scope: .app)
+        try container.repositories.settings.set(DisplayFilter.lcd1x, key: SettingKey.lcdFilter.rawValue, scope: .app)
     }
 
-    func storedFilter() throws -> LCDFilter? {
-        try SettingsResolver(store: container.repositories.settings).appValue(LCDFilter.self, key: .lcdFilter)
+    func storedFilter() throws -> DisplayFilter? {
+        try SettingsResolver(store: container.repositories.settings).appValue(DisplayFilter.self, key: .lcdFilter)
     }
 
     func remove() {

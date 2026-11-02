@@ -621,13 +621,13 @@ final class AppContainer {
     }
 
     /// Off without Plus, whatever is stored.
-    func lcdFilter(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> LCDFilter {
+    func lcdFilter(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> DisplayFilter {
         ScreenshotScene.lcdFilterOverride
-            ?? plus.effective(launchSetting(LCDFilter.self, .lcdFilter, system: system, gameID: gameID, buildID: buildID) ?? .off)
+            ?? plus.effective(launchSetting(DisplayFilter.self, .lcdFilter, system: system, gameID: gameID, buildID: buildID) ?? .off)
     }
 
-    func lcdFilter(for context: LaunchContext) -> LCDFilter {
-        ScreenshotScene.lcdFilterOverride ?? plus.effective(launchSetting(LCDFilter.self, .lcdFilter, for: context) ?? .off)
+    func lcdFilter(for context: LaunchContext) -> DisplayFilter {
+        ScreenshotScene.lcdFilterOverride ?? plus.effective(launchSetting(DisplayFilter.self, .lcdFilter, for: context) ?? .off)
     }
 
     func colorCorrection(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ColorCorrection {
@@ -856,7 +856,7 @@ struct GameplayDisplaySettings: Equatable {
     var controlStyle: TouchControlStyle
     var orientation: ScreenOrientation = .automatic
     var screenScaling: ScreenScaling
-    var lcdFilter: LCDFilter
+    var lcdFilter: DisplayFilter
     var colorCorrection: ColorCorrection
     var dmgPalette: DMGPalette
     var advanceColors: AdvanceColors = .gameBoyAdvance

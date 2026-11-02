@@ -123,8 +123,8 @@ struct FixedEntitlementProvider: FeatureEntitlementProvider {
     func restorePurchases() async throws {}
 }
 
-extension LCDFilter {
-    /// LCD 1× and LCD 3× are Plus features. Off stays free.
+extension DisplayFilter {
+    /// Built-in display filters are Plus features. Off stays free.
     var needsPlus: Bool { self != .off }
 }
 

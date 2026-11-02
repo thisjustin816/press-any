@@ -60,7 +60,7 @@ final class PlusStore: ObservableObject {
 
     /// The filter a game shows: a Plus filter plays as Off without Plus. The stored setting is
     /// left alone, so buying or restoring Plus brings it back.
-    func effective(_ filter: LCDFilter) -> LCDFilter {
+    func effective(_ filter: DisplayFilter) -> DisplayFilter {
         gate.isLocked(filter.needsPlus) ? .off : filter
     }
 

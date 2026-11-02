@@ -61,7 +61,7 @@ lives in App Store Connect, never in code: the app shows the App Store's localiz
 
 In the v1.1 development build, Plus includes:
 
-- **LCD filters**: LCD 1× and LCD 3× (see Picture).
+- **Display filters**: LCD 1×, LCD 3×, CRT 240p and GameCube TV (see Picture).
 - **App icons**: Berry, Grape, Teal, Kiwi and Dandelion colorways of the home-screen icon, in
   Settings > App Icon. All six use a smooth, nearly front-facing button with an A printed below
   it and a closed oval well around it, with Light, Dark and Tinted variants and matching settings
@@ -1066,6 +1066,15 @@ the game live in its cartridge RAM and follow normal Save Profile saves, exports
 Quick Play keeps them temporary until Add to Library.
 
 ### Picture
+
+From System settings down through Game and Build, **Gameplay Preset** groups the authenticity
+settings without replacing them. **Raw** removes display filtering, frame blending, display color
+correction and button-contact bounce. **Accurate** writes a curated combination for the selected
+Model: handheld models use their matching LCD treatment and screen colors, Super Game Boy models
+use a restrained consumer 240p CRT treatment, and Game Boy Player uses a cleaner GameCube-era TV
+treatment. Editing any controlled setting makes the displayed preset **Custom**; returning every
+value to a built-in combination recognizes Raw or Accurate again. The preset itself is not stored,
+so existing settings and App -> System -> Game -> Build inheritance keep their behavior.
 
 - **Screen Scaling** (App, System, Game or Build; Integer by default). Integer draws each Game Boy
   pixel as the largest whole number of device pixels that fits, centered on device pixels, falling

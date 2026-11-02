@@ -33,6 +33,7 @@ struct ScopedSettingsView: View {
     /// The hardware games here run on, which decides the Screen Colors row and whether Game Boy
     /// Advance Colors shows. Read again after each change.
     @State private var hardware: HardwareModel?
+    @State private var settingsRevision = 0
 
     var body: some View {
         if inSheet {
@@ -50,6 +51,7 @@ struct ScopedSettingsView: View {
 
     private var form: some View {
         Form {
+            gameplayPresetSection
             displaySection
             controlsSection
             fastForwardSection
@@ -86,6 +88,29 @@ struct ScopedSettingsView: View {
         return model.resolved(for: system)
     }
 
+    private var gameplayPresetSection: some View {
+        Section {
+            GameplayPresetRow(
+                scope: scope,
+                system: system,
+                gameID: gameID,
+                buildID: buildID,
+                hardware: resolvedHardware,
+                store: store,
+                plus: plus,
+                refreshToken: settingsRevision,
+                onChange: {
+                    settingsRevision += 1
+                    onChange?()
+                }
+            )
+        } header: {
+            Text("Gameplay")
+        } footer: {
+            Text("Raw removes display and input authenticity effects. Accurate uses a curated setup for the selected Model. Changing any controlled setting below makes the result Custom.")
+        }
+    }
+
     // Separate properties keep each section small enough for the compiler to type-check quickly.
     private var displaySection: some View {
         Section {
@@ -94,6 +119,7 @@ struct ScopedSettingsView: View {
                 key: .orientation,
                 defaultValue: ScreenOrientation.automatic,
                 options: [(.automatic, "Automatic"), (.portrait, "Portrait"), (.landscape, "Landscape")],
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -101,6 +127,7 @@ struct ScopedSettingsView: View {
                 key: .screenScaling,
                 defaultValue: ScreenScaling.integer,
                 options: [(.integer, "Integer"), (.fill, "Fill")],
+                reloadToken: settingsRevision,
                 context: context
             )
             screenColors
@@ -112,15 +139,17 @@ struct ScopedSettingsView: View {
                     options: AdvanceColors.allCases.map { ($0, $0.displayName) },
                     listSections: [SettingOptionSection(title: "Game Boy Advance Colors", values: AdvanceColors.allCases)],
                     explanation: AdvanceColors.explanation,
+                    reloadToken: settingsRevision,
                     context: context
                 )
             }
             InheritableSettingRow(
-                title: "LCD Filter",
+                title: "Display Filter",
                 key: .lcdFilter,
-                defaultValue: LCDFilter.off,
-                options: LCDFilter.allCases.map { ($0, $0.displayName) },
+                defaultValue: DisplayFilter.off,
+                options: DisplayFilter.selectable(for: resolvedHardware).map { ($0, $0.displayName) },
                 needsPlus: \.needsPlus,
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -128,6 +157,7 @@ struct ScopedSettingsView: View {
                 key: .frameBlending,
                 defaultValue: FrameBlending.off,
                 options: FrameBlending.allCases.map { ($0, $0.displayName) },
+                reloadToken: settingsRevision,
                 context: context
             )
         } header: {
@@ -143,6 +173,7 @@ struct ScopedSettingsView: View {
                 defaultValue: TouchControlStyle.gameBoy,
                 options: [(.gameBoy, "Game Boy"), (.playtiles, "Playtiles")],
                 isAvailable: ControllerLayoutAvailability.isAvailable,
+                reloadToken: settingsRevision,
                 context: context
             )
         } header: {
@@ -162,6 +193,7 @@ struct ScopedSettingsView: View {
                 key: .fastForwardSpeed,
                 defaultValue: FastForwardSpeed.x2,
                 options: FastForwardSpeed.allCases.map { ($0, $0.displayName) },
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -169,6 +201,7 @@ struct ScopedSettingsView: View {
                 key: .fastForwardAudio,
                 defaultValue: FastForwardAudio.muted,
                 options: FastForwardAudio.allCases.map { ($0, $0.displayName) },
+                reloadToken: settingsRevision,
                 context: context
             )
         }
@@ -182,6 +215,7 @@ struct ScopedSettingsView: View {
                 defaultValue: TimedStates.off,
                 options: TimedStates.allCases.map { ($0, $0.displayName) },
                 needsPlus: \.needsPlus,
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -189,6 +223,7 @@ struct ScopedSettingsView: View {
                 key: .autoResumePolicy,
                 defaultValue: AutoResumePolicy.always,
                 options: [(.always, "Always"), (.ask, "Ask"), (.never, "Never")],
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -196,6 +231,7 @@ struct ScopedSettingsView: View {
                 key: .skipBootAnimation,
                 defaultValue: false,
                 options: [(true, "On"), (false, "Off")],
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -203,6 +239,7 @@ struct ScopedSettingsView: View {
                 key: .buttonBounce,
                 defaultValue: true,
                 options: [(true, "On"), (false, "Off")],
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -214,6 +251,7 @@ struct ScopedSettingsView: View {
                 listSections: modelSections,
                 explanation: plus.isUnlocked ? HardwareModel.settingExplanation : HardwareModel.lockedExplanation,
                 needsPlus: \.needsPlus,
+                reloadToken: settingsRevision,
                 context: context
             )
         } header: {
@@ -233,6 +271,7 @@ struct ScopedSettingsView: View {
                 options: GameBoyCamera.allCases.map { ($0, $0.displayName) },
                 listSections: [SettingOptionSection(title: "Camera", values: GameBoyCamera.allCases)],
                 explanation: GameBoyCamera.explanation,
+                reloadToken: settingsRevision,
                 context: context
             )
         }
@@ -270,6 +309,7 @@ struct ScopedSettingsView: View {
                 },
                 explanation: DMGPalette.explanation,
                 normalizeValue: { $0.selectionValue },
+                reloadToken: settingsRevision,
                 context: context
             )
         case .correction(let corrections):
@@ -280,6 +320,7 @@ struct ScopedSettingsView: View {
                 options: corrections.map { ($0, $0.displayName) },
                 listSections: [SettingOptionSection(title: "Color Correction", values: corrections)],
                 explanation: ColorCorrection.explanation,
+                reloadToken: settingsRevision,
                 context: context
             )
         case .superGameBoy:
@@ -305,6 +346,7 @@ struct ScopedSettingsView: View {
             buildID: buildID,
             store: store,
             onChange: {
+                settingsRevision += 1
                 onChange?()
                 refreshModel()
             },
@@ -377,6 +419,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     /// Values that need Plus. Without it they're marked Plus, and choosing one opens the Plus screen.
     var needsPlus: (Value) -> Bool = { _ in false }
     var isAvailable: @MainActor (Value) -> Bool = { _ in true }
+    var reloadToken = 0
     let context: InheritableSettingContext
 
     @State private var choice: Choice = .inherit
@@ -411,6 +454,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         .accessibilityLabel(title)
         .accessibilityValue("\(label(for: effectiveValue)), \(errorMessage ?? note)")
         .onAppear(perform: load)
+        .onChange(of: reloadToken) { load() }
     }
 
     private var rowLabel: some View {

@@ -84,20 +84,20 @@ final class SettingsResolverTests: XCTestCase {
         let resolver = SettingsResolver(store: store)
         let gameID = UUID(), buildID = UUID()
         let key = SettingKey.lcdFilter.rawValue
-        try store.set(LCDFilter.lcd1x, key: key, scope: .app)
-        try store.set(LCDFilter.lcd3x, key: key, scope: .system(.gameBoyColor))
+        try store.set(DisplayFilter.lcd1x, key: key, scope: .app)
+        try store.set(DisplayFilter.lcd3x, key: key, scope: .system(.gameBoyColor))
         try store.set("fill", key: SettingKey.screenScaling.rawValue, scope: .build(buildID))
-        XCTAssertEqual(try resolver.decode(LCDFilter.self, key: key, system: .gameBoy), .lcd1x)
-        XCTAssertEqual(try resolver.decode(LCDFilter.self, key: key, system: .gameBoyColor), .lcd3x)
+        XCTAssertEqual(try resolver.decode(DisplayFilter.self, key: key, system: .gameBoy), .lcd1x)
+        XCTAssertEqual(try resolver.decode(DisplayFilter.self, key: key, system: .gameBoyColor), .lcd3x)
 
-        try store.set(LCDFilter.off, key: key, scope: .game(gameID))
-        try store.set(LCDFilter.lcd1x, key: key, scope: .build(buildID))
+        try store.set(DisplayFilter.off, key: key, scope: .game(gameID))
+        try store.set(DisplayFilter.lcd1x, key: key, scope: .build(buildID))
         XCTAssertEqual(try resolver.decode(
-            LCDFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
+            DisplayFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
         ), .lcd1x)
         try store.removeValue(key: key, scope: .build(buildID))
         XCTAssertEqual(try resolver.decode(
-            LCDFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
+            DisplayFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
         ), .off)
         XCTAssertEqual(try resolver.decode(
             String.self, key: SettingKey.screenScaling.rawValue,
@@ -105,7 +105,7 @@ final class SettingsResolverTests: XCTestCase {
         ), "fill")
         try store.removeValue(key: key, scope: .game(gameID))
         XCTAssertEqual(try resolver.decode(
-            LCDFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
+            DisplayFilter.self, key: key, system: .gameBoyColor, gameID: gameID, buildID: buildID
         ), .lcd3x)
     }
 

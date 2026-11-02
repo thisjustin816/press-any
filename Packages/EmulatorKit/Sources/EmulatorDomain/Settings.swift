@@ -52,7 +52,7 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case controllerTheme
     /// The game picture's scaling (GameplayInput's `ScreenScaling`), unset means `integer`.
     case screenScaling
-    /// `LCDFilter`, unset means `.off`. Independent of the picture’s scaling.
+    /// `DisplayFilter`, unset means `.off`. The stored key keeps its v1.0 name for compatibility.
     case lcdFilter
     /// `ColorCorrection`, unset means `.balanced`.
     case colorCorrection = "colorCorrection"
@@ -155,21 +155,6 @@ public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {
     case always
     case ask
     case never
-}
-
-/// Built-in display effects. Raw values are stored in settings.
-public enum LCDFilter: String, Codable, Sendable, CaseIterable {
-    case off
-    case lcd1x
-    case lcd3x
-
-    public var displayName: String {
-        switch self {
-        case .off: "Off"
-        case .lcd1x: "LCD 1×"
-        case .lcd3x: "LCD 3×"
-        }
-    }
 }
 
 public enum ColorCorrection: String, Codable, Sendable, CaseIterable {
