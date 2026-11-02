@@ -58,11 +58,9 @@ final class PlusStore: ObservableObject {
 
     var gate: PlusGate { PlusGate(isUnlocked: isUnlocked) }
 
-    /// The filter a game shows: a Plus filter plays as Off without Plus. The stored setting is
-    /// left alone, so buying or restoring Plus brings it back.
-    func effective(_ filter: DisplayFilter) -> DisplayFilter {
-        gate.isLocked(filter.needsPlus) ? .off : filter
-    }
+    /// Built-in Clean and Accurate presets are free, including the display filters they apply.
+    /// Plus gates changing preset-controlled settings manually, not rendering their stored values.
+    func effective(_ filter: DisplayFilter) -> DisplayFilter { filter }
 
     func refreshOwnership() async {
         isUnlocked = await provider.ownsPlus()
