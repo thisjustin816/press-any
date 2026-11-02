@@ -32,9 +32,10 @@ replaceable core boundary, with Metal video, audio, GBC color correction, DMG pa
 controls in portrait and landscape, game controllers and rumble. Each Build stays pinned to the
 core version it first ran on.
 
-The app is free. An optional one-time purchase, Press Any Plus, adds display filters, alternate app
-icons, Auto State history, Timed States, and a choice of hardware to run each game on, from the
-Game Boy Pocket to the Super Game Boy and Game Boy Advance.
+The app is free, including Clean and Accurate gameplay presets. An optional one-time purchase,
+Press Any Plus, adds Custom gameplay tuning, alternate app icons, Auto State history, Timed States,
+and a choice of hardware to run each game on, from the Game Boy Pocket to the Super Game Boy and
+Game Boy Advance.
 
 ## Building
 
