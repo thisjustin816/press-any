@@ -5,6 +5,7 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
     case lcd1x
     case lcd3x
     case crt240p
+    /// Legacy persisted identifier retained for compatibility. The user-facing treatment is CRT 480i.
     case gameCubeTV
 
     /// Every display treatment is available on every hardware model. Built-in presets still choose
@@ -17,7 +18,7 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
         case .lcd1x: "LCD 1×"
         case .lcd3x: "LCD 3×"
         case .crt240p: "CRT 240p"
-        case .gameCubeTV: "GameCube TV"
+        case .gameCubeTV: "CRT 480i"
         }
     }
 }
