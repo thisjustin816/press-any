@@ -65,20 +65,20 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(accurate(.superGameBoy), accurate(.superGameBoy2))
         XCTAssertEqual(accurate(.superGameBoy)?.displayFilter, .crt240p)
         XCTAssertEqual(accurate(.gameBoyPlayer)?.displayFilter, .crt480p)
-        XCTAssertEqual(accurate(.gameBoyPlayer)?.buttonBounce, false, "a GameCube controller has no Game Boy contacts")
 
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoy).displayFilter, .lcd1x)
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyColor).displayFilter, .lcd1x)
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyAdvance).displayFilter, .sp101LCD)
-        XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy).displayFilter, .scanlines)
-        XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyPlayer).displayFilter, .scanlines)
+        XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy).displayFilter, .curvedScanlines)
+        XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy2).displayFilter, .curvedScanlines)
+        XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyPlayer).displayFilter, .slightlyCurvedScanlines)
         XCTAssertEqual(GameplayPresetValues.standard(for: .automatic), GameplayPresetValues.standard(for: .gameBoy))
-        for hardware in [HardwareModel.gameBoy, .gameBoyPocket, .gameBoyColor, .gameBoyAdvance] {
+        for hardware in models {
             XCTAssertTrue(GameplayPresetValues.standard(for: hardware).buttonBounce, "\(hardware) Nostalgic bounces")
+            XCTAssertEqual(accurate(hardware)?.buttonBounce, true, "\(hardware) Accurate bounces")
+            XCTAssertEqual(GameplayPresetValues.values(for: .clean, hardware: hardware)?.buttonBounce, false, "only Clean turns bounce off")
         }
-        for hardware in [HardwareModel.superGameBoy, .superGameBoy2, .gameBoyPlayer] {
-            XCTAssertFalse(GameplayPresetValues.standard(for: hardware).buttonBounce, "\(hardware) has no Game Boy contacts")
-        }
+        XCTAssertFalse(GameplayPresetValues.values(for: .standard, hardware: .superGameBoy)?.displayFilter == .scanlines, "flat Scanlines are a manual choice")
     }
 
     func testBuiltInPresetsRoundTripForEveryHardwareModelAndScope() throws {
@@ -142,8 +142,8 @@ final class GameplayPresetSettingsTests: XCTestCase {
                     guard let expected else { return }
                     let other = try XCTUnwrap(Value.allCases.first { $0 != expected })
                     try store.set(other, key: key.rawValue, scope: scope)
-                    // Another built-in preset can differ in this one value, as Clean does from
-                    // Accurate on the Game Boy Player.
+                    // A built-in preset that differs in this one value alone would be recognized
+                    // instead of Custom.
                     let changed = presets.resolvedPreset(system: .gameBoyColor, hardware: hardware)
                     XCTAssertNotEqual(changed, preset, "\(hardware) \(preset) \(key)")
                     if changed != .custom {
@@ -207,8 +207,10 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, gameID: gameID, hardware: .superGameBoy), .accurate)
         XCTAssertEqual(try decode(DisplayFilter.self, .lcdFilter, store, gameID: gameID), .crt240p)
 
-        // Custom stays as it is.
+        // Custom stays as it is, including a bounce turned off by hand, which Accurate on the
+        // new hardware would turn on.
         try store.set(DisplayFilter.lcd3x, key: SettingKey.lcdFilter.rawValue, scope: game)
+        try store.set(false, key: SettingKey.buttonBounce.rawValue, scope: game)
         try presets.retargetBuiltInPreset(from: .superGameBoy, to: .gameBoyColor, at: game, system: .gameBoy, gameID: gameID)
         XCTAssertEqual(try decode(DisplayFilter.self, .lcdFilter, store, gameID: gameID), .lcd3x)
         XCTAssertEqual(try decode(Bool.self, .buttonBounce, store, gameID: gameID), false)
@@ -248,6 +250,10 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(DisplayFilter.selectable, DisplayFilter.allCases)
         XCTAssertEqual(DisplayFilter.crt240p.displayName, "CRT 240p")
         XCTAssertEqual(DisplayFilter.crt480p.displayName, "CRT 480p")
+        XCTAssertEqual(DisplayFilter.scanlines.displayName, "Scanlines")
+        XCTAssertEqual(DisplayFilter.curvedScanlines.displayName, "Curved Scanlines")
+        XCTAssertEqual(DisplayFilter.slightlyCurvedScanlines.displayName, "Slightly Curved Scanlines")
+        XCTAssertEqual(DisplayFilter(rawValue: "scanlines"), .scanlines, "a stored scanlines value keeps its flat meaning")
         for filter in DisplayFilter.allCases {
             XCTAssertFalse(filter.displayName.contains("GameCube"))
             XCTAssertFalse(filter.rawValue.lowercased().contains("gamecube"))

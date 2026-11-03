@@ -117,35 +117,91 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
-    func testCRTGeometryIsCurvedForTheSuperGameBoyNearlyFlatForTheGameBoyPlayerAndLightForScanlines() throws {
-        XCTAssertLessThan(CRTParameters.lateModelTV.curvature.x, CRTParameters.consumerTV.curvature.x)
-        XCTAssertLessThan(CRTParameters.lateModelTV.curvature.y, CRTParameters.consumerTV.curvature.y)
-        XCTAssertLessThan(CRTParameters.scanlines.curvature.y, CRTParameters.consumerTV.curvature.y)
-        XCTAssertEqual(CRTParameters.consumerTV.linesPerSourceLine, 1)
-        XCTAssertEqual(CRTParameters.lateModelTV.linesPerSourceLine, 2)
-        XCTAssertEqual(CRTParameters.scanlines.linesPerSourceLine, 1)
-
-        // Measured on the picture: how far the raster's top edge bows down at an eighth of the
-        // width, away from the rounded corners, compared with its middle.
+    /// The curvature orderings, measured on the picture at a phone's size (7 screen pixels per
+    /// Game Boy pixel): Super Game Boy treatments curve more than Game Boy Player ones in Accurate
+    /// and in Nostalgic, each Nostalgic less than its hardware's Accurate, every one of the four
+    /// visibly, and flat Scanlines not at all.
+    func testCRTCurvatureOrderingsHoldOnTheRenderedPicture() throws {
         let (device, library) = try metal()
-        func bow(_ filter: DisplayFilter) throws -> Int {
+        let width = 1120, height = 1008
+        // The raster's top and left edges, to a fraction of a pixel, from the light the outer
+        // rows and columns carry once the beam is even and the mask, glow and vignette are off;
+        // the geometry is the filter's own.
+        func edgeBow(_ filter: DisplayFilter) throws -> (top: Double, side: Double) {
+            let parameters = try XCTUnwrap(filter.crtParameters).geometryOnly
             let pixels = try render(
                 filter, fragment: "gameplayTextureFragment", device: device, library: library,
-                frames: [255], sourceWidth: 160, sourceHeight: 144, outputWidth: 640, outputHeight: 576
+                frames: [255], sourceWidth: 160, sourceHeight: 144, outputWidth: width, outputHeight: height, crt: parameters
             )
-            func firstLitRow(_ x: Int) -> Int {
-                (0..<576).first { brightness(pixels, at: pixel(x, $0, width: 640)) > 60 } ?? 576
+            func topEdge(_ x: Int) -> Double {
+                100 - (0..<100).reduce(0.0) { $0 + Double(brightness(pixels, at: pixel(x, $1, width: width))) / 765 }
             }
-            return firstLitRow(80) - firstLitRow(320)
+            func sideEdge(_ y: Int) -> Double {
+                100 - (0..<100).reduce(0.0) { $0 + Double(brightness(pixels, at: pixel($1, y, width: width))) / 765 }
+            }
+            // An eighth of the way in from a side or the top, clear of the rounded corners.
+            return (topEdge(width / 8) - topEdge(width / 2), sideEdge(height / 8) - sideEdge(height / 2))
         }
-        let consumer = try bow(.crt240p)
-        let lateModel = try bow(.crt480p)
-        let scanlines = try bow(.scanlines)
-        XCTAssertGreaterThanOrEqual(consumer, 8, "CRT 240p is visibly curved")
-        XCTAssertLessThan(lateModel, consumer, "CRT 480p is flatter than CRT 240p")
-        XCTAssertLessThanOrEqual(lateModel, 2, "CRT 480p is nearly flat")
-        XCTAssertGreaterThanOrEqual(scanlines, 2, "Scanlines curve a little")
-        XCTAssertLessThanOrEqual(scanlines * 2, consumer, "Scanlines curve far less than CRT 240p")
+        // The same orderings with the filter as it ships, from a bright line drawn near the top
+        // of the picture: its vertical center of light in each column follows the warp whatever
+        // the scanlines, mask and glow do to its brightness.
+        func lineBow(_ filter: DisplayFilter) throws -> Double {
+            var source = [UInt8](repeating: 0, count: 160 * 144 * 4)
+            for x in 0..<160 {
+                for channel in 0..<4 { source[(8 * 160 + x) * 4 + channel] = 255 }
+            }
+            let pixels = try render(
+                filter, fragment: "gameplayTextureFragment", device: device, library: library,
+                sourceWidth: 160, sourceHeight: 144, outputWidth: width, outputHeight: height, sourcePixels: source
+            )
+            func center(_ x: Int) -> Double {
+                var weight = 0.0, moment = 0.0
+                for y in 0..<200 {
+                    let light = Double(brightness(pixels, at: pixel(x, y, width: width)))
+                    weight += light
+                    moment += light * Double(y)
+                }
+                return moment / weight
+            }
+            return center(width / 8) - center(width / 2)
+        }
+
+        let accurateSGB = try edgeBow(.crt240p), accurateGBP = try edgeBow(.crt480p)
+        let nostalgicSGB = try edgeBow(.curvedScanlines), nostalgicGBP = try edgeBow(.slightlyCurvedScanlines)
+        let flat = try edgeBow(.scanlines)
+        let curved = [
+            ("CRT 240p", accurateSGB), ("CRT 480p", accurateGBP),
+            ("Curved Scanlines", nostalgicSGB), ("Slightly Curved Scanlines", nostalgicGBP),
+        ]
+        for (name, bow) in curved {
+            XCTAssertGreaterThanOrEqual(bow.top, 3, "\(name) bows visibly at phone size")
+            XCTAssertGreaterThanOrEqual(bow.side, 1.5, "\(name) curves across as well as down")
+        }
+        XCTAssertGreaterThan(accurateSGB.top, accurateGBP.top + 2, "the Super Game Boy's set curves more than the Game Boy Player's")
+        XCTAssertGreaterThan(nostalgicSGB.top, nostalgicGBP.top + 2, "and so does its remembered set")
+        XCTAssertGreaterThan(accurateSGB.top, nostalgicSGB.top + 1.5, "Nostalgic curves less than Accurate on a Super Game Boy")
+        XCTAssertGreaterThan(accurateGBP.top, nostalgicGBP.top + 1, "and on a Game Boy Player")
+        XCTAssertEqual(flat.top, 0, accuracy: 0.05, "flat Scanlines have no bow")
+        XCTAssertEqual(flat.side, 0, accuracy: 0.05)
+
+        let filters: [DisplayFilter] = [.crt240p, .crt480p, .curvedScanlines, .slightlyCurvedScanlines, .scanlines]
+        let bows = Dictionary(uniqueKeysWithValues: try filters.map { ($0, try lineBow($0)) })
+        func bow(_ filter: DisplayFilter) throws -> Double { try XCTUnwrap(bows[filter]) }
+        XCTAssertGreaterThan(try bow(.crt240p), try bow(.crt480p) + 1)
+        XCTAssertGreaterThan(try bow(.curvedScanlines), try bow(.slightlyCurvedScanlines) + 1)
+        XCTAssertGreaterThan(try bow(.crt240p), try bow(.curvedScanlines) + 1)
+        XCTAssertGreaterThan(try bow(.crt480p), try bow(.slightlyCurvedScanlines) + 0.5)
+        XCTAssertGreaterThan(try bow(.slightlyCurvedScanlines), 1.5, "the gentlest treatment still moves a line near the top by over a pixel")
+        XCTAssertEqual(try bow(.scanlines), 0, accuracy: 0.05)
+
+        XCTAssertEqual(CRTParameters.consumerTV.linesPerSourceLine, 1)
+        XCTAssertEqual(CRTParameters.flatSquareTV.linesPerSourceLine, 2)
+        XCTAssertEqual(CRTParameters.flatScanlines.geometry, .zero, "flat Scanlines have no warp and no rounded corners")
+        for parameters in [CRTParameters.curvedScanlines, .slightlyCurvedScanlines] {
+            XCTAssertGreaterThan(parameters.cornerRadius, 0, "Nostalgic's scanlines have small rounded corners")
+            XCTAssertEqual(parameters.triadsPerSourcePixel, 0, "and no mask")
+            XCTAssertEqual(parameters.glowAmount, 0, "and no glow")
+        }
     }
 
     func testCRTRastersAndMasksDifferInDensity() throws {
@@ -168,12 +224,14 @@ final class LCDFilterTests: XCTestCase {
             let peaks = (1..<(column.count - 1)).filter { column[$0] > column[$0 - 1] && column[$0] >= column[$0 + 1] }
             return ((column.max() ?? 0) - (column.min() ?? 0), peaks.count)
         }
-        let consumerRipple = try ripple(.crt240p), lateRipple = try ripple(.crt480p), linesRipple = try ripple(.scanlines)
+        let consumerRipple = try ripple(.crt240p), lateRipple = try ripple(.crt480p)
         XCTAssertGreaterThan(consumerRipple.depth, 40, "CRT 240p shows dark gaps between lines")
         XCTAssertGreaterThan(lateRipple.depth, 8, "CRT 480p still shows its finer lines")
         XCTAssertLessThan(lateRipple.depth, consumerRipple.depth)
         XCTAssertGreaterThan(lateRipple.peaks, consumerRipple.peaks, "CRT 480p draws more lines over the same source lines")
-        XCTAssertGreaterThan(linesRipple.depth, 40)
+        for filter in [DisplayFilter.scanlines, .curvedScanlines, .slightlyCurvedScanlines] {
+            XCTAssertGreaterThan(try ripple(filter).depth, 40, "\(filter) draws crisp scanlines")
+        }
 
         // The mask: the spacing between the starts of red-dominant runs along a row a quarter of
         // the way down a source line, clear of a slot mask's breaks.
@@ -188,14 +246,14 @@ final class LCDFilterTests: XCTestCase {
             return Double(last - first) / Double(starts.count - 1)
         }
         XCTAssertGreaterThan(
-            CRTParameters.lateModelTV.triadsPerSourcePixel, CRTParameters.consumerTV.triadsPerSourcePixel,
+            CRTParameters.flatSquareTV.triadsPerSourcePixel, CRTParameters.consumerTV.triadsPerSourcePixel,
             "CRT 480p's grille is finer than CRT 240p's slot mask"
         )
         XCTAssertTrue(CRTParameters.consumerTV.isSlotMask)
-        XCTAssertFalse(CRTParameters.lateModelTV.isSlotMask)
+        XCTAssertFalse(CRTParameters.flatSquareTV.isSlotMask)
         // The mask follows source pixels, so its pitch scales with them and every pixel carries
         // the same stripes.
-        let televisions: [(DisplayFilter, CRTParameters)] = [(.crt240p, .consumerTV), (.crt480p, .lateModelTV)]
+        let televisions: [(DisplayFilter, CRTParameters)] = [(.crt240p, .consumerTV), (.crt480p, .flatSquareTV)]
         for size in [384, 288] {
             let pixelsPerSource = Double(size / 32)
             for (filter, parameters) in televisions {
@@ -204,12 +262,14 @@ final class LCDFilterTests: XCTestCase {
                     pixelsPerSource / Double(parameters.triadsPerSourcePixel), accuracy: 0.3, "\(filter) at \(size)"
                 )
             }
-            XCTAssertEqual(maskPitch(try picture(.scanlines, size: size), size: size), 0, "Scanlines have no mask")
+            for filter in [DisplayFilter.scanlines, .curvedScanlines, .slightlyCurvedScanlines] {
+                XCTAssertEqual(maskPitch(try picture(filter, size: size), size: size), 0, "\(filter) has no mask")
+            }
         }
     }
 
     /// Pixel art stays readable: a one-pixel dark outline stays dark and an edge between source
-    /// pixels takes well under a source pixel. Scanlines are the crispest.
+    /// pixels takes well under a source pixel. The scanline filters are the crispest.
     func testCRTKeepsOutlinesDarkAndEdgesSharp() throws {
         let (device, library) = try metal()
         let scale = 12
@@ -234,12 +294,13 @@ final class LCDFilterTests: XCTestCase {
         let outline = picture { $0 == 16 ? 0 : 255 }
         let edge = picture { $0 < 16 ? 255 : 0 }
         var widths: [DisplayFilter: Int] = [:]
-        for filter in [DisplayFilter.crt240p, .crt480p, .scanlines] {
+        let scanlineFilters: [DisplayFilter] = [.scanlines, .curvedScanlines, .slightlyCurvedScanlines]
+        for filter in [DisplayFilter.crt240p, .crt480p] + scanlineFilters {
             let line = try row(filter, source: outline)
             let darkest = try XCTUnwrap(line[(16 * scale)..<(17 * scale)].min())
             let white = try XCTUnwrap(line[(8 * scale)..<(12 * scale)].max())
             XCTAssertGreaterThan(white, 600, "\(filter) keeps white bright")
-            XCTAssertLessThan(darkest, filter == .scanlines ? 120 : 300, "\(filter) keeps a one-pixel outline dark")
+            XCTAssertLessThan(darkest, scanlineFilters.contains(filter) ? 120 : 300, "\(filter) keeps a one-pixel outline dark")
 
             // The beam alone, without mask or glow, from 10% to 90% of the way across the edge.
             var beam = try XCTUnwrap(filter.crtParameters)
@@ -251,19 +312,26 @@ final class LCDFilterTests: XCTestCase {
             XCTAssertLessThanOrEqual(width, scale * 2 / 3, "\(filter) edges take under two thirds of a source pixel")
             widths[filter] = width
         }
-        XCTAssertLessThanOrEqual(try XCTUnwrap(widths[.scanlines]), try XCTUnwrap(widths[.crt480p]))
-        XCTAssertLessThanOrEqual(try XCTUnwrap(widths[.scanlines]), try XCTUnwrap(widths[.crt240p]))
+        for filter in scanlineFilters {
+            XCTAssertLessThanOrEqual(try XCTUnwrap(widths[filter]), try XCTUnwrap(widths[.crt480p]))
+            XCTAssertLessThanOrEqual(try XCTUnwrap(widths[filter]), try XCTUnwrap(widths[.crt240p]))
+        }
     }
 
-    func testCRTCornersAreBlackAndRounded() throws {
+    /// The curved treatments round their corners off to black; flat Scanlines keep the picture's
+    /// square corners.
+    func testCRTCornersAreBlackAndRoundedExceptOnFlatScanlines() throws {
         let (device, library) = try metal()
-        for filter in [DisplayFilter.crt240p, .crt480p, .scanlines] {
+        for filter in [DisplayFilter.crt240p, .crt480p, .curvedScanlines, .slightlyCurvedScanlines, .scanlines] {
             let pixels = try render(
                 filter, fragment: "gameplayTextureFragment", device: device, library: library,
                 frames: [255], sourceWidth: 160, sourceHeight: 144, outputWidth: 320, outputHeight: 288
             )
-            for (x, y) in [(0, 0), (319, 0), (0, 287), (319, 287), (2, 2)] {
-                XCTAssertEqual(brightness(pixels, at: pixel(x, y, width: 320)), 0, "\(filter) corner \(x),\(y)")
+            let corners = [(0, 0), (319, 0), (0, 287), (319, 287), (2, 2)].map { brightness(pixels, at: pixel($0, $1, width: 320)) }
+            if filter == .scanlines {
+                XCTAssertGreaterThan(try XCTUnwrap(corners.last), 600, "flat Scanlines light the corner")
+            } else {
+                XCTAssertEqual(corners, [0, 0, 0, 0, 0], "\(filter) corners are black")
             }
             XCTAssertGreaterThan(brightness(pixels, at: pixel(160, 144, width: 320)), 300)
             XCTAssertTrue(stride(from: 3, to: pixels.count, by: 4).allSatisfy { pixels[$0] == 255 })
@@ -282,7 +350,7 @@ final class LCDFilterTests: XCTestCase {
                 pixels += [value, value, value, 255]
             }
         }
-        let televisions: [(DisplayFilter, CRTParameters)] = [(.crt240p, .consumerTV), (.crt480p, .lateModelTV)]
+        let televisions: [(DisplayFilter, CRTParameters)] = [(.crt240p, .consumerTV), (.crt480p, .flatSquareTV)]
         for (filter, parameters) in televisions {
             XCTAssertGreaterThan(parameters.glowAmount, 0, "\(filter) glows")
             func crt(_ parameters: CRTParameters) throws -> [UInt8] {
@@ -349,18 +417,64 @@ final class LCDFilterTests: XCTestCase {
                 XCTAssertNotEqual(seen, pixels, "\(filter) looks different from \(other)")
             }
             captures[filter] = pixels
-            let image = pixels.withUnsafeBytes { bytes -> UIImage? in
-                guard let context = CGContext(
-                    data: UnsafeMutableRawPointer(mutating: bytes.baseAddress), width: outWidth, height: outHeight,
-                    bitsPerComponent: 8, bytesPerRow: outWidth * 4, space: CGColorSpaceCreateDeviceRGB(),
-                    bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-                ), let cgImage = context.makeImage() else { return nil }
-                return UIImage(cgImage: cgImage)
-            }
-            let attachment = XCTAttachment(image: try XCTUnwrap(image))
+            let attachment = XCTAttachment(image: try XCTUnwrap(image(from: pixels, width: outWidth, height: outHeight)))
             attachment.name = "device-display-\(filter.rawValue)"
             attachment.lifetime = .keepAlways
             add(attachment)
+        }
+    }
+
+    /// CRT 240p as it ships beside a crisper variant on the same picture, for the owner to choose
+    /// its sharpness: the shipped horizontal hardness -5 with glow 0.05, and -6 with glow 0.04.
+    func testCRT240pSharpnessComparisonCapture() throws {
+        let (device, library) = try metal()
+        let width = 160, height = 144, scale = 7
+        var fixture = [UInt8]()
+        for y in 0..<height {
+            for x in 0..<width {
+                // Pixel art at the scale of game text: 8-pixel tiles with one-pixel outlines,
+                // 2-pixel strokes and a checker, on a gradient, with a grid of single dark pixels.
+                let tx = x % 8, ty = y % 8
+                let outline = tx == 0 || ty == 0
+                let stroke = (tx == 3 || tx == 4) && ty > 1 && ty < 7
+                let checker = (x / 8 + y / 8) % 2 == 0
+                let dot = x % 4 == 2 && y % 4 == 2 && !checker
+                let dark = outline || stroke || dot
+                let value: UInt8 = dark ? 16 : (checker ? 240 : 200)
+                fixture += [value, UInt8(min(255, Int(value) * (y + 100) / 244)), UInt8(min(255, Int(value) * (x + 80) / 240)), 255]
+            }
+        }
+        var crisper = CRTParameters.consumerTV
+        crisper.beam.z = -6
+        crisper.glow.x = 0.04
+        let variants: [(String, CRTParameters)] = [("shipped: hardness -5, glow 0.05", .consumerTV), ("crisper: hardness -6, glow 0.04", crisper)]
+        let outWidth = width * scale, outHeight = height * scale
+        var combined = [UInt8](repeating: 0, count: outWidth * 2 * outHeight * 4)
+        for (index, (_, parameters)) in variants.enumerated() {
+            let pixels = try render(
+                .crt240p, fragment: "gameplayTextureFragment", device: device, library: library,
+                sourceWidth: width, sourceHeight: height, outputWidth: outWidth, outputHeight: outHeight,
+                sourcePixels: fixture, crt: parameters
+            )
+            for y in 0..<outHeight {
+                let source = y * outWidth * 4, destination = (y * outWidth * 2 + index * outWidth) * 4
+                combined.replaceSubrange(destination..<(destination + outWidth * 4), with: pixels[source..<(source + outWidth * 4)])
+            }
+        }
+        let attachment = XCTAttachment(image: try XCTUnwrap(image(from: combined, width: outWidth * 2, height: outHeight)))
+        attachment.name = "device-display-crt240p-sharpness-comparison (left \(variants[0].0); right \(variants[1].0))"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    private func image(from pixels: [UInt8], width: Int, height: Int) -> UIImage? {
+        pixels.withUnsafeBytes { bytes -> UIImage? in
+            guard let context = CGContext(
+                data: UnsafeMutableRawPointer(mutating: bytes.baseAddress), width: width, height: height,
+                bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+            ), let cgImage = context.makeImage() else { return nil }
+            return UIImage(cgImage: cgImage)
         }
     }
 

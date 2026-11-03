@@ -72,7 +72,7 @@ struct AcknowledgementsView: View {
         ),
         Component(
             name: "CRT-Lottes",
-            use: "The model for the CRT 240p, CRT 480p and Scanlines treatments, by Timothy Lottes. They are this app’s own shader, using its Gaussian beam, sRGB light and mask approach. Source: https://github.com/libretro/slang-shaders/blob/master/crt/shaders/crt-lottes.slang",
+            use: "The model for the CRT 240p, CRT 480p, Scanlines, Curved Scanlines and Slightly Curved Scanlines treatments, by Timothy Lottes. They are this app’s own shader, using its Gaussian beam, sRGB light and mask approach. Source: https://github.com/libretro/slang-shaders/blob/master/crt/shaders/crt-lottes.slang",
             license: .bundled(file: "DisplayShaders-PublicDomain")
         ),
         Component(

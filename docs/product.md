@@ -1099,12 +1099,12 @@ a level that inherits them keeps inheriting.
 | Game Boy Pocket | Pixel Grid, Blend, bounce on | Monochrome LCD, Blend, bounce on | Off |
 | Game Boy Color | Pixel Grid, Blend, Balanced, bounce on | Game Boy Color LCD, Blend, Low Contrast, bounce on | Off, Original |
 | Game Boy Advance | Backlit GBA SP LCD, Blend, Original, As on a Game Boy Color, bounce on | Game Boy Advance LCD, Blend, Original, As on a Game Boy Advance, bounce on | Off, Original |
-| Super Game Boy and Super Game Boy 2 | Scanlines, Balanced, bounce off | CRT 240p, Balanced, bounce off | Off, Original |
-| Game Boy Player | Scanlines, Balanced, As on a Game Boy Color, bounce off | CRT 480p, Original, As on a Game Boy Advance, bounce off | Off, Original |
+| Super Game Boy and Super Game Boy 2 | Curved Scanlines, Balanced, bounce on | CRT 240p, Balanced, bounce on | Off, Original |
+| Game Boy Player | Slightly Curved Scanlines, Balanced, As on a Game Boy Color, bounce on | CRT 480p, Original, As on a Game Boy Advance, bounce on | Off, Original |
 
-Frame blending is Off on the television models and in Clean; bounce is off in Clean and on the
-television models, because their controllers aren't the Game Boy's own buttons. On a Game Boy or Pocket the
-presets leave color correction alone, since those show a palette. The Game Boy Light and the
+Frame blending is Off on the television models and in Clean. Button Bounce is on in Nostalgic and
+Accurate on every model, the television models included, and off only in Clean. On a Game Boy or
+Pocket the presets leave color correction alone, since those show a palette. The Game Boy Light and the
 backlit Game Boy Advance SP (AGS-101) run as a Pocket and a Game Boy Advance, so they aren't
 models: the Light's look is the Teal (Light) palette, and the SP's is the Backlit GBA SP LCD
 filter, which Nostalgic uses on a Game Boy Advance.
@@ -1118,20 +1118,27 @@ filter, which Nostalgic uses on a Game Boy Advance.
   the second with the Game Boy Advance color profile.
 - **Game Boy Color LCD**: Authentic GBC's notched subpixels.
 - **Backlit GBA SP LCD**: the Pixel Grid with the AGS-101 SP's color profile.
-- **Scanlines**: sharp scanlines on a gently curved screen with small rounded corners, with no
-  mask, glow or vignette.
-- **CRT 240p**: a consumer television, as a Super Game Boy on a SNES showed: a visibly curved
-  tube with rounded corners, one beam per line with dark gaps, a slot mask, slightly soft
-  horizontal reconstruction, a faint glow and a vignette.
-- **CRT 480p**: a late-model television, as a Game Boy Player showed: a nearly flat face with
-  rounded corners, each line drawn twice as the player's 480-line output does so the gaps nearly
-  close, a finer aperture grille, a fainter glow and a light vignette. It shows no interlacing: a
-  CRT shows the two fields of 480i one after the other, so they never comb, and the player's 480p
-  over component draws the same lines.
+- **Scanlines**: sharp scanlines on a flat picture, with no curve, rounded corners, mask, glow
+  or vignette.
+- **Curved Scanlines** and **Slightly Curved Scanlines**: the same sharp scanlines on a curved
+  screen with small rounded corners, the first curving more. Nostalgic uses the first on a Super
+  Game Boy and the second on a Game Boy Player.
+- **CRT 240p**: a 1990s consumer television, as a Super Game Boy on a SNES showed: a visibly
+  curved spherical tube with rounded corners, one beam per line with dark gaps, a slot mask,
+  slightly soft horizontal reconstruction, a faint glow and a vignette.
+- **CRT 480p**: a 2000s television, as a Game Boy Player showed: a flatter tube that still
+  curves a little, with rounded corners, each line drawn twice as the player's 480-line output
+  does so the gaps nearly close, a finer aperture grille, a fainter glow and a light vignette.
+  It shows no interlacing: a CRT shows the two fields of 480i one after the other, so they never
+  comb, and the player's 480p over component draws the same lines.
 
-Both CRTs keep pixel art readable at a phone's scale: a one-pixel outline stays dark, and the
-phosphor mask follows the game's pixels, so every pixel carries the same stripes and the mask
-never shimmers against the picture.
+The curves follow research into the televisions of each hardware's day, in
+[Display presets](display-presets.md). Measured on the picture, the Super Game Boy treatments
+curve more than the Game Boy Player ones, Nostalgic's curve less than the same hardware's
+Accurate, all four curve visibly and Scanlines not at all. Both CRTs keep pixel art readable at
+a phone's scale: a one-pixel outline stays dark, and the phosphor mask follows the game's
+pixels, so every pixel carries the same stripes and the mask never shimmers against the
+picture.
 
 The filters that imitate a physical screen work in linear light from the GPU's sRGB conversion,
 so they cost no per-sample power function; with frame blending, they mix light, as a slow screen
@@ -1259,8 +1266,8 @@ beyond 2 g reads as 2 g. The motion sensor runs only while the game runs and nee
   each press and release, as the hardware's contacts do. A game that reads the joypad more than
   once in vblank can count one tap twice on real hardware and with Button Bounce on. Turning it off
   makes each press and release one clean change. It's a preset setting under Customize (on in
-  Nostalgic and Accurate on a handheld, off in Clean and on the television models), applies to an open game at once, and Quick Play uses the
-  App and System value.
+  Nostalgic and Accurate on every model, off in Clean), applies to an open game at once, and
+  Quick Play uses the App and System value.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls, under With a Controller, is on by default.

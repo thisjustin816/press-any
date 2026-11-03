@@ -73,7 +73,10 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(TouchHaptics.allCases.map(\.rawValue), ["off", "light", "medium"])
         XCTAssertEqual(
             DisplayFilter.allCases.map(\.rawValue),
-            ["off", "lcd1x", "lcd3x", "monochromeLCD", "authenticGBC", "gbaLCD", "sp101LCD", "scanlines", "crt240p", "crt480p"]
+            [
+                "off", "lcd1x", "lcd3x", "monochromeLCD", "authenticGBC", "gbaLCD", "sp101LCD", "scanlines",
+                "curvedScanlines", "slightlyCurvedScanlines", "crt240p", "crt480p",
+            ]
         )
         XCTAssertEqual(FastForwardSpeed.allCases.map(\.rawValue), ["x1_5", "x2", "x3", "x4", "x8", "unlimited"])
         XCTAssertEqual(FastForwardAudio.allCases.map(\.rawValue), ["muted", "accelerated"])

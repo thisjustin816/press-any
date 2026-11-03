@@ -15,11 +15,18 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
     case gbaLCD
     /// The faint grid with the backlit Game Boy Advance SP (AGS-101) color profile.
     case sp101LCD
-    /// Sharp scanlines on a gently curved screen, without a phosphor mask or glow.
+    /// Sharp scanlines on a flat picture, without curvature, rounded corners, a phosphor mask or
+    /// glow.
     case scanlines
-    /// A consumer television showing a 240-line picture.
+    /// The sharp scanlines on a curved screen with small rounded corners, as Nostalgic shows a
+    /// Super Game Boy's television.
+    case curvedScanlines
+    /// The sharp scanlines on a slightly curved screen, as Nostalgic shows a Game Boy Player's
+    /// later television.
+    case slightlyCurvedScanlines
+    /// A 1990s consumer television showing a 240-line picture.
     case crt240p
-    /// A flat late-model television showing each line twice, as a 480-line picture.
+    /// A flatter 2000s television showing each line twice, as a 480-line picture.
     case crt480p
 
     /// Every display treatment is available on every hardware model. Built-in presets still choose
@@ -36,6 +43,8 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
         case .gbaLCD: "Game Boy Advance LCD"
         case .sp101LCD: "Backlit GBA SP LCD"
         case .scanlines: "Scanlines"
+        case .curvedScanlines: "Curved Scanlines"
+        case .slightlyCurvedScanlines: "Slightly Curved Scanlines"
         case .crt240p: "CRT 240p"
         case .crt480p: "CRT 480p"
         }
@@ -96,9 +105,9 @@ public struct GameplayPresetValues: Equatable, Sendable {
     }
 
     /// `hardware` is expected to be resolved. Automatic is treated as the original Game Boy.
-    /// Only Clean and the television models turn button bounce off; the television models because their controllers are not the Game Boy's
-    /// own buttons. A Game Boy or Pocket shows a palette, which color correction doesn't apply to
-    /// in the way the presets mean, so those presets leave correction alone.
+    /// Only Clean turns button bounce off: Nostalgic and Accurate bounce on every model, the
+    /// television models included. A Game Boy or Pocket shows a palette, which color correction
+    /// doesn't apply to in the way the presets mean, so those presets leave correction alone.
     public static func values(for preset: GameplayPreset, hardware: HardwareModel) -> Self? {
         switch (preset, hardware) {
         case (.custom, _):
@@ -117,7 +126,7 @@ public struct GameplayPresetValues: Equatable, Sendable {
         case (.standard, .automatic), (.standard, .gameBoy), (.standard, .gameBoyPocket):
             return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true)
         case (.standard, .superGameBoy), (.standard, .superGameBoy2):
-            return Self(displayFilter: .scanlines, frameBlending: .off, buttonBounce: false, colorCorrection: .balanced)
+            return Self(displayFilter: .curvedScanlines, frameBlending: .off, buttonBounce: true, colorCorrection: .balanced)
         case (.standard, .gameBoyColor):
             return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .balanced)
         case (.standard, .gameBoyAdvance):
@@ -128,7 +137,7 @@ public struct GameplayPresetValues: Equatable, Sendable {
             )
         case (.standard, .gameBoyPlayer):
             return Self(
-                displayFilter: .scanlines, frameBlending: .off, buttonBounce: false,
+                displayFilter: .slightlyCurvedScanlines, frameBlending: .off, buttonBounce: true,
                 colorCorrection: .balanced, advanceColors: .gameBoyColor
             )
 
@@ -138,7 +147,7 @@ public struct GameplayPresetValues: Equatable, Sendable {
         case (.accurate, .gameBoyPocket):
             return Self(displayFilter: .monochromeLCD, frameBlending: .blend, buttonBounce: true)
         case (.accurate, .superGameBoy), (.accurate, .superGameBoy2):
-            return Self(displayFilter: .crt240p, frameBlending: .off, buttonBounce: false, colorCorrection: .balanced)
+            return Self(displayFilter: .crt240p, frameBlending: .off, buttonBounce: true, colorCorrection: .balanced)
         case (.accurate, .gameBoyColor):
             return Self(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, colorCorrection: .lowContrast)
         case (.accurate, .gameBoyAdvance):
@@ -149,7 +158,7 @@ public struct GameplayPresetValues: Equatable, Sendable {
             )
         case (.accurate, .gameBoyPlayer):
             return Self(
-                displayFilter: .crt480p, frameBlending: .off, buttonBounce: false,
+                displayFilter: .crt480p, frameBlending: .off, buttonBounce: true,
                 colorCorrection: .off, advanceColors: .gameBoyAdvance
             )
         }

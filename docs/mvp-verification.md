@@ -398,17 +398,20 @@ Record the phone, iOS version, commit and lighting.
   docs/product.md (Picture). Change one value: the preset reads Custom. Change it back: the preset
   returns.
 - [ ] Set a Game's Model to Super Game Boy with Nostalgic inherited from the system: the Game still
-  inherits (Customize shows From Game Boy settings or Default) and plays with Scanlines. Choose
-  Accurate on the Game, then set its Model to Game Boy Color: the Game shows Accurate for the
-  Game Boy Color.
+  inherits (Customize shows From Game Boy settings or Default) and plays with Curved
+  Scanlines. Choose Accurate on the Game, then set its Model to Game Boy Color: the Game shows
+  Accurate for the Game Boy Color.
 - [ ] Super Game Boy, Accurate: CRT 240p is visibly curved, with dark gaps between lines, a slot
   mask, slightly soft edges and a faint glow; one-pixel outlines stay dark, text stays readable,
-  and the mask shows no shimmer or moiré. Game Boy Player, Accurate: CRT 480p is nearly flat with
-  rounded corners, finer lines, a fine aperture grille and crisper edges. Moving content on
-  either shows no combing.
-- [ ] Super Game Boy and Game Boy Player, Nostalgic: Scanlines curve a little, clearly less than
-  CRT 240p, with small rounded corners, no mask or glow, and pixel edges as crisp as the Pixel
-  Grid's.
+  and the mask shows no shimmer or moiré. Game Boy Player, Accurate: CRT 480p curves less but
+  still visibly, with rounded corners, finer lines, a fine aperture grille and crisper edges.
+  Moving content on either shows no combing.
+- [ ] Super Game Boy, Nostalgic: Curved Scanlines curve a little less than CRT 240p, with small
+  rounded corners, no mask or glow, and pixel edges as crisp as the Pixel Grid's. Game Boy
+  Player, Nostalgic: Slightly Curved Scanlines curve less again, less than CRT 480p, and still
+  visibly. Under Customize, Scanlines is flat with square corners.
+- [ ] Each treatment is distinguishable from Off at a glance, without side-by-side pixel
+  inspection, on a physical iPhone.
 - [ ] A Game Boy Advance on Nostalgic shows the backlit SP colors with the grid; on Accurate it is
   darker with SameBoy's LCD.
 - [ ] Start a game with Button Bounce on, choose Clean in its settings, then Accurate: bounce
@@ -417,4 +420,6 @@ Record the phone, iOS version, commit and lighting.
   and no more heat than Off by touch. With Low Power Mode on, CRT glow disappears and returns when
   it's turned off.
 - [ ] Look at the `device-display-*` attachments of `LCDFilterTests.testDisplayReferenceCaptures`
-  from the CI run (artifact `app-test-results`) for readable text, glow and edges.
+  from the CI run (artifact `app-test-results`) for readable text, glow and edges, and at the
+  `device-display-crt240p-sharpness-comparison` attachment of
+  `testCRT240pSharpnessComparisonCapture` to choose CRT 240p's sharpness.

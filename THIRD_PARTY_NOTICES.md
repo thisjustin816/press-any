@@ -141,12 +141,14 @@ ported. libretro's `lcd1x`, `crt-geom`, `crt-easymode`, `crt-pi`, `crt-aperture`
   luminance of `handheld/shaders/color/gba-color.slang` and `sp101-color.slang`, by Pokefan531
   and hunterk, optimized by crashGG, "License: Public domain". Core color correction is off in the
   presets that use them, so colors are corrected once.
-- CRT 240p, CRT 480p and Scanlines: Press Any's own shader, modelled on CRT-Lottes by Timothy
+- CRT 240p, CRT 480p, Scanlines, Curved Scanlines and Slightly Curved Scanlines: Press Any's
+  own shader, modelled on CRT-Lottes by Timothy
   Lottes (`crt/shaders/crt-lottes.slang`), whose header reads "PUBLIC DOMAIN CRT STYLED
   SCAN-LINE SHADER ... Please take and use, change, or whatever." It uses CRT-Lottes's approach
   (a Gaussian beam across each line, a Gaussian reconstruction along it, light in linear sRGB and
-  a phosphor mask) and, for CRT 240p, its default scanline hardness, with its own geometry,
-  sharper horizontal reconstruction, source-locked masks and glow.
+  a phosphor mask) and, for CRT 240p, its default scanline hardness, with its own geometry
+  (a warp derived from published tube radii, in `docs/display-presets.md`), sharper horizontal
+  reconstruction, source-locked masks and glow.
 - The libretro sources above are pinned to `53deb2efcb79f4fc3e94e9602d5974b4b64e8f94`:
   https://github.com/libretro/slang-shaders/tree/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94. The
   public-domain declarations and source URLs are bundled in

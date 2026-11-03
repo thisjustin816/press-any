@@ -185,7 +185,8 @@ else:
     sys.exit(f"SHOTS must be listing, summary or every-rom, not {shots!r}")
 # Every display filter (DisplayFilter's raw values), on a GB and a GBC game, or on the game given,
 # after its button script and the play shot's wait when there is one.
-filters = ("off", "lcd1x", "lcd3x", "monochromeLCD", "authenticGBC", "gbaLCD", "sp101LCD", "scanlines", "crt240p", "crt480p")
+filters = ("off", "lcd1x", "lcd3x", "monochromeLCD", "authenticGBC", "gbaLCD", "sp101LCD", "scanlines",
+           "curvedScanlines", "slightlyCurvedScanlines", "crt240p", "crt480p")
 if game and script:
     lines.append(f"input\t{script}")
 for system in ("GB", "GBC"):
