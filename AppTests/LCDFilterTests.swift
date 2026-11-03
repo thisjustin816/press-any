@@ -20,7 +20,7 @@ final class LCDFilterTests: XCTestCase {
             buildDisplayName: "Original", markAsBase: true
         ))
         let context = LaunchContext(gameID: result.build.gameID, buildID: result.build.id, saveProfileID: UUID())
-        let standard = GameplayPresetValues.standard(for: .gameBoy).displayFilter
+        let standard = GameplayPresetValues.standard(for: .gameBoyPocket).displayFilter
         XCTAssertEqual(container.gameplayValues(for: context).displayFilter, standard)
         XCTAssertEqual(container.gameplayValues(system: .gameBoy).displayFilter, standard)
         let settings = container.repositories.settings

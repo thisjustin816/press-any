@@ -358,7 +358,8 @@ struct RootView: View {
                     gameplay?.display = container.gameplayDisplay(for: target)
                 },
                 marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: target.gameID, buildID: target.buildID),
-                hasCamera: presentation.runtime.hasCamera
+                hasCamera: presentation.runtime.hasCamera,
+                gameplayHardware: container.hardware
             )
             .presentationDetents([.medium, .large])
         }
@@ -678,9 +679,14 @@ struct RootView: View {
             session: session,
             coreRegistry: container.coreRegistry,
             assetStore: container.fileStore,
-            buttonBounce: container.quickPlayButtonBounce(system: session.system)
+            buttonBounce: container.quickPlayButtonBounce(system: session.system),
+            superGameBoyBorders: container.superGameBoyBorders(system: session.system)
         )
         try runtime.start()
+        let target = container.gameplaySettingsTarget(system: session.system, hardware: runtime.runningHardwareModel)
+        let display = container.gameplayDisplay(for: target)
+        // The bounce passed in was for the hardware most games of the system play on.
+        try? runtime.setButtonBounce(display.buttonBounce)
         gameplay = GameplayPresentation(
             kind: .quickPlay(session.id),
             runtime: runtime,
@@ -689,14 +695,14 @@ struct RootView: View {
                 ? "Couldn’t resume where you left off, so the game started over from its save."
                 : nil,
             firstFrameClock: firstFrameClock,
-            settings: container.gameplaySettingsTarget(system: session.system),
+            settings: target,
             cheatsBuildID: nil,
             prints: GameplayPrints(
                 gameID: nil,
                 save: { [prints = QuickPlayPrints(session: session, files: container.fileStore)] slip in try prints.save(slip) },
                 discard: { [prints = QuickPlayPrints(session: session, files: container.fileStore)] id in try prints.discard(id: id) }
             ),
-            display: container.gameplayDisplay(for: container.gameplaySettingsTarget(system: session.system))
+            display: display
         )
     }
 

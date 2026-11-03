@@ -621,13 +621,30 @@ final class AppContainer {
         launchSetting(ScreenScaling.self, .screenScaling, for: context) ?? .integer
     }
 
-    /// The hardware a game plays on, as EmulationSession resolves it: the Model setting with Plus,
-    /// otherwise Automatic. Quick Play always runs on Automatic.
+    /// What games play on, as EmulationSession resolves it: the Model setting with Plus, otherwise
+    /// Automatic, which picks for each Build.
+    var hardware: GameplayHardware {
+        let ownership = plus.ownership
+        return GameplayHardware(
+            builds: repositories.builds,
+            settings: settingsResolver,
+            automatic: AutomaticHardware(
+                profiles: repositories.saveProfiles,
+                states: repositories.saveStates,
+                assets: repositories.assets,
+                assetStore: fileStore,
+                coreRegistry: coreRegistry,
+                settings: settingsResolver.store
+            ),
+            choosesModel: { ownership.appliesHardwareModel }
+        )
+    }
+
+    /// The hardware a game plays on: a Build's own, or where several games share the scope, the
+    /// first of the models they play on. Quick Play passes the hardware its game runs on.
     func gameplayHardware(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> HardwareModel {
-        let model = plus.ownership.appliesHardwareModel
-            ? launchSetting(HardwareModel.self, .hardwareModel, system: system, gameID: gameID, buildID: buildID)
-            : nil
-        return (model ?? .automatic).resolved(for: system)
+        hardware.hardware(system: system, gameID: gameID, buildID: buildID).first
+            ?? HardwareModel.automaticFallback(for: system)
     }
 
     func gameplayHardware(for context: LaunchContext) -> HardwareModel {
@@ -710,15 +727,17 @@ final class AppContainer {
         )
     }
 
-    /// Quick Play's: it has no Game yet and always runs on Automatic.
-    func gameplaySettingsTarget(system: GameSystem) -> GameplaySettingsTarget {
+    /// Quick Play's: it has no Game yet and always runs on Automatic, which picks `hardware` for
+    /// its game. Before the game starts, the model Automatic picks for most games of the system
+    /// stands in.
+    func gameplaySettingsTarget(system: GameSystem, hardware: HardwareModel? = nil) -> GameplaySettingsTarget {
         GameplaySettingsTarget(
             title: "\(system.displayName) Settings",
             scope: .system(system),
             system: system,
             gameID: nil,
             buildID: nil,
-            hardware: HardwareModel.automatic.resolved(for: system)
+            hardware: hardware ?? HardwareModel.automaticFallback(for: system)
         )
     }
 
@@ -841,6 +860,12 @@ final class AppContainer {
     ) -> Value? {
         guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return nil }
         return launchSetting(type, key, system: build.system, gameID: build.gameID, buildID: build.id)
+    }
+
+    /// Super Game Boy borders for Quick Play, from App and System settings. Nothing sets them yet,
+    /// so unset means off.
+    func superGameBoyBorders(system: GameSystem) -> Bool {
+        launchSetting(Bool.self, .superGameBoyBorders, system: system, gameID: nil, buildID: nil) ?? false
     }
 
     func quickPlayButtonBounce(system: GameSystem) -> Bool {

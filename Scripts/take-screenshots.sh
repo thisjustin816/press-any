@@ -199,6 +199,12 @@ for system in ("GB", "GBC"):
                 shot(f"play:{f}", 10, f"play-{system.lower()}-{name}", f"-ScreenshotLCDFilter {name}")
     if game:
         break
+# Automatic plays most Game Boy games on a Pocket, so the Game Boy and Pocket screens are forced
+# with -ScreenshotModel, on a Game Boy test ROM since a color game can't run on either.
+if dmg_rom := first(lambda r: r["system"] == "GB"):
+    for model, label in (("dmg", "gameboy"), ("mgb", "pocket")):
+        for name in ("lcd1x", "monochromeLCD"):
+            shot(f"play:{dmg_rom}", 10, f"play-{label}-{name}", f"-ScreenshotModel {model} -ScreenshotLCDFilter {name}")
 shot(f"play:{names[0]}", 10, "play-gamepad", "-ScreenshotGamepad YES")
 # The Playtiles layout is drawn after a GBC skin, so it shows a GBC game when one was chosen.
 playtiles_rom = first(lambda r: r["system"] == "GBC") or names[0]

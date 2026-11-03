@@ -10,7 +10,9 @@ struct GameplayPresetRow: View {
     let system: GameSystem
     let gameID: UUID?
     let buildID: UUID?
-    let hardware: HardwareModel
+    /// The models games here play on; more than one where each game gets its own, as under
+    /// Automatic.
+    let hardware: [HardwareModel]
     let store: any SettingsStore
     @ObservedObject var plus: PlusStore
     let refreshToken: Int

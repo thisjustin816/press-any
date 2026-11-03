@@ -5,11 +5,15 @@ public struct ResolvedSetting: Equatable, Sendable {
     public let key: String
     public let valueJSON: String
     public let source: SettingsScope
+    /// The gameplay preset chosen at `source` that gives the value, when the scope stores no value
+    /// of its own for the key.
+    public let preset: GameplayPreset?
 
-    public init(key: String, valueJSON: String, source: SettingsScope) {
+    public init(key: String, valueJSON: String, source: SettingsScope, preset: GameplayPreset? = nil) {
         self.key = key
         self.valueJSON = valueJSON
         self.source = source
+        self.preset = preset
     }
 
     public func decode<T: Decodable>(
@@ -21,7 +25,7 @@ public struct ResolvedSetting: Equatable, Sendable {
 }
 
 public struct SettingsResolver: Sendable {
-    private let store: any SettingsStore
+    public let store: any SettingsStore
 
     public init(store: any SettingsStore) {
         self.store = store
@@ -33,8 +37,7 @@ public struct SettingsResolver: Sendable {
         gameID: UUID? = nil,
         buildID: UUID? = nil
     ) throws -> ResolvedSetting? {
-        let scopes: [SettingsScope] = SettingKey(rawValue: key)?.isAppOnly == true
-            ? [.app] : Self.precedence(system: system, gameID: gameID, buildID: buildID)
+        let scopes = Self.scopes(key: key, system: system, gameID: gameID, buildID: buildID)
         for scope in scopes {
             if let value = try store.valueJSON(key: key, scope: scope) {
                 return ResolvedSetting(key: key, valueJSON: value, source: scope)
@@ -72,8 +75,7 @@ public struct SettingsResolver: Sendable {
         gameID: UUID? = nil,
         buildID: UUID? = nil
     ) throws -> ScopedSetting {
-        let scopes: [SettingsScope] = SettingKey(rawValue: key)?.isAppOnly == true
-            ? [.app] : Self.precedence(system: system, gameID: gameID, buildID: buildID)
+        let scopes = Self.scopes(key: key, system: system, gameID: gameID, buildID: buildID)
         guard let index = scopes.firstIndex(of: scope) else {
             throw SettingsResolverError.scopeOutsideContext(scope)
         }
@@ -95,6 +97,14 @@ public struct SettingsResolver: Sendable {
     public func appValue<T: Decodable>(_ type: T.Type, key: SettingKey) throws -> T? {
         guard let json = try store.valueJSON(key: key.rawValue, scope: .app) else { return nil }
         return try JSONDecoder().decode(type, from: Data(json.utf8))
+    }
+
+    /// The scopes `key` is read from, most specific first.
+    private static func scopes(key: String, system: GameSystem, gameID: UUID?, buildID: UUID?) -> [SettingsScope] {
+        let settingKey = SettingKey(rawValue: key)
+        if settingKey?.isAppOnly == true { return [.app] }
+        if settingKey?.isBuildOnly == true { return buildID.map { [.build($0)] } ?? [] }
+        return precedence(system: system, gameID: gameID, buildID: buildID)
     }
 
     public static func precedence(

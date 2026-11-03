@@ -53,12 +53,24 @@ enum ScreenshotScene: Equatable {
         #endif
     }()
 
+    /// `-ScreenshotModel` accepts a HardwareModel raw value, such as `mgb` for the Game Boy Pocket,
+    /// and plays every game on that model without changing saved settings. Automatic picks the
+    /// Pocket for most Game Boy games, so this is how a capture shows the original Game Boy.
+    static let modelOverride: HardwareModel? = {
+        #if DEBUG
+        guard current != nil else { return nil }
+        return UserDefaults.standard.string(forKey: "ScreenshotModel").flatMap(HardwareModel.init(rawValue:))
+        #else
+        return nil
+        #endif
+    }()
+
     /// `-GrantPlus YES` acts as if Plus were owned, without StoreKit, for screenshots and UI tests.
-    /// Unlike the other arguments it needs no screenshot scene. `-ScreenshotLCDFilter` implies it,
-    /// so a capture's settings agree with the filter it shows.
+    /// Unlike the other arguments it needs no screenshot scene. `-ScreenshotLCDFilter` and
+    /// `-ScreenshotModel` imply it, so a capture's settings agree with what it shows.
     static let grantsPlus: Bool = {
         #if DEBUG
-        return UserDefaults.standard.bool(forKey: "GrantPlus") || lcdFilterOverride != nil
+        return UserDefaults.standard.bool(forKey: "GrantPlus") || lcdFilterOverride != nil || modelOverride != nil
         #else
         return false
         #endif
@@ -89,9 +101,12 @@ enum ScreenshotScene: Equatable {
     static let inputErrorMessage = "Couldn't read -ScreenshotInput"
 
     /// With a button script, games skip the boot logo, so the script starts on the game's first
-    /// frame in a library game as it does in Quick Play.
+    /// frame in a library game as it does in Quick Play. With `-ScreenshotModel`, every level reads
+    /// that Model, so the emulator and the presets agree on the hardware.
     static func settingsStore(_ store: any SettingsStore) -> any SettingsStore {
-        input == nil ? store : BootSkippingSettingsStore(base: store)
+        input == nil && modelOverride == nil
+            ? store
+            : ScreenshotSettingsStore(base: store, skipsBoot: input != nil, model: modelOverride)
     }
 
     private static func flag(_ key: String) -> Bool {
@@ -163,11 +178,15 @@ enum ScreenshotScene: Equatable {
     }
 }
 
-private struct BootSkippingSettingsStore: SettingsStore {
+private struct ScreenshotSettingsStore: SettingsStore {
     let base: any SettingsStore
+    let skipsBoot: Bool
+    let model: HardwareModel?
 
     func valueJSON(key: String, scope: SettingsScope) throws -> String? {
-        key == SettingKey.skipBootAnimation.rawValue ? "true" : try base.valueJSON(key: key, scope: scope)
+        if skipsBoot, key == SettingKey.skipBootAnimation.rawValue { return "true" }
+        if let model, key == SettingKey.hardwareModel.rawValue { return "\"\(model.rawValue)\"" }
+        return try base.valueJSON(key: key, scope: scope)
     }
 
     func setValueJSON(_ valueJSON: String, key: String, scope: SettingsScope) throws {

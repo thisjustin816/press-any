@@ -12,6 +12,7 @@ struct AppSettingsView: View {
     private let integrityChecker: ManagedAssetIntegrityChecker?
     private let libraryDeletion: LibraryDeletionOperations?
     private let games: (any GameRepository)?
+    private let gameplayHardware: GameplayHardware?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.libraryStorageContext) private var libraryStorageContext
@@ -21,13 +22,15 @@ struct AppSettingsView: View {
         plus: PlusStore,
         integrityChecker: ManagedAssetIntegrityChecker? = nil,
         libraryDeletion: LibraryDeletionOperations? = nil,
-        games: (any GameRepository)? = nil
+        games: (any GameRepository)? = nil,
+        gameplayHardware: GameplayHardware? = nil
     ) {
         self.store = store
         _plus = ObservedObject(wrappedValue: plus)
         self.integrityChecker = integrityChecker
         self.libraryDeletion = libraryDeletion
         self.games = games
+        self.gameplayHardware = gameplayHardware
     }
 
     var body: some View {
@@ -44,7 +47,8 @@ struct AppSettingsView: View {
                                 buildID: nil,
                                 store: store,
                                 plus: plus,
-                                inSheet: false
+                                inSheet: false,
+                                gameplayHardware: gameplayHardware
                             )
                         }
                     }
