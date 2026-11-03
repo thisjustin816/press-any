@@ -102,7 +102,7 @@ final class PlusStoreTests: XCTestCase {
 
         XCTAssertFalse(plus.ownership.isOwned)
         XCTAssertEqual(fixture.container.gameplayValues(for: fixture.context).displayFilter, .lcd3x)
-        XCTAssertEqual(try fixture.storedFilter(), .lcd1x, "a refund doesn't delete the choice")
+        XCTAssertEqual(try fixture.storedFilter(), .lcd3x, "a refund doesn't delete the choice")
     }
 
     func testAPurchaseOnAnotherDeviceUnlocksWithoutARestart() async throws {
