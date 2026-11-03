@@ -17,7 +17,7 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
     case sp101LCD
     /// Flat, sharp scanlines without a phosphor mask.
     case scanlines
-    /// A curved consumer television showing a 240-line picture.
+    /// A consumer television showing a 240-line picture.
     case crt240p
     /// A flat late-model television showing each line twice, as a 480-line picture.
     case crt480p
@@ -96,7 +96,7 @@ public struct GameplayPresetValues: Equatable, Sendable {
     }
 
     /// `hardware` is expected to be resolved. Automatic is treated as the original Game Boy.
-    /// Television models turn button bounce off because their controllers are not the Game Boy's
+    /// Only Clean and the television models turn button bounce off; the television models because their controllers are not the Game Boy's
     /// own buttons. A Game Boy or Pocket shows a palette, which color correction doesn't apply to
     /// in the way the presets mean, so those presets leave correction alone.
     public static func values(for preset: GameplayPreset, hardware: HardwareModel) -> Self? {
@@ -115,15 +115,15 @@ public struct GameplayPresetValues: Equatable, Sendable {
             )
 
         case (.standard, .automatic), (.standard, .gameBoy), (.standard, .gameBoyPocket):
-            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: false)
+            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true)
         case (.standard, .superGameBoy), (.standard, .superGameBoy2):
             return Self(displayFilter: .scanlines, frameBlending: .off, buttonBounce: false, colorCorrection: .balanced)
         case (.standard, .gameBoyColor):
-            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: false, colorCorrection: .balanced)
+            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .balanced)
         case (.standard, .gameBoyAdvance):
             // The backlit SP's profile colors the picture, so the core leaves colors as they are.
             return Self(
-                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: false,
+                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true,
                 colorCorrection: .off, advanceColors: .gameBoyColor
             )
         case (.standard, .gameBoyPlayer):

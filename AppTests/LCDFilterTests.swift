@@ -117,20 +117,20 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
-    func testCRTGeometryIsCurvedForTheSuperGameBoyAndNearlyFlatForTheGameBoyPlayer() throws {
-        XCTAssertLessThan(CRTParameters.flatLateModelTV.curvature.x, CRTParameters.curvedConsumerTV.curvature.x)
-        XCTAssertLessThan(CRTParameters.flatLateModelTV.curvature.y, CRTParameters.curvedConsumerTV.curvature.y)
-        XCTAssertLessThan(CRTParameters.flatLateModelTV.maskPitch, CRTParameters.curvedConsumerTV.maskPitch)
-        XCTAssertGreaterThan(CRTParameters.flatLateModelTV.maskPitch, 0)
-        XCTAssertEqual(CRTParameters.curvedConsumerTV.linesPerSourceLine, 1)
-        XCTAssertEqual(CRTParameters.flatLateModelTV.linesPerSourceLine, 2)
-        XCTAssertEqual(CRTParameters.scanlines.curvature, .zero)
+    func testNoCRTCurvesThePicture() throws {
+        for parameters in [CRTParameters.consumerTV, .lateModelTV, .scanlines] {
+            XCTAssertEqual(parameters.curvature, .zero)
+        }
+        XCTAssertLessThan(CRTParameters.lateModelTV.maskPitch, CRTParameters.consumerTV.maskPitch)
+        XCTAssertGreaterThan(CRTParameters.lateModelTV.maskPitch, 0)
+        XCTAssertEqual(CRTParameters.consumerTV.linesPerSourceLine, 1)
+        XCTAssertEqual(CRTParameters.lateModelTV.linesPerSourceLine, 2)
         XCTAssertEqual(CRTParameters.scanlines.maskPitch, 0)
 
         // Measured on the picture: how far the raster's top edge bows down at a quarter of the
-        // width, away from the rounded corners, compared with its middle.
+        // width, away from the rounded corners, compared with its middle. A flat picture's is 0.
         let (device, library) = try metal()
-        func bow(_ filter: DisplayFilter) throws -> Int {
+        for filter in [DisplayFilter.crt240p, .crt480p, .scanlines] {
             let pixels = try render(
                 filter, fragment: "gameplayTextureFragment", device: device, library: library,
                 frames: [255], sourceWidth: 160, sourceHeight: 144, outputWidth: 320, outputHeight: 288
@@ -138,14 +138,8 @@ final class LCDFilterTests: XCTestCase {
             func firstLitRow(_ x: Int) -> Int {
                 (0..<288).first { brightness(pixels, at: pixel(x, $0, width: 320)) > 60 } ?? 288
             }
-            return firstLitRow(40) - firstLitRow(160)
+            XCTAssertLessThanOrEqual(abs(firstLitRow(40) - firstLitRow(160)), 1, "\(filter) is flat")
         }
-        let consumer = try bow(.crt240p)
-        let lateModel = try bow(.crt480p)
-        XCTAssertGreaterThanOrEqual(consumer, 4, "CRT 240p is visibly curved")
-        XCTAssertLessThan(lateModel, consumer, "CRT 480p is flatter than CRT 240p")
-        XCTAssertLessThanOrEqual(lateModel, 1, "CRT 480p is nearly flat")
-        XCTAssertEqual(try bow(.scanlines), 0, "Scanlines are flat")
     }
 
     func testCRTRastersAndMasksDifferInDensity() throws {
@@ -182,8 +176,8 @@ final class LCDFilterTests: XCTestCase {
         XCTAssertGreaterThan(linesRipple.depth, 40)
 
         let consumerPitch = maskPitch(consumer), latePitch = maskPitch(lateModel)
-        XCTAssertEqual(consumerPitch, Double(CRTParameters.curvedConsumerTV.maskPitch), accuracy: 0.5)
-        XCTAssertEqual(latePitch, Double(CRTParameters.flatLateModelTV.maskPitch), accuracy: 0.5)
+        XCTAssertEqual(consumerPitch, Double(CRTParameters.consumerTV.maskPitch), accuracy: 0.5)
+        XCTAssertEqual(latePitch, Double(CRTParameters.lateModelTV.maskPitch), accuracy: 0.5)
         XCTAssertEqual(maskPitch(lines), 0, "Scanlines have no mask")
     }
 
@@ -214,8 +208,8 @@ final class LCDFilterTests: XCTestCase {
                 sourceWidth: 8, sourceHeight: 8, outputWidth: 160, outputHeight: 160, sourcePixels: pixels, crt: parameters
             )
         }
-        let glowing = try crt(.curvedConsumerTV)
-        let reduced = try crt(CRTParameters.curvedConsumerTV.withoutGlow)
+        let glowing = try crt(.consumerTV)
+        let reduced = try crt(CRTParameters.consumerTV.withoutGlow)
         // A source pixel and a half right of the bright one, where the beam has no light left.
         let beside = pixel(120, 90, width: 160)
         XCTAssertGreaterThan(brightness(glowing, at: beside), brightness(reduced, at: beside) + 3, "glow reaches beside the pixel")

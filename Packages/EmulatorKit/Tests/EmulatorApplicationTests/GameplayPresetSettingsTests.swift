@@ -73,6 +73,12 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy).displayFilter, .scanlines)
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyPlayer).displayFilter, .scanlines)
         XCTAssertEqual(GameplayPresetValues.standard(for: .automatic), GameplayPresetValues.standard(for: .gameBoy))
+        for hardware in [HardwareModel.gameBoy, .gameBoyPocket, .gameBoyColor, .gameBoyAdvance] {
+            XCTAssertTrue(GameplayPresetValues.standard(for: hardware).buttonBounce, "\(hardware) Nostalgic bounces")
+        }
+        for hardware in [HardwareModel.superGameBoy, .superGameBoy2, .gameBoyPlayer] {
+            XCTAssertFalse(GameplayPresetValues.standard(for: hardware).buttonBounce, "\(hardware) has no Game Boy contacts")
+        }
     }
 
     func testBuiltInPresetsRoundTripForEveryHardwareModelAndScope() throws {

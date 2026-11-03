@@ -723,11 +723,11 @@ extension EmulationSessionTests {
             "unset takes the standard preset's value"
         )
 
-        try settings.set(true, key: key, scope: .app)
-        XCTAssertTrue(try bounceOnStart(harness.contextA), "the app-wide setting turns it on")
+        try settings.set(false, key: key, scope: .app)
+        XCTAssertFalse(try bounceOnStart(harness.contextA), "the app-wide setting turns it off")
 
-        try settings.set(false, key: key, scope: .build(harness.buildB.id))
-        XCTAssertFalse(try bounceOnStart(harness.contextB), "a Build override wins")
+        try settings.set(true, key: key, scope: .build(harness.buildB.id))
+        XCTAssertTrue(try bounceOnStart(harness.contextB), "a Build override wins")
 
         try settings.setValueJSON("not json", key: key, scope: .app)
         XCTAssertEqual(
