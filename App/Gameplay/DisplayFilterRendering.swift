@@ -51,7 +51,7 @@ struct CRTParameters: Equatable {
     /// A Super Game Boy on a consumer set: a flat picture, one visible scanline per SNES line, a
     /// coarse slot mask and a soft analog picture.
     static let consumerTV = CRTParameters(
-        geometry: SIMD4(0, 0, 0.06, 0.22),
+        geometry: SIMD4(0, 0, 0.10, 0.22),
         beam: SIMD4(1, -8, -2.5, 1.55),
         mask: SIMD4(6, 0.6, 1.4, 1),
         glow: SIMD4(0.18, 1.6, 0, 0)
