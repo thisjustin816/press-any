@@ -12,12 +12,12 @@ looked and felt" and "Just the game, with no effects added" (`GameplayPresetRow.
 - **Nostalgic** is the standard: the game as people remember it, idealized, on a bright modern
   screen. Handhelds get a faint pixel grid, the frame blending their games' flicker effects expect
   and Button Bounce on. A Game Boy Color gets SameBoy's Modern Accurate correction, the game's
-  colors as a modern, bright, color-accurate screen shows them, as a ModRetro Chromatic does. The
-  Game Boy Advance gets the backlit AGS-101 SP's colors, the screen most players remember as the
-  good one. The television models get sharp scanlines on a curved screen with small rounded
-  corners, the look most players picture for a console on a TV, without the mask, glow and
-  vignette that Accurate draws: Curved Scanlines on a Super Game Boy and Slightly Curved
-  Scanlines on a Game Boy Player.
+  colors as a bright, color-accurate modern screen shows them; the reference is a modern
+  handheld such as the ModRetro Chromatic. The Game Boy Advance gets the backlit AGS-101 SP's
+  colors, the screen most players remember as the good one. The television models get sharp
+  scanlines on a curved screen with small rounded corners, the look most players picture for a
+  console on a TV, without the mask, glow and vignette that Accurate draws: Curved Scanlines on
+  a Super Game Boy and Slightly Curved Scanlines on a Game Boy Player.
 - **Accurate** is the original hardware late in its life: the Game Boy's and Pocket's screens as
   BGB measured them (below), with the original Game Boy's slow response (LCD Ghosting) or the
   faster Pocket's (Blend), Authentic GBC's measured subpixels with SameBoy's Reduce Contrast
