@@ -75,7 +75,8 @@ In the v1.1 development build, Plus includes:
   default. Pausing restarts the interval (see Auto State).
 - **Model**: run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy,
   Super Game Boy 2, Game Boy Color, Game Boy Advance or Game Boy Player (see Settings). Without
-  Plus, games play on Automatic and a stored choice is kept.
+  Plus, games play on Automatic and a stored choice is kept. Automatic is free and picks the
+  hardware that suits each game.
 - **Print backgrounds**: Wood, Printer, Game Artwork and Custom backgrounds for Game Boy Printer
   prints (see Game Boy Printer). Transparent, Light and Dark are free.
 - **Print history**: Keep Prints at 25, 50 or 100 prints per Game (see Library). Without Plus a
@@ -1087,11 +1088,19 @@ Every preset is free. Customize lists the preset's settings for this hardware, a
 needs Plus: without it, every value there is marked Plus, choosing one opens the Plus screen and
 saves nothing. A stored value plays with or without Plus. Screen Colors' palettes are free, and no
 preset sets or reads them, so choosing a preset keeps the player's palette. Model has its own Plus
-rule (see Settings). The preset itself isn't stored: the settings it sets inherit App -> System ->
-Game -> Build like any other, and Reset to Inherited in the Preset menu clears them at this level.
-Choosing Nostalgic where nothing above sets another preset stores nothing. When Model changes at
-a level that stores its own preset settings, that level gets the same preset for the new hardware;
-a level that inherits them keeps inheriting.
+rule (see Settings). Choosing a preset stores the preset at that level, not its values, so each
+game below plays the preset's values for the hardware it runs on. That matters wherever games run
+on different models: on Automatic, Accurate chosen in Game Boy settings gives a Super Game Boy
+game CRT 240p, a Nintendo game the Game Boy Color LCD and every other game the Monochrome LCD, and
+the same holds for a Game whose Builds run on different models. A setting changed under Customize
+is stored at that level and wins over the preset there. Settings resolve App -> System -> Game ->
+Build: at each level a stored setting comes first, then that level's preset. Where games here run
+on several models, the menu shows a preset only when every one of them plays it, and Accurate
+reads "As on the hardware each game plays on". Reset to Inherited in the Preset menu clears the
+preset and the Customize settings at this level. Choosing Nostalgic where nothing above sets
+another preset stores nothing. When Model changes at a level that stores Customize settings that
+made a built-in preset, that level gets the preset instead, which then follows the new hardware; a
+level that inherits keeps inheriting.
 
 | Hardware | Nostalgic | Accurate | Clean |
 |---|---|---|---|
@@ -1104,7 +1113,11 @@ a level that inherits them keeps inheriting.
 
 Frame blending is Off on the television models and in Clean. Button Bounce is on in Nostalgic and
 Accurate on every model, the television models included, and off only in Clean. On a Game Boy or
-Pocket the presets leave color correction alone, since those show a palette. The Game Boy Light and the
+Pocket the presets leave color correction alone, since those show a palette. Under Automatic the
+presets follow the model it picks for each game (see Settings): a Super Game Boy game gets the
+Super Game Boy row, a Nintendo Game Boy game the Game Boy Color row, other Game Boy games the
+Pocket row, and a Build that kept a Game Boy from an earlier version the Game Boy row. The Game
+Boy Light and the
 backlit Game Boy Advance SP (AGS-101) run as a Pocket and a Game Boy Advance, so they aren't
 models: the Light's look is the Teal (Light) palette, and the SP's is the Backlit GBA SP LCD
 filter, which Nostalgic uses on a Game Boy Advance.
@@ -1156,8 +1169,8 @@ emulation is later work.
   frame itself follows the setting.
 - **Screen Colors** (System, Game or Build; free) is a different setting for each kind of hardware, and
   only the one for the hardware the game runs on shows: in Game Boy or Game Boy Color settings,
-  and in the Settings of a Game, a Build or the open game. Under Automatic that's the system's own
-  hardware; with another Model see Settings. App Settings doesn't show it, and a choice made there in
+  and in the Settings of a Game, a Build or the open game. Under Automatic that's the hardware
+  Automatic picks for the game; with another Model see Settings. App Settings doesn't show it, and a choice made there in
   an earlier version became that system's setting. Screen Colors opens a scrolling list inside
   Settings, including from the in-game menu. The first row restores the inherited value and names
   its source, or says Default when no parent sets it. A checkmark marks the selected row; choosing
@@ -1328,13 +1341,41 @@ Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States, Sk
 comes from, such as "From Game Boy settings", or that it's set here.
 
 **Model** is the hardware a game runs on, set like the other settings at every level. It's one
-setting, chosen from a list grouped by console: Automatic on its own, with "Game Boy Color for its
-games, Game Boy for the rest" under it; then Game Boy (Game Boy, Game Boy Pocket, Super Game Boy,
-Super Game Boy 2), Game Boy Color, and Game Boy Advance (Game Boy Advance, Game Boy Player). The
-list shows no model numbers. App Settings has it on the Playing page.
+setting, chosen from a list grouped by console: Automatic on its own, with "Game Boy Color for
+color and Nintendo games, Super Game Boy 2 for Super Game Boy games, Game Boy Pocket for the rest"
+under it; then Game Boy (Game Boy, Game Boy Pocket, Super Game Boy, Super Game Boy 2), Game Boy
+Color, and Game Boy Advance (Game Boy Advance, Game Boy Player). The list shows no model numbers.
+App Settings has it on the Playing page.
 
-- Automatic runs a game marked for the Game Boy Color (CGB flag 0x80 or 0xC0) on a Game Boy Color
-  and the rest on a Game Boy. It never picks a Super Game Boy.
+- Automatic, the default and free, reads the cartridge header and picks the first match, as
+  SameBoy's Mac and SDL apps do:
+  1. A game made for the Game Boy Color (CGB flag 0x143 with bit 7 set, 0x80 or 0xC0): **Game Boy
+     Color**. With Super Game Boy borders on, one that also supports the Super Game Boy (as in
+     rule 2) plays on a **Game Boy Player**, with its television look. Borders are a setting
+     (`superGameBoyBorders`) that inherits like the others, is off by default, and has no control
+     yet, so every player gets Game Boy Color; showing it and drawing the border come later.
+  2. A game that supports the Super Game Boy (SGB flag 0x146 = 0x03 with old licensee 0x14B =
+     0x33): **Super Game Boy 2**, which runs at the Game Boy's own speed and pitch, where the
+     original Super Game Boy runs about 2.4% fast. The licensee check matches the hardware, which
+     ignores the SGB flag unless the old licensee is 0x33.
+  3. A game published by Nintendo (old licensee 0x01, or 0x33 with new licensee "01" at 0x144):
+     **Game Boy Color**, for the palette the Game Boy Color's boot ROM gives Nintendo's Game Boy
+     games.
+  4. Everything else: **Game Boy Pocket**.
+
+  Automatic never picks the original Game Boy, the Super Game Boy or the Game Boy Advance, and picks
+  the Game Boy Player only with borders on. A Build that already had save states when Automatic
+  began reading the header keeps the hardware its newest state was made on, of any kind and with
+  any Save Profile, so its states keep loading, borders or not; a Build without states moves to the
+  rule. Which of the two a Build gets is recorded the first time it starts, so later states never
+  pin it, and a Build whose Model was set by hand then records the rule, for when Model goes back
+  to Automatic. A Build on the rule follows the borders setting when it changes; that moves a game
+  only between a Game Boy Color and a Game Boy Player, whose save states load on each other. Battery saves are the
+  cartridge's on every model and aren't affected. The note under the Model list says so: "On
+  Automatic, a game with save states from an earlier version stays on the hardware its newest state
+  was made on, so they keep loading." A patched Build whose image isn't on disk yet shows the
+  system's choice in Settings until it starts: Game Boy Color for a Game Boy Color game, otherwise
+  Game Boy Pocket.
 - Each model boots its own SameBoy boot ROM, so a game finds the hardware it checks for, such as a
   Game Boy Color game brightening its colors on a Game Boy Advance. The Game Boy Player is SameBoy's
   model of a Game Boy Advance inside one. There's no promise that a Game Boy Color-only game works
@@ -1363,15 +1404,20 @@ list shows no model numbers. App Settings has it on the Playing page.
   does. On a Super Game Boy
   or Super Game Boy 2 the row can't be changed: it says "Set by the game or the Super Game Boy"
   with Super Game Boy as its value. Without Plus every game plays on Automatic, so the row follows
-  the game's own system.
+  the model Automatic picks for it. On a Game Boy Pocket the default palette is Green (DMG), as on
+  a Game Boy. Where the games at a level run on several models, as in Game Boy settings on
+  Automatic, the palettes show if any of them shows one, and Customize lists Color Correction if
+  any of them corrects colors.
 - A Game Boy Advance's screen is darker than a Game Boy Color's, and SameBoy colors a game on a
   Game Boy Advance or Player for that darker screen. When a game's Model is one of those, Customize has **Game
   Boy Advance Colors**: As on a Game Boy Advance, the default, or As on a Game Boy Color, which
   colors the picture as a Game Boy Color would with the same Screen Colors correction. The game
   still runs on a Game Boy Advance and can tell. Original colors look the same on both.
 - The Super Game Boy border isn't drawn yet: it makes the picture 256×224, which the layouts,
-  screenshots and thumbnails don't fit. Custom border editing comes after the border.
-- Quick Play always uses Automatic, and its preset settings follow that hardware.
+  screenshots and thumbnails don't fit. Custom border editing comes after the border. A Super Game
+  Boy game on Automatic plays on a Super Game Boy 2 in the colors it sends, without its border.
+- Quick Play always uses Automatic, and its preset settings follow the hardware Automatic picks.
+  Resuming its autosave keeps the hardware the autosave was made on.
 - Choosing a model other than Automatic needs Plus (see Pricing). Without it, every model but
   Automatic carries a Plus badge in the list, choosing one opens the Plus screen, and the note
   under the list says so.
