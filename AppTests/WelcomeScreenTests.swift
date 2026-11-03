@@ -24,6 +24,14 @@ final class WelcomeScreenTests: XCTestCase {
         XCTAssertTrue(WelcomeScreen.showsAtLaunch(defaults: defaults, environment: [:]), "new content shows again")
     }
 
+    func testOnlyAPlayerWhoSawAnEarlierVersionGetsTheUpdateNote() {
+        XCTAssertFalse(WelcomeScreen.followsUpdate(defaults: defaults), "a fresh install")
+        defaults.set(WelcomeScreen.contentVersion - 1, forKey: WelcomeScreen.shownVersionKey)
+        XCTAssertTrue(WelcomeScreen.followsUpdate(defaults: defaults), "someone who saw the version before")
+        WelcomeScreen.markShown(defaults: defaults)
+        XCTAssertFalse(WelcomeScreen.followsUpdate(defaults: defaults), "after this version was shown")
+    }
+
     func testAutomatedRunsNeverSeeItAndLaterLaunchesDont() {
         XCTAssertFalse(WelcomeScreen.showsAtLaunch(defaults: defaults, environment: ["XCTestConfigurationFilePath": "/tmp/x"]))
         XCTAssertFalse(WelcomeScreen.showsAtLaunch(defaults: defaults, environment: [:]), "the system relaunching a test's app")

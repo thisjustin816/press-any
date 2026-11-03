@@ -19,6 +19,7 @@ Verify with a user-supplied legal ROM:
 
 - [x] Generate/open the iOS project from a clean checkout.
 - [x] A fresh install opens on the welcome screen, in Light and Dark Mode and at the largest text size; Get Started or a swipe down leaves the library, and later launches skip it. Settings > How Press Any Works shows it again.
+- [ ] Updating from v1.0 shows the welcome screen once more with the "Games Look Different" note at the top; a fresh v1.1 install and Settings > How Press Any Works show it without the note.
 - [x] Launch a GB game and a GBC game through SameBoy with correct colors, orientation, native speed and audio.
 - [x] Touch input works with acceptable latency.
 - [x] With Game Boy selected and Controller Theme set to Classic, slide a thumb around the D-pad in portrait and both landscape orientations: cardinals stay clean, diagonals engage only near the corners, and sliding back to a cardinal or the center releases the diagonal without lifting.

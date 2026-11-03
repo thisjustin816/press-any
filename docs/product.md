@@ -1523,8 +1523,12 @@ list shows no model numbers. App Settings has it on the Playing page.
 - Menu items end in an ellipsis only when they ask for something more before acting: a file, a
   name, a choice in a form. Items that open a screen, and deletions that only confirm, have none.
 - A welcome screen on first launch explains the library, Builds, saves, Quick Play, the game
-  menu, exports, and that the app comes with no games. It shows once, again only when its
-  content version rises, never in automated runs, and never ahead of a shared file or game.
+  menu, how the screen looks (the gameplay presets), exports, and that the app comes with no
+  games. It shows once, again only when its content version rises, never in automated runs, and
+  never ahead of a shared file or game. v1.1 raises the content version, so players updating
+  from v1.0 see it again, with a "Games Look Different" note at the top: an untouched screen
+  setting now resolves to Nostalgic, and Clean gives unfiltered pixels. A fresh install and
+  Settings never show that note.
   Settings > How Press Any Works reopens it, and the first game shows "Tap Press Any for the
   menu" once. v1 has nothing to opt into; the v2.0 opt-ins (crash reports, usage counts) and
   Developer Mode bring their own introductions.

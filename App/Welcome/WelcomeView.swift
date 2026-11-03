@@ -4,6 +4,9 @@ import SwiftUI
 /// What the app is and how the library and Quick Play work, shown at first launch until a fuller
 /// walkthrough exists, and from Settings at any time.
 struct WelcomeView: View {
+    /// Shows what changed for someone who saw an earlier version of this screen. Only the launch
+    /// after an update sets it; Settings never does.
+    var showsUpdateNote = false
     /// Shown as Get Started at the bottom. Nil when Settings pushes this, where Back closes it.
     var onDone: (() -> Void)?
 
@@ -16,6 +19,20 @@ struct WelcomeView: View {
                     Text("Every version, every save, one library.")
                         .font(.title3)
                         .foregroundStyle(.secondary)
+                }
+
+                if showsUpdateNote {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Games Look Different")
+                            .font(.headline)
+                        Text(Self.updateNote)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("welcome.updateNote")
                 }
 
                 ForEach(Self.topics) { topic in
@@ -73,6 +90,10 @@ struct WelcomeView: View {
         var id: String { title }
     }
 
+    /// For players who had the app before gameplay presets: an untouched screen setting now
+    /// resolves to Nostalgic instead of plain pixels.
+    static let updateNote = "If you never changed how the screen looks, your games now use the Nostalgic preset and its screen filter. For sharp, unfiltered pixels, choose Clean under Preset in Settings. Settings you chose yourself stay as they were."
+
     private static let topics = [
         Topic(
             symbol: "square.grid.2x2",
@@ -100,6 +121,11 @@ struct WelcomeView: View {
             text: "Tap \(AppBrand.displayName) on the controller to pause and open the menu: Fast Forward, Quick Save and Quick Load, States, Settings, and Close Game. A Bluetooth controller's Menu button opens the same menu; press it again to close and resume. The touch controls hide while one is in use."
         ),
         Topic(
+            symbol: "tv",
+            title: "How the Screen Looks",
+            text: "Preset in Settings sets the screen for every game, a system, a game or a Build. Nostalgic, the default, shows the screen as you remember it, cleaned up. Accurate imitates the original screen, or a CRT television for the Super Game Boy and Game Boy Player. Clean shows the game's pixels. All three are free."
+        ),
+        Topic(
             symbol: "folder",
             title: "Exports",
             text: "Export ROM and Export Save on a game’s page put a copy in Files, in the \(AppBrand.displayName) folder. That folder belongs to the app, so deleting \(AppBrand.displayName) deletes it. To keep a backup, share it to iCloud Drive or another place."
@@ -116,7 +142,7 @@ struct WelcomeView: View {
 /// automated run, where it would cover the screen a test or screenshot expects.
 enum WelcomeScreen {
     /// Raise this when the content changes enough that everyone should see it again.
-    static let contentVersion = 2
+    static let contentVersion = 3
     static let shownVersionKey = "welcome.shownVersion"
 
     /// An automated run also marks it shown, so a later launch the system starts on its own, such
@@ -133,6 +159,13 @@ enum WelcomeScreen {
             return false
         }
         return defaults.integer(forKey: shownVersionKey) < contentVersion
+    }
+
+    /// Whether this person saw an earlier version of the screen, so this showing follows an update.
+    /// Read it before `markShown`.
+    static func followsUpdate(defaults: UserDefaults = .standard) -> Bool {
+        let shown = defaults.integer(forKey: shownVersionKey)
+        return shown > 0 && shown < contentVersion
     }
 
     static func markShown(defaults: UserDefaults = .standard) {
