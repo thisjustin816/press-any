@@ -3,8 +3,8 @@ Author: fishku (fishcu)
 Copyright (C) 2024-2025
 Public domain license (CC0)
 Source: https://github.com/libretro/slang-shaders/blob/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94/handheld/shaders/authentic_gbc/authentic_gbc.slang
-Includes the single-pass shader, shared geometry and analytical coverage helpers.
-The app ports the single-pass preset with its upstream default settings to Metal.
+The app ports the single-pass shader's subpixel geometry with its upstream default
+settings to Metal. Its pixel coverage math is the app's own.
 
 Creative Commons Legal Code
 

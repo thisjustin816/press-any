@@ -16,8 +16,8 @@ Sources:
 https://github.com/libretro/slang-shaders/blob/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94/handheld/shaders/color/gba-color.slang
 https://github.com/libretro/slang-shaders/blob/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94/handheld/shaders/color/sp101-color.slang
 
-The app ports these algorithms to Metal. CRT-Lottes retains the upstream default
-Gaussian reconstruction, beam, bloom, mask and sRGB transfer settings. The app
-adds raster-edge feathering, edge falloff, frame blending and a woven-field
-adapter for its Game Boy Player presentation. Device color profiles use the
-upstream sRGB matrices and default luminance without additional darkening.
+CRT 240p, CRT 480p and Scanlines are this app's own Metal shader, modelled on
+CRT-Lottes: a Gaussian beam across each line, a Gaussian reconstruction along it,
+light in linear sRGB and a phosphor mask, with CRT-Lottes's default beam hardness.
+The device color profiles are ported with the upstream sRGB matrices and default
+luminance, without additional darkening.

@@ -56,18 +56,28 @@ struct AcknowledgementsView: View {
             """)
         ),
         Component(
+            name: "libretro LCD shaders",
+            use: "The idea behind the Pixel Grid, RGB Subpixels and Backlit GBA SP LCD grids",
+            license: .publicDomain(credit: """
+            \(AppBrand.displayName)’s pixel grids are its own shader code, modelled on the LCD shaders \
+            in libretro’s slang-shaders collection for RetroArch \
+            (https://github.com/libretro/slang-shaders), among them lcd3x by Gigaherz, which is in \
+            the public domain. No shader code was copied from them. They are credited here anyway.
+            """)
+        ),
+        Component(
             name: "Authentic GBC",
-            use: "Game Boy Color subpixel display by fishku (fishcu), ported to Metal from version 2.2. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/authentic_gbc",
+            use: "The Game Boy Color LCD’s subpixel shapes and defaults, by fishku (fishcu), from version 2.2, ported to Metal. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/authentic_gbc",
             license: .bundled(file: "AuthenticGBC-LICENSE")
         ),
         Component(
             name: "CRT-Lottes",
-            use: "Television display shader by Timothy Lottes, ported to Metal. Source: https://github.com/libretro/slang-shaders/blob/master/crt/shaders/crt-lottes.slang",
+            use: "The model for the CRT 240p, CRT 480p and Scanlines treatments, by Timothy Lottes. They are this app’s own shader, using its Gaussian beam, sRGB light and mask approach. Source: https://github.com/libretro/slang-shaders/blob/master/crt/shaders/crt-lottes.slang",
             license: .bundled(file: "DisplayShaders-PublicDomain")
         ),
         Component(
             name: "GBA and SP101 color profiles",
-            use: "Device color profiles by Pokefan531 and hunterk, optimized by crashGG. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/color",
+            use: "The Game Boy Advance and backlit Game Boy Advance SP (AGS-101) screen colors, by Pokefan531 and hunterk, optimized by crashGG. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/color",
             license: .bundled(file: "DisplayShaders-PublicDomain")
         ),
         Component(
