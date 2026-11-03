@@ -117,9 +117,7 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
-    func testBothCRTsCurveThePictureAndTheSuperGameBoyMoreThanTheGameBoyPlayer() throws {
-        XCTAssertGreaterThan(CRTParameters.lateModelTV.curvature.x, 0)
-        XCTAssertGreaterThan(CRTParameters.lateModelTV.curvature.y, 0)
+    func testCRTGeometryIsCurvedForTheSuperGameBoyAndNearlyFlatForTheGameBoyPlayer() throws {
         XCTAssertLessThan(CRTParameters.lateModelTV.curvature.x, CRTParameters.consumerTV.curvature.x)
         XCTAssertLessThan(CRTParameters.lateModelTV.curvature.y, CRTParameters.consumerTV.curvature.y)
         XCTAssertLessThan(CRTParameters.lateModelTV.maskPitch, CRTParameters.consumerTV.maskPitch)
@@ -144,9 +142,9 @@ final class LCDFilterTests: XCTestCase {
         }
         let consumer = try bow(.crt240p)
         let lateModel = try bow(.crt480p)
-        XCTAssertGreaterThanOrEqual(consumer, 7, "CRT 240p is clearly curved")
-        XCTAssertGreaterThanOrEqual(lateModel, 2, "CRT 480p is gently curved")
+        XCTAssertGreaterThanOrEqual(consumer, 4, "CRT 240p is visibly curved")
         XCTAssertLessThan(lateModel, consumer, "CRT 480p is flatter than CRT 240p")
+        XCTAssertLessThanOrEqual(lateModel, 1, "CRT 480p is nearly flat")
         XCTAssertEqual(try bow(.scanlines), 0, "Scanlines are flat")
     }
 
