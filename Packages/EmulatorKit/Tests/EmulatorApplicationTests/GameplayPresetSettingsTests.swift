@@ -164,6 +164,35 @@ final class GameplayPresetSettingsTests: XCTestCase {
         }
     }
 
+    /// A television filter chosen by hand on a handheld, or a handheld's on a television model,
+    /// plays as chosen and reads as Custom.
+    func testAnyFilterChosenByHandOnAnyModelIsCustom() throws {
+        for hardware in models {
+            for preset in GameplayPreset.builtIn {
+                let presetFilter = try XCTUnwrap(GameplayPresetValues.values(for: preset, hardware: hardware)).displayFilter
+                for filter in DisplayFilter.allCases where filter != presetFilter {
+                    let store = InMemorySettingsStore()
+                    let presets = GameplayPresetSettings(store: store)
+                    try presets.apply(preset, at: .system(.gameBoy), hardware: hardware, system: .gameBoy)
+                    try store.set(filter, key: SettingKey.lcdFilter.rawValue, scope: .system(.gameBoy))
+                    XCTAssertEqual(presets.effectiveValues(system: .gameBoy, hardware: hardware).displayFilter, filter)
+                    let resolved = presets.resolvedPreset(system: .gameBoy, hardware: hardware)
+                    XCTAssertNotEqual(resolved, preset, "\(hardware) \(preset) \(filter)")
+                    // Only a filter that completes another built-in preset's values exactly reads
+                    // as that preset; a television filter on a handheld, or a handheld's on a
+                    // television model, is always Custom.
+                    let televisionModels: Set<HardwareModel> = [.superGameBoy, .superGameBoy2, .gameBoyPlayer]
+                    let televisionFilters: Set<DisplayFilter> = [.scanlines, .curvedScanlines, .slightlyCurvedScanlines, .crt240p, .crt480p]
+                    if televisionModels.contains(hardware) != televisionFilters.contains(filter) || filter == .scanlines {
+                        XCTAssertEqual(resolved, .custom, "\(hardware) \(preset) \(filter)")
+                    } else if resolved != .custom {
+                        XCTAssertEqual(GameplayPresetValues.values(for: resolved, hardware: hardware)?.displayFilter, filter)
+                    }
+                }
+            }
+        }
+    }
+
     func testPalettesAreFreeOfPresetsInBothDirections() throws {
         for hardware in models {
             for preset in GameplayPreset.builtIn {
