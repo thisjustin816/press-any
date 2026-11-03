@@ -73,7 +73,7 @@ float3 monochromeTone(float3 color, constant MonochromeLCDParameters &lcd) {
 // pixel edge.
 float2 gapLength(float2 position, float width) {
     float2 shifted = position + width * 0.5;
-    return floor(shifted) * width + min(fract(shifted), width);
+    return floor(shifted) * width + min(fract(shifted), float2(width));
 }
 
 // A dot-matrix screen: each pixel a square, and between the squares the unlit LCD, lighter and
