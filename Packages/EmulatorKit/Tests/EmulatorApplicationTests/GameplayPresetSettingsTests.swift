@@ -53,7 +53,7 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(accurate(.gameBoyPocket), GameplayPresetValues(displayFilter: .monochromeLCD, frameBlending: .blend, buttonBounce: true))
         XCTAssertEqual(
             accurate(.gameBoyColor),
-            GameplayPresetValues(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, colorCorrection: .lowContrast)
+            GameplayPresetValues(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, colorCorrection: .reduceContrast)
         )
         XCTAssertEqual(
             accurate(.gameBoyAdvance),
@@ -67,7 +67,11 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(accurate(.gameBoyPlayer)?.displayFilter, .crt480p)
 
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoy).displayFilter, .lcd1x)
-        XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyColor).displayFilter, .lcd1x)
+        XCTAssertEqual(
+            GameplayPresetValues.standard(for: .gameBoyColor),
+            GameplayPresetValues(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .accurate),
+            "Nostalgic shows a Game Boy Color's colors as a bright modern screen does"
+        )
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyAdvance).displayFilter, .sp101LCD)
         XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy).displayFilter, .curvedScanlines)
         XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy2).displayFilter, .curvedScanlines)

@@ -1074,14 +1074,20 @@ From System settings down through Game and Build, settings start with **Gameplay
 Model, Screen Colors and Customize. A preset sets the display filter, frame blending, color
 correction, Game Boy Advance Colors and Button Bounce for the hardware the game runs on:
 
-- **Nostalgic**, the standard: the screen as players remember it, cleaned up. Every setting no
-  level sets plays as Nostalgic, so a new or untouched library shows Nostalgic, never Custom.
-- **Accurate**: imitates the model's own screen, or the television a Super Game Boy or Game Boy
-  Player showed on.
-- **Clean**: the game's pixels with no filter, frame blending, color correction or button bounce.
+- **Nostalgic**, the standard, "As you remember it, polished for today's screens": the game as
+  people remember it, idealized, on a bright modern screen. Every setting no level sets plays as
+  Nostalgic, so a new or untouched library shows Nostalgic, never Custom.
+- **Accurate**, "As the original looked and felt": the original hardware late in its life, on its
+  own screen or on the television a Super Game Boy or Game Boy Player showed on.
+- **Clean**, "Just the game, with no effects added": the game's pixels with no filter, frame
+  blending, color correction or button bounce.
 - **Custom** shows when the settings under Customize match no preset. It isn't a choice in the
   menu; changing a setting under Customize makes it, and returning every value to a preset's
   shows that preset again.
+
+Each preset's description shows under the Preset row and under its option in the Preset menu.
+The descriptions name no hardware, since one preset means the same on every model, and speak of
+more than the screen, since a preset also sets frame blending and Button Bounce.
 
 Every preset is free. Customize lists the preset's settings for this hardware, and changing one
 needs Plus: without it, every value there is marked Plus, choosing one opens the Plus screen and
@@ -1097,14 +1103,17 @@ a level that inherits them keeps inheriting.
 |---|---|---|---|
 | Game Boy | Pixel Grid, Blend, bounce on | Monochrome LCD, LCD Ghosting, bounce on | Off |
 | Game Boy Pocket | Pixel Grid, Blend, bounce on | Monochrome LCD, Blend, bounce on | Off |
-| Game Boy Color | Pixel Grid, Blend, Balanced, bounce on | Game Boy Color LCD, Blend, Low Contrast, bounce on | Off, Original |
+| Game Boy Color | Pixel Grid, Blend, Modern Accurate, bounce on | Game Boy Color LCD, Blend, Reduce Contrast, bounce on | Off, Original |
 | Game Boy Advance | Backlit GBA SP LCD, Blend, Original, As on a Game Boy Color, bounce on | Game Boy Advance LCD, Blend, Original, As on a Game Boy Advance, bounce on | Off, Original |
 | Super Game Boy and Super Game Boy 2 | Curved Scanlines, Balanced, bounce on | CRT 240p, Balanced, bounce on | Off, Original |
 | Game Boy Player | Slightly Curved Scanlines, Balanced, As on a Game Boy Color, bounce on | CRT 480p, Original, As on a Game Boy Advance, bounce on | Off, Original |
 
 Frame blending is Off on the television models and in Clean. Button Bounce is on in Nostalgic and
 Accurate on every model, the television models included, and off only in Clean. On a Game Boy or
-Pocket the presets leave color correction alone, since those show a palette. The Game Boy Light and the
+Pocket the presets leave color correction alone, since those show a palette. On a Game Boy Color,
+Nostalgic's Modern Accurate shows the game's colors as a bright modern screen would, and
+Accurate's Reduce Contrast is close to BGB's measurement of a Game Boy Color in light (see
+[Display presets](display-presets.md)). The Game Boy Light and the
 backlit Game Boy Advance SP (AGS-101) run as a Pocket and a Game Boy Advance, so they aren't
 models: the Light's look is the Teal (Light) palette, and the SP's is the Backlit GBA SP LCD
 filter, which Nostalgic uses on a Game Boy Advance.
@@ -1114,8 +1123,17 @@ filter, which Nostalgic uses on a Game Boy Advance.
 - **Off**: the game's pixels.
 - **Pixel Grid** and **RGB Subpixels**: a faint grid between pixels, and the grid with red, green
   and blue bands in each pixel. A filter saved as LCD 1× or LCD 3× in an earlier version is these.
-- **Monochrome LCD** and **Game Boy Advance LCD**: SameBoy's monochrome and color LCD filters,
-  the second with the Game Boy Advance color profile.
+- **Monochrome LCD**: a Game Boy's or Pocket's screen as BGB measured it, brightened for a
+  phone, with each pixel a square and the unlit LCD, lighter and yellower than a dark pixel, in
+  the gaps between them; the Pocket's gaps are thinner. With the hardware's own palette, Green
+  (DMG) on a Game Boy or Olive (Pocket) on a Pocket, it shows the measured screen's colors,
+  lightest first: #89b13d, #64a25c, #3e7a64 and #2d5e58 on a Game Boy (4:1), and #c9deaa,
+  #a5b789, #717c63 and #515953 on a Pocket (7.1:1). Each pixel's average, gap included, is its
+  shade. Any other palette keeps its own colors and takes only that screen's brightness and
+  contrast. Every other model, given the filter under Customize, shows its game's colors with the
+  original Game Boy's brightness and contrast. The filter reads the palette only to draw it; no
+  preset sets or reads Screen Colors.
+- **Game Boy Advance LCD**: SameBoy's color LCD filter with the Game Boy Advance color profile.
 - **Game Boy Color LCD**: Authentic GBC's notched subpixels.
 - **Backlit GBA SP LCD**: the Pixel Grid with the AGS-101 SP's color profile.
 - **Scanlines**: sharp scanlines on a flat picture, with no curve, rounded corners, mask, glow

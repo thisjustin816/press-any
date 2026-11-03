@@ -45,8 +45,11 @@ final class GameplayPresetUITests: XCTestCase {
         XCTAssertTrue(presetValue(preset).hasPrefix("Nostalgic"), "the preset is unchanged")
 
         // Choosing another preset is free and needs no Plus screen.
+        // Each option carries its description as a subtitle, which may join its label.
         preset.tap()
-        app.buttons["Accurate"].firstMatch.tap()
+        let accurate = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Accurate'")).firstMatch
+        expect(accurate)
+        accurate.tap()
         XCTAssertFalse(app.navigationBars["Press Any Plus"].waitForExistence(timeout: 2))
         XCTAssertTrue(presetValue(preset).hasPrefix("Accurate"))
     }

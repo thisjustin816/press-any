@@ -127,10 +127,15 @@ ported. libretro's `lcd1x`, `crt-geom`, `crt-easymode`, `crt-pi`, `crt-aperture`
   shaders in libretro's slang-shaders collection (https://github.com/libretro/slang-shaders),
   closest to `handheld/shaders/lcd3x.slang` by Gigaherz, whose header says "License: Public
   domain". No code is copied; the app credits them in Acknowledgements anyway.
-- Monochrome LCD and Game Boy Advance LCD: SameBoy's `Shaders/MonoLCD.fsh` and `Shaders/LCD.fsh`
-  by Lior Halphon, ported to Metal with their default constants, at the SameBoy pin above. They
-  are outside SameBoy's restricted `iOS/` directory, so its Expat license applies; the bundled
-  `App/Acknowledgements/SameBoy-LICENSE.txt` covers them.
+- Game Boy Advance LCD: SameBoy's `Shaders/LCD.fsh` by Lior Halphon, ported to Metal with its
+  default constants, at the SameBoy pin above. It is outside SameBoy's restricted `iOS/`
+  directory, so its Expat license applies; the bundled `App/Acknowledgements/SameBoy-LICENSE.txt`
+  covers it.
+- Monochrome LCD: Press Any's own shader. Its Game Boy and Game Boy Pocket colors start from
+  the measured screen colors on BGB's reality page by beware (https://bgb.bircd.org/reality/),
+  read from its swatches; `docs/display-presets.md` lists them and how the app brightens them.
+  They are cited measurements: no BGB code or images are included. Settings > Acknowledgements
+  credits the page anyway.
 - Game Boy Color LCD: the subpixel geometry of Authentic GBC v2.2 by fishku (fishcu), copyright
   2024-2025, "Public domain license (CC0)", from `handheld/shaders/authentic_gbc/`, with its
   default brightness 0.6 and smoothing 0.3 and host subpixel rendering off. Authentic GBC also

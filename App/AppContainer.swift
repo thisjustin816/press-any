@@ -630,6 +630,11 @@ final class AppContainer {
         return (model ?? .automatic).resolved(for: system)
     }
 
+    func gameplayHardware(for context: LaunchContext) -> HardwareModel {
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .gameBoy }
+        return gameplayHardware(system: build.system, gameID: build.gameID, buildID: build.id)
+    }
+
     /// The preset-controlled settings a game plays with. Unset or unreadable values take the
     /// standard preset's for the hardware. Stored values apply with or without Plus; Plus only
     /// gates editing them.
@@ -758,6 +763,7 @@ final class AppContainer {
             lcdFilter: values.displayFilter,
             colorCorrection: values.colorCorrection,
             dmgPalette: dmgPalette(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            hardware: target.hardware ?? gameplayHardware(system: target.system, gameID: target.gameID, buildID: target.buildID),
             advanceColors: values.advanceColors,
             frameBlending: values.frameBlending,
             buttonBounce: values.buttonBounce,
@@ -876,6 +882,8 @@ struct GameplayDisplaySettings: Equatable {
     var lcdFilter: DisplayFilter
     var colorCorrection: ColorCorrection
     var dmgPalette: DMGPalette
+    /// The hardware the game plays on, resolved, as the palette and presets resolve it.
+    var hardware: HardwareModel = .gameBoy
     var advanceColors: AdvanceColors = .gameBoyAdvance
     var frameBlending: FrameBlending
     var buttonBounce: Bool = true

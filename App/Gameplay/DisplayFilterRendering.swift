@@ -32,6 +32,31 @@ extension DisplayFilter {
     }
 }
 
+/// The Monochrome LCD's screen for the shader, matching `MonochromeLCDParameters` in
+/// DisplayShaders.h: `MonochromeScreen`'s tone curve, gap color and strength, and gap width.
+struct MonochromeLCDParameters {
+    typealias Knots = (SIMD4<Float>, SIMD4<Float>, SIMD4<Float>, SIMD4<Float>, SIMD4<Float>)
+    var curveInput: Knots
+    var curveOutput: Knots
+    var gap: SIMD4<Float>
+    var cell: SIMD4<Float>
+
+    init(_ screen: MonochromeScreen) {
+        func knots(_ side: KeyPath<MonochromeScreen.Knot, MonochromeScreen.Color>) -> Knots {
+            let values = screen.curve.map { knot in
+                let color = knot[keyPath: side]
+                return SIMD4<Float>(Float(color.x), Float(color.y), Float(color.z), 0)
+            }
+            return (values[0], values[1], values[2], values[3], values[4])
+        }
+        curveInput = knots(\.input)
+        curveOutput = knots(\.output)
+        let gapColor = screen.gapColor
+        gap = SIMD4(Float(gapColor.x), Float(gapColor.y), Float(gapColor.z), Float(screen.gapStrength))
+        cell = SIMD4(Float(MonochromeScreen.gapWidth), 0, 0, 0)
+    }
+}
+
 /// One television for the CRT shader, matching `CRTParameters` in DisplayShaders.h. Beam hardness
 /// is the exponent of a base-2 Gaussian, so more negative is narrower; CRT-Lottes uses -8 across
 /// a line and -3 along it. At -3 a pixel's center still takes about a tenth of its neighbor and

@@ -28,6 +28,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     var scaling: ScreenScaling = .integer
     var lcdFilter: DisplayFilter = .off
     var frameBlending: FrameBlending = .off
+    /// The screen Monochrome LCD draws, for the hardware and palette the game shows.
+    var monochromeScreen = MonochromeScreen(hardware: .gameBoy, palette: .dmgGreen)
     /// Low Power Mode and serious thermal pressure drop CRT glow, the treatments' costliest part.
     var reducesWork: () -> Bool = { PresentationFrameRate.current() == .capped }
 
@@ -140,6 +142,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         var blendWeights = SIMD4<Float>(Float(weights[0]), Float(weights[1]), Float(weights[2]), 0)
         encoder.setFragmentBytes(&blendWeights, length: MemoryLayout<SIMD4<Float>>.size, index: 1)
         encoder.setFragmentBytes(&crt, length: MemoryLayout<CRTParameters>.stride, index: 2)
+        var monochrome = MonochromeLCDParameters(monochromeScreen)
+        encoder.setFragmentBytes(&monochrome, length: MemoryLayout<MonochromeLCDParameters>.stride, index: 3)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
         commandBuffer.present(drawable)

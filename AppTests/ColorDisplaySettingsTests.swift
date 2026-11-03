@@ -22,7 +22,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
         let target = try XCTUnwrap(container.gameplaySettingsTarget(for: context))
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
         XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
-        XCTAssertEqual(container.colorCorrection(system: .gameBoyColor), .balanced)
+        XCTAssertEqual(container.colorCorrection(system: .gameBoyColor), .accurate, "Nostalgic on a Game Boy Color")
         XCTAssertEqual(container.dmgPalette(system: .gameBoy), .dmgGreen)
         let store = container.repositories.settings
         let correctionKey = SettingKey.colorCorrection.rawValue
@@ -76,6 +76,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
         try store.set(HardwareModel.gameBoyPocket, key: SettingKey.hardwareModel.rawValue, scope: .system(.gameBoy))
         XCTAssertEqual(container.dmgPalette(for: context), .pocket, "a Pocket shows its own screen")
         XCTAssertEqual(container.dmgPalette(system: .gameBoy), .pocket)
+        XCTAssertEqual(container.gameplayHardware(for: context), .gameBoyPocket, "so Monochrome LCD draws the Pocket's screen")
 
         try store.set(DMGPalette.light, key: SettingKey.dmgPalette.rawValue, scope: .system(.gameBoy))
         XCTAssertEqual(container.dmgPalette(for: context), .light, "a chosen palette wins on every model")

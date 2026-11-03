@@ -625,6 +625,7 @@ struct RootView: View {
                     lcdFilter: values.displayFilter,
                     colorCorrection: values.colorCorrection,
                     dmgPalette: container.dmgPalette(for: launch.context),
+                    hardware: container.gameplayHardware(for: launch.context),
                     advanceColors: values.advanceColors,
                     frameBlending: values.frameBlending,
                     buttonBounce: values.buttonBounce,

@@ -123,7 +123,7 @@ struct WelcomeView: View {
         Topic(
             symbol: "tv",
             title: "How the Screen Looks",
-            text: "Preset in Settings sets the screen for every game, a system, a game or a Build. Nostalgic, the default, shows the screen as you remember it, cleaned up. Accurate imitates the original screen, or a CRT television for the Super Game Boy and Game Boy Player. Clean shows the game's pixels. All three are free."
+            text: "Preset in Settings sets how games look and feel, for every game, a system, a game or a Build. Nostalgic, the default, is as you remember it, polished for today's screens. Accurate is as the original looked and felt, on its own screen or on the television a Super Game Boy or Game Boy Player played on. Clean is just the game, with no effects added. All three are free."
         ),
         Topic(
             symbol: "folder",

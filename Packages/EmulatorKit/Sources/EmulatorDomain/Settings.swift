@@ -254,6 +254,18 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
         }
     }
 
+    /// The RGB888 color the screen shows while the game has the LCD switched off: SameBoy's fifth
+    /// palette color for the monochrome palettes, and white for the Game Boy Color boot palettes,
+    /// which the bridge sets that way.
+    public var lcdOffColor: UInt32 {
+        switch self {
+        case .dmgGreen: 0xd2e6a6
+        case .pocket: 0xcfdaac
+        case .light: 0x91ead0
+        default: 0xffffff
+        }
+    }
+
     /// RGB888 swatches in Game Boy shade order (0-3), with background, OBJ0 and OBJ1 rows.
     /// Boot colors are uncorrected.
     public var previewColors: [[UInt32]] {

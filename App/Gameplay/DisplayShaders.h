@@ -2,7 +2,8 @@
 // these modes, so every sample arrives linear and only the result is encoded. Frame blending
 // therefore mixes light, as a slow screen does.
 //
-// SameBoy Monochrome LCD and LCD: Lior Halphon, Expat. Authentic GBC geometry: fishku, CC0.
+// SameBoy LCD: Lior Halphon, Expat. Authentic GBC geometry: fishku, CC0. The Monochrome LCD is
+// this app's own code, drawing BGB's measured screen colors.
 // GBA and SP101 color profiles: Pokefan531 and hunterk, public domain. The CRT is this app's own
 // code, modelled on CRT-Lottes by Timothy Lottes (public domain). Sources, pinned revisions and
 // bundled notices are in THIRD_PARTY_NOTICES.md.
@@ -48,39 +49,54 @@ float4 displayRelative(DISPLAY_FRAMES, sampler s, float2 position, float2 offset
     return displayTexel(DISPLAY_FRAMES_ARGS, s, floor(position * float2(newest.get_width(), newest.get_height())) + offset);
 }
 
-// SameBoy MonoLCD.fsh with its default constants.
-float4 sameboyMonoLCD(DISPLAY_FRAMES, sampler s, float2 position) {
-    float2 input_resolution = float2(newest.get_width(), newest.get_height());
-    float2 pixel = position * input_resolution - float2(0.5, 0.5);
+// The Monochrome LCD's screen, described by `MonochromeLCDParameters` in
+// DisplayFilterRendering.swift; the layouts match.
+struct MonochromeLCDParameters {
+    float4 curveInput[5];  // each channel's tone curve knots, ascending, in linear light
+    float4 curveOutput[5]; // what each knot shows
+    float4 gap;            // the unlit LCD the gaps show, in linear light; its strength
+    float4 cell;           // the gap's width in pixels
+};
 
-    float4 q11 = displayTexel(DISPLAY_FRAMES_ARGS, s, floor(pixel));
-    float4 q12 = displayTexel(DISPLAY_FRAMES_ARGS, s, float2(floor(pixel.x), ceil(pixel.y)));
-    float4 q21 = displayTexel(DISPLAY_FRAMES_ARGS, s, float2(ceil(pixel.x), floor(pixel.y)));
-    float4 q22 = displayTexel(DISPLAY_FRAMES_ARGS, s, ceil(pixel));
+// A channel between two knots is interpolated; past the first or last, the end segment continues.
+float3 monochromeTone(float3 color, constant MonochromeLCDParameters &lcd) {
+    float3 t = (color - lcd.curveInput[0].rgb) / (lcd.curveInput[1].rgb - lcd.curveInput[0].rgb);
+    float3 result = mix(lcd.curveOutput[0].rgb, lcd.curveOutput[1].rgb, t);
+    for (uint i = 1; i < 4; ++i) {
+        t = (color - lcd.curveInput[i].rgb) / (lcd.curveInput[i + 1].rgb - lcd.curveInput[i].rgb);
+        result = select(result, mix(lcd.curveOutput[i].rgb, lcd.curveOutput[i + 1].rgb, t), color >= lcd.curveInput[i].rgb);
+    }
+    return saturate(result);
+}
 
-    float2 smoothed = smoothstep(0., 1., fract(pixel));
-    float4 r1 = mix(q11, q21, smoothed.x);
-    float4 r2 = mix(q12, q22, smoothed.x);
+// How much gap lies before `position`, in pixels, with a gap `width` wide centered on every
+// pixel edge.
+float2 gapLength(float2 position, float width) {
+    float2 shifted = position + width * 0.5;
+    return floor(shifted) * width + min(fract(shifted), width);
+}
 
-    float2 sub_pos = fract(position * input_resolution) * 6.0;
-    float multiplier = 1.0;
-    if (sub_pos.y < 1.0) multiplier *= sub_pos.y * 0.25 + (1.0 - 0.25);
-    else if (sub_pos.y > 5.0) multiplier *= (6.0 - sub_pos.y) * 0.25 + (1.0 - 0.25);
-    if (sub_pos.x < 1.0) multiplier *= sub_pos.x * 0.25 + (1.0 - 0.25);
-    else if (sub_pos.x > 5.0) multiplier *= (6.0 - sub_pos.x) * 0.25 + (1.0 - 0.25);
+// A dot-matrix screen: each pixel a square, and between the squares the unlit LCD, lighter and
+// yellower than a dark pixel, as BGB's photos show it. BGB's colors are averages of defocused
+// photos, gaps included, so each square is darkened by the light its gaps add and a pixel's
+// average stays its shade. A gap can't add more light than the shade has, so around the darkest
+// shades its strength drops to what the shade leaves room for. Each screen pixel takes the share
+// of gap its footprint covers, so the gaps never alias and fade into the pixels when the screen
+// is too coarse to show them.
+float4 monochromeLCD(DISPLAY_FRAMES, sampler s, float2 position, constant MonochromeLCDParameters &lcd) {
+    float2 texel = position * float2(newest.get_width(), newest.get_height());
+    float2 footprint = max(fwidth(texel), float2(1e-5));
+    float width = lcd.cell.x;
+    float2 share = (gapLength(texel + footprint * 0.5, width) - gapLength(texel - footprint * 0.5, width)) / footprint;
+    float covered = 1.0 - (1.0 - share.x) * (1.0 - share.y);
+    // The share of each pixel its gaps take.
+    float area = 2.0 * width - width * width;
 
-    float4 pre_shadow = mix(displaySample(DISPLAY_FRAMES_ARGS, s, position) * multiplier, mix(r1, r2, smoothed.y), 0.4);
-    pre_shadow.a = 1.0;
-    pixel += float2(-0.6, -0.8);
-
-    q11 = displayTexel(DISPLAY_FRAMES_ARGS, s, floor(pixel));
-    q12 = displayTexel(DISPLAY_FRAMES_ARGS, s, float2(floor(pixel.x), ceil(pixel.y)));
-    q21 = displayTexel(DISPLAY_FRAMES_ARGS, s, float2(ceil(pixel.x), floor(pixel.y)));
-    q22 = displayTexel(DISPLAY_FRAMES_ARGS, s, ceil(pixel));
-    r1 = mix(q11, q21, fract(pixel.x));
-    r2 = mix(q12, q22, fract(pixel.x));
-    float4 shadow = mix(r1, r2, fract(pixel.y));
-    return mix(min(shadow, pre_shadow), pre_shadow, 0.75);
+    float3 shade = monochromeTone(displayTexel(DISPLAY_FRAMES_ARGS, s, floor(texel)).rgb, lcd);
+    float3 room = shade / max(area * lcd.gap.rgb, float3(1e-6));
+    float strength = min(lcd.gap.a, min(room.r, min(room.g, room.b)));
+    float3 square = saturate((shade - strength * area * lcd.gap.rgb) / (1.0 - strength * area));
+    return float4(mix(square, lcd.gap.rgb, strength * covered), 1.0);
 }
 
 // SameBoy LCD.fsh with its default constants.
@@ -287,9 +303,10 @@ float4 crtDisplay(DISPLAY_FRAMES, sampler s, sampler bloomSampler, float2 positi
     return float4(color, 1.0);
 }
 
-float4 linearDisplay(DISPLAY_FRAMES, sampler s, sampler bloomSampler, float2 position, constant CRTParameters &crt) {
+float4 linearDisplay(DISPLAY_FRAMES, sampler s, sampler bloomSampler, float2 position, constant CRTParameters &crt,
+                     constant MonochromeLCDParameters &monochrome) {
     float4 color;
-    if (mode == DISPLAY_MODE_MONOCHROME) color = sameboyMonoLCD(DISPLAY_FRAMES_ARGS, s, position);
+    if (mode == DISPLAY_MODE_MONOCHROME) color = monochromeLCD(DISPLAY_FRAMES_ARGS, s, position, monochrome);
     else if (mode == DISPLAY_MODE_AUTHENTIC_GBC) color = authenticGBC(DISPLAY_FRAMES_ARGS, s, position);
     else if (mode == DISPLAY_MODE_CRT) color = crtDisplay(DISPLAY_FRAMES_ARGS, s, bloomSampler, position, crt);
     else color = sameboyColorLCD(DISPLAY_FRAMES_ARGS, s, position);

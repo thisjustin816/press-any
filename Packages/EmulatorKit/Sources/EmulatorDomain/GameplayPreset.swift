@@ -7,7 +7,7 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
     case lcd1x
     /// The faint grid with red, green and blue bands in each pixel.
     case lcd3x
-    /// SameBoy's monochrome LCD filter.
+    /// A Game Boy's or Pocket's screen as BGB measured it, with light gaps between pixels.
     case monochromeLCD
     /// fishku's Authentic GBC subpixels.
     case authenticGBC
@@ -128,7 +128,8 @@ public struct GameplayPresetValues: Equatable, Sendable {
         case (.standard, .superGameBoy), (.standard, .superGameBoy2):
             return Self(displayFilter: .curvedScanlines, frameBlending: .off, buttonBounce: true, colorCorrection: .balanced)
         case (.standard, .gameBoyColor):
-            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .balanced)
+            // SameBoy's Modern Accurate: the game's colors as a bright modern screen shows them.
+            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .accurate)
         case (.standard, .gameBoyAdvance):
             // The backlit SP's profile colors the picture, so the core leaves colors as they are.
             return Self(
@@ -149,7 +150,9 @@ public struct GameplayPresetValues: Equatable, Sendable {
         case (.accurate, .superGameBoy), (.accurate, .superGameBoy2):
             return Self(displayFilter: .crt240p, frameBlending: .off, buttonBounce: true, colorCorrection: .balanced)
         case (.accurate, .gameBoyColor):
-            return Self(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, colorCorrection: .lowContrast)
+            // Reduce Contrast's white and black (#dbdfd7, #282420, 40:1) are close to BGB's
+            // measured Game Boy Color in light (#d9e1c6, #17282d, 38:1).
+            return Self(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, colorCorrection: .reduceContrast)
         case (.accurate, .gameBoyAdvance):
             // The Game Boy Advance profile darkens the picture as that screen does.
             return Self(

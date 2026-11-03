@@ -6,17 +6,23 @@ and licenses.
 
 ## The three presets
 
-- **Nostalgic** is the standard: the screen as players remember it, cleaned up. Handhelds get a
-  faint pixel grid with vivid colors, the frame blending their games' flicker effects expect and
-  Button Bounce on. The Game Boy Advance gets the backlit AGS-101 SP's colors, the screen
-  most players remember as the good one. The television models get sharp scanlines on a
-  curved screen with small rounded corners, the look most players picture for a console on a
-  TV, without the mask, glow and vignette that Accurate draws: Curved Scanlines on a Super Game
-  Boy and Slightly Curved Scanlines on a Game Boy Player.
-- **Accurate** imitates the hardware: SameBoy's monochrome LCD with the original Game Boy's slow
-  response (LCD Ghosting) or the faster Pocket's (Blend), Authentic GBC's measured subpixels with
-  SameBoy's Low Contrast correction, SameBoy's color LCD with the published Game Boy Advance
-  color profile, and two television models.
+Settings describes them as "As you remember it, polished for today's screens", "As the original
+looked and felt" and "Just the game, with no effects added" (`GameplayPresetRow.detail`).
+
+- **Nostalgic** is the standard: the game as people remember it, idealized, on a bright modern
+  screen. Handhelds get a faint pixel grid, the frame blending their games' flicker effects expect
+  and Button Bounce on. A Game Boy Color gets SameBoy's Modern Accurate correction, the game's
+  colors as a modern, bright, color-accurate screen shows them, as a ModRetro Chromatic does. The
+  Game Boy Advance gets the backlit AGS-101 SP's colors, the screen most players remember as the
+  good one. The television models get sharp scanlines on a curved screen with small rounded
+  corners, the look most players picture for a console on a TV, without the mask, glow and
+  vignette that Accurate draws: Curved Scanlines on a Super Game Boy and Slightly Curved
+  Scanlines on a Game Boy Player.
+- **Accurate** is the original hardware late in its life: the Game Boy's and Pocket's screens as
+  BGB measured them (below), with the original Game Boy's slow response (LCD Ghosting) or the
+  faster Pocket's (Blend), Authentic GBC's measured subpixels with SameBoy's Reduce Contrast
+  correction, SameBoy's color LCD with the published Game Boy Advance color profile, and two
+  television models.
 - **Clean** draws the game's pixels with nothing added.
 
 Palettes stay outside the presets. A Game Boy palette is a taste most emulators let players
@@ -30,7 +36,8 @@ SP LCD filter.
 | Filter | Source | License | Why |
 |---|---|---|---|
 | Pixel Grid, RGB Subpixels | Press Any's own code, modelled on libretro's `lcd3x` by Gigaherz | Apache-2.0 (own); `lcd3x` is public domain | The grid family is the common "clean handheld" look; keeping v1.0's code keeps v1.0's LCD 1× and 3× unchanged |
-| Monochrome LCD, Game Boy Advance LCD | SameBoy `Shaders/MonoLCD.fsh`, `Shaders/LCD.fsh` | Expat | [SameBoy's scaling page](https://sameboy.github.io/scaling/) calls them "Ideal for the original Game Boy" and "Ideal for Game Boy Color and Game Boy Advance" |
+| Monochrome LCD | Press Any's own shader, with the screen colors measured on [BGB's reality page](https://bgb.bircd.org/reality/) | Apache-2.0 (own); the colors are cited measurements | Both screens measured from color-corrected photos, by the method below |
+| Game Boy Advance LCD | SameBoy `Shaders/LCD.fsh` | Expat | [SameBoy's scaling page](https://sameboy.github.io/scaling/) calls it "Ideal for Game Boy Color and Game Boy Advance" |
 | Game Boy Color LCD | Authentic GBC 2.2 by fishku, subpixel geometry only | CC0 | Measured from a photo of a GBC's subpixels; [Chasm's developer](https://store.steampowered.com/oldnews/?appgroupname=Chasm&appids=312200&enddate=1775026800&feed=steam_community_announcements) ported it after comparing alternatives |
 | Game Boy Advance and SP101 colors | `gba-color.slang`, `sp101-color.slang` by Pokefan531 and hunterk | Public domain | The long-running [color thread](https://forums.libretro.com/t/real-gba-and-ds-phat-colors/1540/220) compares them with hardware; they ship in RetroArch's shader collection |
 | Scanlines, Curved Scanlines, Slightly Curved Scanlines, CRT 240p, CRT 480p | Press Any's own CRT, modelled on CRT-Lottes by Timothy Lottes | Apache-2.0 (own); CRT-Lottes is public domain | [libretro's CRT page](https://docs.libretro.com/shader/crt/) says CRT-Lottes "looks good at default settings, making it a good general-purpose choice" |
@@ -42,6 +49,66 @@ Not used, because their headers declare the GPL: libretro's `lcd1x`, `zfast_lcd`
 `crt-easymode`, `crt-pi`, `crt-aperture` and `crt-guest-advanced`. Writing a general technique
 from its math (a barrel warp, a Gaussian beam, a mask pattern) is fine; copying or porting their
 code is not.
+
+## Game Boy and Pocket screens
+
+BGB's reality page photographs a Game Boy's and a Game Boy Pocket's screens under
+color-accurate light, corrects the photos with a color checker, defocuses them and averages each
+shade, so each color includes the gaps between pixels. Read from its swatches, lightest shade
+first, then the screen with the LCD off:
+
+| Screen | Shade 0 | Shade 1 | Shade 2 | Shade 3 | LCD off |
+|---|---|---|---|---|---|
+| Game Boy (DMG), measured | #759833 | #588f51 | #3b7560 | #2e615a | #948a04 |
+| Game Boy Pocket (MGB), measured | #adbf92 | #96a67c | #727e64 | #5a635c | #c2cfa8 |
+| Game Boy, Accurate | #89b13d | #64a25c | #3e7a64 | #2d5e58 | #aa9f05 |
+| Game Boy Pocket, Accurate | #c9deaa | #a5b789 | #717c63 | #515953 | #e9f9cb |
+
+The measured colors are what a reflective screen sends back in a lit room, which on a phone's
+emissive screen reads as dim and flat (2.7:1 on the Game Boy). Accurate keeps their hues and
+brightens them the same way on both models, in linear light: every color is multiplied by 1.4,
+then the contrast of brightness alone is raised by a power of 1.4, keeping each color's
+chromaticity: `out = 1.4 * c * (Y(c) / Y(shade 0)) ^ 0.4`, with Y the Rec. 709 luminance. That
+gives 4.0:1 on the Game Boy and 7.1:1 on the Pocket, and one exposure for both keeps the Pocket
+about 1.8 times as bright as the original, as measured. The owner chose this over the measured
+colors as they are (2.7:1) and a stronger contrast power of 1.6 (4.9:1).
+`EmulatorDomain/MonochromeScreen.swift` computes the table from the measurements, and
+`MonochromeScreenTests` checks it.
+
+**Pixel gaps.** BGB describes the gaps between pixels showing the unlit LCD, lighter and
+yellower than a dark pixel, with the pixel squares slightly bluer than their averaged shade. The
+filter draws each pixel as a square and the gaps, a sixth of a pixel wide and centered on the
+pixel edges, in the screen's LCD-off color at a strength of 0.5 on the Game Boy and 0.3 on the
+Pocket, whose pixels sit closer together. The square is darkened by the light its gaps add, so
+each pixel's average stays the measured shade, as the defocused photos measured it. Around the
+Game Boy's two darkest shades the yellow gap would add more red than the shade has, so there the
+gap's strength drops to what the shade leaves room for (about 0.21 around the darkest and 0.39
+around the next) and the average still matches. Each screen pixel takes the share of gap its
+footprint covers, exactly, so the gaps don't alias in either scaling path and fade into the
+pixels' average when the picture is too small to show them.
+
+**Palettes.** The filter receives SameBoy's frame in the palette's colors and maps them with a
+tone curve per channel through five knots, computed on the CPU (`MonochromeScreen`) and applied
+in the shader. With the hardware's own palette, Green (DMG) on a Game Boy or Olive (Pocket) on
+a Pocket, the knots take each of the palette's four shades and its LCD-off color to the table
+above, so Accurate shows exactly those colors, and a blend of two neighboring shades from frame
+blending lands on the blend of theirs. Any other palette is the player's choice of colors, so it
+gets one curve for all three channels: the palette's lightest shade goes to the screen's lightest
+brightness, its darkest to the screen's darkest, and the shades between where the hardware's own
+palette puts them, and its LCD-off color, through the same curve, fills the gaps. Doing this in
+the shader rather than giving the core a different palette keeps the palette setting, the core,
+save states and captures untouched by the filter, and keeps palettes outside the presets in
+storage and in the Custom check. Every model but the Pocket draws the original Game Boy's
+screen: a Game Boy Color, Game Boy Advance, Super Game Boy or Game Boy Player given Monochrome
+LCD under Customize shows its game's colors with the Game Boy's brightness and contrast, white
+as the lightest and black as the darkest, and light gaps.
+
+## Game Boy Color colors
+
+BGB's reality page measures a Game Boy Color in light at white #d9e1c6 and black #17282d,
+38:1. SameBoy's Reduce Contrast correction gives white #dbdfd7 and black #282420, 40:1, close
+to it, so Accurate uses it with Authentic GBC's subpixels. Nostalgic uses
+Modern Accurate, which shows the game's colors as a color-accurate modern screen would.
 
 ## Televisions
 
@@ -196,7 +263,7 @@ pixel). Per output pixel, without frame blending:
 | Backlit GBA SP LCD | 1 | 3 |
 | Game Boy Color LCD | 4 | 3 |
 | Game Boy Advance LCD | 3 to 6 | 3 |
-| Monochrome LCD | 9 | 3 |
+| Monochrome LCD | 1 | 3 |
 | Scanlines, Curved Scanlines, Slightly Curved Scanlines | 4 | 3 |
 | CRT 240p, CRT 480p | 5 (4 in Low Power Mode or a serious thermal state) | 3 |
 
