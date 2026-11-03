@@ -48,6 +48,8 @@ final class GameplayViewController: UIViewController {
     private var colorCorrection: ColorCorrection
     private var advanceColors: AdvanceColors
     private var dmgPalette: DMGPalette
+    /// The hardware the game shows, so Monochrome LCD draws its screen.
+    private var hardware: HardwareModel
     private var buttonBounce: Bool
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
@@ -121,6 +123,7 @@ final class GameplayViewController: UIViewController {
         lcdFilter: DisplayFilter = .off,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
+        hardware: HardwareModel = .gameBoy,
         advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending = .off,
         buttonBounce: Bool = true,
@@ -147,6 +150,7 @@ final class GameplayViewController: UIViewController {
         self.lcdFilter = lcdFilter
         self.colorCorrection = colorCorrection
         self.dmgPalette = dmgPalette
+        self.hardware = hardware
         self.advanceColors = advanceColors
         self.frameBlending = frameBlending
         self.buttonBounce = buttonBounce
@@ -217,6 +221,7 @@ final class GameplayViewController: UIViewController {
         renderer?.scaling = screenScaling
         renderer?.lcdFilter = lcdFilter
         renderer?.frameBlending = frameBlending
+        renderer?.monochromeScreen = MonochromeScreen(hardware: hardware, palette: dmgPalette)
         applyCoreDisplaySettings()
         applyLayout(touchControls.layout)
         // Audio can be unavailable, during a call for example. The game still runs, silently,
@@ -1036,6 +1041,7 @@ final class GameplayViewController: UIViewController {
         lcdFilter: DisplayFilter,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
+        hardware: HardwareModel = .gameBoy,
         advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending,
         buttonBounce: Bool = true,
@@ -1049,6 +1055,11 @@ final class GameplayViewController: UIViewController {
             } catch {
                 showTransientMessage("Could not update button bounce: \(error.localizedDescription)")
             }
+        }
+        if dmgPalette != self.dmgPalette || hardware != self.hardware {
+            self.hardware = hardware
+            renderer?.monochromeScreen = MonochromeScreen(hardware: hardware, palette: dmgPalette)
+            metalView.setNeedsDisplay()
         }
         if colorCorrection != self.colorCorrection || dmgPalette != self.dmgPalette || advanceColors != self.advanceColors {
             self.colorCorrection = colorCorrection

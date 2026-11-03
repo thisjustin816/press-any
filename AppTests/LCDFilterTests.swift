@@ -467,6 +467,93 @@ final class LCDFilterTests: XCTestCase {
         add(attachment)
     }
 
+    /// Accurate on a Game Boy or Pocket, with the hardware's own palette, shows BGB's measured
+    /// screen after the chosen exposure and contrast: each pixel's average is its shade, in both
+    /// scaling paths, and the gaps between pixels show the lighter, yellower unlit LCD.
+    func testMonochromeLCDShowsTheMeasuredScreenWithLightGaps() throws {
+        let (device, library) = try metal()
+        let screens: [(HardwareModel, [UInt32])] = [
+            (.gameBoy, [0x89b13d, 0x64a25c, 0x3e7a64, 0x2d5e58]),
+            (.gameBoyPocket, [0xc9deaa, 0xa5b789, 0x717c63, 0x515953]),
+        ]
+        let scale = 12, width = 8, height = 2
+        for (hardware, targets) in screens {
+            let palette = DMGPalette.defaultValue(for: hardware)
+            // Two columns of each shade, lightest first, in the palette's colors.
+            let source = (0..<(width * height)).flatMap { index in bgra(palette.previewColors[0][(index % width) / 2]) }
+            for fragment in ["gameplayTextureFragment", "gameplaySharpFragment"] {
+                let pixels = try render(
+                    .monochromeLCD, fragment: fragment, device: device, library: library,
+                    sourceWidth: width, sourceHeight: height, outputWidth: width * scale, outputHeight: height * scale,
+                    sourcePixels: source, monochrome: MonochromeScreen(hardware: hardware, palette: palette)
+                )
+                for (shade, target) in targets.enumerated() {
+                    // One whole pixel, edge to edge, averaged in linear light.
+                    var sum = MonochromeScreen.Color()
+                    for y in 0..<scale {
+                        for x in (shade * 2 * scale)..<((shade * 2 + 1) * scale) {
+                            sum += color(pixels, at: pixel(x, y, width: width * scale))
+                        }
+                    }
+                    let measured = MonochromeScreen.rgb888(sum / Double(scale * scale))
+                    print("\(hardware) shade \(shade) in \(fragment): measured #\(hex(measured)), target #\(hex(target))")
+                    for shift: UInt32 in [16, 8, 0] {
+                        XCTAssertEqual(
+                            Int((measured >> shift) & 0xff), Int((target >> shift) & 0xff), accuracy: 2,
+                            "\(hardware) shade \(shade) in \(fragment): #\(hex(measured)), not #\(hex(target))"
+                        )
+                    }
+                }
+                // The gap between the two darkest pixels, and the middle of the second.
+                let gap = color(pixels, at: pixel(7 * scale, scale / 2, width: width * scale))
+                let dark = color(pixels, at: pixel(7 * scale + scale / 2, scale / 2, width: width * scale))
+                XCTAssertGreaterThan(MonochromeScreen.luminance(gap), MonochromeScreen.luminance(dark) * 1.1, "\(hardware) gaps are lighter than a dark pixel")
+                XCTAssertGreaterThan(gap.x - gap.z, dark.x - dark.z, "\(hardware) gaps are yellower than a dark pixel")
+            }
+        }
+    }
+
+    /// Accurate on a Game Boy and on a Pocket at a phone's scale, from one picture in each
+    /// hardware's own palette, attached for review.
+    func testMonochromeLCDReferenceCaptures() throws {
+        let (device, library) = try metal()
+        let width = 160, height = 144, scale = 7
+        for hardware in [HardwareModel.gameBoy, .gameBoyPocket] {
+            let palette = DMGPalette.defaultValue(for: hardware)
+            var source = [UInt8]()
+            for y in 0..<height {
+                for x in 0..<width {
+                    // Bands of the four shades, with outlined tiles and one-pixel strokes like text.
+                    let band = min(x / 40, 3)
+                    let tile = (x % 16 == 0 || y % 16 == 0) || ((x % 16 == 7) && y % 16 > 3 && y % 16 < 13)
+                    let shade = tile ? (band < 2 ? 3 : 0) : band
+                    source += bgra(palette.previewColors[0][shade])
+                }
+            }
+            let pixels = try render(
+                .monochromeLCD, fragment: "gameplayTextureFragment", device: device, library: library,
+                sourceWidth: width, sourceHeight: height, outputWidth: width * scale, outputHeight: height * scale,
+                sourcePixels: source, monochrome: MonochromeScreen(hardware: hardware, palette: palette)
+            )
+            let attachment = XCTAttachment(image: try XCTUnwrap(image(from: pixels, width: width * scale, height: height * scale)))
+            attachment.name = "device-display-monochromeLCD-accurate-\(hardware.rawValue)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+    }
+
+    private func bgra(_ rgb: UInt32) -> [UInt8] {
+        [UInt8(rgb & 0xff), UInt8((rgb >> 8) & 0xff), UInt8((rgb >> 16) & 0xff), 255]
+    }
+
+    private func hex(_ rgb: UInt32) -> String { String(format: "%06x", rgb) }
+
+    /// A rendered pixel in linear light.
+    private func color(_ pixels: [UInt8], at index: Int) -> MonochromeScreen.Color {
+        let rgb = UInt32(pixels[index + 2]) << 16 | UInt32(pixels[index + 1]) << 8 | UInt32(pixels[index])
+        return MonochromeScreen.linear(rgb)
+    }
+
     private func image(from pixels: [UInt8], width: Int, height: Int) -> UIImage? {
         pixels.withUnsafeBytes { bytes -> UIImage? in
             guard let context = CGContext(
@@ -496,7 +583,8 @@ final class LCDFilterTests: XCTestCase {
         frames: [UInt8] = [255], weights: SIMD4<Float> = SIMD4(1, 0, 0, 0),
         sourceWidth: Int = 1, sourceHeight: Int = 1,
         outputWidth: Int = 24, outputHeight: Int = 24,
-        sourcePixels: [UInt8]? = nil, crt: CRTParameters? = nil
+        sourcePixels: [UInt8]? = nil, crt: CRTParameters? = nil,
+        monochrome: MonochromeScreen = MonochromeScreen(hardware: .gameBoy, palette: .dmgGreen)
     ) throws -> [UInt8] {
         let descriptor = MTLRenderPipelineDescriptor()
         descriptor.vertexFunction = try XCTUnwrap(library.makeFunction(name: "gameplayFullscreenVertex"))
@@ -553,6 +641,8 @@ final class LCDFilterTests: XCTestCase {
         encoder.setFragmentBytes(&blendWeights, length: MemoryLayout<SIMD4<Float>>.size, index: 1)
         var parameters = crt ?? filter.crtParameters ?? .none
         encoder.setFragmentBytes(&parameters, length: MemoryLayout<CRTParameters>.stride, index: 2)
+        var screen = MonochromeLCDParameters(monochrome)
+        encoder.setFragmentBytes(&screen, length: MemoryLayout<MonochromeLCDParameters>.stride, index: 3)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
         commands.commit()

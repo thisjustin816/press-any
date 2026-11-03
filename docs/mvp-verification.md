@@ -417,6 +417,16 @@ Record the phone, iOS version, commit and lighting.
   inspection, on a physical iPhone.
 - [ ] A Game Boy Advance on Nostalgic shows the backlit SP colors with the grid; on Accurate it is
   darker with SameBoy's LCD.
+- [ ] A Game Boy game on Accurate with Screen Colors left at its default: the screen is BGB's
+  measured green, brighter than a lit Game Boy but clearly lower in contrast than Nostalgic, with
+  each pixel a square and lighter, yellower gaps between them, visible in dark areas and gone
+  without shimmer when the picture is small. Set Model to Game Boy Pocket: the screen turns the
+  Pocket's paler, brighter gray-green with thinner gaps. Choose Teal (Light) or Black & White:
+  the palette keeps its colors with the same softened contrast. Preset menu options each show
+  their description under the name, and the Preset row shows the chosen one's.
+- [ ] A Game Boy Color game on Nostalgic shows bright, saturated colors (Modern Accurate); on
+  Accurate it is paler, with lighter blacks (Reduce Contrast), through the Game Boy Color LCD's
+  subpixels.
 - [ ] Start a game with Button Bounce on, choose Clean in its settings, then Accurate: bounce
   changes without restarting, in library play and Quick Play.
 - [ ] Play 10 minutes each with CRT 240p and with Pixel Grid on the minimum QA device: full speed,
@@ -425,4 +435,7 @@ Record the phone, iOS version, commit and lighting.
 - [ ] Look at the `device-display-*` attachments of `LCDFilterTests.testDisplayReferenceCaptures`
   from the CI run (artifact `app-test-results`) for readable text, glow and edges, and at the
   `device-display-crt240p-sharpness-comparison` attachment of
-  `testCRT240pSharpnessComparisonCapture` to choose CRT 240p's sharpness.
+  `testCRT240pSharpnessComparisonCapture` to choose CRT 240p's sharpness. The
+  `device-display-monochromeLCD-accurate-dmg` and `-mgb` attachments of
+  `testMonochromeLCDReferenceCaptures` show Accurate on a Game Boy and a Pocket in their own
+  palettes.

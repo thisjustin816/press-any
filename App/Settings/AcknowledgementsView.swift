@@ -31,7 +31,7 @@ struct AcknowledgementsView: View {
             name: "SameBoy",
             use: """
             Game Boy, Super Game Boy, Game Boy Color and Game Boy Advance emulation, boot ROMs,
-            boot palettes and monochrome/color LCD shaders by Lior Halphon.
+            boot palettes and the color LCD shader by Lior Halphon.
             Source: https://github.com/LIJI32/SameBoy
             """,
             license: .bundled(file: "SameBoy-LICENSE")
@@ -79,6 +79,16 @@ struct AcknowledgementsView: View {
             name: "GBA and SP101 color profiles",
             use: "The Game Boy Advance and backlit Game Boy Advance SP (AGS-101) screen colors, by Pokefan531 and hunterk, optimized by crashGG. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/color",
             license: .bundled(file: "DisplayShaders-PublicDomain")
+        ),
+        Component(
+            name: "BGB screen measurements",
+            use: "The Monochrome LCD’s Game Boy and Game Boy Pocket screen colors",
+            license: .rightsNotice(credit: """
+            BGB’s reality page by beware (https://bgb.bircd.org/reality/) measures the screens \
+            of a Game Boy and a Game Boy Pocket from photos taken under color-accurate light and \
+            corrected with a color checker. \(AppBrand.displayName)’s Monochrome LCD is its own \
+            shader, brightened from those measured colors. No code or images from BGB are included.
+            """)
         ),
         Component(
             name: "Game Boy Printer disassembly",

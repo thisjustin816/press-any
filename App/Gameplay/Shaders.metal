@@ -70,18 +70,19 @@ float4 gridColor(float4 color, float2 texel, uint mode) {
 #define GAMEPLAY_FRAGMENT_ARGUMENTS VertexOut in [[stage_in]], texture2d<float> source [[texture(0)]], \
     texture2d<float> previous [[texture(1)]], texture2d<float> oldest [[texture(2)]], \
     constant uint &displayMode [[buffer(0)]], constant float4 &blendWeights [[buffer(1)]], \
-    constant CRTParameters &crt [[buffer(2)]]
+    constant CRTParameters &crt [[buffer(2)]], constant MonochromeLCDParameters &monochrome [[buffer(3)]]
 
 float4 physicalDisplay(VertexOut in, texture2d<float> source, texture2d<float> previous, texture2d<float> oldest,
-                       uint displayMode, float3 weights, constant CRTParameters &crt) {
+                       uint displayMode, float3 weights, constant CRTParameters &crt,
+                       constant MonochromeLCDParameters &monochrome) {
     constexpr sampler nearestSampler(coord::normalized, address::clamp_to_edge, filter::nearest);
     constexpr sampler bloomSampler(coord::normalized, address::clamp_to_edge, filter::linear, mip_filter::linear);
-    return linearDisplay(source, previous, oldest, weights, displayMode, nearestSampler, bloomSampler, in.texCoord, crt);
+    return linearDisplay(source, previous, oldest, weights, displayMode, nearestSampler, bloomSampler, in.texCoord, crt, monochrome);
 }
 
 fragment float4 gameplayTextureFragment(GAMEPLAY_FRAGMENT_ARGUMENTS) {
     if (displayMode > DISPLAY_MODE_SP101) {
-        return physicalDisplay(in, source, previous, oldest, displayMode, blendWeights.xyz, crt);
+        return physicalDisplay(in, source, previous, oldest, displayMode, blendWeights.xyz, crt, monochrome);
     }
     constexpr sampler nearestSampler(coord::normalized, address::clamp_to_edge, filter::nearest);
     float2 size = float2(source.get_width(), source.get_height());
@@ -94,7 +95,7 @@ fragment float4 gameplayTextureFragment(GAMEPLAY_FRAGMENT_ARGUMENTS) {
 /// its edges, over about one screen pixel, so the pixels look even and stay sharp.
 fragment float4 gameplaySharpFragment(GAMEPLAY_FRAGMENT_ARGUMENTS) {
     if (displayMode > DISPLAY_MODE_SP101) {
-        return physicalDisplay(in, source, previous, oldest, displayMode, blendWeights.xyz, crt);
+        return physicalDisplay(in, source, previous, oldest, displayMode, blendWeights.xyz, crt, monochrome);
     }
     constexpr sampler linearSampler(coord::normalized, address::clamp_to_edge, filter::linear);
     float2 size = float2(source.get_width(), source.get_height());

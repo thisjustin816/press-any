@@ -23,11 +23,19 @@ struct GameplayPresetRow: View {
 
     var body: some View {
         Menu {
+            // A second Text is the option's subtitle.
             ForEach(GameplayPreset.builtIn, id: \.self) { choice in
-                Button(choice.displayName) { choose(choice) }
+                Button { choose(choice) } label: {
+                    Text(choice.displayName)
+                    Text(Self.detail(choice, plusUnlocked: plus.isUnlocked))
+                }
             }
-            Button(plus.gate.label(GameplayPreset.custom.displayName, needsPlus: true)) {}
-                .disabled(true)
+            // Custom isn't a choice, so its option says when it shows.
+            Button {} label: {
+                Text(plus.gate.label(GameplayPreset.custom.displayName, needsPlus: true))
+                Text(Self.detail(.custom, plusUnlocked: true))
+            }
+            .disabled(true)
             Divider()
             Button("Reset to Inherited") { reset() }
         } label: {
@@ -37,7 +45,7 @@ struct GameplayPresetRow: View {
                         Text("Preset").foregroundStyle(Color.primary)
                         if preset == .custom, !plus.isUnlocked { PlusBadge() }
                     }
-                    Text(errorMessage ?? Self.detail(preset, hardware: hardware, plusUnlocked: plus.isUnlocked))
+                    Text(errorMessage ?? Self.detail(preset, plusUnlocked: plus.isUnlocked))
                         .font(.subheadline)
                         .foregroundStyle(errorMessage == nil ? Color.secondary : Color.red)
                 }
@@ -51,17 +59,19 @@ struct GameplayPresetRow: View {
             .contentShape(Rectangle())
         }
         .accessibilityLabel("Gameplay Preset")
-        .accessibilityValue("\(preset.displayName), \(errorMessage ?? Self.detail(preset, hardware: hardware, plusUnlocked: plus.isUnlocked))")
+        .accessibilityValue("\(preset.displayName), \(errorMessage ?? Self.detail(preset, plusUnlocked: plus.isUnlocked))")
         .onAppear(perform: load)
         .onChange(of: refreshToken) { load() }
         .onChange(of: hardware) { load() }
     }
 
-    static func detail(_ preset: GameplayPreset, hardware: [HardwareModel], plusUnlocked: Bool) -> String {
+    /// Each preset's description, under the Preset row and under its option in the menu. A preset
+    /// sets more than the screen, and the same words fit every model.
+    static func detail(_ preset: GameplayPreset, plusUnlocked: Bool) -> String {
         switch preset {
-        case .standard: "The screen as you remember it, cleaned up"
-        case .accurate: hardware.count == 1 ? "As on a \(hardware[0].displayName)" : "As on the hardware each game plays on"
-        case .clean: "The game's pixels, with no screen effects"
+        case .standard: "As you remember it, polished for today's screens"
+        case .accurate: "As the original looked and felt"
+        case .clean: "Just the game, with no effects added"
         case .custom:
             plusUnlocked
                 ? "Customize matches no preset"

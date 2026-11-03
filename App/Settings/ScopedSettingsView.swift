@@ -167,7 +167,7 @@ struct ScopedSettingsView: View {
         }
     }
 
-    static let gameplayFooter = "\(GameplayPreset.standardName) shows the screen as you remember it, cleaned up. Accurate imitates the Model's own screen or television, and Clean shows the game's pixels with no effects. Every preset and Screen Colors are free. Customize changes the settings a preset sets, one by one, with \(PlusProduct.name)."
+    static let gameplayFooter = "\(GameplayPreset.standardName), Accurate and Clean each set the screen, frame blending and Button Bounce for the Model. Every preset and Screen Colors are free. Customize changes the settings a preset sets, one by one, with \(PlusProduct.name)."
 
     static func customizeFooter(_ gate: PlusGate) -> String {
         let rules = gate.isLocked(true)
