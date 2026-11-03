@@ -201,19 +201,16 @@ Set up the product in App Store Connect first (`docs/testflight.md`). A TestFlig
 Apple's sandbox with the tester's own Apple Account, for free, and the purchase doesn't carry over
 to the App Store. These checks passed on a physical iPhone and remain as regression coverage.
 
-The checked purchase/filter results below record the v1.0 build. Its LCD entitlement behavior
-is superseded by the v1.1 preset checks at the end of this document; it is not a current requirement.
-
-- [x] Without Plus, set LCD Filter to LCD 1× before installing this build, or restore a backup that has it. The game plays with Off, and Settings shows LCD 1× (Plus). Choosing LCD 3× in App, Game Boy, Game, Build and game-menu settings opens the Plus screen once each time and saves nothing. No Plus screen ever opens at launch or during play.
-- [x] Settings > Press Any Plus shows the sandbox price from the App Store, not a fixed one. Buy Plus: the screen thanks you, the stored LCD 1× plays at once, also in a game left open behind its settings sheet, and Keep Auto States offers 3, 5 and 10 again with the earlier choice.
+- [ ] Without Plus, with a Game Boy game's Display Filter stored as RGB Subpixels (an LCD 3× choice from v1.0, or set with Plus and then refunded): the game plays with RGB Subpixels, and its Gameplay preset reads Custom (Plus). In Game Boy, Game, Build and game-menu settings, choosing any value under Customize opens the Plus screen once and saves nothing, while Nostalgic, Accurate and Clean, and every Screen Colors palette, work without it. No Plus screen ever opens at launch or during play.
+- [ ] Settings > Press Any Plus shows the sandbox price from the App Store, not a fixed one. Buy Plus: the screen thanks you, Customize's values lose their Plus marks at once, also in a game left open behind its settings sheet, and Keep Auto States offers 3, 5 and 10 again with the earlier choice.
 - [x] Settings > App Icon: change to Grape and back to Default. iOS confirms each change, and the home screen shows the icon in Light, Dark and Tinted.
 - [x] Delete the app and install it again, or install it on a second iPhone with the same Apple Account. Plus is already there; if not, Restore Purchases finds it.
 - [x] Family Sharing: a second Apple Account in the same family, with purchase sharing on, gets Plus on its own iPhone without buying it. If the sandbox won't share the purchase, run this check on the first App Store release.
-- [x] Take the purchase back. TestFlight purchases can't be refunded, so this needs a development build from a Mac: buy with a sandbox tester (App Store Connect > Users and Access > Sandbox), clear that tester's purchase history and tap Restore Purchases, or run from Xcode with the StoreKit configuration and refund in Debug > StoreKit > Manage Transactions. Plus locks again: LCD 1× plays as Off and is still shown, the App Icon picker locks but the chosen icon stays, and existing Auto States stay until the next one is written, which leaves the latest unpinned one and every pinned one.
-- [x] With Plus owned, turn on Airplane Mode and launch the app. Plus is still owned and the LCD filter plays.
+- [ ] Take the purchase back. TestFlight purchases can't be refunded, so this needs a development build from a Mac: buy with a sandbox tester (App Store Connect > Users and Access > Sandbox), clear that tester's purchase history and tap Restore Purchases, or run from Xcode with the StoreKit configuration and refund in Debug > StoreKit > Manage Transactions. Plus locks again: a stored Custom display filter keeps playing and Customize is marked Plus again, the App Icon picker locks but the chosen icon stays, and existing Auto States stay until the next one is written, which leaves the latest unpinned one and every pinned one.
+- [ ] With Plus owned, turn on Airplane Mode and launch the app. Plus is still owned and Customize isn't marked Plus.
 - [x] With Plus, set Settings > Playing > Timed States to Every 1 Minute and Keep Auto States to 3. Play a library game for 90 seconds, pause for 30 seconds, then resume for another 90 seconds (3 minutes of running play). States shows exactly two Auto States marked Timed: one before the pause and one after. The pause adds no timed state and the remaining 30 seconds before it do not carry over. Confirm the save does not hitch gameplay, then repeat with Fast Forward: the interval still takes a minute on the clock. Without Plus, choosing an interval opens the Plus screen; Quick Play creates no timed states.
 - [x] Without Plus, in Airplane Mode, the Plus screen shows the calm unavailable message with Try Again, which loads the price once back online.
-- [ ] With Plus, set a Game Boy Color game's Model to Game Boy in its Game settings and open it: it boots the Game Boy logo and shows its monochrome mode or its message that it needs a Game Boy Color. From the open game's settings, set Model to Game Boy Advance and close the sheet: the game restarts on its own with "Restarted on Game Boy Advance.", boots the Game Boy Advance logo, keeps its save, and a game that checks for a Game Boy Advance shows it. Change Model and back in one visit: closing doesn't restart. Load a state made before the change: the message says it was made on a Game Boy Color, Game Boy Advance or Game Boy Player, with no Load an Older State? question first. Close the game, set the Game's Model to Game Boy from Game Details, and open it with Resume Games on Always and then on Ask: it starts from its save with the message about where you left off, and Ask doesn't offer to resume. With the Build on Game Boy Advance, Display shows Game Boy Advance Colors: As on a Game Boy Color brightens the paused picture at once, and Original colors look the same either way; on any other model the row is gone. Set a game with Super Game Boy support to Super Game Boy: it plays in the colors it sends, with no border, and Screen Colors reads Super Game Boy and can't be changed. Model opens a list grouped under Game Boy, Game Boy Color and Game Boy Advance, with Automatic on its own above them. Set a Game Boy game to Game Boy Color: Screen Colors lists Color Correction; set a Game Boy Color game to Game Boy: it lists the Game Boy palettes. For a game marked for Game Boy Color only, the note under the Game Boy models says it may play in black and white or only show a message there. Without Plus, Model is marked Plus, every model but Automatic has a Plus badge and opens the Plus screen, Screen Colors follows the game's own system, and a stored model plays as Automatic.
+- [ ] With Plus, set a Game Boy Color game's Model to Game Boy in its Game settings and open it: it boots the Game Boy logo and shows its monochrome mode or its message that it needs a Game Boy Color. From the open game's settings, set Model to Game Boy Advance and close the sheet: the game restarts on its own with "Restarted on Game Boy Advance.", boots the Game Boy Advance logo, keeps its save, and a game that checks for a Game Boy Advance shows it. Change Model and back in one visit: closing doesn't restart. Load a state made before the change: the message says it was made on a Game Boy Color, Game Boy Advance or Game Boy Player, with no Load an Older State? question first. Close the game, set the Game's Model to Game Boy from Game Details, and open it with Resume Games on Always and then on Ask: it starts from its save with the message about where you left off, and Ask doesn't offer to resume. With the Build on Game Boy Advance, Customize shows Game Boy Advance Colors: As on a Game Boy Color brightens the paused picture at once, and Original colors look the same either way; on any other model the row is gone. Set a game with Super Game Boy support to Super Game Boy: it plays in the colors it sends, with no border, and Screen Colors reads Super Game Boy and can't be changed. Model opens a list grouped under Game Boy, Game Boy Color and Game Boy Advance, with Automatic on its own above them. Set a Game Boy game to Game Boy Color: Screen Colors is gone from Gameplay and Customize lists Color Correction; set a Game Boy Color game to Game Boy: it lists the Game Boy palettes. For a game marked for Game Boy Color only, the note under the Game Boy models says it may play in black and white or only show a message there. Without Plus, Model is marked Plus, every model but Automatic has a Plus badge and opens the Plus screen, Screen Colors follows the game's own system, and a stored model plays as Automatic.
 - [ ] Without Plus, print in a library game and open the preview: Transparent, Light and Dark select, show and export as they do with Plus. Wood, Printer, Game Artwork and Custom stay in the row with a Plus badge, and tapping each, or the empty Custom tile, opens the Plus screen once and leaves the selection as it was. No Plus screen opens on its own while printing, viewing prints or browsing Captures, and Save or Share, Discard, All Prints, Pin and the Printer Log all work.
 - [ ] With Plus, choose Wood, then take the purchase back as above: the open preview and the next one show and export Transparent, and Wood comes back when Plus is bought or restored. With a saved Custom image and no Plus, touch and hold the Custom tile: Remove Background works and Replace isn't offered.
 - [ ] Without Plus, Settings > Playing > Keep Prints reads 10 with a Plus badge, and each number opens the Plus screen and saves nothing. Pin one print, then print 12 more in one library game: Captures keeps the latest 10 and the pinned one, and the 2 oldest are in Recently Deleted as Cleaned-up Prints and restore from there. With Plus, Keep Prints at 25, 50 and 100 each keeps that many after the next print.
@@ -388,22 +385,32 @@ These checks need Plus. The Press Any Plus device checks cover the backgrounds w
 - [ ] Try an invalid image and an oversized file. The import shows an error and keeps the previous
   saved image. Check portrait/landscape images, orientation metadata and transparent PNG input.
 
+## Gameplay presets and display filters
 
-## v1.1 gameplay presets and television filters
+Run on a physical iPhone at normal brightness, in portrait and landscape, with Integer and Fill.
+Record the phone, iOS version, commit and lighting.
 
-- [ ] On GB, Pocket, GBC and GBA models, choose Accurate and confirm the advanced rows immediately show the documented LCD/color/blending/button values; change one and confirm the preset becomes Custom.
-- [ ] Choose Clean, confirm Display Filter and Frame Blending are Off and Button Bounce is Off, then reset the preset and confirm inherited values return.
-- [ ] On Super Game Boy/Super Game Boy 2, Accurate shows CRT 240p with visible but restrained scanlines/softness and no handheld LCD subpixel pattern.
-- [ ] On Game Boy Player, Accurate shows the CRT 480i treatment, visibly distinct from CRT 240p and without assuming a curved or flat CRT.
-- [ ] Without Plus, Clean and Accurate remain selectable and apply their effects. Trying to change a preset-controlled advanced setting opens Press Any Plus and leaves the stored value unchanged.
-
-- [ ] Verify DMG, Pocket and Light each select the monochrome shader with their own palette;
-  GBC selects Authentic GBC; GBA selects the GBA profile; SP AGS-101 selects SP101.
-- [ ] Select another Model, then Accurate. Compare each stock-device reference in portrait and
-  landscape at normal phone brightness. Record the phone, OS, commit and lighting conditions.
-- [ ] Start a game with Button Bounce on, select Clean in its settings, then Accurate. Verify
-  bounce changes without restarting in library play and Quick Play.
-- [ ] Run `LCDFilterTests.testCuratedDeviceReferenceCaptures` on an Apple Metal device/simulator.
-  Preserve its named attachments and review both CRT variants for readable text, glow and edges.
-- [ ] Compare CRT 480i moving content across successive fields and both Integer/Fill paths.
-  Confirm performance and energy use on a physical iPhone; these remain manual checks.
+- [ ] On a fresh install, Game Boy and Game Boy Color settings show Nostalgic, not Custom, and a
+  game plays with the Pixel Grid and Blend. Without Plus, Nostalgic, Accurate and Clean can each
+  be chosen and change the open game at once; Screen Colors palettes can be chosen and stay when
+  a preset changes.
+- [ ] With Plus, on each Model choose each preset and check Customize against the table in
+  docs/product.md (Picture). Change one value: the preset reads Custom. Change it back: the preset
+  returns.
+- [ ] Set a Game's Model to Super Game Boy with Nostalgic inherited from the system: the Game still
+  inherits (Customize shows From Game Boy settings or Default) and plays with Scanlines. Choose
+  Accurate on the Game, then set its Model to Game Boy Color: the Game shows Accurate for the
+  Game Boy Color.
+- [ ] Super Game Boy, Accurate: CRT 240p is visibly curved, with dark gaps between lines, a coarse
+  slot mask, soft edges and glow, and text stays readable. Game Boy Player, Accurate: CRT 480p is
+  nearly flat with rounded corners, finer lines and a fine aperture grille. Moving content on
+  either shows no combing.
+- [ ] A Game Boy Advance on Nostalgic shows the backlit SP colors with the grid; on Accurate it is
+  darker with SameBoy's LCD.
+- [ ] Start a game with Button Bounce on, choose Clean in its settings, then Accurate: bounce
+  changes without restarting, in library play and Quick Play.
+- [ ] Play 10 minutes each with CRT 240p and with Pixel Grid on the minimum QA device: full speed,
+  and no more heat than Off by touch. With Low Power Mode on, CRT glow disappears and returns when
+  it's turned off.
+- [ ] Look at the `device-display-*` attachments of `LCDFilterTests.testDisplayReferenceCaptures`
+  from the CI run (artifact `app-test-results`) for readable text, glow and edges.

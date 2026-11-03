@@ -183,10 +183,15 @@ elif shots == "summary":
             shot(f"play:{f}", 10, f"play-{system.lower()}")
 else:
     sys.exit(f"SHOTS must be listing, summary or every-rom, not {shots!r}")
+# Every display filter (DisplayFilter's raw values), on a GB and a GBC game, or on the game given.
+filters = ("off", "lcd1x", "lcd3x", "monochromeLCD", "authenticGBC", "gbaLCD", "sp101LCD", "scanlines", "crt240p", "crt480p")
 for system in ("GB", "GBC"):
-    if f := first(lambda r: r["system"] == system):
-        for preset in ("lcd1x", "lcd3x"):
-            shot(f"play:{f}", 10, f"play-{system.lower()}-{preset}", f"-ScreenshotLCDFilter {preset}")
+    f = game["filename"] if game else first(lambda r: r["system"] == system)
+    if f:
+        for name in filters:
+            shot(f"play:{f}", 10, f"play-{system.lower()}-{name}", f"-ScreenshotLCDFilter {name}")
+    if game:
+        break
 shot(f"play:{names[0]}", 10, "play-gamepad", "-ScreenshotGamepad YES")
 # The Playtiles layout is drawn after a GBC skin, so it shows a GBC game when one was chosen.
 playtiles_rom = first(lambda r: r["system"] == "GBC") or names[0]

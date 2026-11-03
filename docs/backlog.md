@@ -11,7 +11,7 @@ roadmap; its final scope and timing are not fixed.
   `app-store-review/1.0-build-110`, and its stable release, `v1.0.0`, is at the same commit.
   Submission and stable release tags follow `docs/testflight.md`.
 - **v1.1:** work completed after build 110. This includes revised branding and app icons;
-  the Model setting and hardware-family checks; Clean/Accurate/Custom gameplay presets and model-specific display filters; automatic artwork previews, missing-artwork
+  the Model setting and hardware-family checks; free Nostalgic/Accurate/Clean gameplay presets, Custom with Plus, and model-specific display filters; automatic artwork previews, missing-artwork
   review, provenance and grouped Library settings; Game Boy Camera with Photo! DX color
   capture; Playtiles landscape controls and compatibility checks; and the fixes listed below.
   ZIP globals attachment, grouped Build menus and list overflow cues are built for this release,
@@ -97,9 +97,9 @@ Open items in each area are in the table, finished ones on the line under it.
 | partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1.0 | Screenshots are uploaded for the initial submission. The listing set is ten shots; the fourth is a print on the Printer background, of a picture the screenshot scene draws. The manual workflow defaults to the 6.3-inch iPhone 17 Pro and verifies its App Store Connect dimensions; 6.9-inch and 6.5-inch sets are also available (docs/testflight.md). An app preview is optional |
 
 Done: Press Any Plus through StoreKit 2 with price, Buy, Restore Purchases and retry, configured
-in App Store Connect, with stand-in app tests and completed physical-device checks; LCD filters,
-app icon colorways and Auto State history gated at every scope, retaining stored choices without
-Plus; A Press Any folder in Files holding Exports, with the library kept in Application Support and
+in App Store Connect, with stand-in app tests and completed physical-device checks; Custom
+gameplay settings, app icon colorways and Auto State history gated at every scope, retaining stored
+choices without Plus; A Press Any folder in Files holding Exports, with the library kept in Application Support and
 an empty share Inbox removed at launch; iOS 17.4 minimum; iPhone-first, iPad not deliberately broken; Light + dark appearance;
 Offline-first core; Naming: display name only from Info.plist, brand-free IDs; Wordmark (rounded
 Corporatus artwork, pink "A" and navy lettering) in library toolbar and controller body; Shared pink/navy/gray
@@ -410,23 +410,23 @@ released. Directional input leaves it paused.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| done | Free built-in palettes for original Game Boy games | v1.0 | Twelve button-combo palettes and six game palettes (Mole Mania, Link's Awakening, Super Mario Land, Super Mario Land 2, Donkey Kong Land and Game Boy Camera), alongside DMG/Pocket/Light; grouped palette list with color names, combo subtitles and BG/OBJ0/OBJ1 previews, one Black & White choice; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors lists, including in-game Settings |
+| done | Free built-in palettes for original Game Boy games, outside the Gameplay presets | v1.0 | Twelve button-combo palettes and six game palettes (Mole Mania, Link's Awakening, Super Mario Land, Super Mario Land 2, Donkey Kong Land and Game Boy Camera), alongside DMG/Pocket/Light; grouped palette list with color names, combo subtitles and BG/OBJ0/OBJ1 previews, one Black & White choice; display-only DMG rendering; Skip Boot Logo on/off; scoped Screen Colors lists, including in-game Settings |
 | missing | Custom Game Boy palettes and GBC game-palette selection | v2.0 | Specify separate background/OBJ0/OBJ1 colors, enter a GBC boot-ROM palette combination number (such as 17), or select a recognized game (such as Mole Mania) to use its built-in colors; include color previews |
 | done | Adaptive presentation on high-refresh displays | v1.0 | CADisplayLink on its own thread runs the frames owed at 59.73 Hz and presents the newest, up to 120 Hz on ProMotion; Low Power Mode or a serious or critical thermal state caps presentation at 60 Hz, applied live from the system's change notifications; the Low Power Mode device check passed |
-| partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v2.0 | v1.1 has one curated Accurate display per device: SameBoy monochrome LCD, Authentic GBC, SameBoy color LCD with GBA/SP101 profiles, and CRT-Lottes TV treatments; all authors credited and licenses bundled; remaining effects and catalog missing; each shader that ships is credited by author in Acknowledgements and `THIRD_PARTY_NOTICES.md` |
-| partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v2.0 | LCD effect and frame blending inherit App → System → Game → Build independently of scaling, and change live from the game menu's Settings; named presets and Quick Actions switching missing |
+| partial | Curated display/shader set (LCD 1×, LCD 3×, Pixel Transparency, DMG/GBC LCD, sharp bilinear, CRT/scanlines); BuiltIn + CommunityDownload catalog with license/hash checks | v2.0 | v1.1 has ten built-in filters behind the Nostalgic, Accurate and Clean presets: Off, Pixel Grid and RGB Subpixels (v1.0's own LCD 1× and 3×), SameBoy's Monochrome LCD and LCD with the GBA profile, Authentic GBC's subpixels, the backlit SP profile, Scanlines, and CRT 240p and 480p (Press Any's own CRT modelled on CRT-Lottes); no GPL code; authors credited and licenses bundled; Pixel Transparency, sharp bilinear and the catalog missing; each shader that ships is credited by author in Acknowledgements and `THIRD_PARTY_NOTICES.md` |
+| partial | Shader components/params inherit independently; named user presets; live switching via Quick Actions | v2.0 | Display filter, frame blending, color correction and Button Bounce inherit App → System → Game → Build independently of scaling, are set together by a free preset, and change live from the game menu's Settings; named user presets and Quick Actions switching missing |
 | missing | Custom crop / other aspect options | v2.0 |  |
-| missing | Thermal-aware degradation of optional work | v2.0 |  |
+| partial | Thermal-aware degradation of optional work | v2.0 | CRT glow and its mipmaps turn off in Low Power Mode or a serious or critical thermal state, as presentation drops to 60 Hz; other optional work doesn't degrade yet |
 | missing | Arbitrary .slang/.slangp import; shader preset file import/export | later |  |
 
 Done: Framebuffer -> Metal texture presentation; native core timing paces frames; Screen Scaling
 Integer (default, whole device pixels, nearest) / Fill (10:9, edge-blended), inheritable; Frame
-Blending Off (default) / Blend / LCD Ghosting, inheritable; Screen Colors lists per system, also
+Blending Off / Blend / LCD Ghosting, inheritable, set by the Gameplay preset; Screen Colors lists per system, also
 accessible from in-game Settings: Game Boy Green (DMG, default) / Olive (Pocket) / Teal (Light),
 twelve button-combo boot palettes (including Black & White), and six game palettes
 (Mole Mania, Link's Awakening, Super Mario Land, Super Mario Land 2, Donkey Kong Land and Game
 Boy Camera); color names and background/sprite thumbnails,
-Game Boy Color Balanced (default) / Modern Accurate / Boost Contrast / Reduce Contrast / Low Contrast /
+Game Boy Color Color Correction (a preset setting under Customize) Balanced / Modern Accurate / Boost Contrast / Reduce Contrast / Low Contrast /
 Original. Both inherit App -> System -> Game -> Build, with the lists from System down, update
 the open picture from Settings, and survive reset and state loads.
 
@@ -601,7 +601,7 @@ Save Profile and save state rows and to discard a Quick Play session, asking fir
 |---|---|---|---|
 | done | Audio interruptions pause safely; route changes don't restart the game | v1.0 | the game pauses whenever its scene goes inactive (calls, Siri, Control Center); an audio interruption that leaves the scene active, and an output device going away, pause it too and leave it paused until Resume; the physical-device checks passed |
 | missing | Thermal-aware degradation | v2.0 |  |
-| missing | Default shader sustains full speed on minimum QA device | v2.0 | Curated device displays are built; full-speed and energy checks on the minimum QA device remain pending |
+| missing | Default shader sustains full speed on minimum QA device | v2.0 | The default is Nostalgic: Pixel Grid on handhelds (one texture read per pixel, as v1.0's LCD 1×), the backlit SP grid on a Game Boy Advance and Scanlines on the television models (four reads); full-speed and energy checks on the minimum QA device are pending |
 
 Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms

@@ -302,7 +302,7 @@ appear in search results.
 4. A print on the Printer background, a picture drawn for the shot and kept in a Game's Captures
 5. Gameplay in landscape
 6. Import Review
-7. Gameplay with the LCD effect
+7. Gameplay with the RGB Subpixels filter
 8. Technical Info, showing what a game was made with
 9. Quick Play
 10. Gameplay in landscape with a controller connected
@@ -403,10 +403,10 @@ review. Until then, Settings > Press Any Plus says the App Store isn't available
    - **Price Schedule**: $0.99 in the United States; Apple sets the other storefronts.
    - **Family Sharing**: Turn On. It can't be turned off again.
    - **App Store Localization** (English (U.S.)): Display Name `Press Any Plus`, Description
-     `LCD filters, app icons, Auto State history and more.`
+     `Custom gameplay settings, app icons, Auto State history and more.`
    - **Review Information**: a screenshot of Settings > Press Any Plus from an iPhone, and these
      notes: "Settings > Press Any Plus shows what Plus includes, the price, Buy and Restore
-     Purchases. Plus unlocks manual gameplay customization (System > Customize), app icon colors (Settings >
+     Purchases. Plus unlocks changing the Gameplay preset's settings one by one (Settings > Game Boy > Customize, also in a game's settings; the Nostalgic, Accurate and Clean presets and the screen palettes are free), app icon colors (Settings >
      App Icon), Auto State history and Timed States (Settings > Playing > Keep Auto States and
      Timed States), Model, which runs a game on other Game Boy hardware (Settings > Playing >
      Model), and, for Game Boy Printer games, the Wood, Printer, Game Artwork and Custom print
