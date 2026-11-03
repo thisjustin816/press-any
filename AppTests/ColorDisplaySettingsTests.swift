@@ -96,10 +96,9 @@ final class ColorDisplaySettingsTests: XCTestCase {
         let palettes = ScreenColorChoices.dmg(DMGPalette.selectableCases)
         let corrections = ScreenColorChoices.correction(ColorCorrection.allCases)
         let expected: [(HardwareModel, ScreenColorChoices)] = [
-            (.automatic, palettes), (.gameBoy, palettes), (.gameBoyPocket, palettes), (.gameBoyLight, palettes),
+            (.automatic, palettes), (.gameBoy, palettes), (.gameBoyPocket, palettes),
             (.superGameBoy, .superGameBoy), (.superGameBoy2, .superGameBoy),
-            (.gameBoyColor, corrections), (.gameBoyAdvance, corrections),
-            (.gameBoyAdvanceSP101, corrections), (.gameBoyPlayer, corrections),
+            (.gameBoyColor, corrections), (.gameBoyAdvance, corrections), (.gameBoyPlayer, corrections),
         ]
         func view(_ system: GameSystem, ownsPlus: Bool) -> ScopedSettingsView {
             ScopedSettingsView(
@@ -125,8 +124,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
         )
         XCTAssertEqual(view.modelSections.map(\.title), [nil, "Game Boy", "Game Boy Color", "Game Boy Advance"])
         XCTAssertEqual(view.modelSections.map(\.values), [
-            [.automatic], [.gameBoy, .gameBoyPocket, .gameBoyLight, .superGameBoy, .superGameBoy2], [.gameBoyColor],
-            [.gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer],
+            [.automatic], [.gameBoy, .gameBoyPocket, .superGameBoy, .superGameBoy2], [.gameBoyColor], [.gameBoyAdvance, .gameBoyPlayer],
         ])
         XCTAssertEqual(view.modelSections.compactMap(\.footer), [])
         var colorOnly = view

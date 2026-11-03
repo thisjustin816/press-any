@@ -58,10 +58,6 @@ final class PlusStore: ObservableObject {
 
     var gate: PlusGate { PlusGate(isUnlocked: isUnlocked) }
 
-    /// Built-in Clean and Accurate presets are free, including the display filters they apply.
-    /// Plus gates changing preset-controlled settings manually, not rendering their stored values.
-    func effective(_ filter: DisplayFilter) -> DisplayFilter { filter }
-
     func refreshOwnership() async {
         isUnlocked = await provider.ownsPlus()
     }

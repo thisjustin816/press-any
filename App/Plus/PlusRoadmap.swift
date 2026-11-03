@@ -10,11 +10,11 @@ enum PlusRoadmap {
     }
 
     static let includedToday = [
-        Item(title: "Custom Gameplay Tuning", detail: "Fine-tune screen colors, display filters, frame blending and button bounce beyond the free Clean and Accurate presets."),
+        Item(title: "Custom Gameplay", detail: "Change the display filter, frame blending, color correction and button bounce one by one. The Gameplay presets and Screen Colors palettes are free."),
         Item(title: "App Icons", detail: "The home-screen icon in Berry, Grape, Teal, Kiwi or Dandelion."),
         Item(title: "Auto State History", detail: "Keep 3, 5 or 10 Auto States for each save. Without Plus, the latest is kept."),
         Item(title: "Timed States", detail: "An Auto State every 1, 2, 5 or 10 minutes of play. Pausing restarts the interval."),
-        Item(title: "Model", detail: "Run Game Boy and Game Boy Color games on a Game Boy, Pocket, Light, Super Game Boy, Game Boy Color, Game Boy Advance, the backlit SP display or Game Boy Player, with Super Game Boy colors."),
+        Item(title: "Model", detail: "Run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, with Super Game Boy colors."),
         Item(title: "Print Backgrounds", detail: "Wood, Printer, Game Artwork and Custom backgrounds for Game Boy Printer prints. Transparent, Light and Dark are free."),
         Item(title: "Print History", detail: "Keep 25, 50 or 100 prints for each Game. Without Plus, the latest 10 are kept."),
     ]
@@ -30,7 +30,7 @@ enum PlusRoadmap {
         Item(title: "Frame Advance", detail: "Move a game on one frame at a time, with a frame counter."),
         Item(title: "Quick Actions", detail: "Save, load, rewind and more from the game menu, controller buttons and skins."),
         Item(title: "Super Game Boy Borders", detail: "The border a Super Game Boy game draws around the picture."),
-        Item(title: "Shaders", detail: "A small, tested set of screen effects, chosen with the community."),
+        Item(title: "Shader Library", detail: "More screen effects, downloaded from license-checked sources and chosen with the community."),
         Item(title: "Layout Editor and Skins", detail: "Move and resize the screen and controls, and import Delta and Manic skins."),
         Item(title: "Capture Gallery and Notes", detail: "Screenshots kept with each Build, and timestamped gameplay notes."),
         Item(title: "External Displays", detail: "Play on an AirPlay or wired display, with the phone as the controller."),

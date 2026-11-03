@@ -123,18 +123,20 @@ struct ScopedSettingsView: View {
                 }
             )
             modelSetting
+            screenColors
             NavigationLink {
                 Form {
                     Section {
                         customGameplayRows
                     } footer: {
-                        Text("Changing these values requires Plus. Every display treatment works with every Model. " + Self.buttonBounceExplanation)
+                        Text(Self.customizeFooter(plus.gate))
                     }
                 }
-                .navigationTitle("Customize Gameplay")
+                .scrollOverflowCue()
+                .navigationTitle("Customize")
                 .navigationBarTitleDisplayMode(.inline)
             } label: {
-                HStack {
+                HStack(spacing: 6) {
                     Text("Customize")
                     if !plus.isUnlocked { PlusBadge() }
                 }
@@ -142,8 +144,17 @@ struct ScopedSettingsView: View {
         } header: {
             Text("Gameplay")
         } footer: {
-            Text("Clean shows the unfiltered output. Accurate uses the selected device's curated display and input configuration. Both are free. Open Customize to adjust individual settings with Plus.")
+            Text(Self.gameplayFooter)
         }
+    }
+
+    static let gameplayFooter = "\(GameplayPreset.standardName) shows the screen as you remember it, cleaned up. Accurate imitates the Model's own screen or television, and Clean shows the game's pixels with no effects. Every preset and Screen Colors are free. Customize changes the settings a preset sets, one by one, with \(PlusProduct.name)."
+
+    static func customizeFooter(_ gate: PlusGate) -> String {
+        let rules = gate.isLocked(true)
+            ? "Changing these needs \(PlusProduct.name). Choosing one opens the Plus screen and changes nothing."
+            : "A change here makes the preset Custom, until every value matches a preset again."
+        return rules + " Every display filter works on every Model. " + buttonBounceExplanation
     }
 
     private var modelSetting: some View {
@@ -161,13 +172,30 @@ struct ScopedSettingsView: View {
         )
     }
 
+    /// What unset preset settings show and play with on this hardware.
+    private var standard: GameplayPresetValues { GameplayPresetValues.standard(for: resolvedHardware) }
+
     @ViewBuilder private var customGameplayRows: some View {
-        screenColors
+        switch screenColorChoices {
+        case .correction(let corrections):
+            InheritableSettingRow(
+                title: "Color Correction",
+                key: .colorCorrection,
+                defaultValue: standard.colorCorrection ?? ColorCorrection.defaultValue,
+                options: corrections.map { ($0, $0.displayName) },
+                listSections: [SettingOptionSection(title: "Color Correction", values: corrections)],
+                explanation: ColorCorrection.explanation,
+                reloadToken: settingsRevision,
+                context: context
+            )
+        case .dmg, .superGameBoy:
+            EmptyView()
+        }
         if resolvedHardware.isGameBoyAdvance {
             InheritableSettingRow(
                 title: "Game Boy Advance Colors",
                 key: .advanceColors,
-                defaultValue: AdvanceColors.gameBoyAdvance,
+                defaultValue: standard.advanceColors ?? AdvanceColors.gameBoyAdvance,
                 options: AdvanceColors.allCases.map { ($0, $0.displayName) },
                 listSections: [SettingOptionSection(title: "Game Boy Advance Colors", values: AdvanceColors.allCases)],
                 explanation: AdvanceColors.explanation,
@@ -178,16 +206,15 @@ struct ScopedSettingsView: View {
         InheritableSettingRow(
             title: "Display Filter",
             key: .lcdFilter,
-            defaultValue: DisplayFilter.off,
-            options: DisplayFilter.selectable(for: resolvedHardware).map { ($0, $0.displayName) },
-            normalizeValue: { $0.selectionValue },
+            defaultValue: standard.displayFilter,
+            options: DisplayFilter.selectable.map { ($0, $0.displayName) },
             reloadToken: settingsRevision,
             context: context
         )
         InheritableSettingRow(
             title: "Frame Blending",
             key: .frameBlending,
-            defaultValue: FrameBlending.off,
+            defaultValue: standard.frameBlending,
             options: FrameBlending.allCases.map { ($0, $0.displayName) },
             reloadToken: settingsRevision,
             context: context
@@ -195,7 +222,7 @@ struct ScopedSettingsView: View {
         InheritableSettingRow(
             title: "Button Bounce",
             key: .buttonBounce,
-            defaultValue: true,
+            defaultValue: standard.buttonBounce,
             options: [(true, "On"), (false, "Off")],
             reloadToken: settingsRevision,
             context: context
@@ -296,8 +323,6 @@ struct ScopedSettingsView: View {
             )
         } header: {
             Text("Playing")
-        } footer: {
-            Text("Resume Games and Skip Boot Logo do not change the Gameplay preset.")
         }
     }
 
@@ -331,7 +356,8 @@ struct ScopedSettingsView: View {
 
     var screenColorChoices: ScreenColorChoices { ScreenColorChoices(hardware: resolvedHardware) }
 
-    /// Each kind of hardware has its own Screen Colors, so only the one that applies shows.
+    /// A palette for hardware that shows one, free and outside the presets. Game Boy Color colors
+    /// are Color Correction, under Customize.
     @ViewBuilder private var screenColors: some View {
         switch screenColorChoices {
         case .dmg(let palettes):
@@ -351,17 +377,8 @@ struct ScopedSettingsView: View {
                 reloadToken: settingsRevision,
                 context: context
             )
-        case .correction(let corrections):
-            InheritableSettingRow(
-                title: "Screen Colors",
-                key: .colorCorrection,
-                defaultValue: ColorCorrection.defaultValue,
-                options: corrections.map { ($0, $0.displayName) },
-                listSections: [SettingOptionSection(title: "Color Correction", values: corrections)],
-                explanation: ColorCorrection.explanation,
-                reloadToken: settingsRevision,
-                context: context
-            )
+        case .correction:
+            EmptyView()
         case .superGameBoy:
             LabeledContent {
                 Text("Super Game Boy")
@@ -401,9 +418,9 @@ enum ScreenColorChoices: Equatable {
     /// `hardware` is resolved, so Automatic doesn't arrive here.
     init(hardware: HardwareModel) {
         switch hardware {
-        case .automatic, .gameBoy, .gameBoyPocket, .gameBoyLight: self = .dmg(DMGPalette.selectableCases)
+        case .automatic, .gameBoy, .gameBoyPocket: self = .dmg(DMGPalette.selectableCases)
         case .superGameBoy, .superGameBoy2: self = .superGameBoy
-        case .gameBoyColor, .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer: self = .correction(ColorCorrection.allCases)
+        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: self = .correction(ColorCorrection.allCases)
         }
     }
 }
@@ -631,8 +648,8 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         return context.plus.isLocked(needsPlus(effectiveValue)) ? "\(source). \(label(for: defaultValue)) without Plus" : source
     }
 
-    /// Preset-controlled settings are the Custom editor and require Plus. Other value-specific
-    /// Plus rules keep their existing behavior.
+    /// A preset setting changed by hand needs Plus; without it, choosing anything opens the Plus
+    /// screen and saves nothing. A value that needs Plus does the same.
     private func choose(_ newChoice: Choice) {
         if context.plus.isLocked(editNeedsPlus) {
             context.openPlus()

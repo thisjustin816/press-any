@@ -93,7 +93,6 @@ struct RootView: View {
                     onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) },
                     onImportFiles: { urls in urls.forEach { receiveSharedFile($0, opensImportReview: true) } }
                 )
-                .onPlusChange(container.plus) { refreshGameplayLCDFilter(container) }
                 .environment(\.libraryStorageContext, LibraryStorageContext(container: container) { session in
                     Task { @MainActor in
                         // Settings must finish dismissing before gameplay can present its cover.
@@ -363,13 +362,6 @@ struct RootView: View {
         }
     }
 
-    /// Plus decides whether an open game's LCD filter shows, so a purchase or refund changes it in
-    /// place, even behind the settings sheet.
-    private func refreshGameplayLCDFilter(_ container: AppContainer) {
-        guard let target = gameplay?.settings else { return }
-        gameplay?.display.lcdFilter = container.gameplayDisplay(for: target).lcdFilter
-    }
-
     /// The open game's cheats, at half height over the paused game. Each change reaches the game
     /// before it resumes.
     @ViewBuilder
@@ -599,6 +591,7 @@ struct RootView: View {
         guard let container = bootstrap.container else { return }
         do {
             let restore = try container.start(launch, resume: resume)
+            let values = container.gameplayValues(for: launch.context)
             var message: String?
             switch restore {
             case .failed:
@@ -627,11 +620,12 @@ struct RootView: View {
                     controlStyle: container.controllerStyle(for: launch.context),
                     orientation: container.orientation(for: launch.context),
                     screenScaling: container.screenScaling(for: launch.context),
-                    lcdFilter: container.lcdFilter(for: launch.context),
-                    colorCorrection: container.colorCorrection(for: launch.context),
+                    lcdFilter: values.displayFilter,
+                    colorCorrection: values.colorCorrection,
                     dmgPalette: container.dmgPalette(for: launch.context),
-                    advanceColors: container.advanceColors(for: launch.context),
-                    frameBlending: container.frameBlending(for: launch.context),
+                    advanceColors: values.advanceColors,
+                    frameBlending: values.frameBlending,
+                    buttonBounce: values.buttonBounce,
                     fastForwardSpeed: container.fastForwardSpeed(for: launch.context),
                     fastForwardAudio: container.fastForwardAudio(for: launch.context),
                     camera: container.gameBoyCamera(for: launch.context)

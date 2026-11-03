@@ -51,13 +51,13 @@ struct AppSettingsView: View {
                 } header: {
                     Text("Gameplay")
                 } footer: {
-                    Text("Choose Clean or Accurate for each system, then open Customize for individual settings. A Game or Build can still override these defaults.")
+                    Text("The Gameplay preset, Model and Screen Colors for every game on one system. A Game or Build can still set its own.")
                 }
 
                 // The same order as a system's, Game's or Build's settings.
                 Section {
                     NavigationLink {
-                        DisplaySettingsPage(storage: storage, plus: plus)
+                        DisplaySettingsPage(storage: storage)
                     } label: {
                         Label("Display", systemImage: "display")
                     }

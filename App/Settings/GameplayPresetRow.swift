@@ -3,6 +3,8 @@ import EmulatorDomain
 import Foundation
 import SwiftUI
 
+/// The Gameplay preset for one scope. Every built-in preset is free; Custom is shown when the
+/// settings under Customize match none of them.
 struct GameplayPresetRow: View {
     let scope: SettingsScope
     let system: GameSystem
@@ -14,13 +16,14 @@ struct GameplayPresetRow: View {
     let refreshToken: Int
     let onChange: () -> Void
 
-    @State private var preset: GameplayPreset = .custom
+    @State private var preset: GameplayPreset = .standard
     @State private var errorMessage: String?
 
     var body: some View {
         Menu {
-            Button(GameplayPreset.clean.displayName) { choose(.clean) }
-            Button(GameplayPreset.accurate.displayName) { choose(.accurate) }
+            ForEach(GameplayPreset.builtIn, id: \.self) { choice in
+                Button(choice.displayName) { choose(choice) }
+            }
             Button(plus.gate.label(GameplayPreset.custom.displayName, needsPlus: true)) {}
                 .disabled(true)
             Divider()
@@ -32,7 +35,7 @@ struct GameplayPresetRow: View {
                         Text("Preset").foregroundStyle(Color.primary)
                         if preset == .custom, !plus.isUnlocked { PlusBadge() }
                     }
-                    Text(errorMessage ?? detail)
+                    Text(errorMessage ?? Self.detail(preset, hardware: hardware, plusUnlocked: plus.isUnlocked))
                         .font(.subheadline)
                         .foregroundStyle(errorMessage == nil ? Color.secondary : Color.red)
                 }
@@ -46,26 +49,29 @@ struct GameplayPresetRow: View {
             .contentShape(Rectangle())
         }
         .accessibilityLabel("Gameplay Preset")
-        .accessibilityValue("\(preset.displayName), \(errorMessage ?? detail)")
+        .accessibilityValue("\(preset.displayName), \(errorMessage ?? Self.detail(preset, hardware: hardware, plusUnlocked: plus.isUnlocked))")
         .onAppear(perform: load)
         .onChange(of: refreshToken) { load() }
         .onChange(of: hardware) { load() }
     }
 
-    private var detail: String {
+    static func detail(_ preset: GameplayPreset, hardware: HardwareModel, plusUnlocked: Bool) -> String {
         switch preset {
-        case .clean: "No hardware or display effects"
-        case .accurate: "Matched to \(hardware.displayName)"
+        case .standard: "The screen as you remember it, cleaned up"
+        case .accurate: "As on a \(hardware.displayName)"
+        case .clean: "The game's pixels, with no screen effects"
         case .custom:
-            plus.isUnlocked ? "Advanced settings differ from Clean or Accurate" : "Manual tuning requires \(PlusProduct.name)"
+            plusUnlocked
+                ? "Customize matches no preset"
+                : "Kept from earlier settings. Changing them needs \(PlusProduct.name)."
         }
     }
 
     private func choose(_ newPreset: GameplayPreset) {
-        guard newPreset != .custom else { return }
         do {
-            try GameplayPresetSettings(store: store).apply(newPreset, at: scope, hardware: hardware)
-            preset = newPreset
+            try GameplayPresetSettings(store: store).apply(
+                newPreset, at: scope, hardware: hardware, system: system, gameID: gameID, buildID: buildID
+            )
             errorMessage = nil
             onChange()
             load()
@@ -86,17 +92,8 @@ struct GameplayPresetRow: View {
     }
 
     private func load() {
-        do {
-            preset = try GameplayPresetSettings(store: store).resolvedPreset(
-                system: system,
-                gameID: gameID,
-                buildID: buildID,
-                hardware: hardware
-            )
-            errorMessage = nil
-        } catch {
-            preset = .custom
-            errorMessage = "Could not read the preset: \(error.localizedDescription)"
-        }
+        preset = GameplayPresetSettings(store: store).resolvedPreset(
+            system: system, gameID: gameID, buildID: buildID, hardware: hardware
+        )
     }
 }
