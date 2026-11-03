@@ -21,9 +21,9 @@ final class ColorDisplaySettingsTests: XCTestCase {
         let context = LaunchContext(gameID: result.build.gameID, buildID: result.build.id, saveProfileID: UUID())
         let target = try XCTUnwrap(container.gameplaySettingsTarget(for: context))
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
-        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
+        XCTAssertEqual(container.dmgPalette(for: context), .pocket, "Automatic plays a plain Game Boy game on a Pocket")
         XCTAssertEqual(container.colorCorrection(system: .gameBoyColor), .balanced)
-        XCTAssertEqual(container.dmgPalette(system: .gameBoy), .dmgGreen)
+        XCTAssertEqual(container.dmgPalette(system: .gameBoy), .pocket, "Automatic plays a plain Game Boy game on a Pocket")
         let store = container.repositories.settings
         let correctionKey = SettingKey.colorCorrection.rawValue
         let paletteKey = SettingKey.dmgPalette.rawValue
@@ -51,11 +51,11 @@ final class ColorDisplaySettingsTests: XCTestCase {
             try store.removeValue(key: paletteKey, scope: scope)
         }
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
-        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
+        XCTAssertEqual(container.dmgPalette(for: context), .pocket, "Automatic plays a plain Game Boy game on a Pocket")
         try store.setValueJSON("\"unknown\"", key: correctionKey, scope: .build(context.buildID))
         try store.setValueJSON("\"unknown\"", key: paletteKey, scope: .build(context.buildID))
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
-        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
+        XCTAssertEqual(container.dmgPalette(for: context), .pocket, "Automatic plays a plain Game Boy game on a Pocket")
     }
 
     func testAnUnsetPaletteFollowsTheModelAndAChosenOneWins() throws {
@@ -71,7 +71,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
         ))
         let context = LaunchContext(gameID: result.build.gameID, buildID: result.build.id, saveProfileID: UUID())
         let store = container.repositories.settings
-        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
+        XCTAssertEqual(container.dmgPalette(for: context), .pocket, "Automatic plays a plain Game Boy game on a Pocket")
 
         try store.set(HardwareModel.gameBoyPocket, key: SettingKey.hardwareModel.rawValue, scope: .system(.gameBoy))
         XCTAssertEqual(container.dmgPalette(for: context), .pocket, "a Pocket shows its own screen")
