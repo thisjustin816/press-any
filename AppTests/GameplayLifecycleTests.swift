@@ -172,6 +172,68 @@ final class GameplayLifecycleTests: XCTestCase {
         XCTAssertEqual(runtime.stops, 1)
     }
 
+    /// Issue #199: on iOS 27.2 the menu's morph back into its button crashed inside UIKit when an
+    /// item was chosen. The morph reads the button as it was when the menu opened, so a layout
+    /// change that arrives while the menu is open or closing, such as a rotation, a safe-area
+    /// change or a controller connecting, waits until the menu has closed.
+    func testTheMenuButtonHoldsItsPlaceWhileItsMenuIsOpenOrClosing() throws {
+        let (gameplay, _, _) = makeGameplay()
+        let (button, interaction, configuration) = try showMenu(in: gameplay)
+        let portrait = button.frame
+        XCTAssertFalse(button.isHidden)
+        XCTAssertTrue(button.isMenuActive)
+
+        gameplay.view.frame = CGRect(x: 0, y: 0, width: 844, height: 390)
+        gameplay.view.layoutIfNeeded()
+        XCTAssertEqual(button.frame, portrait, "the button holds still under an open menu")
+        XCTAssertFalse(button.isHidden)
+
+        let animator = MenuDismissalAnimator()
+        button.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
+        XCTAssertTrue(button.isMenuActive)
+        XCTAssertEqual(button.frame, portrait, "and while the menu morphs back into it")
+
+        animator.complete()
+        XCTAssertFalse(button.isMenuActive)
+        let landscape = try menuButtonFrame(width: 844, height: 390)
+        XCTAssertEqual(button.frame, landscape, "the waiting layout applies once the menu has closed")
+        XCTAssertNotEqual(landscape, portrait)
+
+        // With the menu closed, layout changes apply at once again.
+        gameplay.view.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+        gameplay.view.layoutIfNeeded()
+        XCTAssertEqual(button.frame, portrait)
+    }
+
+    func testTheMenuButtonKeepsItsLookWhileItsMenuIsOpenAndHidesOnlyAfterItCloses() throws {
+        let button = GameMenuButton(menu: UIMenu(children: []))
+        button.place(in: CGRect(x: 10, y: 20, width: 180, height: 44))
+        button.configureWordmark(palette: .classic)
+        button.layoutIfNeeded()
+        // Only the button's own delegate callbacks are exercised, so any interaction will do.
+        let interaction = button.contextMenuInteraction ?? UIContextMenuInteraction(delegate: button)
+        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in UIMenu(children: []) }
+        button.contextMenuInteraction(interaction, willDisplayMenuFor: configuration, animator: nil)
+
+        button.place(in: nil)
+        button.configureWordmark(palette: nil)
+        XCTAssertFalse(button.isHidden, "a layout with no area for the button waits for its menu")
+        let wordmark = try XCTUnwrap(button.subviews.compactMap { $0 as? UIImageView }.first)
+        XCTAssertFalse(wordmark.isHidden, "and so does a palette change")
+
+        button.contextMenuInteraction(interaction, willEndFor: configuration, animator: nil)
+        XCTAssertTrue(button.isHidden)
+        XCTAssertTrue(wordmark.isHidden)
+    }
+
+    /// Where the logo's menu button lands on a freshly laid-out gameplay screen of this size.
+    private func menuButtonFrame(width: CGFloat, height: CGFloat) throws -> CGRect {
+        let (gameplay, _, _) = makeGameplay()
+        gameplay.view.frame = CGRect(x: 0, y: 0, width: width, height: height)
+        gameplay.view.layoutIfNeeded()
+        return try XCTUnwrap(gameplay.view.subviews.compactMap { $0 as? GameMenuButton }.first).frame
+    }
+
     func testCloseGameWithoutAnOpenMenuSavesAndClosesImmediately() {
         let (gameplay, runtime, _) = makeGameplay()
         var closes = 0

@@ -815,7 +815,10 @@ claims reliability from just an old ROM, old save and new ROM.
   where it was opened, as in Photos and Files.
 - **Closing.** Close Game and Quick Play's Add to Library wait for the game menu to finish
   dismissing before saving and leaving gameplay. Chosen in the menu, they always wait, for up to
-  a second if the menu never reports closing.
+  a second if the menu never reports closing. The menu morphs out of its button and back into
+  it, so from its opening to the end of its closing animation the button holds its place and
+  look: a layout or theme change that arrives meanwhile, such as a rotation or a controller
+  connecting, applies once the menu has closed.
 - **Restart and Start Over.** Restart, beside Close Game in the game menu, asks first, then starts
   the game again from its boot and plays. The cartridge keeps its save through a reset. A library
   game first keeps where the player was as an Auto State, so States can go back to it; Quick
