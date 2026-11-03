@@ -35,8 +35,8 @@ final class LCDFilterTests: XCTestCase {
         XCTAssertEqual(reopened.gameplayValues(system: .gameBoy).displayFilter, .monochromeLCD)
         try settings.setValueJSON("\"gameCubeTV\"", key: key, scope: .build(result.build.id))
         XCTAssertEqual(
-            container.gameplayValues(for: context).displayFilter, .monochromeLCD,
-            "an unknown filter reads as unset and must not block launch"
+            container.gameplayValues(for: context).displayFilter, standard,
+            "an unknown filter, such as the retired gameCubeTV, plays the default and must not block launch"
         )
 
         // The defaults follow the hardware the game runs on.

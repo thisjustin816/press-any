@@ -21,7 +21,10 @@ final class GameplayPresetUITests: XCTestCase {
         expect(preset)
         XCTAssertTrue(presetValue(preset).hasPrefix("Nostalgic"), "an untouched system shows the standard preset, not Custom")
 
-        app.buttons["Customize"].firstMatch.tap()
+        // The row reads "Customize, Plus feature" with its Plus badge.
+        let customize = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Customize'")).firstMatch
+        expect(customize)
+        customize.tap()
         expect(app.navigationBars["Customize"])
         let blending = app.descendants(matching: .any)["Frame Blending"].firstMatch
         expect(blending)
