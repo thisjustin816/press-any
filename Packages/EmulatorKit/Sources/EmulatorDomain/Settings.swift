@@ -483,7 +483,7 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     /// Under the Model picker.
     public static let settingExplanation = settingSummary + " A save state loads only on the kind of hardware it was made on. " + automaticKeepsStates
     /// Under the Model picker, with or without Plus.
-    public static let automaticKeepsStates = "On Automatic, a game with save states from an earlier version stays on the hardware its newest state was made on, so they keep loading."
+    public static let automaticKeepsStates = "On Automatic, a game with save states from an earlier version stays on the Game Boy or Game Boy Color its newest state was made on, so they keep loading."
 
     /// What Automatic picks, under it in the Model picker.
     public static let automaticSummary = "Game Boy Color for color and Nintendo games, Super Game Boy 2 for Super Game Boy games, Game Boy Pocket for the rest"

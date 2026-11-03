@@ -932,7 +932,10 @@ extension EmulationSessionTests {
         try settings.removeValue(key: SettingKey.automaticHardware.rawValue, scope: .build(harness.buildA.id))
         let hardware = harness.gameplayHardware(settings: settings)
         let build = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
-        XCTAssertEqual(hardware.hardware(for: build), .superGameBoy, "newest state wins")
+        XCTAssertEqual(
+            hardware.hardware(for: build), .gameBoyPocket,
+            "a newest state made on a model only Plus chooses leaves the Build on the rule"
+        )
 
         let newest = try XCTUnwrap(harness.states.fetchSaveStates(buildID: build.id, saveProfileID: harness.profile.id)
             .max { $0.createdAt < $1.createdAt })

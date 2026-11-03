@@ -1368,14 +1368,16 @@ App Settings has it on the Playing page.
   Automatic never picks the original Game Boy, the Super Game Boy or the Game Boy Advance, and picks
   the Game Boy Player only with borders on. A Build that already had save states when Automatic
   began reading the header keeps the hardware its newest state was made on, of any kind and with
-  any Save Profile, so its states keep loading, borders or not; a Build without states moves to the
-  rule. Which of the two a Build gets is recorded the first time it starts, so later states never
+  any Save Profile, so its states keep loading, borders or not, when that hardware is a Game Boy or
+  Game Boy Color, the only models Automatic picked before. A newest state made on any other model
+  was made with Model set by hand, which needs Plus, so that Build follows the rule and Automatic
+  never gives a Plus model for free. A Build without states moves to the rule. Which of the two a Build gets is recorded the first time it starts, so later states never
   pin it, and a Build whose Model was set by hand then records the rule, for when Model goes back
   to Automatic. A Build on the rule follows the borders setting when it changes; that moves a game
   only between a Game Boy Color and a Game Boy Player, whose save states load on each other. Battery saves are the
   cartridge's on every model and aren't affected. The note under the Model list says so: "On
-  Automatic, a game with save states from an earlier version stays on the hardware its newest state
-  was made on, so they keep loading." A patched Build whose image isn't on disk yet shows the
+  Automatic, a game with save states from an earlier version stays on the Game Boy or Game Boy
+  Color its newest state was made on, so they keep loading." A patched Build whose image isn't on disk yet shows the
   system's choice in Settings until it starts: Game Boy Color for a Game Boy Color game, otherwise
   Game Boy Pocket.
 - Each model boots its own SameBoy boot ROM, so a game finds the hardware it checks for, such as a

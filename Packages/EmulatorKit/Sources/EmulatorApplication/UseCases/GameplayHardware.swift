@@ -89,7 +89,10 @@ public struct AutomaticHardware: Sendable {
         return try? assetStore.readData(at: url)
     }
 
-    /// The model the Build's newest save state, of any kind and with any profile, was made on.
+    /// The model the Build's newest save state, of any kind and with any profile, was made on,
+    /// when that is a Game Boy or Game Boy Color: the only models Automatic picked before it read
+    /// the header. A newest state made on another model was made with Model set by hand, which
+    /// needs Plus, so the Build follows the rule instead and Automatic never hands out a Plus model.
     /// A state that can't be read, or doesn't name its model, gives way to the next newest. Nil
     /// for a Build without states.
     private func newestStateModel(of build: Build) -> HardwareModel? {
@@ -106,7 +109,7 @@ public struct AutomaticHardware: Sendable {
                   let url = try? assetStore.managedURL(relativePath: asset.relativePath),
                   let data = try? assetStore.readData(at: url),
                   let model = core.hardwareModel(ofState: data) else { continue }
-            return model
+            return [.gameBoy, .gameBoyColor].contains(model) ? model : nil
         }
         return nil
     }
