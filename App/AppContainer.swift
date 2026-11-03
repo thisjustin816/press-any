@@ -676,13 +676,16 @@ final class AppContainer {
         gameplayValues(for: context).colorCorrection
     }
 
-    /// Free, and no preset changes it.
+    /// Free, and no preset changes it. Unset, it follows the hardware the game plays on.
     func dmgPalette(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> DMGPalette {
-        launchSetting(DMGPalette.self, .dmgPalette, system: system, gameID: gameID, buildID: buildID) ?? .defaultValue
+        launchSetting(DMGPalette.self, .dmgPalette, system: system, gameID: gameID, buildID: buildID)
+            ?? .defaultValue(for: gameplayHardware(system: system, gameID: gameID, buildID: buildID))
     }
 
     func dmgPalette(for context: LaunchContext) -> DMGPalette {
-        launchSetting(DMGPalette.self, .dmgPalette, for: context) ?? .defaultValue
+        if let stored = launchSetting(DMGPalette.self, .dmgPalette, for: context) { return stored }
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .defaultValue }
+        return .defaultValue(for: gameplayHardware(system: build.system, gameID: build.gameID, buildID: build.id))
     }
 
     /// A Game's Builds, for suggesting a new one's name and roles. Unreadable means none.

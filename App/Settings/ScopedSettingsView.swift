@@ -374,6 +374,14 @@ struct ScopedSettingsView: View {
         }
     }
 
+    /// The palette an unset Screen Colors shows: the Pocket's own where every game here that shows
+    /// a palette plays on a Pocket, the original Game Boy's otherwise.
+    private var paletteDefault: DMGPalette {
+        let palettes = resolvedHardware.map { $0 == .automatic ? .gameBoyPocket : $0 }
+            .filter { $0 == .gameBoy || $0 == .gameBoyPocket }
+        return !palettes.isEmpty && palettes.allSatisfy { $0 == .gameBoyPocket } ? .pocket : .dmgGreen
+    }
+
     var screenColorChoices: ScreenColorChoices { ScreenColorChoices(hardware: resolvedHardware) }
 
     /// A palette for hardware that shows one, free and outside the presets. Game Boy Color colors
@@ -384,7 +392,7 @@ struct ScopedSettingsView: View {
             InheritableSettingRow(
                 title: "Screen Colors",
                 key: .dmgPalette,
-                defaultValue: DMGPalette.defaultValue,
+                defaultValue: paletteDefault,
                 options: palettes.map { ($0, $0.displayName) },
                 optionImage: { DMGPalettePreview.image(for: $0) },
                 optionTitle: { $0.colorName },

@@ -58,6 +58,33 @@ final class ColorDisplaySettingsTests: XCTestCase {
         XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
     }
 
+    func testAnUnsetPaletteFollowsTheModelAndAChosenOneWins() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root, plus: .fixed(ownsPlus: true))
+        let file = root.appendingPathComponent("Pocket.gb")
+        try Data(repeating: 0, count: 0x8000).write(to: file)
+        let analysis = try container.importAnalyzer.analyzeROM(at: file, targetGameID: nil)
+        let result = try container.importCommitter.commit(ROMImportPlan(
+            analysis: analysis, disposition: .createGame(title: "Pocket"),
+            buildDisplayName: "Original", markAsBase: true
+        ))
+        let context = LaunchContext(gameID: result.build.gameID, buildID: result.build.id, saveProfileID: UUID())
+        let store = container.repositories.settings
+        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
+
+        try store.set(HardwareModel.gameBoyPocket, key: SettingKey.hardwareModel.rawValue, scope: .system(.gameBoy))
+        XCTAssertEqual(container.dmgPalette(for: context), .pocket, "a Pocket shows its own screen")
+        XCTAssertEqual(container.dmgPalette(system: .gameBoy), .pocket)
+
+        try store.set(DMGPalette.light, key: SettingKey.dmgPalette.rawValue, scope: .system(.gameBoy))
+        XCTAssertEqual(container.dmgPalette(for: context), .light, "a chosen palette wins on every model")
+
+        try store.removeValue(key: SettingKey.dmgPalette.rawValue, scope: .system(.gameBoy))
+        try store.set(HardwareModel.gameBoy, key: SettingKey.hardwareModel.rawValue, scope: .build(context.buildID))
+        XCTAssertEqual(container.dmgPalette(for: context), .dmgGreen)
+    }
+
     func testScreenColorsPickerOffersBootPalettesOnlyForOriginalGamesWithoutPlus() throws {
         let store = InMemorySettingsStore()
         for system in [GameSystem.gameBoy, .gameBoyColor] {

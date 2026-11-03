@@ -224,6 +224,12 @@ public enum DMGPalette: String, Codable, Sendable, CaseIterable {
     case cgbCamera = "cgbCamera"
 
     public static let defaultValue: Self = .dmgGreen
+
+    /// What an unset palette shows on `hardware`: the Pocket's own screen on a Game Boy Pocket,
+    /// the original Game Boy's everywhere else.
+    public static func defaultValue(for hardware: HardwareModel) -> Self {
+        hardware == .gameBoyPocket ? .pocket : .dmgGreen
+    }
     public static let explanation = "Previews show background colors above the two sprite palettes. Button combos identify Game Boy Color boot palettes; no buttons need to be held."
 
     // The legacy grayscale value stays decodable for saved settings.

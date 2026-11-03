@@ -1175,11 +1175,13 @@ emulation is later work.
   Settings, including from the in-game menu. The first row restores the inherited value and names
   its source, or says Default when no parent sets it. A checkmark marks the selected row; choosing
   a value keeps the list open so the paused picture stays visible above the half-height sheet.
-  - Original Game Boy games choose Green (DMG, the default), Olive (Pocket), Teal (Light),
+  - Original Game Boy games choose Green (DMG), Olive (Pocket), Teal (Light),
     twelve button-combo boot palettes, and six game palettes: Olive & Orange (Mole Mania),
     Red & Green (Link's Awakening), Tan & Red (Super Mario Land), Pastel & Orange (Super Mario
     Land 2), Blue & Orange (Donkey Kong Land), and Amber (Game Boy Camera). Donkey Kong Land
-    1, 2 and 3 share the same combination. The list groups Console Palettes, Button Palettes
+    1, 2 and 3 share the same combination. Unset, the palette follows the hardware: Olive on a
+    Game Boy Pocket, Green everywhere else, so choosing the Pocket as the Model shows its screen.
+    The list groups Console Palettes, Button Palettes
     and Game Palettes. Color names appear above a smaller subtitle with the console, button
     combo or game in parentheses, such as Brown (Up)
     and Black & White (Left + B). Black & White is the only grayscale choice; saved legacy
@@ -1404,8 +1406,8 @@ App Settings has it on the Playing page.
   does. On a Super Game Boy
   or Super Game Boy 2 the row can't be changed: it says "Set by the game or the Super Game Boy"
   with Super Game Boy as its value. Without Plus every game plays on Automatic, so the row follows
-  the model Automatic picks for it. On a Game Boy Pocket the default palette is Green (DMG), as on
-  a Game Boy. Where the games at a level run on several models, as in Game Boy settings on
+  the model Automatic picks for it. On a Game Boy Pocket the default palette is Olive (Pocket), its
+  own screen; on a Game Boy it is Green (DMG). Where the games at a level run on several models, as in Game Boy settings on
   Automatic, the palettes show if any of them shows one, and Customize lists Color Correction if
   any of them corrects colors.
 - A Game Boy Advance's screen is darker than a Game Boy Color's, and SameBoy colors a game on a
@@ -1569,8 +1571,12 @@ App Settings has it on the Playing page.
 - Menu items end in an ellipsis only when they ask for something more before acting: a file, a
   name, a choice in a form. Items that open a screen, and deletions that only confirm, have none.
 - A welcome screen on first launch explains the library, Builds, saves, Quick Play, the game
-  menu, exports, and that the app comes with no games. It shows once, again only when its
-  content version rises, never in automated runs, and never ahead of a shared file or game.
+  menu, how the screen looks (the gameplay presets), exports, and that the app comes with no
+  games. It shows once, again only when its content version rises, never in automated runs, and
+  never ahead of a shared file or game. v1.1 raises the content version, so players updating
+  from v1.0 see it again, with a "Games Look Different" note at the top: an untouched screen
+  setting now resolves to Nostalgic, and Clean gives unfiltered pixels. A fresh install and
+  Settings never show that note.
   Settings > How Press Any Works reopens it, and the first game shows "Tap Press Any for the
   menu" once. v1 has nothing to opt into; the v2.0 opt-ins (crash reports, usage counts) and
   Developer Mode bring their own introductions.

@@ -66,6 +66,7 @@ struct RootView: View {
     /// The open game's cheats, from its menu.
     @State private var showsGameplayCheats = false
     @State private var showsWelcome = false
+    @State private var welcomeFollowsUpdate = false
 
     var body: some View {
         withLaunchAlerts(content)
@@ -130,7 +131,7 @@ struct RootView: View {
             presentNextSharedFile()
         }) {
             NavigationStack {
-                WelcomeView { showsWelcome = false }
+                WelcomeView(showsUpdateNote: welcomeFollowsUpdate) { showsWelcome = false }
             }
         }
         .alert("Couldn’t Open the File", isPresented: sharedFileErrorBinding(overGameplay: false)) {
@@ -293,6 +294,7 @@ struct RootView: View {
         guard bootstrap.container != nil, WelcomeScreen.showsAtLaunch(),
               gameplay == nil, pendingRecovery == nil, pendingResume == nil, riskyLaunch == nil, damagedSave == nil,
               sharedFile == nil, queuedSharedFiles.isEmpty else { return }
+        welcomeFollowsUpdate = WelcomeScreen.followsUpdate()
         showsWelcome = true
     }
 
