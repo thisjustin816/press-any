@@ -126,7 +126,8 @@ count. Restore Purchases calls `AppStore.sync()`. StoreKit's own on-device cache
 working offline; there's no receipt storage, purchase server or analytics. StoreKit handles
 purchase network calls; optional artwork lookups use Libretro separately. Debug builds take
 `-GrantPlus YES` for screenshots and UI tests, and
-`-ScreenshotLCDFilter` implies it. `Config/PressAnyPlus.storekit` defines the product for Xcode
+`-ScreenshotLCDFilter` and `-ScreenshotModel` (a Model raw value, such as `dmg` or `mgb`, for every
+game in the capture) imply it. `Config/PressAnyPlus.storekit` defines the product for Xcode
 runs.
 
 ## Library model
