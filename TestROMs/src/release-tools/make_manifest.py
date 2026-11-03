@@ -47,7 +47,9 @@ def main():
             "filename": r["file"], "name": r["name"], "system": system,
             "sdk": r["sdk"], "sdk_version": r["sdk_version"],
             "mapper": MAPPERS.get(code, f"unknown (0x{code:02X})"), "cartridge_type": f"0x{code:02X}",
-            "cgb_flag": f"0x{data[0x143]:02X}", "sha256": hashlib.sha256(data).hexdigest(), "size": len(data),
+            "cgb_flag": f"0x{data[0x143]:02X}", "sgb_flag": f"0x{data[0x146]:02X}",
+            "old_licensee": f"0x{data[0x14B]:02X}", "new_licensee": data[0x144:0x146].hex().upper(),
+            "sha256": hashlib.sha256(data).hexdigest(), "size": len(data),
             "header_checksum_ok": header_checksum_ok(data), "hero": r["hero"], "tags": r["tags"],
         })
     patches = []

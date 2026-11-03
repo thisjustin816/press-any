@@ -39,5 +39,8 @@ ar rcs "$BUILD/libsameboy.a" "${objects[@]}"
   "$ROOT_DIR/Scripts/tests/sameboy_printer.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_printer_model.c" \
   "$ROOT_DIR/Scripts/tests/sameboy_joypad.c" \
+  "$ROOT_DIR/Scripts/tests/sameboy_sgb_border.c" \
   "$BUILD/libsameboy.a" -lm -o "$BUILD/smoke"
-"$BUILD/smoke"
+SGB2_BOOT_ROM="${SGB2_BOOT_ROM:-$ROOT_DIR/Packages/EmulatorKit/Sources/SameBoyAdapter/Resources/BootROMs/sgb2_boot.bin}" \
+  SGB_FIXTURE="$ROOT_DIR/TestROMs/roms/sgb-packets.gb" \
+  "$BUILD/smoke"
