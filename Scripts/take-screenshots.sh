@@ -183,10 +183,28 @@ elif shots == "summary":
             shot(f"play:{f}", 10, f"play-{system.lower()}")
 else:
     sys.exit(f"SHOTS must be listing, summary or every-rom, not {shots!r}")
+# Every display filter (DisplayFilter's raw values), on a GB and a GBC game, or on the game given,
+# after its button script and the play shot's wait when there is one.
+filters = ("off", "lcd1x", "lcd3x", "monochromeLCD", "authenticGBC", "gbaLCD", "sp101LCD", "scanlines",
+           "curvedScanlines", "slightlyCurvedScanlines", "crt240p", "crt480p")
+if game and script:
+    lines.append(f"input\t{script}")
 for system in ("GB", "GBC"):
-    if f := first(lambda r: r["system"] == system):
-        for preset in ("lcd1x", "lcd3x"):
-            shot(f"play:{f}", 10, f"play-{system.lower()}-{preset}", f"-ScreenshotLCDFilter {preset}")
+    f = game["filename"] if game else first(lambda r: r["system"] == system)
+    if f:
+        for name in filters:
+            if game and script:
+                shot(f"play:{f}", waits.get("play", 1), f"play-{name}", f"-ScreenshotLCDFilter {name}", "input")
+            else:
+                shot(f"play:{f}", 10, f"play-{system.lower()}-{name}", f"-ScreenshotLCDFilter {name}")
+    if game:
+        break
+# Automatic plays most Game Boy games on a Pocket, so the Game Boy and Pocket screens are forced
+# with -ScreenshotModel, on a Game Boy test ROM since a color game can't run on either.
+if dmg_rom := first(lambda r: r["system"] == "GB"):
+    for model, label in (("dmg", "gameboy"), ("mgb", "pocket")):
+        for name in ("lcd1x", "monochromeLCD"):
+            shot(f"play:{dmg_rom}", 10, f"play-{label}-{name}", f"-ScreenshotModel {model} -ScreenshotLCDFilter {name}")
 shot(f"play:{names[0]}", 10, "play-gamepad", "-ScreenshotGamepad YES")
 # The Playtiles layout is drawn after a GBC skin, so it shows a GBC game when one was chosen.
 playtiles_rom = first(lambda r: r["system"] == "GBC") or names[0]

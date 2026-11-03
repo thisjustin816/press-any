@@ -30,8 +30,8 @@ struct AcknowledgementsView: View {
         Component(
             name: "SameBoy",
             use: """
-            Game Boy, Super Game Boy, Game Boy Color and Game Boy Advance emulation, boot ROMs and
-            boot palettes by Lior Halphon.
+            Game Boy, Super Game Boy, Game Boy Color and Game Boy Advance emulation, boot ROMs,
+            boot palettes and the color LCD shader by Lior Halphon.
             Source: https://github.com/LIJI32/SameBoy
             """,
             license: .bundled(file: "SameBoy-LICENSE")
@@ -57,12 +57,37 @@ struct AcknowledgementsView: View {
         ),
         Component(
             name: "libretro LCD shaders",
-            use: "The idea behind the LCD 1× and LCD 3× display filters",
+            use: "The idea behind the Pixel Grid, RGB Subpixels and Backlit GBA SP LCD grids",
             license: .publicDomain(credit: """
-            \(AppBrand.displayName)’s LCD 1× and LCD 3× filters are its own shader code, modelled \
-            on the LCD shaders in libretro’s slang-shaders collection for RetroArch \
+            \(AppBrand.displayName)’s pixel grids are its own shader code, modelled on the LCD shaders \
+            in libretro’s slang-shaders collection for RetroArch \
             (https://github.com/libretro/slang-shaders), among them lcd3x by Gigaherz, which is in \
             the public domain. No shader code was copied from them. They are credited here anyway.
+            """)
+        ),
+        Component(
+            name: "Authentic GBC",
+            use: "The Game Boy Color LCD’s subpixel shapes and defaults, by fishku (fishcu), from version 2.2, ported to Metal. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/authentic_gbc",
+            license: .bundled(file: "AuthenticGBC-LICENSE")
+        ),
+        Component(
+            name: "CRT-Lottes",
+            use: "The model for the CRT 240p, CRT 480p, Scanlines, Curved Scanlines and Slightly Curved Scanlines treatments, by Timothy Lottes. They are this app’s own shader, using its Gaussian beam, sRGB light and mask approach. Source: https://github.com/libretro/slang-shaders/blob/master/crt/shaders/crt-lottes.slang",
+            license: .bundled(file: "DisplayShaders-PublicDomain")
+        ),
+        Component(
+            name: "GBA and SP101 color profiles",
+            use: "The Game Boy Advance and backlit Game Boy Advance SP (AGS-101) screen colors, by Pokefan531 and hunterk, optimized by crashGG. Source: https://github.com/libretro/slang-shaders/tree/master/handheld/shaders/color",
+            license: .bundled(file: "DisplayShaders-PublicDomain")
+        ),
+        Component(
+            name: "BGB screen measurements",
+            use: "The Monochrome LCD’s Game Boy and Game Boy Pocket screen colors",
+            license: .rightsNotice(credit: """
+            BGB’s reality page by beware (https://bgb.bircd.org/reality/) measures the screens \
+            of a Game Boy and a Game Boy Pocket from photos taken under color-accurate light and \
+            corrected with a color checker. \(AppBrand.displayName)’s Monochrome LCD is its own \
+            shader, brightened from those measured colors. No code or images from BGB are included.
             """)
         ),
         Component(

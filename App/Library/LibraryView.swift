@@ -287,7 +287,8 @@ struct LibraryView: View {
                     store: container.repositories.settings,
                     plus: container.plus,
                     marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: game.id, buildID: nil),
-                    hasCamera: container.hasCameraCartridge(gameID: game.id, buildID: nil)
+                    hasCamera: container.hasCameraCartridge(gameID: game.id, buildID: nil),
+                    gameplayHardware: container.hardware
                 )
             }
             .sheet(isPresented: $showSettings) {
@@ -296,7 +297,8 @@ struct LibraryView: View {
                     plus: container.plus,
                     integrityChecker: container.integrityChecker,
                     libraryDeletion: container.libraryDeletion,
-                    games: container.repositories.games
+                    games: container.repositories.games,
+                    gameplayHardware: container.hardware
                 )
             }
             .alert("Rename Game", isPresented: Binding(

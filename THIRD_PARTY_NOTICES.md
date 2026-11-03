@@ -115,17 +115,50 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
 - Usage: `Scripts/test-accuracy-roms.sh` fetches and builds them at run time to check the core's
   results. None of them is committed here or ships in the app.
 
-## LCD display filters
+## Display filters
 
-- Code: `App/Gameplay/Shaders.metal`, the LCD 1x and LCD 3x filters. Press Any's own shader code,
-  written for this project. No code is copied from the shaders below; their formulas differ.
-- Inspiration: the LCD shaders in libretro's slang-shaders collection
-  (https://github.com/libretro/slang-shaders), RetroArch's shader set. `lcd3x`, by Gigaherz, is
-  the closest. Its header says "License: Public domain". The collection's other LCD shaders, such
-  as `lcd-grid-v2`, carry no author or license header, and Press Any does not use them.
-- Credit: the app credits the libretro shaders in Acknowledgements even though nothing is copied
-  and `lcd3x` asks for none. The author of any shader that ships later is credited the same way
-  (see AGENTS.md).
+`App/Gameplay/Shaders.metal` and `App/Gameplay/DisplayShaders.h` hold the gameplay display
+filters. Sources not in this repository are pinned below; nothing GPL-licensed is copied or
+ported. libretro's `lcd1x`, `crt-geom`, `crt-easymode`, `crt-pi`, `crt-aperture`, `zfast_lcd` and
+`crt-guest-advanced` headers declare the GPL, so Press Any uses none of their code.
+
+- Pixel Grid, RGB Subpixels and the grid of Backlit GBA SP LCD: Press Any's own shader code,
+  written for this project and unchanged from v1.0's LCD 1x and LCD 3x. Inspiration: the LCD
+  shaders in libretro's slang-shaders collection (https://github.com/libretro/slang-shaders),
+  closest to `handheld/shaders/lcd3x.slang` by Gigaherz, whose header says "License: Public
+  domain". No code is copied; the app credits them in Acknowledgements anyway.
+- Game Boy Advance LCD: SameBoy's `Shaders/LCD.fsh` by Lior Halphon, ported to Metal with its
+  default constants, at the SameBoy pin above. It is outside SameBoy's restricted `iOS/`
+  directory, so its Expat license applies; the bundled `App/Acknowledgements/SameBoy-LICENSE.txt`
+  covers it.
+- Monochrome LCD: Press Any's own shader. Its Game Boy and Game Boy Pocket colors start from
+  the measured screen colors on BGB's reality page by beware (https://bgb.bircd.org/reality/),
+  read from its swatches; `docs/display-presets.md` lists them and how the app brightens them.
+  They are cited measurements: no BGB code or images are included. Settings > Acknowledgements
+  credits the page anyway.
+- Game Boy Color LCD: the subpixel geometry of Authentic GBC v2.2 by fishku (fishcu), copyright
+  2024-2025, "Public domain license (CC0)", from `handheld/shaders/authentic_gbc/`, with its
+  default brightness 0.6 and smoothing 0.3 and host subpixel rendering off. Authentic GBC also
+  includes `misc/shaders/coverage/coverage.inc`, which carries no license statement, so Press
+  Any does not use it: the pixel coverage math is the app's own. The declaration and the CC0 text
+  are bundled in `App/Acknowledgements/AuthenticGBC-LICENSE.txt`.
+- Game Boy Advance and backlit Game Boy Advance SP (AGS-101) colors: the sRGB matrices and
+  luminance of `handheld/shaders/color/gba-color.slang` and `sp101-color.slang`, by Pokefan531
+  and hunterk, optimized by crashGG, "License: Public domain". Core color correction is off in the
+  presets that use them, so colors are corrected once.
+- CRT 240p, CRT 480p, Scanlines, Curved Scanlines and Slightly Curved Scanlines: Press Any's
+  own shader, modelled on CRT-Lottes by Timothy
+  Lottes (`crt/shaders/crt-lottes.slang`), whose header reads "PUBLIC DOMAIN CRT STYLED
+  SCAN-LINE SHADER ... Please take and use, change, or whatever." It uses CRT-Lottes's approach
+  (a Gaussian beam across each line, a Gaussian reconstruction along it, light in linear sRGB and
+  a phosphor mask) and, for CRT 240p, its default scanline hardness, with its own geometry
+  (a warp derived from published tube radii, in `docs/display-presets.md`), sharper horizontal
+  reconstruction, source-locked masks and glow.
+- The libretro sources above are pinned to `53deb2efcb79f4fc3e94e9602d5974b4b64e8f94`:
+  https://github.com/libretro/slang-shaders/tree/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94. The
+  public-domain declarations and source URLs are bundled in
+  `App/Acknowledgements/DisplayShaders-PublicDomain.txt`, and Settings > Acknowledgements credits
+  every author.
 
 ## Game Boy Printer firmware research
 
@@ -145,9 +178,9 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
 ## In the app
 
 Settings > Acknowledgements lists the code, artwork and data used in the app. SameBoy's,
-GRDB.swift's and Corporatus's notices are bundled in `App/Acknowledgements/`; gbtoolsid, which is in
-the public domain, No-Intro, the libretro LCD shaders and the Game Boy Printer firmware research get
-a credit.
+GRDB.swift's and Corporatus's notices are bundled in `App/Acknowledgements/`, as are the display
+filters' (see Display filters); gbtoolsid, which is in the public domain, No-Intro, the libretro LCD
+shaders and the Game Boy Printer firmware research get a credit.
 
 ## Updating a dependency
 

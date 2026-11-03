@@ -64,7 +64,7 @@ public final class EmulationSession: @unchecked Sendable {
     private let cheats: (any BuildCheatRepository)?
     private var lastCheckpointNanoseconds: UInt64 = 0
     private let writesTimedStates: @Sendable () -> Bool
-    private let choosesHardwareModel: @Sendable () -> Bool
+    private let hardware: GameplayHardware
     private var timedStateStartedAt: Date?
 
     private let lock = NSLock()
@@ -120,7 +120,15 @@ public final class EmulationSession: @unchecked Sendable {
         self.imageResolver = imageResolver
         self.now = now
         self.writesTimedStates = writesTimedStates
-        self.choosesHardwareModel = choosesHardwareModel
+        self.hardware = GameplayHardware(
+            builds: builds,
+            settings: settings,
+            automatic: AutomaticHardware(
+                profiles: profiles, states: states, assets: assets, assetStore: assetStore,
+                coreRegistry: coreRegistry, settings: settings?.store
+            ),
+            choosesModel: choosesHardwareModel
+        )
         self.coreResolver = ResolveCoreForBuild(builds: builds, registry: coreRegistry, now: now)
         self.coreRegistry = coreRegistry
         self.persistentSaveService = PersistentSaveService(profiles: profiles, assets: assets, assetStore: assetStore, now: now)
@@ -189,8 +197,10 @@ public final class EmulationSession: @unchecked Sendable {
             // The save as the core reports it, which can differ in size from the file, so an
             // unchanged save isn't mistaken for a new one.
             var savedBattery = Data()
-            let model = hardwareModel(build)
-            let bounce = buttonBounce(build)
+            // Recording what Automatic picks is what keeps it from changing once the Build has
+            // states; a launch that can't record it still plays on the same choice.
+            let model = (try? hardware.recordForStart(build, image: rom)) ?? hardware.hardware(for: build, image: rom)
+            let bounce = buttonBounce(build, hardware: model)
 
             func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
                 let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
@@ -248,7 +258,7 @@ public final class EmulationSession: @unchecked Sendable {
             lock.withLock {
                 worker = newWorker
                 activeContext = context
-                _runningHardwareModel = model.resolved(for: build.system)
+                _runningHardwareModel = model
                 imageLease = lease
                 sessionEmulatedNanoseconds = 0
                 playtime.reset()
@@ -326,17 +336,13 @@ public final class EmulationSession: @unchecked Sendable {
         return skip ?? false
     }
 
-    /// Whether buttons chatter after a change, as the setting resolved for this Build says. An
-    /// unreadable setting keeps SameBoy's default, on.
-    private func buttonBounce(_ build: Build) -> Bool {
-        let bounce = try? settings?.decode(
-            Bool.self,
-            key: SettingKey.buttonBounce.rawValue,
-            system: build.system,
-            gameID: build.gameID,
-            buildID: build.id
-        )
-        return bounce ?? true
+    /// Whether buttons chatter after a change on `hardware`, as the setting or gameplay preset
+    /// resolved for this Build says. Unset or unreadable means the standard preset's choice.
+    private func buttonBounce(_ build: Build, hardware: HardwareModel) -> Bool {
+        guard let store = settings?.store else { return GameplayPresetValues.standard(for: hardware).buttonBounce }
+        return GameplayPresetSettings(store: store).effectiveValues(
+            system: build.system, gameID: build.gameID, buildID: build.id, hardware: hardware
+        ).buttonBounce
     }
 
     /// The hardware the open game runs on, or nil with no game open.
@@ -349,7 +355,7 @@ public final class EmulationSession: @unchecked Sendable {
     public func changedHardwareModel() -> HardwareModel? {
         guard let (_, context, _) = try? snapshotActive(),
               let build = try? builds.fetchBuild(id: context.buildID) else { return nil }
-        let model = hardwareModel(build).resolved(for: build.system)
+        let model = hardware.hardware(for: build)
         return model == runningHardwareModel ? nil : model
     }
 
@@ -374,24 +380,10 @@ public final class EmulationSession: @unchecked Sendable {
                 return nil
             }
             made = (core as? any HardwareModelCapability)?.hardwareFamily(ofState: data)
-            runsOn = hardwareModel(build).resolved(for: build.system)
+            runsOn = hardware.hardware(for: build)
         }
         guard let made, made != runsOn.family else { return nil }
         return made
-    }
-
-    /// The hardware the Build runs on: the setting resolved for it, or Automatic when choosing
-    /// isn't allowed or the setting can't be read.
-    private func hardwareModel(_ build: Build) -> HardwareModel {
-        guard choosesHardwareModel() else { return .automatic }
-        let model = try? settings?.decode(
-            HardwareModel.self,
-            key: SettingKey.hardwareModel.rawValue,
-            system: build.system,
-            gameID: build.gameID,
-            buildID: build.id
-        )
-        return model ?? .automatic
     }
 
     @discardableResult
@@ -417,6 +409,15 @@ public final class EmulationSession: @unchecked Sendable {
         let (worker, _, _) = try snapshotActive()
         try worker.perform { $0.setSpeed(speed) }
         lock.withLock { playtime.setSpeed(speed) }
+    }
+
+    /// Changes button bounce on the open game. With no game open there is nothing to change: the
+    /// next start reads the setting.
+    public func setButtonBounce(_ enabled: Bool) throws {
+        guard let (worker, _, _) = try? snapshotActive() else { return }
+        try worker.perform { core in
+            (core as? any ButtonBounceCapability)?.setButtonBounce(enabled)
+        }
     }
 
     @discardableResult
@@ -671,8 +672,8 @@ public final class EmulationSession: @unchecked Sendable {
         try saveAutoState()
         let build = try builds.fetchBuild(id: context.buildID)
         let skipBoot = build.map(skipsBootAnimation) ?? false
-        let model = build.map(hardwareModel)
-        let bounce = build.map(buttonBounce)
+        let model = build.map { hardware.hardware(for: $0) }
+        let bounce = build.flatMap { build in model.map { buttonBounce(build, hardware: $0) } }
         try worker.perform { core in
             if let bounce { (core as? any ButtonBounceCapability)?.setButtonBounce(bounce) }
             if let model { try (core as? any HardwareModelCapability)?.setHardwareModel(model) }
@@ -681,7 +682,7 @@ public final class EmulationSession: @unchecked Sendable {
         }
         lock.withLock {
             latestFrame = nil
-            if let model, let build, activeContext == context { _runningHardwareModel = model.resolved(for: build.system) }
+            if let model, activeContext == context { _runningHardwareModel = model }
         }
     }
 

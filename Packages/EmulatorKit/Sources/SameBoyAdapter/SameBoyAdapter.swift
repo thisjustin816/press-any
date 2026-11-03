@@ -142,7 +142,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         guard supportedSystems.contains(system) else {
             throw SameBoyAdapterError.unsupportedSystem(system)
         }
-        let model = hardwareModel.resolved(for: system)
+        let model = hardwareModel.resolved(forImage: rom, system: system)
         let created = try makeInstance(rom, model: model)
         if let instance { SBDestroy(instance) }
         instance = created
@@ -155,12 +155,12 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     public func setHardwareModel(_ model: HardwareModel) throws {
         guard model != hardwareModel else { return }
         guard let instance, let rom = loadedImage, let system = loadedSystem,
-              model.resolved(for: system) != runningModel else {
+              model.resolved(forImage: rom, system: system) != runningModel else {
             hardwareModel = model
             return
         }
         let battery = try persistentSaveData()
-        let resolved = model.resolved(for: system)
+        let resolved = model.resolved(forImage: rom, system: system)
         let created = try makeInstance(rom, model: resolved)
         battery.withUnsafeBytes { bytes in
             SBLoadBattery(created, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
@@ -204,8 +204,8 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
 
     private static func bridgeModel(_ model: HardwareModel) -> SBModel {
         switch model {
-        case .automatic, .gameBoy: SB_MODEL_DMG
-        case .gameBoyPocket: SB_MODEL_MGB
+        case .gameBoy: SB_MODEL_DMG
+        case .automatic, .gameBoyPocket: SB_MODEL_MGB
         case .superGameBoy: SB_MODEL_SGB
         case .superGameBoy2: SB_MODEL_SGB2
         case .gameBoyColor: SB_MODEL_CGB
@@ -398,9 +398,36 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         Self.stateFamily(state)
     }
 
+    /// A Game Boy Advance and a Game Boy Player write the same model, so a state from either reads
+    /// as a Game Boy Advance.
+    public func hardwareModel(ofState state: Data) -> HardwareModel? {
+        guard let model = Self.stateModelCode(state) else { return nil }
+        return switch (model.family, model.model) {
+        case (UInt8(ascii: "G"), UInt8(ascii: "D")): .gameBoy
+        case (UInt8(ascii: "G"), UInt8(ascii: "M")): .gameBoyPocket
+        case (UInt8(ascii: "S"), UInt8(ascii: "N")), (UInt8(ascii: "S"), UInt8(ascii: "P")): .superGameBoy
+        case (UInt8(ascii: "S"), UInt8(ascii: "2")): .superGameBoy2
+        case (UInt8(ascii: "C"), UInt8(ascii: "C")): .gameBoyColor
+        case (UInt8(ascii: "C"), UInt8(ascii: "A")): .gameBoyAdvance
+        default: nil
+        }
+    }
+
     /// The hardware family a state was made on, from the model its BESS CORE block names, or nil
     /// when the state has no readable BESS footer.
     static func stateFamily(_ state: Data) -> HardwareFamily? {
+        switch stateModelCode(state)?.family {
+        case UInt8(ascii: "G"): .gameBoy
+        case UInt8(ascii: "S"): .superGameBoy
+        case UInt8(ascii: "C"): .gameBoyColor
+        default: nil
+        }
+    }
+
+    /// The first two characters of the model the state's BESS CORE block names: the family, such
+    /// as G, and the model within it, such as M for a Game Boy Pocket. Nil when the state has no
+    /// readable BESS footer.
+    private static func stateModelCode(_ state: Data) -> (family: UInt8, model: UInt8)? {
         let bytes = [UInt8](state)
         func uint32LE(_ offset: Int) -> Int? {
             guard offset >= 0, offset + 4 <= bytes.count else { return nil }
@@ -416,13 +443,8 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         while let name = tag(offset), let size = uint32LE(offset + 4), name != "END " {
             if name == "CORE" {
                 // After the block header come the major and minor versions, then the model.
-                guard offset + 12 < bytes.count else { return nil }
-                switch bytes[offset + 12] {
-                case UInt8(ascii: "G"): return .gameBoy
-                case UInt8(ascii: "S"): return .superGameBoy
-                case UInt8(ascii: "C"): return .gameBoyColor
-                default: return nil
-                }
+                guard offset + 13 < bytes.count else { return nil }
+                return (bytes[offset + 12], bytes[offset + 13])
             }
             offset += 8 + size
         }
@@ -449,8 +471,8 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
 
     private static func loadBootROM(for model: HardwareModel) throws -> Data {
         let resourceName = switch model {
-        case .automatic, .gameBoy: "dmg_boot"
-        case .gameBoyPocket: "mgb_boot"
+        case .gameBoy: "dmg_boot"
+        case .automatic, .gameBoyPocket: "mgb_boot"
         case .superGameBoy: "sgb_boot"
         case .superGameBoy2: "sgb2_boot"
         case .gameBoyColor: "cgb_boot"

@@ -27,12 +27,17 @@ struct ScopedSettingsView: View {
     /// A Game Boy Camera cartridge, which shows the Game Boy Camera setting. System pages always
     /// show it, since they set it for every camera game.
     var hasCamera = false
+    /// What games here play on. Without it, as in previews, the Model setting decides, and
+    /// Automatic counts as every model it picks among for the system.
+    var gameplayHardware: GameplayHardware?
 
     @Environment(\.dismiss) private var dismiss
     @State private var showsPlus = false
-    /// The hardware games here run on, which decides the Screen Colors row and whether Game Boy
-    /// Advance Colors shows. Read again after each change.
-    @State private var hardware: HardwareModel?
+    /// The models games here run on, which decide the Screen Colors row and which Customize rows
+    /// show. Read again after each change.
+    @State private var hardware: [HardwareModel]?
+    @State private var settingsRevision = 0
+    @State private var presetError: String?
 
     var body: some View {
         if inSheet {
@@ -50,6 +55,8 @@ struct ScopedSettingsView: View {
 
     private var form: some View {
         Form {
+            gameplayPresetSection
+            if let presetError { Section { Text(presetError).foregroundStyle(.red) } }
             displaySection
             controlsSection
             fastForwardSection
@@ -68,13 +75,33 @@ struct ScopedSettingsView: View {
         hardware = currentHardware()
     }
 
-    /// Never Automatic: that resolves to the system's own hardware. Without Plus every game plays
-    /// on Automatic.
-    var resolvedHardware: HardwareModel {
+    private func settingsChanged() {
+        let previous = hardware ?? currentHardware()
+        let current = currentHardware()
+        do {
+            try GameplayPresetSettings(store: store).retargetBuiltInPreset(
+                from: previous, to: current, at: scope, system: system, gameID: gameID, buildID: buildID
+            )
+            presetError = nil
+        } catch {
+            presetError = "Could not apply the preset to this Model: \(error.localizedDescription)"
+        }
+        hardware = current
+        settingsRevision += 1
+        onChange?()
+    }
+
+    /// Never Automatic and never empty: a Build's own model, each of a Game's Builds' models, or
+    /// for a system on Automatic every model Automatic picks among, since each game gets its own.
+    /// Without Plus every game plays on Automatic.
+    var resolvedHardware: [HardwareModel] {
         hardware ?? currentHardware()
     }
 
-    private func currentHardware() -> HardwareModel {
+    private func currentHardware() -> [HardwareModel] {
+        if let gameplayHardware {
+            return gameplayHardware.hardware(system: system, gameID: gameID, buildID: buildID)
+        }
         let stored = try? SettingsResolver(store: store).decode(
             HardwareModel.self,
             key: SettingKey.hardwareModel.rawValue,
@@ -83,10 +110,145 @@ struct ScopedSettingsView: View {
             buildID: buildID
         )
         let model = plus.isUnlocked ? stored ?? .automatic : .automatic
-        return model.resolved(for: system)
+        return model == .automatic ? HardwareModel.automaticChoices(for: system) : [model]
     }
 
-    // Separate properties keep each section small enough for the compiler to type-check quickly.
+    /// The model whose values a Customize row shows by default: the first here that has the
+    /// setting, or the first here when none does.
+    private func defaultsHardware(for key: SettingKey) -> HardwareModel {
+        let models = resolvedHardware
+        let match: HardwareModel? = switch key {
+        case .colorCorrection: models.first(where: ScreenColorChoices.correctsColors)
+        case .advanceColors: models.first(where: \.isGameBoyAdvance)
+        default: nil
+        }
+        return match ?? models[0]
+    }
+
+    private var gameplayPresetSection: some View {
+        Section {
+            GameplayPresetRow(
+                scope: scope,
+                system: system,
+                gameID: gameID,
+                buildID: buildID,
+                hardware: resolvedHardware,
+                store: store,
+                plus: plus,
+                refreshToken: settingsRevision,
+                onChange: {
+                    settingsRevision += 1
+                    onChange?()
+                }
+            )
+            modelSetting
+            screenColors
+            NavigationLink {
+                Form {
+                    Section {
+                        customGameplayRows
+                    } footer: {
+                        Text(Self.customizeFooter(plus.gate))
+                    }
+                }
+                .scrollOverflowCue()
+                .navigationTitle("Customize")
+                .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Customize")
+                    if !plus.isUnlocked { PlusBadge() }
+                }
+            }
+        } header: {
+            Text("Gameplay")
+        } footer: {
+            Text(Self.gameplayFooter)
+        }
+    }
+
+    static let gameplayFooter = "\(GameplayPreset.standardName), Accurate and Clean each set the screen, frame blending and Button Bounce for the Model. Every preset and Screen Colors are free. Customize changes the settings a preset sets, one by one, with \(PlusProduct.name)."
+
+    static func customizeFooter(_ gate: PlusGate) -> String {
+        let rules = gate.isLocked(true)
+            ? "Changing these needs \(PlusProduct.name). Choosing one opens the Plus screen and changes nothing."
+            : "A change here makes the preset Custom, until every value matches a preset again."
+        return rules + " Every display filter works on every Model. " + buttonBounceExplanation
+    }
+
+    private var modelSetting: some View {
+        InheritableSettingRow(
+            title: "Model",
+            key: .hardwareModel,
+            defaultValue: HardwareModel.automatic,
+            options: HardwareModel.allCases.map { ($0, $0.displayName) },
+            optionSubtitle: { $0 == .automatic ? HardwareModel.automaticSummary : nil },
+            listSections: modelSections,
+            explanation: plus.isUnlocked ? HardwareModel.settingExplanation : HardwareModel.lockedExplanation,
+            needsPlus: \.needsPlus,
+            reloadToken: settingsRevision,
+            context: context
+        )
+    }
+
+    /// What a Customize row shows when nothing sets it: the standard preset's value on the hardware.
+    private func standard(_ key: SettingKey) -> GameplayPresetValues {
+        GameplayPresetValues.standard(for: defaultsHardware(for: key))
+    }
+
+    /// Color Correction shows when any game here plays on a model that corrects colors.
+    @ViewBuilder private var customGameplayRows: some View {
+        if resolvedHardware.contains(where: ScreenColorChoices.correctsColors) {
+            let corrections = ColorCorrection.allCases
+            InheritableSettingRow(
+                title: "Color Correction",
+                key: .colorCorrection,
+                defaultValue: standard(.colorCorrection).colorCorrection ?? ColorCorrection.defaultValue,
+                options: corrections.map { ($0, $0.displayName) },
+                listSections: [SettingOptionSection(title: "Color Correction", values: corrections)],
+                explanation: ColorCorrection.explanation,
+                reloadToken: settingsRevision,
+                context: context
+            )
+        }
+        if resolvedHardware.contains(where: \.isGameBoyAdvance) {
+            InheritableSettingRow(
+                title: "Game Boy Advance Colors",
+                key: .advanceColors,
+                defaultValue: standard(.advanceColors).advanceColors ?? AdvanceColors.gameBoyAdvance,
+                options: AdvanceColors.allCases.map { ($0, $0.displayName) },
+                listSections: [SettingOptionSection(title: "Game Boy Advance Colors", values: AdvanceColors.allCases)],
+                explanation: AdvanceColors.explanation,
+                reloadToken: settingsRevision,
+                context: context
+            )
+        }
+        InheritableSettingRow(
+            title: "Display Filter",
+            key: .lcdFilter,
+            defaultValue: standard(.lcdFilter).displayFilter,
+            options: DisplayFilter.selectable.map { ($0, $0.displayName) },
+            reloadToken: settingsRevision,
+            context: context
+        )
+        InheritableSettingRow(
+            title: "Frame Blending",
+            key: .frameBlending,
+            defaultValue: standard(.frameBlending).frameBlending,
+            options: FrameBlending.allCases.map { ($0, $0.displayName) },
+            reloadToken: settingsRevision,
+            context: context
+        )
+        InheritableSettingRow(
+            title: "Button Bounce",
+            key: .buttonBounce,
+            defaultValue: standard(.buttonBounce).buttonBounce,
+            options: [(true, "On"), (false, "Off")],
+            reloadToken: settingsRevision,
+            context: context
+        )
+    }
+
     private var displaySection: some View {
         Section {
             InheritableSettingRow(
@@ -94,6 +256,7 @@ struct ScopedSettingsView: View {
                 key: .orientation,
                 defaultValue: ScreenOrientation.automatic,
                 options: [(.automatic, "Automatic"), (.portrait, "Portrait"), (.landscape, "Landscape")],
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -101,33 +264,7 @@ struct ScopedSettingsView: View {
                 key: .screenScaling,
                 defaultValue: ScreenScaling.integer,
                 options: [(.integer, "Integer"), (.fill, "Fill")],
-                context: context
-            )
-            screenColors
-            if resolvedHardware.isGameBoyAdvance {
-                InheritableSettingRow(
-                    title: "Game Boy Advance Colors",
-                    key: .advanceColors,
-                    defaultValue: AdvanceColors.gameBoyAdvance,
-                    options: AdvanceColors.allCases.map { ($0, $0.displayName) },
-                    listSections: [SettingOptionSection(title: "Game Boy Advance Colors", values: AdvanceColors.allCases)],
-                    explanation: AdvanceColors.explanation,
-                    context: context
-                )
-            }
-            InheritableSettingRow(
-                title: "LCD Filter",
-                key: .lcdFilter,
-                defaultValue: LCDFilter.off,
-                options: LCDFilter.allCases.map { ($0, $0.displayName) },
-                needsPlus: \.needsPlus,
-                context: context
-            )
-            InheritableSettingRow(
-                title: "Frame Blending",
-                key: .frameBlending,
-                defaultValue: FrameBlending.off,
-                options: FrameBlending.allCases.map { ($0, $0.displayName) },
+                reloadToken: settingsRevision,
                 context: context
             )
         } header: {
@@ -143,6 +280,7 @@ struct ScopedSettingsView: View {
                 defaultValue: TouchControlStyle.gameBoy,
                 options: [(.gameBoy, "Game Boy"), (.playtiles, "Playtiles")],
                 isAvailable: ControllerLayoutAvailability.isAvailable,
+                reloadToken: settingsRevision,
                 context: context
             )
         } header: {
@@ -162,6 +300,7 @@ struct ScopedSettingsView: View {
                 key: .fastForwardSpeed,
                 defaultValue: FastForwardSpeed.x2,
                 options: FastForwardSpeed.allCases.map { ($0, $0.displayName) },
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -169,6 +308,7 @@ struct ScopedSettingsView: View {
                 key: .fastForwardAudio,
                 defaultValue: FastForwardAudio.muted,
                 options: FastForwardAudio.allCases.map { ($0, $0.displayName) },
+                reloadToken: settingsRevision,
                 context: context
             )
         }
@@ -182,6 +322,7 @@ struct ScopedSettingsView: View {
                 defaultValue: TimedStates.off,
                 options: TimedStates.allCases.map { ($0, $0.displayName) },
                 needsPlus: \.needsPlus,
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -189,6 +330,7 @@ struct ScopedSettingsView: View {
                 key: .autoResumePolicy,
                 defaultValue: AutoResumePolicy.always,
                 options: [(.always, "Always"), (.ask, "Ask"), (.never, "Never")],
+                reloadToken: settingsRevision,
                 context: context
             )
             InheritableSettingRow(
@@ -196,31 +338,11 @@ struct ScopedSettingsView: View {
                 key: .skipBootAnimation,
                 defaultValue: false,
                 options: [(true, "On"), (false, "Off")],
-                context: context
-            )
-            InheritableSettingRow(
-                title: "Button Bounce",
-                key: .buttonBounce,
-                defaultValue: true,
-                options: [(true, "On"), (false, "Off")],
-                context: context
-            )
-            InheritableSettingRow(
-                title: "Model",
-                key: .hardwareModel,
-                defaultValue: HardwareModel.automatic,
-                options: HardwareModel.allCases.map { ($0, $0.displayName) },
-                optionSubtitle: { $0 == .automatic ? HardwareModel.automaticSummary : nil },
-                listSections: modelSections,
-                explanation: plus.isUnlocked ? HardwareModel.settingExplanation : HardwareModel.lockedExplanation,
-                needsPlus: \.needsPlus,
+                reloadToken: settingsRevision,
                 context: context
             )
         } header: {
             Text("Playing")
-        } footer: {
-            // A menu row shows no explanation of its own, so Button Bounce's goes here.
-            Text(Self.buttonBounceExplanation + " " + HardwareModel.settingSummary)
         }
     }
 
@@ -233,6 +355,7 @@ struct ScopedSettingsView: View {
                 options: GameBoyCamera.allCases.map { ($0, $0.displayName) },
                 listSections: [SettingOptionSection(title: "Camera", values: GameBoyCamera.allCases)],
                 explanation: GameBoyCamera.explanation,
+                reloadToken: settingsRevision,
                 context: context
             )
         }
@@ -251,16 +374,25 @@ struct ScopedSettingsView: View {
         }
     }
 
+    /// The palette an unset Screen Colors shows: the Pocket's own where every game here that shows
+    /// a palette plays on a Pocket, the original Game Boy's otherwise.
+    private var paletteDefault: DMGPalette {
+        let palettes = resolvedHardware.map { $0 == .automatic ? .gameBoyPocket : $0 }
+            .filter { $0 == .gameBoy || $0 == .gameBoyPocket }
+        return !palettes.isEmpty && palettes.allSatisfy { $0 == .gameBoyPocket } ? .pocket : .dmgGreen
+    }
+
     var screenColorChoices: ScreenColorChoices { ScreenColorChoices(hardware: resolvedHardware) }
 
-    /// Each kind of hardware has its own Screen Colors, so only the one that applies shows.
+    /// A palette for hardware that shows one, free and outside the presets. Game Boy Color colors
+    /// are Color Correction, under Customize.
     @ViewBuilder private var screenColors: some View {
         switch screenColorChoices {
         case .dmg(let palettes):
             InheritableSettingRow(
                 title: "Screen Colors",
                 key: .dmgPalette,
-                defaultValue: DMGPalette.defaultValue,
+                defaultValue: paletteDefault,
                 options: palettes.map { ($0, $0.displayName) },
                 optionImage: { DMGPalettePreview.image(for: $0) },
                 optionTitle: { $0.colorName },
@@ -270,18 +402,11 @@ struct ScopedSettingsView: View {
                 },
                 explanation: DMGPalette.explanation,
                 normalizeValue: { $0.selectionValue },
+                reloadToken: settingsRevision,
                 context: context
             )
-        case .correction(let corrections):
-            InheritableSettingRow(
-                title: "Screen Colors",
-                key: .colorCorrection,
-                defaultValue: ColorCorrection.defaultValue,
-                options: corrections.map { ($0, $0.displayName) },
-                listSections: [SettingOptionSection(title: "Color Correction", values: corrections)],
-                explanation: ColorCorrection.explanation,
-                context: context
-            )
+        case .correction:
+            EmptyView()
         case .superGameBoy:
             LabeledContent {
                 Text("Super Game Boy")
@@ -304,30 +429,41 @@ struct ScopedSettingsView: View {
             gameID: gameID,
             buildID: buildID,
             store: store,
-            onChange: {
-                onChange?()
-                refreshModel()
-            },
+            onChange: settingsChanged,
             plus: plus.gate,
-            openPlus: { showsPlus = true }
+            openPlus: { showsPlus = true },
+            presetHardware: defaultsHardware(for:)
         )
     }
 }
 
-/// The Screen Colors that apply on the hardware a game runs on.
+/// The Screen Colors that apply on the hardware games run on.
 enum ScreenColorChoices: Equatable {
     case dmg([DMGPalette])
     case correction([ColorCorrection])
     /// The game or the Super Game Boy sets the colors, so there is nothing to choose.
     case superGameBoy
 
-    /// `hardware` is resolved, so Automatic doesn't arrive here.
-    init(hardware: HardwareModel) {
-        switch hardware {
-        case .automatic, .gameBoy, .gameBoyPocket: self = .dmg(DMGPalette.selectableCases)
-        case .superGameBoy, .superGameBoy2: self = .superGameBoy
-        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: self = .correction(ColorCorrection.allCases)
+    /// `hardware` is resolved, so Automatic arrives only by mistake, and counts as the Game Boy
+    /// Pocket it picks for most games. Where games run on several models, the palettes show when
+    /// any of them shows a palette, then Color Correction when any corrects colors.
+    init(hardware: [HardwareModel]) {
+        if hardware.contains(where: Self.showsPalette) {
+            self = .dmg(DMGPalette.selectableCases)
+        } else if hardware.contains(where: Self.correctsColors) {
+            self = .correction(ColorCorrection.allCases)
+        } else {
+            self = .superGameBoy
         }
+    }
+
+    static func showsPalette(_ model: HardwareModel) -> Bool {
+        [.automatic, .gameBoy, .gameBoyPocket].contains(model)
+    }
+
+    /// A Game Boy Color, Advance or Player, whose colors are Color Correction.
+    static func correctsColors(_ model: HardwareModel) -> Bool {
+        [.gameBoyColor, .gameBoyAdvance, .gameBoyPlayer].contains(model)
     }
 }
 
@@ -340,9 +476,17 @@ struct InheritableSettingContext {
     var onChange: (() -> Void)?
     var plus = PlusGate(isUnlocked: true)
     var openPlus: () -> Void = {}
+    /// The model whose preset values a row for one of the preset settings shows.
+    var presetHardware: (SettingKey) -> HardwareModel = { _ in .gameBoyPocket }
 
+    /// A preset setting inherits a preset's value as well as a stored one.
     func edit(_ key: SettingKey) -> ScopedSetting? {
-        try? SettingsResolver(store: store).edit(
+        if GameplayPresetSettings.controlledKeys.contains(key) {
+            return try? GameplayPresetSettings(store: store).edit(
+                key, at: scope, system: system, gameID: gameID, buildID: buildID, hardware: presetHardware(key)
+            )
+        }
+        return try? SettingsResolver(store: store).edit(
             key: key.rawValue,
             at: scope,
             system: system,
@@ -377,12 +521,17 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     /// Values that need Plus. Without it they're marked Plus, and choosing one opens the Plus screen.
     var needsPlus: (Value) -> Bool = { _ in false }
     var isAvailable: @MainActor (Value) -> Bool = { _ in true }
+    var reloadToken = 0
     let context: InheritableSettingContext
 
     @State private var choice: Choice = .inherit
     @State private var inherited: ResolvedSetting?
     @State private var errorMessage: String?
     @ScaledMetric(relativeTo: .body) private var checkmarkWidth: CGFloat = 20
+
+    private var editNeedsPlus: Bool {
+        GameplayPresetSettings.controlledKeys.contains(key)
+    }
 
     var body: some View {
         Group {
@@ -395,10 +544,10 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
             } else {
                 Menu {
                     Picker(title, selection: Binding(get: { choice }, set: { choose($0) })) {
-                        Text("\(inheritNote) (\(label(for: inheritedValue)))")
+                        Text(context.plus.label("\(inheritNote) (\(label(for: inheritedValue)))", needsPlus: editNeedsPlus))
                             .tag(Choice.inherit)
                         ForEach(options.indices, id: \.self) { index in
-                            Text(context.plus.label(options[index].1, needsPlus: needsPlus(options[index].0)))
+                            Text(context.plus.label(options[index].1, needsPlus: editNeedsPlus || needsPlus(options[index].0)))
                                 .tag(Choice.value(options[index].0))
                                 .disabled(!isAvailable(options[index].0))
                         }
@@ -411,6 +560,7 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         .accessibilityLabel(title)
         .accessibilityValue("\(label(for: effectiveValue)), \(errorMessage ?? note)")
         .onAppear(perform: load)
+        .onChange(of: reloadToken) { load() }
     }
 
     private var rowLabel: some View {
@@ -419,7 +569,8 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
                 HStack(spacing: 6) {
                     Text(title)
                         .foregroundStyle(Color.primary)
-                    if options.contains(where: { context.plus.isLocked(needsPlus($0.0)) }) {
+                    if context.plus.isLocked(editNeedsPlus)
+                        || options.contains(where: { context.plus.isLocked(needsPlus($0.0)) }) {
                         PlusBadge()
                     }
                 }
@@ -446,14 +597,24 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     private func selectionList(sections: [SettingOptionSection<Value>]) -> some View {
         Form {
             Section {
-                selectionButton(.inherit, title: inheritNote, subtitle: label(for: inheritedValue), value: inheritedValue)
+                selectionButton(
+                    .inherit,
+                    title: inheritNote,
+                    subtitle: label(for: inheritedValue),
+                    value: inheritedValue,
+                    locked: context.plus.isLocked(editNeedsPlus)
+                )
             }
             ForEach(sections.indices, id: \.self) { index in
                 Section {
                     ForEach(sections[index].values, id: \.self) { value in
-                        selectionButton(.value(value), title: optionTitle?(value) ?? label(for: value),
-                                        subtitle: optionSubtitle?(value), value: value,
-                                        locked: context.plus.isLocked(needsPlus(value)))
+                        selectionButton(
+                            .value(value),
+                            title: optionTitle?(value) ?? label(for: value),
+                            subtitle: optionSubtitle?(value),
+                            value: value,
+                            locked: context.plus.isLocked(editNeedsPlus || needsPlus(value))
+                        )
                     }
                 } header: {
                     if let title = sections[index].title {
@@ -537,8 +698,13 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
         return context.plus.isLocked(needsPlus(effectiveValue)) ? "\(source). \(label(for: defaultValue)) without Plus" : source
     }
 
-    /// A Plus value without Plus opens the Plus screen and leaves the choice as it was.
+    /// A preset setting changed by hand needs Plus; without it, choosing anything opens the Plus
+    /// screen and saves nothing. A value that needs Plus does the same.
     private func choose(_ newChoice: Choice) {
+        if context.plus.isLocked(editNeedsPlus) {
+            context.openPlus()
+            return
+        }
         if case .value(let value) = newChoice, !isAvailable(value) { return }
         if case .value(let value) = newChoice, context.plus.isLocked(needsPlus(value)) {
             context.openPlus()
@@ -548,9 +714,13 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     }
 
     /// "Default" when no level above sets the value, since there is nothing to inherit then;
-    /// otherwise the level it comes from.
+    /// otherwise the level it comes from, and the preset chosen there when that gives it.
     private var inheritNote: String {
-        (inherited?.source).map { "From \(sourceName($0))" } ?? "Default"
+        guard let inherited else { return "Default" }
+        guard let preset = inherited.preset else { return "From \(sourceName(inherited.source))" }
+        return inherited.source == context.scope
+            ? "From \(preset.displayName)"
+            : "From \(preset.displayName) in \(sourceName(inherited.source))"
     }
 
     private func label(for value: Value) -> String {

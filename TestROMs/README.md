@@ -7,7 +7,8 @@ from the source in `src/`. No commercial ROMs, boot ROMs, fetched games, toolcha
 caches are included.
 
 `manifest.json` lists every ROM and patch with filename, system, SDK, SDK version, mapper, SHA-256,
-size, `hero` and `tags`. Patch entries name their source and target ROM. `SHA256SUMS` covers
+size, `hero` and `tags`, and each ROM's header flags: CGB flag, SGB flag, old licensee and new
+licensee. Patch entries name their source and target ROM. `SHA256SUMS` covers
 everything in `roms/` and `patches/` (`sha256sum -c SHA256SUMS` from this directory).
 
 ## Layout
@@ -30,12 +31,18 @@ everything in `roms/` and `patches/` (`sha256sum -c SHA256SUMS` from this direct
 | `gbdk406-dmg.gb` | GB | GBDK-2020 4.0.6 | ROM ONLY | older 4.0.x |
 | `palette-dmg.gb` | GB | RGBDS 1.0.4 | ROM ONLY | four BG shades and OBP0/OBP1 sprite rows; A maps sprite color 1 to shade 0 |
 | `rgbds-dmg.gb` | GB | RGBDS 1.0.4 | ROM ONLY | pure assembly, hero |
+| `sgb-packets.gb` | GB | RGBDS 1.0.4 | ROM ONLY | SGB flag, licensee 0x33; sends a Super Game Boy palette and border |
+| `header-sgb-licensee-00.gb` | GB | RGBDS 1.0.4 | ROM ONLY | SGB flag with old licensee 0x00, which the Super Game Boy ignores |
+| `header-licensee-01.gb` | GB | RGBDS 1.0.4 | ROM ONLY | old licensee 0x01 (Nintendo) |
+| `header-licensee-33-01.gb` | GB | RGBDS 1.0.4 | ROM ONLY | old licensee 0x33, new licensee "01" (Nintendo) |
+| `header-sgb-licensee-33-01.gb` | GB | RGBDS 1.0.4 | ROM ONLY | SGB flag and Nintendo's new licensee |
 | `gbstudio-dmg.gb` | GB | GB Studio 4.3.2 | MBC5+RUMBLE+RAM+BATTERY | mono mode, hero |
 | `hugedriver-dmg.gb` | GB | hUGEDriver a3cbd0c, RGBDS 1.0.4 | ROM ONLY | plays hUGEDriver's sample song |
 | `zgb-dmg.gb` | GB | ZGB v2023.0 on GBDK-2020 4.1.1 | MBC1 | |
 | `gbdk450-gbc.gbc` | GBC | GBDK-2020 4.5.0 | ROM ONLY | GBC-only, header 0x143 = 0xC0 |
 | `gbdk450-dual.gbc` | GBC | GBDK-2020 4.5.0 | ROM ONLY | dual-mode (0x80), inverted gray on DMG, color on GBC, hero |
 | `rgbds-gbc.gbc` | GBC | RGBDS 1.0.4 | ROM ONLY | GBC-only (`rgbfix -C`) |
+| `header-sgb-cgb.gbc` | GBC | RGBDS 1.0.4 | ROM ONLY | dual-mode (0x80) with the SGB flag and licensee 0x33 |
 | `gbstudio-gbc.gbc` | GBC | GB Studio 4.3.2 | MBC5+RUMBLE+RAM+BATTERY | color mode, hero |
 | `mbc5-battery.gb` | GB | GBDK-2020 4.5.0 | MBC5+RAM+BATTERY | 8 KB cart RAM; save counter +1 per boot and per A press, hero |
 | `gbdk450-rev-v1.0.gb` | GB | GBDK-2020 4.5.0 | ROM ONLY | revision pair v1.0, hero |
@@ -87,6 +94,17 @@ The palette fixture draws background shade 0..3 at x=0,8,16,24 on y=0. Sprite ro
 and y=48 use OBJ0 and OBJ1 respectively, with raw colors 1..3 at x=0,8,16. Holding A maps
 sprite color 1 to shade 0, covering all four entries despite transparent raw color 0. The
 SameBoy package tests check its pixels headless with the boot logo shown and skipped.
+
+The six `automatic-model` ROMs come from one program in `src/sgb-automatic/`, assembled with each
+one's text and given its header flags by `rgbfix` (`-c` Game Boy Color, `-s` Super Game Boy, `-l` old
+licensee, `-k` new licensee). Each shows its name and flags above four shade bars. Every one sends a
+Super Game Boy its border (CHR_TRN, PCT_TRN) and then PAL01, which colors the picture cream, orange,
+teal and navy; other hardware ignores the packets, and the Super Game Boy itself ignores them unless
+the header has the SGB flag and licensee 0x33. The border is a purple and gold checker with a light
+frame around the picture. `Scripts/tests/sameboy_sgb_border.c` runs `sgb-packets.gb` on SameBoy's
+Super Game Boy 2 with the border drawn and checks both, and the SameBoy package tests check the
+palette in the 160x144 picture. The package's header tests check which model the app's Automatic
+picks for every ROM here.
 
 ## What was checked
 

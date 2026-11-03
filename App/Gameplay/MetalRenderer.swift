@@ -13,6 +13,11 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private let sharpPipeline: MTLRenderPipelineState
     /// The newest frames, oldest overwritten first, so frame blending can mix earlier ones in.
     private var textures: [MTLTexture] = []
+    /// The same frames read as sRGB, so the treatments that work in linear light get it from the
+    /// texture unit rather than a pow() per sample.
+    private var linearViews: [MTLTexture] = []
+    /// Whether each frame's mipmaps, which CRT glow reads, match its pixels.
+    private var mipmapsCurrent: [Bool] = []
     private var newest = 0
     /// How many of `textures` hold a frame of the current size.
     private var heldFrames = 0
@@ -21,8 +26,12 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     /// Where the controller layout puts the game picture, in the view's points. Nil fills the view.
     var screenRect: CGRect?
     var scaling: ScreenScaling = .integer
-    var lcdFilter: LCDFilter = .off
+    var lcdFilter: DisplayFilter = .off
     var frameBlending: FrameBlending = .off
+    /// The screen Monochrome LCD draws, for the hardware and palette the game shows.
+    var monochromeScreen = MonochromeScreen(hardware: .gameBoy, palette: .dmgGreen)
+    /// Low Power Mode and serious thermal pressure drop CRT glow, the treatments' costliest part.
+    var reducesWork: () -> Bool = { PresentationFrameRate.current() == .capped }
 
     init?(view: MTKView) {
         guard let device = MTLCreateSystemDefaultDevice(),
@@ -63,6 +72,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         ensureTextures(width: frame.width, height: frame.height)
         guard !textures.isEmpty else { return }
         newest = (newest + 1) % textures.count
+        mipmapsCurrent[newest] = false
         heldFrames = min(heldFrames + 1, textures.count)
         let texture = textures[newest]
         sourceSize = (Double(frame.width), Double(max(frame.height, 1)))
@@ -85,10 +95,17 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         guard !textures.isEmpty,
               let pass = view.currentRenderPassDescriptor,
               let drawable = view.currentDrawable,
-              let commandBuffer = commandQueue.makeCommandBuffer(),
-              let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else {
+              let commandBuffer = commandQueue.makeCommandBuffer() else {
             return
         }
+        let weights = frameBlending.weights(heldFrames: heldFrames)
+        let slots = (0..<textures.count).map { age in
+            weights[age] > 0 ? (newest - age + textures.count) % textures.count : newest
+        }
+        var crt = lcdFilter.crtParameters ?? .none
+        if reducesWork() { crt = crt.withoutGlow }
+        if crt.glow.x > 0 { generateMipmaps(for: Set(slots), in: commandBuffer) }
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return }
 
         let pixelsPerPoint = view.bounds.width > 0 ? view.drawableSize.width / view.bounds.width : 1
         let target = screenRect.map {
@@ -116,19 +133,31 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         ))
         encoder.setRenderPipelineState(scaling == .integer ? nearestPipeline : sharpPipeline)
         // The newest frame first. An unused slot repeats the newest, with no weight.
-        let weights = frameBlending.weights(heldFrames: heldFrames)
-        for age in 0..<textures.count {
-            let texture = weights[age] > 0 ? textures[(newest - age + textures.count) % textures.count] : textures[newest]
-            encoder.setFragmentTexture(texture, index: age)
+        let frames = lcdFilter.samplesLinearLight ? linearViews : textures
+        for (age, slot) in slots.enumerated() {
+            encoder.setFragmentTexture(frames[slot], index: age)
         }
         var filter = lcdFilter.shaderMode
         encoder.setFragmentBytes(&filter, length: MemoryLayout<UInt32>.size, index: 0)
         var blendWeights = SIMD4<Float>(Float(weights[0]), Float(weights[1]), Float(weights[2]), 0)
         encoder.setFragmentBytes(&blendWeights, length: MemoryLayout<SIMD4<Float>>.size, index: 1)
+        encoder.setFragmentBytes(&crt, length: MemoryLayout<CRTParameters>.stride, index: 2)
+        var monochrome = MonochromeLCDParameters(monochromeScreen)
+        encoder.setFragmentBytes(&monochrome, length: MemoryLayout<MonochromeLCDParameters>.stride, index: 3)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
+    }
+
+    private func generateMipmaps(for slots: Set<Int>, in commandBuffer: MTLCommandBuffer) {
+        let stale = slots.filter { !mipmapsCurrent[$0] }
+        guard !stale.isEmpty, let blit = commandBuffer.makeBlitCommandEncoder() else { return }
+        for slot in stale {
+            blit.generateMipmaps(for: textures[slot])
+            mipmapsCurrent[slot] = true
+        }
+        blit.endEncoding()
     }
 
     /// A new size, as when a Game Boy Color game switches the picture, starts the history over.
@@ -139,23 +168,16 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             pixelFormat: .bgra8Unorm,
             width: width,
             height: height,
-            mipmapped: false
+            mipmapped: true
         )
-        descriptor.usage = [.shaderRead]
+        descriptor.usage = [.shaderRead, .pixelFormatView]
         let made = (0..<3).compactMap { _ in device.makeTexture(descriptor: descriptor) }
-        textures = made.count == 3 ? made : []
+        let views = made.compactMap { $0.makeTextureView(pixelFormat: .bgra8Unorm_srgb) }
+        textures = made.count == 3 && views.count == 3 ? made : []
+        linearViews = textures.isEmpty ? [] : views
+        mipmapsCurrent = Array(repeating: false, count: textures.count)
         newest = 0
         heldFrames = 0
         textureSize = (width, height)
-    }
-}
-
-extension LCDFilter {
-    var shaderMode: UInt32 {
-        switch self {
-        case .off: 0
-        case .lcd1x: 1
-        case .lcd3x: 3
-        }
     }
 }

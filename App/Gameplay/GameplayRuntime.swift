@@ -15,6 +15,8 @@ protocol GameplayRuntime: AnyObject {
     func stepFrame(input: EmulatorInputState) throws -> EmulatorVideoFrame
     func drainAudio(maxFrames: Int) throws -> [StereoSample]
     func setSpeed(_ speed: EmulationSpeed) throws
+    /// Applies a changed Button Bounce to the open game without restarting it.
+    func setButtonBounce(_ enabled: Bool) throws
     func setDisplaySettings(
         colorCorrection: ColorCorrection,
         dmgPalette: DMGPalette,

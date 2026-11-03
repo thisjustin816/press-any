@@ -66,6 +66,7 @@ struct RootView: View {
     /// The open game's cheats, from its menu.
     @State private var showsGameplayCheats = false
     @State private var showsWelcome = false
+    @State private var welcomeFollowsUpdate = false
 
     var body: some View {
         withLaunchAlerts(content)
@@ -93,7 +94,6 @@ struct RootView: View {
                     onResumeQuickPlay: { session in resumeQuickPlay(session, container: container) },
                     onImportFiles: { urls in urls.forEach { receiveSharedFile($0, opensImportReview: true) } }
                 )
-                .onPlusChange(container.plus) { refreshGameplayLCDFilter(container) }
                 .environment(\.libraryStorageContext, LibraryStorageContext(container: container) { session in
                     Task { @MainActor in
                         // Settings must finish dismissing before gameplay can present its cover.
@@ -131,7 +131,7 @@ struct RootView: View {
             presentNextSharedFile()
         }) {
             NavigationStack {
-                WelcomeView { showsWelcome = false }
+                WelcomeView(showsUpdateNote: welcomeFollowsUpdate) { showsWelcome = false }
             }
         }
         .alert("Couldn’t Open the File", isPresented: sharedFileErrorBinding(overGameplay: false)) {
@@ -294,6 +294,7 @@ struct RootView: View {
         guard bootstrap.container != nil, WelcomeScreen.showsAtLaunch(),
               gameplay == nil, pendingRecovery == nil, pendingResume == nil, riskyLaunch == nil, damagedSave == nil,
               sharedFile == nil, queuedSharedFiles.isEmpty else { return }
+        welcomeFollowsUpdate = WelcomeScreen.followsUpdate()
         showsWelcome = true
     }
 
@@ -357,17 +358,11 @@ struct RootView: View {
                     gameplay?.display = container.gameplayDisplay(for: target)
                 },
                 marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: target.gameID, buildID: target.buildID),
-                hasCamera: presentation.runtime.hasCamera
+                hasCamera: presentation.runtime.hasCamera,
+                gameplayHardware: container.hardware
             )
             .presentationDetents([.medium, .large])
         }
-    }
-
-    /// Plus decides whether an open game's LCD filter shows, so a purchase or refund changes it in
-    /// place, even behind the settings sheet.
-    private func refreshGameplayLCDFilter(_ container: AppContainer) {
-        guard let target = gameplay?.settings else { return }
-        gameplay?.display.lcdFilter = container.gameplayDisplay(for: target).lcdFilter
     }
 
     /// The open game's cheats, at half height over the paused game. Each change reaches the game
@@ -599,6 +594,7 @@ struct RootView: View {
         guard let container = bootstrap.container else { return }
         do {
             let restore = try container.start(launch, resume: resume)
+            let values = container.gameplayValues(for: launch.context)
             var message: String?
             switch restore {
             case .failed:
@@ -627,11 +623,13 @@ struct RootView: View {
                     controlStyle: container.controllerStyle(for: launch.context),
                     orientation: container.orientation(for: launch.context),
                     screenScaling: container.screenScaling(for: launch.context),
-                    lcdFilter: container.lcdFilter(for: launch.context),
-                    colorCorrection: container.colorCorrection(for: launch.context),
+                    lcdFilter: values.displayFilter,
+                    colorCorrection: values.colorCorrection,
                     dmgPalette: container.dmgPalette(for: launch.context),
-                    advanceColors: container.advanceColors(for: launch.context),
-                    frameBlending: container.frameBlending(for: launch.context),
+                    hardware: container.gameplayHardware(for: launch.context),
+                    advanceColors: values.advanceColors,
+                    frameBlending: values.frameBlending,
+                    buttonBounce: values.buttonBounce,
                     fastForwardSpeed: container.fastForwardSpeed(for: launch.context),
                     fastForwardAudio: container.fastForwardAudio(for: launch.context),
                     camera: container.gameBoyCamera(for: launch.context)
@@ -681,9 +679,14 @@ struct RootView: View {
             session: session,
             coreRegistry: container.coreRegistry,
             assetStore: container.fileStore,
-            buttonBounce: container.quickPlayButtonBounce(system: session.system)
+            buttonBounce: container.quickPlayButtonBounce(system: session.system),
+            superGameBoyBorders: container.superGameBoyBorders(system: session.system)
         )
         try runtime.start()
+        let target = container.gameplaySettingsTarget(system: session.system, hardware: runtime.runningHardwareModel)
+        let display = container.gameplayDisplay(for: target)
+        // The bounce passed in was for the hardware most games of the system play on.
+        try? runtime.setButtonBounce(display.buttonBounce)
         gameplay = GameplayPresentation(
             kind: .quickPlay(session.id),
             runtime: runtime,
@@ -692,14 +695,14 @@ struct RootView: View {
                 ? "Couldn’t resume where you left off, so the game started over from its save."
                 : nil,
             firstFrameClock: firstFrameClock,
-            settings: container.gameplaySettingsTarget(system: session.system),
+            settings: target,
             cheatsBuildID: nil,
             prints: GameplayPrints(
                 gameID: nil,
                 save: { [prints = QuickPlayPrints(session: session, files: container.fileStore)] slip in try prints.save(slip) },
                 discard: { [prints = QuickPlayPrints(session: session, files: container.fileStore)] id in try prints.discard(id: id) }
             ),
-            display: container.gameplayDisplay(for: container.gameplaySettingsTarget(system: session.system))
+            display: display
         )
     }
 

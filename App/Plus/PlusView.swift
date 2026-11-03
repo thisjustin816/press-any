@@ -141,19 +141,4 @@ extension View {
             PlusView(store: store, inSheet: true)
         }
     }
-
-    /// Runs `action` after Plus is bought, restored, refunded or revoked, for a view that doesn't
-    /// otherwise observe the store.
-    func onPlusChange(_ store: PlusStore, perform action: @escaping () -> Void) -> some View {
-        modifier(PlusChangeObserver(store: store, action: action))
-    }
-}
-
-private struct PlusChangeObserver: ViewModifier {
-    @ObservedObject var store: PlusStore
-    let action: () -> Void
-
-    func body(content: Content) -> some View {
-        content.onChange(of: store.isUnlocked) { _, _ in action() }
-    }
 }

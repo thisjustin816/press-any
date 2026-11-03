@@ -57,8 +57,13 @@ public protocol HardwareModelCapability: AnyObject {
     /// game starts again from its boot on the new hardware, keeping its battery save, cheats and
     /// display settings. If the switch fails, the game keeps running as it was.
     func setHardwareModel(_ model: HardwareModel) throws
+    /// The hardware the loaded game runs on, never Automatic, or nil with no image loaded.
+    var runningModel: HardwareModel? { get }
     /// The family of the hardware a state from this core was made on, or nil when it doesn't say.
     func hardwareFamily(ofState state: Data) -> HardwareFamily?
+    /// The model a state from this core was made on, or nil when it doesn't say. Where the state
+    /// can't tell two models apart, it names the first of them in `HardwareModel.allCases`.
+    func hardwareModel(ofState state: Data) -> HardwareModel?
 }
 
 /// A save state made on hardware of another family than the game runs on, which won't load until

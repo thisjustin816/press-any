@@ -7,6 +7,12 @@ Camera cartridges see through your iPhone's camera, with color capture on compat
 Tilt games
 Cartridges with a motion sensor follow how you tilt your iPhone. Recenter Tilt is in the game menu.
 
+Gameplay presets
+Choose how games look and feel for each system, free: Nostalgic, the new default, is as you remember it, polished for today's screens. Accurate is as the original looked and felt, on its own screen or on the television a Super Game Boy or Game Boy Player played on. Clean is just the game, with no effects added. Plus lets you change each setting on its own. The Game Boy palettes stay free.
+
+Games look different now
+If you never changed how the screen looks, your games now use Nostalgic and its screen filter. For sharp, unfiltered pixels, choose Clean in Settings. Settings you chose yourself stay as they were.
+
 Model (Plus)
 Run games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, each with its own boot ROM.
 

@@ -7,14 +7,14 @@ import XCTest
 /// run on the CI simulator (docs/mvp-verification.md).
 @MainActor
 final class PlusStoreTests: XCTestCase {
-    func testBuyingPlusUnlocksTheStoredLCDFilter() async throws {
+    func testBuyingPlusPreservesTheFreeStoredDisplayFilter() async throws {
         let provider = ControllableEntitlementProvider()
         let fixture = try LCDFixture(plus: PlusStore(provider: provider))
         defer { fixture.remove() }
         let plus = fixture.container.plus
         await plus.refreshOwnership()
         XCTAssertFalse(plus.isUnlocked)
-        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .off)
+        XCTAssertEqual(fixture.container.gameplayValues(for: fixture.context).displayFilter, .lcd3x)
 
         await plus.loadOffer()
         XCTAssertEqual(plus.offer, .available(price: "$0.99"), "the price comes from the store")
@@ -23,7 +23,7 @@ final class PlusStoreTests: XCTestCase {
         XCTAssertNil(plus.notice)
         XCTAssertTrue(plus.isUnlocked)
         XCTAssertTrue(plus.ownership.isOwned, "game sessions see it too")
-        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .lcd1x)
+        XCTAssertEqual(fixture.container.gameplayValues(for: fixture.context).displayFilter, .lcd3x)
     }
 
     func testAPurchaseWaitingForApprovalStaysLockedAndSaysSo() async {
@@ -88,21 +88,21 @@ final class PlusStoreTests: XCTestCase {
         XCTAssertNil(plus.notice)
     }
 
-    func testRefundLocksPlusAgainAndKeepsTheStoredFilter() async throws {
+    func testRefundLocksCustomEditingAndKeepsTheFreeStoredFilter() async throws {
         let provider = ControllableEntitlementProvider()
         let fixture = try LCDFixture(plus: PlusStore(provider: provider))
         defer { fixture.remove() }
         let plus = fixture.container.plus
         await plus.buy()
-        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .lcd1x)
+        XCTAssertEqual(fixture.container.gameplayValues(for: fixture.context).displayFilter, .lcd3x)
 
         // The store reports a refund on its own, as StoreKit's updates do.
         provider.changeOwnership(to: false)
         try await waitUntil { !plus.isUnlocked }
 
         XCTAssertFalse(plus.ownership.isOwned)
-        XCTAssertEqual(fixture.container.lcdFilter(for: fixture.context), .off)
-        XCTAssertEqual(try fixture.storedFilter(), .lcd1x, "a refund doesn't delete the choice")
+        XCTAssertEqual(fixture.container.gameplayValues(for: fixture.context).displayFilter, .lcd3x)
+        XCTAssertEqual(try fixture.storedFilter(), .lcd3x, "a refund doesn't delete the choice")
     }
 
     func testAPurchaseOnAnotherDeviceUnlocksWithoutARestart() async throws {

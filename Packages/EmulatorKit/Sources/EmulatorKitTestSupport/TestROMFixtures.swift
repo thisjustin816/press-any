@@ -15,6 +15,12 @@ public enum TestROMFixtures {
         public let cartridgeType: String
         /// Hex, as in `0xC0`.
         public let cgbFlag: String
+        /// Hex, as in `0x03`.
+        public let sgbFlag: String
+        /// Hex, as in `0x33`.
+        public let oldLicensee: String
+        /// The two bytes at 0x144 in hex, as in `3031` for "01".
+        public let newLicensee: String
         public let sha256: String
         public let size: Int
         public let headerChecksumOk: Bool

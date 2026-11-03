@@ -130,7 +130,24 @@ jobs:
       - name: App tests
         run: |
           set -o pipefail
-          make test 2>&1 | tee test.log
+          make test TEST_OPTIONS='-resultBundlePath app-tests.xcresult' 2>&1 | tee test.log
+      - name: Export app test attachments
+        if: always()
+        run: |
+          if [ -d app-tests.xcresult ]; then
+            xcrun xcresulttool export attachments --path app-tests.xcresult --output-path app-test-attachments
+          fi
+      - name: Upload app test results and display references
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: app-test-results
+          path: |
+            test.log
+            app-tests.xcresult
+            app-test-attachments/
+          if-no-files-found: ignore
+          retention-days: 7
       # The EmulatorKit tests also run on Linux in ci.yml. Running them here exercises the same
       # code against Apple's Foundation, which differs from Linux Foundation in Sendable
       # conformances and file-system behavior. With boot ROMs bundled, the SameBoy adapter tests

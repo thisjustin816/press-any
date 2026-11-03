@@ -26,11 +26,14 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
     private let registry: CoreRegistry
     /// Quick Play has no Game or Build, so this comes from the App and System settings.
     private let buttonBounce: Bool
+    /// The Super Game Boy borders setting for the system, which Automatic reads.
+    private let superGameBoyBorders: Bool
     private let files: any AssetStore
     private let lock = NSLock()
     private var worker: SessionWorker?
     private var _state: QuickPlayRuntimeState = .idle
     private var latestFrame: EmulatorVideoFrame?
+    private var _runningHardwareModel: HardwareModel?
     private var sessionNanoseconds: UInt64 = 0
     /// Real time played this session, which Fast Forward doesn't speed up.
     private var playtime: PlaytimeClock
@@ -43,12 +46,14 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         coreRegistry: CoreRegistry,
         assetStore: any AssetStore,
         buttonBounce: Bool = true,
+        superGameBoyBorders: Bool = false,
         batteryCheckInterval: TimeInterval = 5,
         playtime: PlaytimeClock = PlaytimeClock()
     ) {
         self.session = session
         self.playtime = playtime
         self.buttonBounce = buttonBounce
+        self.superGameBoyBorders = superGameBoyBorders
         self.registry = coreRegistry
         self.files = assetStore
         self.batteryCheckIntervalNanoseconds = UInt64(batteryCheckInterval * 1_000_000_000)
@@ -57,6 +62,11 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
     public var state: QuickPlayRuntimeState { lock.withLock { _state } }
     public var currentFrame: EmulatorVideoFrame? { lock.withLock { latestFrame } }
     public var playtimeSeconds: Double { lock.withLock { Double(playtime.nanoseconds) / 1_000_000_000 } }
+
+    /// The hardware the game runs on, or nil before it starts. Quick Play always runs on
+    /// Automatic: the hardware the game's header suits, except that a resumed Auto State keeps the
+    /// hardware it was made on, so a state from before Automatic read the header still loads.
+    public var runningHardwareModel: HardwareModel? { lock.withLock { _runningHardwareModel } }
 
     /// True when the last start found an autosave the core rejected. The game booted normally and
     /// the rejected file was kept beside the session as `autosave.rejected.state`.
@@ -78,13 +88,19 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         // The save as the core reports it, so an unchanged save isn't mistaken for a new one.
         var savedBattery = Data()
 
-        func bootedWorker() throws -> SessionWorker {
+        func bootedWorker(madeOn state: Data? = nil) throws -> SessionWorker {
             let worker = SessionWorker(
                 core: try factory.makeCore(),
                 label: "QuickPlay.RuntimeSession.\(session.id.uuidString)"
             )
             try worker.perform { core in
                 (core as? any ButtonBounceCapability)?.setButtonBounce(self.buttonBounce)
+                if let hardware = core as? any HardwareModelCapability {
+                    let automatic = HardwareModel.automatic.resolved(
+                        forImage: rom, system: self.session.system, superGameBoyBorders: self.superGameBoyBorders
+                    )
+                    try hardware.setHardwareModel(state.flatMap(hardware.hardwareModel(ofState:)) ?? automatic)
+                }
                 try core.loadImage(rom, system: self.session.system)
             }
             try worker.perform { try $0.loadPersistentSave(battery) }
@@ -106,9 +122,10 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         let worker: SessionWorker
         if resumeAutoState, FileManager.default.fileExists(atPath: autoStateURL.path),
            !session.autoStateIsUnsafeToRestore(files: files) {
-            let candidate = try bootedWorker()
+            let state = try? Data(contentsOf: autoStateURL, options: .mappedIfSafe)
+            let candidate = try bootedWorker(madeOn: state)
             do {
-                let state = try Data(contentsOf: autoStateURL, options: .mappedIfSafe)
+                guard let state else { throw CocoaError(.fileReadUnknown) }
                 try candidate.perform { try $0.deserializeState(state) }
                 worker = candidate
             } catch {
@@ -123,9 +140,11 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             worker = try freshWorker()
         }
 
+        let running = try worker.perform { ($0 as? any HardwareModelCapability)?.runningModel }
         lock.withLock {
             self.worker = worker
             latestFrame = nil
+            _runningHardwareModel = running
             sessionNanoseconds = 0
             playtime.reset()
             lastBatteryCheckNanoseconds = 0
@@ -156,6 +175,14 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         let worker = try activeWorker(requireRunning: false)
         try worker.perform { $0.setSpeed(speed) }
         lock.withLock { playtime.setSpeed(speed) }
+    }
+
+    /// Changes button bounce on the running game. With none running there is nothing to change.
+    public func setButtonBounce(_ enabled: Bool) throws {
+        guard let worker = try? activeWorker(requireRunning: false) else { return }
+        try worker.perform { core in
+            (core as? any ButtonBounceCapability)?.setButtonBounce(enabled)
+        }
     }
 
     @discardableResult

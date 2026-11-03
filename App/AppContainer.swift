@@ -58,7 +58,8 @@ final class AppContainer {
     let coreRegistry: CoreRegistry
     let settingsResolver: SettingsResolver
     let launchHistory: SessionLaunchHistory
-    /// Plus ownership. LCD filters, Model, Timed States, and Auto State and print history follow it.
+    /// Plus ownership. Model, Timed States, and Auto State and print history follow it; changing a
+    /// preset setting by hand needs it.
     let plus: PlusStore
     /// Files an import or the running game is using, which cache trimming and Check Library Files
     /// leave alone.
@@ -620,51 +621,81 @@ final class AppContainer {
         launchSetting(ScreenScaling.self, .screenScaling, for: context) ?? .integer
     }
 
-    /// Off without Plus, whatever is stored.
-    func lcdFilter(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> LCDFilter {
-        ScreenshotScene.lcdFilterOverride
-            ?? plus.effective(launchSetting(LCDFilter.self, .lcdFilter, system: system, gameID: gameID, buildID: buildID) ?? .off)
+    /// What games play on, as EmulationSession resolves it: the Model setting with Plus, otherwise
+    /// Automatic, which picks for each Build.
+    var hardware: GameplayHardware {
+        let ownership = plus.ownership
+        return GameplayHardware(
+            builds: repositories.builds,
+            settings: settingsResolver,
+            automatic: AutomaticHardware(
+                profiles: repositories.saveProfiles,
+                states: repositories.saveStates,
+                assets: repositories.assets,
+                assetStore: fileStore,
+                coreRegistry: coreRegistry,
+                settings: settingsResolver.store
+            ),
+            choosesModel: { ownership.appliesHardwareModel }
+        )
     }
 
-    func lcdFilter(for context: LaunchContext) -> LCDFilter {
-        ScreenshotScene.lcdFilterOverride ?? plus.effective(launchSetting(LCDFilter.self, .lcdFilter, for: context) ?? .off)
+    /// The hardware a game plays on: a Build's own, or where several games share the scope, the
+    /// first of the models they play on. Quick Play passes the hardware its game runs on.
+    func gameplayHardware(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> HardwareModel {
+        hardware.hardware(system: system, gameID: gameID, buildID: buildID).first
+            ?? HardwareModel.automaticFallback(for: system)
+    }
+
+    func gameplayHardware(for context: LaunchContext) -> HardwareModel {
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .gameBoy }
+        return gameplayHardware(system: build.system, gameID: build.gameID, buildID: build.id)
+    }
+
+    /// The preset-controlled settings a game plays with. Unset or unreadable values take the
+    /// standard preset's for the hardware. Stored values apply with or without Plus; Plus only
+    /// gates editing them.
+    func gameplayValues(
+        system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil, hardware: HardwareModel? = nil
+    ) -> GameplayEffectiveValues {
+        var values = GameplayPresetSettings(store: repositories.settings).effectiveValues(
+            system: system, gameID: gameID, buildID: buildID,
+            hardware: hardware ?? gameplayHardware(system: system, gameID: gameID, buildID: buildID)
+        )
+        if let filter = ScreenshotScene.lcdFilterOverride { values.displayFilter = filter }
+        return values
+    }
+
+    func gameplayValues(for context: LaunchContext) -> GameplayEffectiveValues {
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else {
+            return gameplayValues(system: .gameBoy, hardware: .gameBoy)
+        }
+        return gameplayValues(system: build.system, gameID: build.gameID, buildID: build.id)
     }
 
     func colorCorrection(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> ColorCorrection {
-        launchSetting(ColorCorrection.self, .colorCorrection, system: system, gameID: gameID, buildID: buildID) ?? .defaultValue
+        gameplayValues(system: system, gameID: gameID, buildID: buildID).colorCorrection
     }
 
     func colorCorrection(for context: LaunchContext) -> ColorCorrection {
-        launchSetting(ColorCorrection.self, .colorCorrection, for: context) ?? .defaultValue
+        gameplayValues(for: context).colorCorrection
     }
 
+    /// Free, and no preset changes it. Unset, it follows the hardware the game plays on.
     func dmgPalette(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> DMGPalette {
-        launchSetting(DMGPalette.self, .dmgPalette, system: system, gameID: gameID, buildID: buildID) ?? .defaultValue
+        launchSetting(DMGPalette.self, .dmgPalette, system: system, gameID: gameID, buildID: buildID)
+            ?? .defaultValue(for: gameplayHardware(system: system, gameID: gameID, buildID: buildID))
     }
 
     func dmgPalette(for context: LaunchContext) -> DMGPalette {
-        launchSetting(DMGPalette.self, .dmgPalette, for: context) ?? .defaultValue
-    }
-
-    func advanceColors(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> AdvanceColors {
-        launchSetting(AdvanceColors.self, .advanceColors, system: system, gameID: gameID, buildID: buildID) ?? .gameBoyAdvance
-    }
-
-    func advanceColors(for context: LaunchContext) -> AdvanceColors {
-        launchSetting(AdvanceColors.self, .advanceColors, for: context) ?? .gameBoyAdvance
+        if let stored = launchSetting(DMGPalette.self, .dmgPalette, for: context) { return stored }
+        guard let build = try? repositories.builds.fetchBuild(id: context.buildID) else { return .defaultValue }
+        return .defaultValue(for: gameplayHardware(system: build.system, gameID: build.gameID, buildID: build.id))
     }
 
     /// A Game's Builds, for suggesting a new one's name and roles. Unreadable means none.
     func builds(in gameID: UUID) -> [Build] {
         (try? repositories.builds.fetchBuilds(gameID: gameID)) ?? []
-    }
-
-    func frameBlending(for context: LaunchContext) -> FrameBlending {
-        launchSetting(FrameBlending.self, .frameBlending, for: context) ?? .off
-    }
-
-    func frameBlending(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> FrameBlending {
-        launchSetting(FrameBlending.self, .frameBlending, system: system, gameID: gameID, buildID: buildID) ?? .off
     }
 
     func fastForwardSpeed(for context: LaunchContext) -> FastForwardSpeed {
@@ -696,13 +727,17 @@ final class AppContainer {
         )
     }
 
-    func gameplaySettingsTarget(system: GameSystem) -> GameplaySettingsTarget {
+    /// Quick Play's: it has no Game yet and always runs on Automatic, which picks `hardware` for
+    /// its game. Before the game starts, the model Automatic picks for most games of the system
+    /// stands in.
+    func gameplaySettingsTarget(system: GameSystem, hardware: HardwareModel? = nil) -> GameplaySettingsTarget {
         GameplaySettingsTarget(
             title: "\(system.displayName) Settings",
             scope: .system(system),
             system: system,
             gameID: nil,
-            buildID: nil
+            buildID: nil,
+            hardware: hardware ?? HardwareModel.automaticFallback(for: system)
         )
     }
 
@@ -737,15 +772,20 @@ final class AppContainer {
 
     /// The display settings for an open game, resolved down to its Build.
     func gameplayDisplay(for target: GameplaySettingsTarget) -> GameplayDisplaySettings {
-        GameplayDisplaySettings(
+        let values = gameplayValues(
+            system: target.system, gameID: target.gameID, buildID: target.buildID, hardware: target.hardware
+        )
+        return GameplayDisplaySettings(
             controlStyle: controllerStyle(system: target.system, gameID: target.gameID, buildID: target.buildID),
             orientation: orientation(system: target.system, gameID: target.gameID, buildID: target.buildID),
             screenScaling: screenScaling(system: target.system, gameID: target.gameID, buildID: target.buildID),
-            lcdFilter: lcdFilter(system: target.system, gameID: target.gameID, buildID: target.buildID),
-            colorCorrection: colorCorrection(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            lcdFilter: values.displayFilter,
+            colorCorrection: values.colorCorrection,
             dmgPalette: dmgPalette(system: target.system, gameID: target.gameID, buildID: target.buildID),
-            advanceColors: advanceColors(system: target.system, gameID: target.gameID, buildID: target.buildID),
-            frameBlending: frameBlending(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            hardware: target.hardware ?? gameplayHardware(system: target.system, gameID: target.gameID, buildID: target.buildID),
+            advanceColors: values.advanceColors,
+            frameBlending: values.frameBlending,
+            buttonBounce: values.buttonBounce,
             fastForwardSpeed: fastForwardSpeed(system: target.system, gameID: target.gameID, buildID: target.buildID),
             fastForwardAudio: fastForwardAudio(system: target.system, gameID: target.gameID, buildID: target.buildID),
             camera: gameBoyCamera(system: target.system, gameID: target.gameID, buildID: target.buildID)
@@ -822,8 +862,14 @@ final class AppContainer {
         return launchSetting(type, key, system: build.system, gameID: build.gameID, buildID: build.id)
     }
 
+    /// Super Game Boy borders for Quick Play, from App and System settings. Nothing sets them yet,
+    /// so unset means off.
+    func superGameBoyBorders(system: GameSystem) -> Bool {
+        launchSetting(Bool.self, .superGameBoyBorders, system: system, gameID: nil, buildID: nil) ?? false
+    }
+
     func quickPlayButtonBounce(system: GameSystem) -> Bool {
-        launchSetting(Bool.self, .buttonBounce, system: system, gameID: nil, buildID: nil) ?? true
+        gameplayDisplay(for: gameplaySettingsTarget(system: system)).buttonBounce
     }
 
     func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {
@@ -849,6 +895,8 @@ struct GameplaySettingsTarget {
     let system: GameSystem
     let gameID: UUID?
     let buildID: UUID?
+    /// The hardware the game runs on whatever Model says, or nil to follow Model.
+    var hardware: HardwareModel?
 }
 
 /// The settings an open game applies as they change.
@@ -856,11 +904,14 @@ struct GameplayDisplaySettings: Equatable {
     var controlStyle: TouchControlStyle
     var orientation: ScreenOrientation = .automatic
     var screenScaling: ScreenScaling
-    var lcdFilter: LCDFilter
+    var lcdFilter: DisplayFilter
     var colorCorrection: ColorCorrection
     var dmgPalette: DMGPalette
+    /// The hardware the game plays on, resolved, as the palette and presets resolve it.
+    var hardware: HardwareModel = .gameBoy
     var advanceColors: AdvanceColors = .gameBoyAdvance
     var frameBlending: FrameBlending
+    var buttonBounce: Bool = true
     var fastForwardSpeed: FastForwardSpeed
     var fastForwardAudio: FastForwardAudio
     /// Only camera cartridges read it.

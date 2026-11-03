@@ -61,7 +61,10 @@ lives in App Store Connect, never in code: the app shows the App Store's localiz
 
 In the v1.1 development build, Plus includes:
 
-- **LCD filters**: LCD 1× and LCD 3× (see Picture).
+- **Custom gameplay**: changing the settings a Gameplay preset sets one by one: Display Filter,
+  Frame Blending, Color Correction, Game Boy Advance Colors and Button Bounce (see Picture). Every
+  preset (Nostalgic, Accurate and Clean) is free, and so are the Game Boy palettes under Screen
+  Colors.
 - **App icons**: Berry, Grape, Teal, Kiwi and Dandelion colorways of the home-screen icon, in
   Settings > App Icon. All six use a smooth, nearly front-facing button with an A printed below
   it and a closed oval well around it, with Light, Dark and Tinted variants and matching settings
@@ -71,8 +74,9 @@ In the v1.1 development build, Plus includes:
 - **Timed States**: an Auto State every 1, 2, 5 or 10 minutes of library play, with Off as the
   default. Pausing restarts the interval (see Auto State).
 - **Model**: run Game Boy and Game Boy Color games on a Game Boy, Game Boy Pocket, Super Game Boy,
-  Super Game Boy 2, Game Boy Color, Game Boy Advance or Game Boy Player (see Settings). Without Plus, games play on Automatic
-  and a stored choice is kept.
+  Super Game Boy 2, Game Boy Color, Game Boy Advance or Game Boy Player (see Settings). Without
+  Plus, games play on Automatic and a stored choice is kept. Automatic is free and picks the
+  hardware that suits each game.
 - **Print backgrounds**: Wood, Printer, Game Artwork and Custom backgrounds for Game Boy Printer
   prints (see Game Boy Printer). Transparent, Light and Dark are free.
 - **Print history**: Keep Prints at 25, 50 or 100 prints per Game (see Library). Without Plus a
@@ -122,7 +126,8 @@ count. Restore Purchases calls `AppStore.sync()`. StoreKit's own on-device cache
 working offline; there's no receipt storage, purchase server or analytics. StoreKit handles
 purchase network calls; optional artwork lookups use Libretro separately. Debug builds take
 `-GrantPlus YES` for screenshots and UI tests, and
-`-ScreenshotLCDFilter` implies it. `Config/PressAnyPlus.storekit` defines the product for Xcode
+`-ScreenshotLCDFilter` and `-ScreenshotModel` (a Model raw value, such as `dmg` or `mgb`, for every
+game in the capture) imply it. `Config/PressAnyPlus.storekit` defines the product for Xcode
 runs.
 
 ## Library model
@@ -1020,8 +1025,8 @@ clear of both overlays.
   Directional input leaves it paused. The resume press is consumed until released.
 - **Cheats** opens the Build's cheats over the paused game at half height (see Cheats and memory tools).
 - **Settings** opens over the paused game at half height. A library game edits its Game's
-  settings; Quick Play edits its system's. Layout, scaling, LCD filter and frame blending apply
-  at once; the rest at the next launch.
+  settings; Quick Play edits its system's. Layout, scaling, the Gameplay preset, display filter,
+  frame blending, Screen Colors and Button Bounce apply at once; the rest at the next launch.
 - The controller's Menu button opens the menu; pressing it again closes the menu and resumes.
   The Home button is reserved for the system. Button customization uses iOS Settings (see
   Controllers, haptics and rumble).
@@ -1067,24 +1072,134 @@ Quick Play keeps them temporary until Add to Library.
 
 ### Picture
 
+From System settings down through Game and Build, settings start with **Gameplay**: Preset,
+Model, Screen Colors and Customize. A preset sets the display filter, frame blending, color
+correction, Game Boy Advance Colors and Button Bounce for the hardware the game runs on:
+
+- **Nostalgic**, the standard, "As you remember it, polished for today's screens": the game as
+  people remember it, idealized, on a bright modern screen. Every setting no level sets plays as
+  Nostalgic, so a new or untouched library shows Nostalgic, never Custom.
+- **Accurate**, "As the original looked and felt": the original hardware late in its life, on its
+  own screen or on the television a Super Game Boy or Game Boy Player showed on.
+- **Clean**, "Just the game, with no effects added": the game's pixels with no filter, frame
+  blending, color correction or button bounce.
+- **Custom** shows when the settings under Customize match no preset. It isn't a choice in the
+  menu; changing a setting under Customize makes it, and returning every value to a preset's
+  shows that preset again.
+
+Each preset's description shows under the Preset row and under its option in the Preset menu.
+The descriptions name no hardware, since one preset means the same on every model, and speak of
+more than the screen, since a preset also sets frame blending and Button Bounce.
+
+Every preset is free. Customize lists the preset's settings for this hardware, and changing one
+needs Plus: without it, every value there is marked Plus, choosing one opens the Plus screen and
+saves nothing. A stored value plays with or without Plus. Screen Colors' palettes are free, and no
+preset sets or reads them, so choosing a preset keeps the player's palette. Model has its own Plus
+rule (see Settings). Choosing a preset stores the preset at that level, not its values, so each
+game below plays the preset's values for the hardware it runs on. That matters wherever games run
+on different models: on Automatic, Accurate chosen in Game Boy settings gives a Super Game Boy
+game CRT 240p, a Nintendo game the Game Boy Color LCD and every other game the Monochrome LCD, and
+the same holds for a Game whose Builds run on different models. A setting changed under Customize
+is stored at that level and wins over the preset there. Settings resolve App -> System -> Game ->
+Build: at each level a stored setting comes first, then that level's preset. Where games here run
+on several models, the menu shows a preset only when every one of them plays it, and Accurate
+reads "As on the hardware each game plays on". Reset to Inherited in the Preset menu clears the
+preset and the Customize settings at this level. Choosing Nostalgic where nothing above sets
+another preset stores nothing. When Model changes at a level that stores Customize settings that
+made a built-in preset, that level gets the preset instead, which then follows the new hardware; a
+level that inherits keeps inheriting.
+
+| Hardware | Nostalgic | Accurate | Clean |
+|---|---|---|---|
+| Game Boy | Pixel Grid, Blend, bounce on | Monochrome LCD, LCD Ghosting, bounce on | Off |
+| Game Boy Pocket | Pixel Grid, Blend, bounce on | Monochrome LCD, Blend, bounce on | Off |
+| Game Boy Color | Pixel Grid, Blend, Modern Accurate, bounce on | Game Boy Color LCD, Blend, Reduce Contrast, bounce on | Off, Original |
+| Game Boy Advance | Backlit GBA SP LCD, Blend, Original, As on a Game Boy Color, bounce on | Game Boy Advance LCD, Blend, Original, As on a Game Boy Advance, bounce on | Off, Original |
+| Super Game Boy and Super Game Boy 2 | Curved Scanlines, Balanced, bounce on | CRT 240p, Balanced, bounce on | Off, Original |
+| Game Boy Player | Slightly Curved Scanlines, Balanced, As on a Game Boy Color, bounce on | CRT 480p, Original, As on a Game Boy Advance, bounce on | Off, Original |
+
+Frame blending is Off on the television models and in Clean. Button Bounce is on in Nostalgic and
+Accurate on every model, the television models included, and off only in Clean. On a Game Boy or
+Pocket the presets leave color correction alone, since those show a palette. On a Game Boy Color,
+Nostalgic's Modern Accurate shows the game's colors as a bright modern screen would, and
+Accurate's Reduce Contrast is close to BGB's measurement of a Game Boy Color in light (see
+[Display presets](display-presets.md)). Under Automatic the presets follow the model it picks for
+each game (see Settings): a Super Game Boy game gets the Super Game Boy row, a Nintendo Game Boy
+game the Game Boy Color row, other Game Boy games the Pocket row, and a Build that kept a Game Boy
+from an earlier version the Game Boy row. The Game Boy Light and the
+backlit Game Boy Advance SP (AGS-101) run as a Pocket and a Game Boy Advance, so they aren't
+models: the Light's look is the Teal (Light) palette, and the SP's is the Backlit GBA SP LCD
+filter, which Nostalgic uses on a Game Boy Advance.
+
+**Display Filter** (under Customize) offers every filter on every model:
+
+- **Off**: the game's pixels.
+- **Pixel Grid** and **RGB Subpixels**: a faint grid between pixels, and the grid with red, green
+  and blue bands in each pixel. A filter saved as LCD 1× or LCD 3× in an earlier version is these.
+- **Monochrome LCD**: a Game Boy's or Pocket's screen as BGB measured it, brightened for a
+  phone, with each pixel a square and the unlit LCD, lighter and yellower than a dark pixel, in
+  the gaps between them; the Pocket's gaps are thinner. With the hardware's own palette, Green
+  (DMG) on a Game Boy or Olive (Pocket) on a Pocket, it shows the measured screen's colors,
+  lightest first: #89b13d, #64a25c, #3e7a64 and #2d5e58 on a Game Boy (4:1), and #c9deaa,
+  #a5b789, #717c63 and #515953 on a Pocket (7.1:1). Each pixel's average, gap included, is its
+  shade. Any other palette keeps its own colors and takes only that screen's brightness and
+  contrast. Every other model, given the filter under Customize, shows its game's colors with the
+  original Game Boy's brightness and contrast. The filter reads the palette only to draw it; no
+  preset sets or reads Screen Colors.
+- **Game Boy Advance LCD**: SameBoy's color LCD filter with the Game Boy Advance color profile.
+- **Game Boy Color LCD**: Authentic GBC's notched subpixels.
+- **Backlit GBA SP LCD**: the Pixel Grid with the AGS-101 SP's color profile.
+- **Scanlines**: sharp scanlines on a flat picture, with no curve, rounded corners, mask, glow
+  or vignette.
+- **Curved Scanlines** and **Slightly Curved Scanlines**: the same sharp scanlines on a curved
+  screen with small rounded corners, the first curving more. Nostalgic uses the first on a Super
+  Game Boy and the second on a Game Boy Player.
+- **CRT 240p**: a 1990s consumer television, as a Super Game Boy on a SNES showed: a visibly
+  curved spherical tube with rounded corners, one beam per line with dark gaps, a slot mask,
+  slightly soft horizontal reconstruction, a faint glow and a vignette.
+- **CRT 480p**: a 2000s television, as a Game Boy Player showed: a flatter tube that still
+  curves a little, with rounded corners, each line drawn twice as the player's 480-line output
+  does so the gaps nearly close, a finer aperture grille, a fainter glow and a light vignette.
+  It shows no interlacing: a CRT shows the two fields of 480i one after the other, so they never
+  comb, and the player's 480p over component draws the same lines.
+
+The curves follow research into the televisions of each hardware's day, in
+[Display presets](display-presets.md). Measured on the picture, the Super Game Boy treatments
+curve more than the Game Boy Player ones, Nostalgic's curve less than the same hardware's
+Accurate, all four curve visibly and Scanlines not at all. Both CRTs keep pixel art readable at
+a phone's scale: a one-pixel outline stays dark, and the phosphor mask follows the game's
+pixels, so every pixel carries the same stripes and the mask never shimmers against the
+picture.
+
+The filters that imitate a physical screen work in linear light from the GPU's sRGB conversion,
+so they cost no per-sample power function; with frame blending, they mix light, as a slow screen
+does. CRT glow reads a mipmap of the frame; Low Power Mode or a serious or critical thermal state
+turns the glow off until that ends. The sources, their licenses and the alternatives considered
+are in [Display presets](display-presets.md). A phone can't reproduce a reflective screen under
+every light or a particular television, so the device checks in `docs/mvp-verification.md`
+compare the looks by eye. The Game Boy Advance models here run GB/GBC cartridges; native GBA
+emulation is later work.
+
 - **Screen Scaling** (App, System, Game or Build; Integer by default). Integer draws each Game Boy
   pixel as the largest whole number of device pixels that fits, centered on device pixels, falling
   back to Fill when not even one whole multiple fits. Fill draws as large as the frame allows at
   10:9, sampling each pixel flat and blending only across its edges. On the Game Boy layout the
   frame itself follows the setting.
-- **Screen Colors** (System, Game or Build) is a different setting for each kind of hardware, and
+- **Screen Colors** (System, Game or Build; free) is a different setting for each kind of hardware, and
   only the one for the hardware the game runs on shows: in Game Boy or Game Boy Color settings,
-  and in the Settings of a Game, a Build or the open game. Under Automatic that's the system's own
-  hardware; with another Model see Settings. App Settings doesn't show it, and a choice made there in
+  and in the Settings of a Game, a Build or the open game. Under Automatic that's the hardware
+  Automatic picks for the game; with another Model see Settings. App Settings doesn't show it, and a choice made there in
   an earlier version became that system's setting. Screen Colors opens a scrolling list inside
   Settings, including from the in-game menu. The first row restores the inherited value and names
   its source, or says Default when no parent sets it. A checkmark marks the selected row; choosing
   a value keeps the list open so the paused picture stays visible above the half-height sheet.
-  - Original Game Boy games choose Green (DMG, the default), Olive (Pocket), Teal (Light),
-    twelve free button-combo boot palettes, and six game palettes: Olive & Orange (Mole Mania),
+  - Original Game Boy games choose Green (DMG), Olive (Pocket), Teal (Light),
+    twelve button-combo boot palettes, and six game palettes: Olive & Orange (Mole Mania),
     Red & Green (Link's Awakening), Tan & Red (Super Mario Land), Pastel & Orange (Super Mario
     Land 2), Blue & Orange (Donkey Kong Land), and Amber (Game Boy Camera). Donkey Kong Land
-    1, 2 and 3 share the same combination. The list groups Console Palettes, Button Palettes
+    1, 2 and 3 share the same combination. Unset, the palette follows the hardware: Olive on a
+    Game Boy Pocket, Green everywhere else, so choosing the Pocket as the Model shows its screen.
+    The list groups Console Palettes, Button Palettes
     and Game Palettes. Color names appear above a smaller subtitle with the console, button
     combo or game in parentheses, such as Brown (Up)
     and Black & White (Left + B). Black & White is the only grayscale choice; saved legacy
@@ -1093,10 +1208,10 @@ Quick Play keeps them temporary until Add to Library.
     Thumbnails use uncorrected colors. No buttons need to be held. The palettes keep separate
     background, OBJ0 and OBJ1 colors, work with Skip Boot Logo on or off, and use the resolved
     color correction setting. Game Boy Color games keep their own colors and correction choices.
-  - Game Boy Color games have a Color Correction list and choose how their colors are adjusted
-    for a modern screen: Balanced (the default, SameBoy's Modern Balanced), Accurate (Modern
-    Accurate), Boost Contrast, Reduce Contrast, Low Contrast, or Original, which shows the colors
-    as the game stores them.
+  - On a Game Boy Color, Advance or Player, colors are **Color Correction**, a preset setting
+    under Customize: Balanced (SameBoy's Modern Balanced, and the default outside a preset),
+    Modern Accurate, Boost Contrast, Reduce Contrast, Low Contrast, or Original, which shows the
+    colors as the game stores them.
 
   Both change the open picture at once, including behind a paused Settings sheet, and stay
   applied through reset and state loads. A boot palette changes only the displayed colors;
@@ -1104,10 +1219,7 @@ Quick Play keeps them temporary until Add to Library.
   choice. It does not change the emulated hardware, battery save or state format. Palette and
   correction values inherit App -> System -> Game -> Build, including stored App values; the
   Screen Colors lists stay in System, Game and Build settings.
-- **LCD filter** (Plus): LCD 1× and LCD 3×, the first of the display effects. Without Plus both
-  stay listed with a Plus badge wherever the filter is chosen, and choosing one opens the Plus
-  screen. A stored filter plays as Off and comes back with Plus, changing an open game at once.
-- **Frame Blending** (inheritable, Off by default): Blend averages each frame with the one before,
+- **Frame Blending** (under Customize; the preset's value by default): Blend averages each frame with the one before,
   as the slow LCD does, so a sprite drawn on alternate frames stays steady; LCD Ghosting weights
   the newest frame 0.5 and the two before 0.3 and 0.2. Both mix emulated frames, so 60 Hz and
   120 Hz look the same.
@@ -1120,13 +1232,13 @@ Quick Play keeps them temporary until Add to Library.
   is serious or critical it's held to 60 Hz, and returns to 120 Hz when that ends, with no restart.
   The game's speed is the same either way.
 - v2.0: a curated, RetroArch-compatible shader library chosen after a community survey and device
-  comparison (LCD1x, LCD3x and pixel-transparency variants are candidates; PT-SkyWalker541 is a
+  comparison (pixel-transparency variants are candidates; PT-SkyWalker541 is a
   candidate to audit), downloaded from pinned, license-checked sources with hashes and preserved
   licenses; independent inheritance of pipeline components and parameters; named presets; live
   switching from Quick Actions; a system-authentic default with raw pixels a tap away. Arbitrary
   `.slang` import is later. Every shader that ships is credited by its author in Settings >
   Acknowledgements and `THIRD_PARTY_NOTICES.md`, with its license text, whether or not the
-  license asks for it. Pixel-AA is a candidate to stack with the LCD filters, on a
+  license asks for it. Pixel-AA is a candidate to stack with the display filters, on a
   recommendation from fishku, who asked to be credited for it if it ships.
 
 ### Sound
@@ -1183,11 +1295,12 @@ beyond 2 g reads as 2 g. The motion sensor runs only while the game runs and nee
   mapping of its own and won't add one. It declares Extended Gamepad support, which iOS
   needs for per-app customizations.
 - Touch and controller input reach the core once per frame, at the start of vblank. **Button
-  Bounce**, on by default as in SameBoy, then makes the button chatter for about 4.5 scanlines after
+  Bounce**, when on, then makes the button chatter for about 4.5 scanlines after
   each press and release, as the hardware's contacts do. A game that reads the joypad more than
   once in vblank can count one tap twice on real hardware and with Button Bounce on. Turning it off
-  makes each press and release one clean change. It's inheritable like Skip Boot Logo, and Quick
-  Play uses the App and System value.
+  makes each press and release one clean change. It's a preset setting under Customize (on in
+  Nostalgic and Accurate on every model, off in Clean), applies to an open game at once, and
+  Quick Play uses the App and System value.
 - With a controller connected the touch controls hide and the body stays. A touch outside the
   logo brings them back until the next controller button press. Settings > Controls > Hide Touch
   Controls, under With a Controller, is on by default.
@@ -1213,23 +1326,25 @@ clears an override. The System level covers Game Boy and Game Boy Color. Save Pr
 the narrow playthrough overrides above. Sound is app-wide.
 
 Inheritable today: controller layout, Orientation, Screen Scaling, Screen Colors (lists from System
-down), LCD filter, Frame Blending, Fast Forward Speed and Audio, Resume Games, Timed States,
-Skip Boot Logo and Button Bounce.
+down), the Gameplay preset's settings (Display Filter, Frame Blending, Color Correction, Game Boy
+Advance Colors and Button Bounce, from System down in Settings), Model, Fast Forward Speed and
+Audio, Resume Games, Timed States and Skip Boot Logo.
 App-wide: Controller Theme, Sound, Tap Game for Menu, Touch Haptics, Hide Touch Controls with a
 Controller, and the region and language order.
 
 App Settings is a short list of pages, like the iPhone's own Settings, in the order a system's,
 Game's or Build's settings use:
 
-- **Display**: Orientation, Screen Scaling, and LCD Filter and Frame Blending under Effects.
+- **Gameplay**: Game Boy and Game Boy Color, each a page with that system's settings, starting
+  with its Gameplay preset.
+- **Display**: Orientation and Screen Scaling.
 - **Controls**: Controller Layout and Controller Theme; Touch Haptics and Tap Game for Menu under
   Touch; Hide Touch Controls under With a Controller.
-- **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games, Skip Boot Logo and Button
-  Bounce; Keep Prints under Game Boy Printer (App-only, needs Plus); Save States
+- **Playing**: Sound; Fast Forward's Speed and Audio; Resume Games and Skip Boot Logo; Model;
+  Keep Prints under Game Boy Printer (App-only, needs Plus); Save States
   (Slots, Name New States, Keep Save States and Keep Auto States, all App-only; Timed States is
   inheritable and needs Plus).
 - **App Icon** (Plus): the default icon and its colorways, each with a preview.
-- **Systems**: Game Boy and Game Boy Color, each a page with that system's settings.
 - **Library**: a page grouped into Preferences (Artwork and Regions and Languages), Organization
   (Suggest Names and Suggest Game Merges), Files (Storage, Check Library Files and Recently
   Deleted), and Backup and Restore (Back Up Library, Restore from Backup and Last Restore).
@@ -1239,20 +1354,50 @@ Game's or Build's settings use:
 
 The settings for a system, a Game, a Build or the open game are one form: a page in App Settings
 for a system, and otherwise a sheet short enough to sit at half height over a paused game. They're
-grouped under Display (Orientation, Screen Scaling, Screen Colors, Game Boy Advance Colors on those
-models, LCD Filter, Frame Blending),
-Controls (Controller Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States,
-Skip Boot Logo, Button Bounce, Model). Under each setting's name a note says where its value
+grouped under Gameplay (Preset, Model, Screen Colors where the hardware shows a palette, and
+Customize: Color Correction and Game Boy Advance Colors on the models that have them, Display
+Filter, Frame Blending, Button Bounce), Display (Orientation, Screen Scaling), Controls (Controller
+Layout), Fast Forward (Speed, Audio) and Playing (Resume Games, Timed States, Skip Boot Logo). Under each setting's name a note says where its value
 comes from, such as "From Game Boy settings", or that it's set here.
 
 **Model** is the hardware a game runs on, set like the other settings at every level. It's one
-setting, chosen from a list grouped by console: Automatic on its own, with "Game Boy Color for its
-games, Game Boy for the rest" under it; then Game Boy (Game Boy, Game Boy Pocket, Super Game Boy,
-Super Game Boy 2), Game Boy Color, and Game Boy Advance (Game Boy Advance, Game Boy Player). The
-list shows no model numbers. App Settings has it on the Playing page.
+setting, chosen from a list grouped by console: Automatic on its own, with "Game Boy Color for
+color and Nintendo games, Super Game Boy 2 for Super Game Boy games, Game Boy Pocket for the rest"
+under it; then Game Boy (Game Boy, Game Boy Pocket, Super Game Boy, Super Game Boy 2), Game Boy
+Color, and Game Boy Advance (Game Boy Advance, Game Boy Player). The list shows no model numbers.
+App Settings has it on the Playing page.
 
-- Automatic runs a game marked for the Game Boy Color (CGB flag 0x80 or 0xC0) on a Game Boy Color
-  and the rest on a Game Boy. It never picks a Super Game Boy.
+- Automatic, the default and free, reads the cartridge header and picks the first match, as
+  SameBoy's Mac and SDL apps do:
+  1. A game made for the Game Boy Color (CGB flag 0x143 with bit 7 set, 0x80 or 0xC0): **Game Boy
+     Color**. With Super Game Boy borders on, one that also supports the Super Game Boy (as in
+     rule 2) plays on a **Game Boy Player**, with its television look. Borders are a setting
+     (`superGameBoyBorders`) that inherits like the others, is off by default, and has no control
+     yet, so every player gets Game Boy Color; showing it and drawing the border come later.
+  2. A game that supports the Super Game Boy (SGB flag 0x146 = 0x03 with old licensee 0x14B =
+     0x33): **Super Game Boy 2**, which runs at the Game Boy's own speed and pitch, where the
+     original Super Game Boy runs about 2.4% fast. The licensee check matches the hardware, which
+     ignores the SGB flag unless the old licensee is 0x33.
+  3. A game published by Nintendo (old licensee 0x01, or 0x33 with new licensee "01" at 0x144):
+     **Game Boy Color**, for the palette the Game Boy Color's boot ROM gives Nintendo's Game Boy
+     games.
+  4. Everything else: **Game Boy Pocket**.
+
+  Automatic never picks the original Game Boy, the Super Game Boy or the Game Boy Advance, and picks
+  the Game Boy Player only with borders on. A Build that already had save states when Automatic
+  began reading the header keeps the hardware its newest state was made on, of any kind and with
+  any Save Profile, so its states keep loading, borders or not, when that hardware is a Game Boy or
+  Game Boy Color, the only models Automatic picked before. A newest state made on any other model
+  was made with Model set by hand, which needs Plus, so that Build follows the rule and Automatic
+  never gives a Plus model for free. A Build without states moves to the rule. Which of the two a Build gets is recorded the first time it starts, so later states never
+  pin it, and a Build whose Model was set by hand then records the rule, for when Model goes back
+  to Automatic. A Build on the rule follows the borders setting when it changes; that moves a game
+  only between a Game Boy Color and a Game Boy Player, whose save states load on each other. Battery saves are the
+  cartridge's on every model and aren't affected. The note under the Model list says so: "On
+  Automatic, a game with save states from an earlier version stays on the Game Boy or Game Boy
+  Color its newest state was made on, so they keep loading." A patched Build whose image isn't on disk yet shows the
+  system's choice in Settings until it starts: Game Boy Color for a Game Boy Color game, otherwise
+  Game Boy Pocket.
 - Each model boots its own SameBoy boot ROM, so a game finds the hardware it checks for, such as a
   Game Boy Color game brightening its colors on a Game Boy Advance. The Game Boy Player is SameBoy's
   model of a Game Boy Advance inside one. There's no promise that a Game Boy Color-only game works
@@ -1276,19 +1421,25 @@ list shows no model numbers. App Settings has it on the Playing page.
   State made on another kind: the game starts from its battery save, a message says where that
   point can load, and the state stays in States. Crash recovery behaves the same way.
 - Screen Colors follows the hardware the game runs on. On a Game Boy or Pocket it lists the Game
-  Boy palettes, for Game Boy Color games too. On a Game Boy Color, Advance or Player it lists Color
-  Correction, for Game Boy games too, which those color as their boot ROM does. On a Super Game Boy
+  Boy palettes, for Game Boy Color games too. On a Game Boy Color, Advance or Player the colors are
+  Color Correction, under Customize, for Game Boy games too, which those color as their boot ROM
+  does. On a Super Game Boy
   or Super Game Boy 2 the row can't be changed: it says "Set by the game or the Super Game Boy"
   with Super Game Boy as its value. Without Plus every game plays on Automatic, so the row follows
-  the game's own system.
+  the model Automatic picks for it. On a Game Boy Pocket the default palette is Olive (Pocket), its
+  own screen; on a Game Boy it is Green (DMG). Where the games at a level run on several models, as in Game Boy settings on
+  Automatic, the palettes show if any of them shows one, and Customize lists Color Correction if
+  any of them corrects colors.
 - A Game Boy Advance's screen is darker than a Game Boy Color's, and SameBoy colors a game on a
-  Game Boy Advance or Player for that darker screen. When a game's Model is one of those, Display has **Game
+  Game Boy Advance or Player for that darker screen. When a game's Model is one of those, Customize has **Game
   Boy Advance Colors**: As on a Game Boy Advance, the default, or As on a Game Boy Color, which
   colors the picture as a Game Boy Color would with the same Screen Colors correction. The game
   still runs on a Game Boy Advance and can tell. Original colors look the same on both.
 - The Super Game Boy border isn't drawn yet: it makes the picture 256×224, which the layouts,
-  screenshots and thumbnails don't fit. Custom border editing comes after the border.
-- Quick Play always uses Automatic.
+  screenshots and thumbnails don't fit. Custom border editing comes after the border. A Super Game
+  Boy game on Automatic plays on a Super Game Boy 2 in the colors it sends, without its border.
+- Quick Play always uses Automatic, and its preset settings follow the hardware Automatic picks.
+  Resuming its autosave keeps the hardware the autosave was made on.
 - Choosing a model other than Automatic needs Plus (see Pricing). Without it, every model but
   Automatic carries a Plus badge in the list, choosing one opens the Plus screen, and the note
   under the list says so.
@@ -1440,8 +1591,12 @@ list shows no model numbers. App Settings has it on the Playing page.
 - Menu items end in an ellipsis only when they ask for something more before acting: a file, a
   name, a choice in a form. Items that open a screen, and deletions that only confirm, have none.
 - A welcome screen on first launch explains the library, Builds, saves, Quick Play, the game
-  menu, exports, and that the app comes with no games. It shows once, again only when its
-  content version rises, never in automated runs, and never ahead of a shared file or game.
+  menu, how the screen looks (the gameplay presets), exports, and that the app comes with no
+  games. It shows once, again only when its content version rises, never in automated runs, and
+  never ahead of a shared file or game. v1.1 raises the content version, so players updating
+  from v1.0 see it again, with a "Games Look Different" note at the top: an untouched screen
+  setting now resolves to Nostalgic, and Clean gives unfiltered pixels. A fresh install and
+  Settings never show that note.
   Settings > How Press Any Works reopens it, and the first game shows "Tap Press Any for the
   menu" once. v1 has nothing to opt into; the v2.0 opt-ins (crash reports, usage counts) and
   Developer Mode bring their own introductions.
@@ -1494,7 +1649,7 @@ viewer are later.
 ### Screenshots, notes and debug context
 
 The game menu's Capture submenu offers Share Screenshot: a PNG at the core frame's native size,
-with its current screen colors and no touch controls, menu, LCD filter or frame blending. Sharing
+with its current screen colors and no touch controls, menu, display filter or frame blending. Sharing
 works in library games and Quick Play, requires a frame, and leaves the game paused until Resume.
 The temporary PNG remains available until the system share sheet closes, then is removed. The
 share sheet's Save Image adds the screenshot to Photos; the app declares add-only access and never

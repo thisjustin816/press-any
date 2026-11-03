@@ -351,6 +351,23 @@ final class GameplayLifecycleTests: XCTestCase {
         return (gameplay, runtime, monitor)
     }
 
+    func testPresetButtonBounceChangesReachTheOpenGameWithoutRestarting() {
+        let (gameplay, runtime, _) = makeGameplay()
+        gameplay.setCoveredBySheet(true)
+        gameplay.applyDisplaySettings(
+            controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
+            frameBlending: .off, buttonBounce: false
+        )
+        XCTAssertEqual(runtime.buttonBounce, false)
+        gameplay.applyDisplaySettings(
+            controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .authenticGBC,
+            frameBlending: .blend, buttonBounce: true
+        )
+        XCTAssertEqual(runtime.buttonBounce, true)
+        XCTAssertEqual(runtime.restarts, 0)
+        XCTAssertFalse(gameplay.isRunningFrames)
+    }
+
     func testDisplaySettingsReachTheOpenGameWhileItStaysPaused() {
         let (gameplay, runtime, _) = makeGameplay()
         XCTAssertEqual(runtime.displaySettings?.correction, .balanced)
@@ -1092,6 +1109,8 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     private var foregroundCount = 0
     private var failed = false
     private var frameCount = 0
+    private(set) var buttonBounce = true
+    func setButtonBounce(_ enabled: Bool) throws { buttonBounce = enabled }
     private var displayOptions: (correction: ColorCorrection, palette: DMGPalette, advance: AdvanceColors)?
     var displaySettings: (correction: ColorCorrection, palette: DMGPalette, advance: AdvanceColors)? {
         lock.withLock { displayOptions }

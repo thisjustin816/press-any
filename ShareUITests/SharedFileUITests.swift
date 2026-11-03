@@ -157,34 +157,40 @@ final class SharedFileUITests: XCTestCase {
     }
 
     private func share(_ filename: String) {
-        sender.activate()
-        let fixture = sender.buttons[filename]
-        expect(fixture)
-        fixture.tap()
-        let recipient = sender.descendants(matching: .any).matching(NSPredicate(
-            format: "label IN %@", ["Press Any", "Open in Press Any", "Copy to Press Any"]
-        )).firstMatch
-        if !recipient.waitForExistence(timeout: 30) {
-            let more = sender.descendants(matching: .any)
-                .matching(NSPredicate(format: "label BEGINSWITH 'More'")).firstMatch
-            expect(more, message: "the system share sheet offers more destinations", timeout: 30)
-            if !recipient.exists { more.tap() }
-        }
-        expect(recipient, message: "Press Any is a system share destination for \(filename)", timeout: 30)
-        recipient.tap()
-        // The simulator sometimes drops the tap on the share sheet, which stays open, and sometimes
-        // hands the file over without bringing Press Any forward. A dropped tap sent nothing, so
-        // tapping again can't share the file twice; otherwise the app only needs bringing forward,
-        // and the caller's next check confirms the file arrived.
+        let destinationTitle = filename.hasSuffix(".ips") || filename.hasSuffix(".bps") ? "Open Patch" : "Open ROM"
+        let destination = app.navigationBars[destinationTitle]
+
         for _ in 0..<2 {
-            if app.wait(for: .runningForeground, timeout: 15) { return }
-            if recipient.exists, recipient.isHittable {
-                recipient.tap()
-            } else {
-                app.activate()
+            sender.activate()
+            let fixture = sender.buttons[filename]
+            expect(fixture)
+            fixture.tap()
+            let recipient = sender.descendants(matching: .any).matching(NSPredicate(
+                format: "label IN %@", ["Press Any", "Open in Press Any", "Copy to Press Any"]
+            )).firstMatch
+            if !recipient.waitForExistence(timeout: 30) {
+                let more = sender.descendants(matching: .any)
+                    .matching(NSPredicate(format: "label BEGINSWITH 'More'")).firstMatch
+                expect(more, message: "the system share sheet offers more destinations", timeout: 30)
+                if !recipient.exists { more.tap() }
+            }
+            expect(recipient, message: "Press Any is a system share destination for \(filename)", timeout: 30)
+            recipient.tap()
+
+            if app.wait(for: .runningForeground, timeout: 15), destination.waitForExistence(timeout: 10) {
+                return
+            }
+
+            // Never reuse the old share-sheet element after waiting. XCTest can still report it as
+            // hittable, then reactivate ShareTestSender to tap it, dismissing the sheet mid-tap.
+            // Bring Press Any forward to verify the handoff; if it never arrived, recreate the sheet.
+            app.activate()
+            if destination.waitForExistence(timeout: 10) {
+                return
             }
         }
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15), "iOS hands the file to Press Any")
+
+        XCTFail("iOS hands \(filename) to Press Any")
     }
 
     private func replace(_ field: XCUIElement, with value: String) {

@@ -12,6 +12,7 @@ struct AppSettingsView: View {
     private let integrityChecker: ManagedAssetIntegrityChecker?
     private let libraryDeletion: LibraryDeletionOperations?
     private let games: (any GameRepository)?
+    private let gameplayHardware: GameplayHardware?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.libraryStorageContext) private var libraryStorageContext
@@ -21,22 +22,46 @@ struct AppSettingsView: View {
         plus: PlusStore,
         integrityChecker: ManagedAssetIntegrityChecker? = nil,
         libraryDeletion: LibraryDeletionOperations? = nil,
-        games: (any GameRepository)? = nil
+        games: (any GameRepository)? = nil,
+        gameplayHardware: GameplayHardware? = nil
     ) {
         self.store = store
         _plus = ObservedObject(wrappedValue: plus)
         self.integrityChecker = integrityChecker
         self.libraryDeletion = libraryDeletion
         self.games = games
+        self.gameplayHardware = gameplayHardware
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    ForEach(GameSystem.allCases, id: \.self) { system in
+                        NavigationLink(system.displayName) {
+                            ScopedSettingsView(
+                                title: "\(system.displayName) Settings",
+                                scope: .system(system),
+                                system: system,
+                                gameID: nil,
+                                buildID: nil,
+                                store: store,
+                                plus: plus,
+                                inSheet: false,
+                                gameplayHardware: gameplayHardware
+                            )
+                        }
+                    }
+                } header: {
+                    Text("Gameplay")
+                } footer: {
+                    Text("The Gameplay preset, Model and Screen Colors for every game on one system. A Game or Build can still set its own.")
+                }
+
                 // The same order as a system's, Game's or Build's settings.
                 Section {
                     NavigationLink {
-                        DisplaySettingsPage(storage: storage, plus: plus)
+                        DisplaySettingsPage(storage: storage)
                     } label: {
                         Label("Display", systemImage: "display")
                     }
@@ -58,27 +83,6 @@ struct AppSettingsView: View {
                             if !plus.isUnlocked { PlusBadge() }
                         }
                     }
-                }
-
-                Section {
-                    ForEach(GameSystem.allCases, id: \.self) { system in
-                        NavigationLink(system.displayName) {
-                            ScopedSettingsView(
-                                title: "\(system.displayName) Settings",
-                                scope: .system(system),
-                                system: system,
-                                gameID: nil,
-                                buildID: nil,
-                                store: store,
-                                plus: plus,
-                                inSheet: false
-                            )
-                        }
-                    }
-                } header: {
-                    Text("Systems")
-                } footer: {
-                    Text("Settings for every game on one system, including its Screen Colors. A Game or Build can still set its own.")
                 }
 
                 if (libraryDeletion != nil && games != nil) || integrityChecker != nil || libraryStorageContext != nil {

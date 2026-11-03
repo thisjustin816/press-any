@@ -44,10 +44,13 @@ final class GameplayViewController: UIViewController {
     private var halted = false
     private var controlStyle: TouchControlStyle
     private var orientation: ScreenOrientation
-    private var lcdFilter: LCDFilter
+    private var lcdFilter: DisplayFilter
     private var colorCorrection: ColorCorrection
     private var advanceColors: AdvanceColors
     private var dmgPalette: DMGPalette
+    /// The hardware the game shows, so Monochrome LCD draws its screen.
+    private var hardware: HardwareModel
+    private var buttonBounce: Bool
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
     private var fastForwardAudio: FastForwardAudio
@@ -117,11 +120,13 @@ final class GameplayViewController: UIViewController {
         controlStyle: TouchControlStyle = .gameBoy,
         orientation: ScreenOrientation = .automatic,
         screenScaling: ScreenScaling = .integer,
-        lcdFilter: LCDFilter = .off,
+        lcdFilter: DisplayFilter = .off,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
+        hardware: HardwareModel = .gameBoy,
         advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending = .off,
+        buttonBounce: Bool = true,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted,
         controllerTheme: ControllerTheme = .matchSystem,
@@ -145,8 +150,10 @@ final class GameplayViewController: UIViewController {
         self.lcdFilter = lcdFilter
         self.colorCorrection = colorCorrection
         self.dmgPalette = dmgPalette
+        self.hardware = hardware
         self.advanceColors = advanceColors
         self.frameBlending = frameBlending
+        self.buttonBounce = buttonBounce
         self.fastForwardSpeed = fastForwardSpeed
         self.fastForwardAudio = fastForwardAudio
         self.screenScaling = screenScaling
@@ -214,6 +221,7 @@ final class GameplayViewController: UIViewController {
         renderer?.scaling = screenScaling
         renderer?.lcdFilter = lcdFilter
         renderer?.frameBlending = frameBlending
+        renderer?.monochromeScreen = MonochromeScreen(hardware: hardware, palette: dmgPalette)
         applyCoreDisplaySettings()
         applyLayout(touchControls.layout)
         // Audio can be unavailable, during a call for example. The game still runs, silently,
@@ -1030,14 +1038,29 @@ final class GameplayViewController: UIViewController {
         controlStyle: TouchControlStyle,
         orientation: ScreenOrientation = .automatic,
         screenScaling: ScreenScaling,
-        lcdFilter: LCDFilter,
+        lcdFilter: DisplayFilter,
         colorCorrection: ColorCorrection = .defaultValue,
         dmgPalette: DMGPalette = .defaultValue,
+        hardware: HardwareModel = .gameBoy,
         advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending,
+        buttonBounce: Bool = true,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted
     ) {
+        if buttonBounce != self.buttonBounce {
+            do {
+                try runtime.setButtonBounce(buttonBounce)
+                self.buttonBounce = buttonBounce
+            } catch {
+                showTransientMessage("Could not update button bounce: \(error.localizedDescription)")
+            }
+        }
+        if dmgPalette != self.dmgPalette || hardware != self.hardware {
+            self.hardware = hardware
+            renderer?.monochromeScreen = MonochromeScreen(hardware: hardware, palette: dmgPalette)
+            metalView.setNeedsDisplay()
+        }
         if colorCorrection != self.colorCorrection || dmgPalette != self.dmgPalette || advanceColors != self.advanceColors {
             self.colorCorrection = colorCorrection
             self.dmgPalette = dmgPalette

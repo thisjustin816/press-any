@@ -109,26 +109,22 @@ struct ControlsSettingsPage: View {
     }
 }
 
-/// How the game picture looks. Screen Colors depends on the system, so it lives under Systems.
+/// How the game picture is placed. The picture's look depends on the hardware, so the Gameplay
+/// preset and its settings live in each system's settings.
 struct DisplaySettingsPage: View {
     private let storage: AppSettingsStorage
-    @ObservedObject private var plus: PlusStore
 
-    @State private var showsPlus = false
     @State private var orientation: ScreenOrientation
     @State private var screenScaling: ScreenScaling
-    @State private var lcdFilter: LCDFilter
-    @State private var frameBlending: FrameBlending
     @State private var errorMessage: String?
 
-    init(storage: AppSettingsStorage, plus: PlusStore) {
+    init(storage: AppSettingsStorage) {
         self.storage = storage
-        _plus = ObservedObject(wrappedValue: plus)
         _orientation = State(initialValue: storage.value(ScreenOrientation.self, .orientation) ?? .automatic)
         _screenScaling = State(initialValue: storage.value(ScreenScaling.self, .screenScaling) ?? .integer)
-        _lcdFilter = State(initialValue: storage.value(LCDFilter.self, .lcdFilter) ?? .off)
-        _frameBlending = State(initialValue: storage.value(FrameBlending.self, .frameBlending) ?? .off)
     }
+
+    static let effectsFooter = "Display filters, frame blending and screen colors are part of each system's Gameplay settings, since they depend on the hardware a game runs on."
 
     var body: some View {
         Form {
@@ -148,29 +144,7 @@ struct DisplaySettingsPage: View {
                     Text("Fill").tag(ScreenScaling.fill)
                 }
             } footer: {
-                Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed.")
-            }
-
-            Section {
-                Picker(selection: Binding(get: { lcdFilter }, set: { chooseLCDFilter($0) })) {
-                    ForEach(LCDFilter.allCases, id: \.self) { filter in
-                        Text(plus.gate.label(filter.displayName, needsPlus: filter.needsPlus)).tag(filter)
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("LCD Filter")
-                        if !plus.isUnlocked { PlusBadge() }
-                    }
-                }
-                Picker("Frame Blending", selection: $frameBlending) {
-                    ForEach(FrameBlending.allCases, id: \.self) { blending in
-                        Text(blending.displayName).tag(blending)
-                    }
-                }
-            } header: {
-                Text("Effects")
-            } footer: {
-                Text(Self.effectsFooter(plus.gate))
+                Text("Integer keeps every pixel the same size. Fill makes the game as large as its frame, with pixel edges smoothed. " + Self.effectsFooter)
             }
 
             if let errorMessage {
@@ -180,26 +154,8 @@ struct DisplaySettingsPage: View {
         .scrollOverflowCue()
         .navigationTitle("Display")
         .navigationBarTitleDisplayMode(.inline)
-        .plusSheet(isPresented: $showsPlus, store: plus)
         .onChange(of: orientation) { _, newValue in save(newValue, .orientation) }
         .onChange(of: screenScaling) { _, newValue in save(newValue, .screenScaling) }
-        .onChange(of: lcdFilter) { _, newValue in save(newValue, .lcdFilter) }
-        .onChange(of: frameBlending) { _, newValue in save(newValue, .frameBlending) }
-    }
-
-    static func effectsFooter(_ gate: PlusGate) -> String {
-        let effects = "LCD 1× adds a subtle pixel grid and LCD 3× red, green and blue subpixels, at the same screen size. Blend mixes each frame with the one before, as a Game Boy screen does, so sprites that flicker to look see-through stay steady. LCD Ghosting also leaves a short trail behind moving things."
-        guard gate.isLocked(true) else { return effects }
-        return effects + " LCD filters come with \(PlusProduct.name). Without it a game shows Off, and a filter you already chose is kept."
-    }
-
-    /// A Plus filter without Plus opens the Plus screen and leaves the choice as it was.
-    private func chooseLCDFilter(_ filter: LCDFilter) {
-        if plus.gate.isLocked(filter.needsPlus) {
-            showsPlus = true
-        } else {
-            lcdFilter = filter
-        }
     }
 
     private func save(_ value: some Encodable, _ key: SettingKey) {
@@ -219,7 +175,6 @@ struct PlayingSettingsPage: View {
     @State private var fastForwardAudio: FastForwardAudio
     @State private var autoResumePolicy: AutoResumePolicy
     @State private var skipBootAnimation: Bool
-    @State private var buttonBounce: Bool
     @State private var saveStateSlots: SaveStateSlots
     @State private var nameNewStates: Bool
     @State private var keepSaveStates: KeepSaveStates
@@ -244,7 +199,6 @@ struct PlayingSettingsPage: View {
         _fastForwardAudio = State(initialValue: storage.value(FastForwardAudio.self, .fastForwardAudio) ?? .muted)
         _autoResumePolicy = State(initialValue: storage.value(AutoResumePolicy.self, .autoResumePolicy) ?? .always)
         _skipBootAnimation = State(initialValue: storage.value(Bool.self, .skipBootAnimation) ?? false)
-        _buttonBounce = State(initialValue: storage.value(Bool.self, .buttonBounce) ?? true)
         _hardwareModel = State(initialValue: storage.value(HardwareModel.self, .hardwareModel) ?? .automatic)
         _gameBoyCamera = State(initialValue: storage.value(GameBoyCamera.self, .gameBoyCamera) ?? .defaultValue)
     }
@@ -285,9 +239,8 @@ struct PlayingSettingsPage: View {
                     Text("Never").tag(AutoResumePolicy.never)
                 }
                 Toggle("Skip Boot Logo", isOn: $skipBootAnimation)
-                Toggle("Button Bounce", isOn: $buttonBounce)
             } footer: {
-                Text("Resume Games picks up where you left off when you open a game again or return to the app. Skip Boot Logo opens library games on the game; Quick Play always skips it. " + ScopedSettingsView.buttonBounceExplanation)
+                Text("Resume Games picks up where you left off when you open a game again or return to the app. Skip Boot Logo opens library games on the game; Quick Play always skips it.")
             }
 
             Section {
@@ -355,7 +308,6 @@ struct PlayingSettingsPage: View {
         .onChange(of: fastForwardAudio) { _, newValue in save(newValue, .fastForwardAudio) }
         .onChange(of: autoResumePolicy) { _, newValue in save(newValue, .autoResumePolicy) }
         .onChange(of: skipBootAnimation) { _, newValue in save(newValue, .skipBootAnimation) }
-        .onChange(of: buttonBounce) { _, newValue in save(newValue, .buttonBounce) }
         .onChange(of: hardwareModel) { _, newValue in save(newValue, .hardwareModel) }
         .onChange(of: gameBoyCamera) { _, newValue in save(newValue, .gameBoyCamera) }
     }
