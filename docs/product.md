@@ -1162,11 +1162,13 @@ emulation is later work.
   Settings, including from the in-game menu. The first row restores the inherited value and names
   its source, or says Default when no parent sets it. A checkmark marks the selected row; choosing
   a value keeps the list open so the paused picture stays visible above the half-height sheet.
-  - Original Game Boy games choose Green (DMG, the default), Olive (Pocket), Teal (Light),
+  - Original Game Boy games choose Green (DMG), Olive (Pocket), Teal (Light),
     twelve button-combo boot palettes, and six game palettes: Olive & Orange (Mole Mania),
     Red & Green (Link's Awakening), Tan & Red (Super Mario Land), Pastel & Orange (Super Mario
     Land 2), Blue & Orange (Donkey Kong Land), and Amber (Game Boy Camera). Donkey Kong Land
-    1, 2 and 3 share the same combination. The list groups Console Palettes, Button Palettes
+    1, 2 and 3 share the same combination. Unset, the palette follows the hardware: Olive on a
+    Game Boy Pocket, Green everywhere else, so choosing the Pocket as the Model shows its screen.
+    The list groups Console Palettes, Button Palettes
     and Game Palettes. Color names appear above a smaller subtitle with the console, button
     combo or game in parentheses, such as Brown (Up)
     and Black & White (Left + B). Black & White is the only grayscale choice; saved legacy

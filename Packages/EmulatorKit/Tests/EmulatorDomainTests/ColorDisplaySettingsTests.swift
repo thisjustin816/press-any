@@ -37,6 +37,10 @@ final class ColorDisplaySettingsTests: XCTestCase {
     func testDisplayDefaults() {
         XCTAssertEqual(ColorCorrection.defaultValue, .balanced)
         XCTAssertEqual(DMGPalette.defaultValue, .dmgGreen)
+        XCTAssertEqual(DMGPalette.defaultValue(for: .gameBoyPocket), .pocket)
+        for hardware in HardwareModel.allCases where hardware != .gameBoyPocket {
+            XCTAssertEqual(DMGPalette.defaultValue(for: hardware), .dmgGreen, "\(hardware)")
+        }
     }
 
     func testLegacyGrayscaleIsDecodableButHasOnlyOneMenuChoice() throws {

@@ -364,7 +364,7 @@ struct ScopedSettingsView: View {
             InheritableSettingRow(
                 title: "Screen Colors",
                 key: .dmgPalette,
-                defaultValue: DMGPalette.defaultValue,
+                defaultValue: DMGPalette.defaultValue(for: resolvedHardware),
                 options: palettes.map { ($0, $0.displayName) },
                 optionImage: { DMGPalettePreview.image(for: $0) },
                 optionTitle: { $0.colorName },
