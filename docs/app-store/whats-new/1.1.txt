@@ -10,6 +10,9 @@ Cartridges with a motion sensor follow how you tilt your iPhone. Recenter Tilt i
 Gameplay presets
 Choose how the screen looks for each system, free: Nostalgic, the new default, shows the screen as you remember it, cleaned up. Accurate imitates the original screen, or a CRT television for the Super Game Boy and Game Boy Player. Clean shows the game's pixels. Plus lets you change each setting on its own. The Game Boy palettes stay free.
 
+Games look different now
+If you never changed how the screen looks, your games now use Nostalgic and its screen filter. For sharp, unfiltered pixels, choose Clean in Settings. Settings you chose yourself stay as they were.
+
 Model (Plus)
 Run games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, each with its own boot ROM.
 
