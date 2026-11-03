@@ -1118,15 +1118,20 @@ filter, which Nostalgic uses on a Game Boy Advance.
   the second with the Game Boy Advance color profile.
 - **Game Boy Color LCD**: Authentic GBC's notched subpixels.
 - **Backlit GBA SP LCD**: the Pixel Grid with the AGS-101 SP's color profile.
-- **Scanlines**: sharp scanlines with no mask or glow.
+- **Scanlines**: sharp scanlines on a gently curved screen with small rounded corners, with no
+  mask, glow or vignette.
 - **CRT 240p**: a consumer television, as a Super Game Boy on a SNES showed: a visibly curved
-  tube with rounded corners, one beam per line with dark gaps, a coarse slot mask, soft
-  horizontal reconstruction, glow and a vignette.
+  tube with rounded corners, one beam per line with dark gaps, a slot mask, slightly soft
+  horizontal reconstruction, a faint glow and a vignette.
 - **CRT 480p**: a late-model television, as a Game Boy Player showed: a nearly flat face with
   rounded corners, each line drawn twice as the player's 480-line output does so the gaps nearly
-  close, a fine aperture grille, light glow and vignette. It shows no interlacing: a CRT shows
-  the two fields of 480i one after the other, so they never comb, and the player's 480p over
-  component draws the same lines.
+  close, a finer aperture grille, a fainter glow and a light vignette. It shows no interlacing: a
+  CRT shows the two fields of 480i one after the other, so they never comb, and the player's 480p
+  over component draws the same lines.
+
+Both CRTs keep pixel art readable at a phone's scale: a one-pixel outline stays dark, and the
+phosphor mask follows the game's pixels, so every pixel carries the same stripes and the mask
+never shimmers against the picture.
 
 The filters that imitate a physical screen work in linear light from the GPU's sRGB conversion,
 so they cost no per-sample power function; with frame blending, they mix light, as a slow screen

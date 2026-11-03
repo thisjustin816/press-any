@@ -9,8 +9,9 @@ and licenses.
 - **Nostalgic** is the standard: the screen as players remember it, cleaned up. Handhelds get a
   faint pixel grid with vivid colors, the frame blending their games' flicker effects expect and
   Button Bounce on. The Game Boy Advance gets the backlit AGS-101 SP's colors, the screen
-  most players remember as the good one. The television models get flat, sharp scanlines, the
-  look most players picture for a console on a TV.
+  most players remember as the good one. The television models get sharp scanlines on a gently
+  curved screen with rounded corners, the look most players picture for a console on a TV,
+  without the mask, glow and vignette that Accurate draws.
 - **Accurate** imitates the hardware: SameBoy's monochrome LCD with the original Game Boy's slow
   response (LCD Ghosting) or the faster Pocket's (Blend), Authentic GBC's measured subpixels with
   SameBoy's Low Contrast correction, SameBoy's color LCD with the published Game Boy Advance
@@ -44,13 +45,24 @@ code is not.
 ## Televisions
 
 The CRT treatments are one shader with a `CRTParameters` value per television
-(`App/Gameplay/DisplayFilterRendering.swift`), and tests assert that CRT 480p is flatter and has
-a finer mask than CRT 240p.
+(`App/Gameplay/DisplayFilterRendering.swift`). Tests assert that CRT 480p is flatter and has a
+finer mask than CRT 240p, that Scanlines curve far less than CRT 240p, and that each keeps a
+one-pixel outline dark and an edge under two thirds of a source pixel wide.
+
+A phone shows a Game Boy pixel about 7 screen pixels wide, much larger than a CRT shader's
+usual target, so softness that reads as analog on a monitor reads as blur here. The treatments
+therefore reconstruct along each line more sharply than CRT-Lottes's default (hardness -3, which
+leaves about a tenth of a neighbor in each pixel's center), keep glow faint so it doesn't fill in
+dark outlines, and lock the phosphor mask to source pixels: each pixel carries the same whole
+triads, and each screen pixel takes the share of each stripe it covers, so the mask never beats
+against the picture and fades to its average when it's finer than the screen.
 
 - **CRT 240p** (Super Game Boy, Accurate): a 1990s consumer set showing a SNES's 240-line
   picture. Spherical tubes of that era bowed visibly, so the barrel warp is about 1.8 times
-  CRT-Lottes's default; one beam per line with CRT-Lottes's default hardness leaves dark gaps; the
-  slot mask has a 6-pixel triad; horizontal reconstruction is soft; glow and a vignette follow.
+  CRT-Lottes's default; one beam per line with CRT-Lottes's default scanline hardness leaves dark
+  gaps; a slot mask carries two triads per SNES pixel, roughly what a 20-inch set's dot pitch gives;
+  horizontal reconstruction (-5) stays a little soft, as a composite picture did; a faint glow
+  and a vignette follow.
 - **CRT 480p** (Game Boy Player, Accurate): the Game Boy Player was sold until the GameCube's end
   (2007). By then many sets were flat-faced tubes: Sony sold flat FD Trinitron WEGA sets from the late 1990s
   ([Wikipedia](https://en.wikipedia.org/wiki/FD_Trinitron/WEGA)), and CRTs were still most TVs
@@ -59,14 +71,20 @@ a finer mask than CRT 240p.
   digital ([Nintendo World Report](http://www.nintendoworldreport.com/guide/2147/the-ultimate-game-boy-player-faq)
   calls it progressive scan compatible), and it draws each Game Boy line on two TV lines, with a
   Sharpness setting that softens the picture. So the treatment is nearly flat (a warp about a
-  quarter of CRT-Lottes's default) with rounded corners, two softer beams per source line, an
-  aperture grille with a 3-pixel triad and lighter glow. That flat Trinitron-style tube is
-  typical rather than universal: many households still had curved sets.
+  quarter of CRT-Lottes's default) with rounded corners, two beams per source line that nearly
+  close up, sharper reconstruction (-6) for a component picture, an aperture grille of two and a
+  half triads per pixel and a fainter glow. That flat Trinitron-style tube is typical rather than
+  universal: many households still had curved sets.
 - Interlacing isn't drawn. A CRT shows 480i's two fields one after the other, so a viewer never
   sees them combed together, and with each line drawn twice both fields carry the same picture
   until it moves. Drawing the previous frame on alternate lines, as a progressive screen weaving
   fields would, combs moving things in a way a CRT never did.
-- **Scanlines** (both television models, Nostalgic): sharp lines with no mask or glow.
+- **Scanlines** (both television models, Nostalgic): the television as players remember it,
+  cleaned up. A light barrel warp (about three quarters of CRT-Lottes's default, under half of
+  CRT 240p's) and small rounded corners read as a television without the mask, glow or
+  vignette, and the crispest reconstruction of the three (-8) keeps pixel art sharp. One look serves both models,
+  so on a Game Boy Player it curves more than Accurate's nearly flat set: Nostalgic pictures a
+  TV, not that player's late-model one.
 
 These are approximations of an RGB picture, not composite video or a named television.
 

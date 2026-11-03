@@ -203,13 +203,13 @@ float4 authenticGBC(DISPLAY_FRAMES, sampler s, float2 position) {
 struct CRTParameters {
     float4 geometry; // barrel curvature x, y; corner radius; vignette
     float4 beam;     // raster lines per source line; scanline hardness; horizontal hardness; brightness
-    float4 mask;     // pitch in screen pixels (0 for none); dark; light; 1 for a slot mask, 0 for a grille
+    float4 mask;     // triads per source pixel (0 for none); dark; light; slot break height in source lines (0 for a grille)
     float4 glow;     // bloom amount (0 for none); bloom mip level
 };
 
 // Each source line is one or more beam passes. A beam is Gaussian across its line and its
-// horizontal reconstruction is a two-tap Gaussian, as in CRT-Lottes; with its default hardness the
-// taps further out weigh under 1%, so they are left out.
+// horizontal reconstruction is a two-tap Gaussian, as in CRT-Lottes; at its default hardness or
+// harder the taps further out weigh under 1%, so they are left out.
 float3 crtLine(DISPLAY_FRAMES, sampler s, float rasterLine, float x, float2 rasterSize, float linesPerSource, float hardPix) {
     float row = clamp(floor(rasterLine / linesPerSource), 0.0, rasterSize.y / linesPerSource - 1.0);
     float left = floor(x - 0.5);
@@ -221,31 +221,42 @@ float3 crtLine(DISPLAY_FRAMES, sampler s, float rasterLine, float x, float2 rast
     return (a * wl + b * wr) / (wl + wr);
 }
 
-float3 crtMask(float2 screenPixel, float4 mask) {
+// How much of each of a triad's three stripes the span [t0, t1) covers, in triads. Each stripe's
+// covered length up to t is a clamped ramp per triad, so the share is exact at any footprint.
+float3 stripeShares(float t0, float t1) {
+    const float3 starts = float3(0.0, 1.0, 2.0) / 3.0;
+    float3 upTo1 = floor(t1) / 3.0 + clamp(float3(fract(t1)) - starts, float3(0.0), float3(1.0 / 3.0));
+    float3 upTo0 = floor(t0) / 3.0 + clamp(float3(fract(t0)) - starts, float3(0.0), float3(1.0 / 3.0));
+    return (upTo1 - upTo0) / max(t1 - t0, 1e-5);
+}
+
+// The phosphor mask, locked to source pixels so it never beats against them. `coord` is the
+// position in triads across and source lines down, and `footprint` one screen pixel's size there;
+// each screen pixel takes the share of each stripe, and of a slot mask's breaks, that it covers,
+// so a mask finer than the screen fades to its average instead of aliasing.
+float3 crtMask(float2 coord, float2 footprint, float4 mask) {
     if (mask.x <= 0.0) return float3(1.0);
-    float pitch = mask.x;
-    float2 pixel = floor(screenPixel);
-    float triad = floor(pixel.x / pitch);
-    float phase = fract(pixel.x / pitch);
-    float3 color = float3(mask.y);
-    if (phase < 1.0 / 3.0) color.r = mask.z;
-    else if (phase < 2.0 / 3.0) color.g = mask.z;
-    else color.b = mask.z;
-    // A slot mask breaks each stripe every `pitch` rows, offset half a slot on alternate triads.
-    if (mask.w > 0.5 && fract((pixel.y + fmod(triad, 2.0) * floor(pitch * 0.5)) / pitch) * pitch < 1.0) {
-        color *= mask.y;
+    float3 color = mix(float3(mask.y), float3(mask.z), stripeShares(coord.x - footprint.x * 0.5, coord.x + footprint.x * 0.5));
+    if (mask.w > 0.0) {
+        // Each stripe breaks once a source line, offset half a line on alternate triads.
+        float y = coord.y + 0.5 * fmod(floor(coord.x), 2.0);
+        float y0 = y - footprint.y * 0.5, y1 = y + footprint.y * 0.5;
+        float broken = (floor(y1) * mask.w + min(fract(y1), mask.w)) - (floor(y0) * mask.w + min(fract(y0), mask.w));
+        color *= mix(1.0, mask.y, broken / max(y1 - y0, 1e-5));
     }
     return color;
 }
 
-float4 crtDisplay(DISPLAY_FRAMES, sampler s, sampler bloomSampler, float2 position, float2 screenPixel,
-                  constant CRTParameters &crt) {
+float4 crtDisplay(DISPLAY_FRAMES, sampler s, sampler bloomSampler, float2 position, constant CRTParameters &crt) {
     float2 size = float2(newest.get_width(), newest.get_height());
     float2 centered = position * 2.0 - 1.0;
     float2 warped = centered * (1.0 + float2(centered.y * centered.y, centered.x * centered.x) * crt.geometry.xy);
     float2 uv = warped * 0.5 + 0.5;
 
-    // Edge and corner antialiasing come before any branch, so the derivatives stay valid.
+    // Edge and corner antialiasing and the mask's footprint come before any branch, so the
+    // derivatives stay valid.
+    float2 maskCoord = uv * size * float2(crt.mask.x, 1.0);
+    float2 maskFootprint = fwidth(maskCoord);
     float aspect = size.x / size.y;
     // Signed distance to the rounded raster edge, in half-heights.
     float radius = crt.geometry.z;
@@ -271,17 +282,16 @@ float4 crtDisplay(DISPLAY_FRAMES, sampler s, sampler bloomSampler, float2 positi
         if (weights.z > 0.0) glow += oldest.sample(bloomSampler, uv, level(crt.glow.y)) * weights.z;
         color += glow.rgb * crt.glow.x;
     }
-    color *= crtMask(screenPixel, crt.mask);
+    color *= crtMask(maskCoord, maskFootprint, crt.mask);
     color *= inside * (1.0 - crt.geometry.w * smoothstep(0.25, 1.7, dot(centered, centered)));
     return float4(color, 1.0);
 }
 
-float4 linearDisplay(DISPLAY_FRAMES, sampler s, sampler bloomSampler, float2 position, float2 screenPixel,
-                     constant CRTParameters &crt) {
+float4 linearDisplay(DISPLAY_FRAMES, sampler s, sampler bloomSampler, float2 position, constant CRTParameters &crt) {
     float4 color;
     if (mode == DISPLAY_MODE_MONOCHROME) color = sameboyMonoLCD(DISPLAY_FRAMES_ARGS, s, position);
     else if (mode == DISPLAY_MODE_AUTHENTIC_GBC) color = authenticGBC(DISPLAY_FRAMES_ARGS, s, position);
-    else if (mode == DISPLAY_MODE_CRT) color = crtDisplay(DISPLAY_FRAMES_ARGS, s, bloomSampler, position, screenPixel, crt);
+    else if (mode == DISPLAY_MODE_CRT) color = crtDisplay(DISPLAY_FRAMES_ARGS, s, bloomSampler, position, crt);
     else color = sameboyColorLCD(DISPLAY_FRAMES_ARGS, s, position);
     return float4(linearToSRGB(color.rgb), 1.0);
 }

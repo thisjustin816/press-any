@@ -32,45 +32,53 @@ extension DisplayFilter {
 
 /// One television for the CRT shader, matching `CRTParameters` in DisplayShaders.h. Beam hardness
 /// is the exponent of a base-2 Gaussian, so more negative is narrower; CRT-Lottes uses -8 across
-/// a line and -3 along it. Mask pitch is in screen pixels for one red, green and blue triad.
+/// a line and -3 along it. At -3 a pixel's center still takes about a tenth of its neighbor and
+/// an edge ramps across the whole pixel, which reads as blur at a phone's 7 screen pixels per
+/// Game Boy pixel, so the treatments here are harder along the line.
 struct CRTParameters: Equatable {
     /// Barrel curvature x and y (0 is flat; CRT-Lottes uses 0.031 and 0.042), corner radius in
     /// half-heights, and vignette strength.
     var geometry: SIMD4<Float>
     /// Raster lines per source line, scanline hardness, horizontal hardness and brightness.
     var beam: SIMD4<Float>
-    /// Pitch (0 for none), dark and light channel gain, and 1 for a slot mask or 0 for a grille.
+    /// Phosphor triads per source pixel (0 for none), dark and light channel gain, and for a slot
+    /// mask the height of the break between slots as a fraction of a source line (0 for a grille).
+    /// The mask follows source pixels, so every pixel carries the same stripes at any scale.
     var mask: SIMD4<Float>
     /// Bloom amount (0 for none) and the mip level it is read from.
     var glow: SIMD4<Float>
 
     var curvature: SIMD2<Float> { SIMD2(geometry.x, geometry.y) }
-    var maskPitch: Float { mask.x }
+    var triadsPerSourcePixel: Float { mask.x }
+    var isSlotMask: Bool { mask.x > 0 && mask.w > 0 }
     var linesPerSourceLine: Float { beam.x }
+    var glowAmount: Float { glow.x }
 
     /// A Super Game Boy on a 1990s consumer set: a spherical tube with visible curvature, one
-    /// visible scanline per SNES line, a coarse slot mask and a soft analog picture.
+    /// visible scanline per SNES line and a slot mask of two triads per pixel. The analog picture
+    /// stays a little soft along the line, with a faint glow, while outlines stay dark.
     static let consumerTV = CRTParameters(
         geometry: SIMD4(0.055, 0.075, 0.06, 0.22),
-        beam: SIMD4(1, -8, -2.5, 1.55),
-        mask: SIMD4(6, 0.6, 1.4, 1),
-        glow: SIMD4(0.18, 1.6, 0, 0)
+        beam: SIMD4(1, -8, -5, 1.3),
+        mask: SIMD4(2, 0.8, 1.35, 0.15),
+        glow: SIMD4(0.05, 2, 0, 0)
     )
 
     /// A Game Boy Player on a flat late-model set: a nearly flat face with rounded corners, the
-    /// player's line-doubled 480-line picture so the lines nearly close up, and a fine aperture
-    /// grille.
+    /// player's line-doubled 480-line picture so the lines nearly close up, a sharper component
+    /// picture and a finer aperture grille.
     static let lateModelTV = CRTParameters(
         geometry: SIMD4(0.008, 0.010, 0.10, 0.08),
-        beam: SIMD4(2, -6, -2.0, 1.25),
-        mask: SIMD4(3, 0.75, 1.25, 0),
-        glow: SIMD4(0.10, 1.6, 0, 0)
+        beam: SIMD4(2, -7, -6, 1.2),
+        mask: SIMD4(2.5, 0.85, 1.25, 0),
+        glow: SIMD4(0.03, 2, 0, 0)
     )
 
-    /// Clean scanlines on a flat picture, without a mask, curvature or glow.
+    /// The television as players remember it: a gently curved screen with rounded corners and
+    /// crisp scanlines, without a mask, glow or vignette. Lighter than either CRT treatment.
     static let scanlines = CRTParameters(
-        geometry: SIMD4(0, 0, 0, 0),
-        beam: SIMD4(1, -10, -6, 1.45),
+        geometry: SIMD4(0.024, 0.032, 0.05, 0),
+        beam: SIMD4(1, -10, -8, 1.45),
         mask: SIMD4(0, 1, 1, 0),
         glow: SIMD4(0, 0, 0, 0)
     )

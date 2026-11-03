@@ -76,8 +76,7 @@ float4 physicalDisplay(VertexOut in, texture2d<float> source, texture2d<float> p
                        uint displayMode, float3 weights, constant CRTParameters &crt) {
     constexpr sampler nearestSampler(coord::normalized, address::clamp_to_edge, filter::nearest);
     constexpr sampler bloomSampler(coord::normalized, address::clamp_to_edge, filter::linear, mip_filter::linear);
-    return linearDisplay(source, previous, oldest, weights, displayMode, nearestSampler, bloomSampler,
-                         in.texCoord, in.position.xy, crt);
+    return linearDisplay(source, previous, oldest, weights, displayMode, nearestSampler, bloomSampler, in.texCoord, crt);
 }
 
 fragment float4 gameplayTextureFragment(GAMEPLAY_FRAGMENT_ARGUMENTS) {

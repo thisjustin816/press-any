@@ -15,7 +15,7 @@ public enum DisplayFilter: String, Codable, Sendable, CaseIterable {
     case gbaLCD
     /// The faint grid with the backlit Game Boy Advance SP (AGS-101) color profile.
     case sp101LCD
-    /// Flat, sharp scanlines without a phosphor mask.
+    /// Sharp scanlines on a gently curved screen, without a phosphor mask or glow.
     case scanlines
     /// A consumer television showing a 240-line picture.
     case crt240p

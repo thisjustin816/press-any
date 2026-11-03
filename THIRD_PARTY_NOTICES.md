@@ -145,7 +145,8 @@ ported. libretro's `lcd1x`, `crt-geom`, `crt-easymode`, `crt-pi`, `crt-aperture`
   Lottes (`crt/shaders/crt-lottes.slang`), whose header reads "PUBLIC DOMAIN CRT STYLED
   SCAN-LINE SHADER ... Please take and use, change, or whatever." It uses CRT-Lottes's approach
   (a Gaussian beam across each line, a Gaussian reconstruction along it, light in linear sRGB and
-  a phosphor mask) and its default beam hardness, with its own geometry, masks and glow.
+  a phosphor mask) and, for CRT 240p, its default scanline hardness, with its own geometry,
+  sharper horizontal reconstruction, source-locked masks and glow.
 - The libretro sources above are pinned to `53deb2efcb79f4fc3e94e9602d5974b4b64e8f94`:
   https://github.com/libretro/slang-shaders/tree/53deb2efcb79f4fc3e94e9602d5974b4b64e8f94. The
   public-domain declarations and source URLs are bundled in

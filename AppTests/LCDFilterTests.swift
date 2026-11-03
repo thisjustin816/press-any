@@ -117,79 +117,147 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
-    func testCRTGeometryIsCurvedForTheSuperGameBoyAndNearlyFlatForTheGameBoyPlayer() throws {
+    func testCRTGeometryIsCurvedForTheSuperGameBoyNearlyFlatForTheGameBoyPlayerAndLightForScanlines() throws {
         XCTAssertLessThan(CRTParameters.lateModelTV.curvature.x, CRTParameters.consumerTV.curvature.x)
         XCTAssertLessThan(CRTParameters.lateModelTV.curvature.y, CRTParameters.consumerTV.curvature.y)
-        XCTAssertLessThan(CRTParameters.lateModelTV.maskPitch, CRTParameters.consumerTV.maskPitch)
-        XCTAssertGreaterThan(CRTParameters.lateModelTV.maskPitch, 0)
+        XCTAssertLessThan(CRTParameters.scanlines.curvature.y, CRTParameters.consumerTV.curvature.y)
         XCTAssertEqual(CRTParameters.consumerTV.linesPerSourceLine, 1)
         XCTAssertEqual(CRTParameters.lateModelTV.linesPerSourceLine, 2)
-        XCTAssertEqual(CRTParameters.scanlines.curvature, .zero)
-        XCTAssertEqual(CRTParameters.scanlines.maskPitch, 0)
+        XCTAssertEqual(CRTParameters.scanlines.linesPerSourceLine, 1)
 
-        // Measured on the picture: how far the raster's top edge bows down at a quarter of the
+        // Measured on the picture: how far the raster's top edge bows down at an eighth of the
         // width, away from the rounded corners, compared with its middle.
         let (device, library) = try metal()
         func bow(_ filter: DisplayFilter) throws -> Int {
             let pixels = try render(
                 filter, fragment: "gameplayTextureFragment", device: device, library: library,
-                frames: [255], sourceWidth: 160, sourceHeight: 144, outputWidth: 320, outputHeight: 288
+                frames: [255], sourceWidth: 160, sourceHeight: 144, outputWidth: 640, outputHeight: 576
             )
             func firstLitRow(_ x: Int) -> Int {
-                (0..<288).first { brightness(pixels, at: pixel(x, $0, width: 320)) > 60 } ?? 288
+                (0..<576).first { brightness(pixels, at: pixel(x, $0, width: 640)) > 60 } ?? 576
             }
-            return firstLitRow(40) - firstLitRow(160)
+            return firstLitRow(80) - firstLitRow(320)
         }
         let consumer = try bow(.crt240p)
         let lateModel = try bow(.crt480p)
-        XCTAssertGreaterThanOrEqual(consumer, 4, "CRT 240p is visibly curved")
+        let scanlines = try bow(.scanlines)
+        XCTAssertGreaterThanOrEqual(consumer, 8, "CRT 240p is visibly curved")
         XCTAssertLessThan(lateModel, consumer, "CRT 480p is flatter than CRT 240p")
-        XCTAssertLessThanOrEqual(lateModel, 1, "CRT 480p is nearly flat")
-        XCTAssertEqual(try bow(.scanlines), 0, "Scanlines are flat")
+        XCTAssertLessThanOrEqual(lateModel, 2, "CRT 480p is nearly flat")
+        XCTAssertGreaterThanOrEqual(scanlines, 2, "Scanlines curve a little")
+        XCTAssertLessThanOrEqual(scanlines * 2, consumer, "Scanlines curve far less than CRT 240p")
     }
 
     func testCRTRastersAndMasksDifferInDensity() throws {
         let (device, library) = try metal()
-        // Mid-gray stays below clipping, so the mask and beam show in full.
-        func picture(_ filter: DisplayFilter) throws -> [UInt8] {
+        // Mid-gray stays below clipping, so the mask and beam show in full. Twelve screen pixels
+        // per source pixel resolve the finer mask.
+        func picture(_ filter: DisplayFilter, size: Int = 384, crt: CRTParameters? = nil) throws -> [UInt8] {
             try render(
                 filter, fragment: "gameplayTextureFragment", device: device, library: library,
-                frames: [96], sourceWidth: 32, sourceHeight: 32, outputWidth: 192, outputHeight: 192
+                frames: [96], sourceWidth: 32, sourceHeight: 32, outputWidth: size, outputHeight: size, crt: crt
             )
         }
-        // Scanlines: brightness along a column through the middle, over four source lines.
-        func ripple(_ pixels: [UInt8]) -> (depth: Int, peaks: Int) {
-            let column = (84..<108).map { brightness(pixels, at: pixel(96, $0, width: 192)) }
+        // Scanlines: brightness along a column through the middle, over four source lines, with
+        // the mask left out so a slot mask's breaks don't count as lines.
+        func ripple(_ filter: DisplayFilter) throws -> (depth: Int, peaks: Int) {
+            var beamOnly = try XCTUnwrap(filter.crtParameters)
+            beamOnly.mask = .zero
+            let pixels = try picture(filter, crt: beamOnly)
+            let column = (168..<216).map { brightness(pixels, at: pixel(192, $0, width: 384)) }
             let peaks = (1..<(column.count - 1)).filter { column[$0] > column[$0 - 1] && column[$0] >= column[$0 + 1] }
             return ((column.max() ?? 0) - (column.min() ?? 0), peaks.count)
         }
-        // The mask: the spacing between the starts of red-dominant runs along a middle row.
-        func maskPitch(_ pixels: [UInt8]) -> Double {
-            let reds = (0..<192).map { x -> Bool in
-                let index = pixel(x, 96, width: 192)
-                return Int(pixels[index + 2]) > Int(pixels[index + 1]) + 4
-            }
-            let starts = (1..<reds.count).filter { reds[$0] && !reds[$0 - 1] }
-            guard starts.count > 2, let first = starts.first, let last = starts.last else { return 0 }
-            return Double(last - first) / Double(starts.count - 1)
-        }
-        let consumer = try picture(.crt240p), lateModel = try picture(.crt480p), lines = try picture(.scanlines)
-        let consumerRipple = ripple(consumer), lateRipple = ripple(lateModel), linesRipple = ripple(lines)
+        let consumerRipple = try ripple(.crt240p), lateRipple = try ripple(.crt480p), linesRipple = try ripple(.scanlines)
         XCTAssertGreaterThan(consumerRipple.depth, 40, "CRT 240p shows dark gaps between lines")
         XCTAssertGreaterThan(lateRipple.depth, 8, "CRT 480p still shows its finer lines")
         XCTAssertLessThan(lateRipple.depth, consumerRipple.depth)
         XCTAssertGreaterThan(lateRipple.peaks, consumerRipple.peaks, "CRT 480p draws more lines over the same source lines")
         XCTAssertGreaterThan(linesRipple.depth, 40)
 
-        let consumerPitch = maskPitch(consumer), latePitch = maskPitch(lateModel)
-        XCTAssertEqual(consumerPitch, Double(CRTParameters.consumerTV.maskPitch), accuracy: 0.5)
-        XCTAssertEqual(latePitch, Double(CRTParameters.lateModelTV.maskPitch), accuracy: 0.5)
-        XCTAssertEqual(maskPitch(lines), 0, "Scanlines have no mask")
+        // The mask: the spacing between the starts of red-dominant runs along a row a quarter of
+        // the way down a source line, clear of a slot mask's breaks.
+        func maskPitch(_ pixels: [UInt8], size: Int) -> Double {
+            let row = 16 * (size / 32) + size / 128
+            let reds = (0..<size).map { x -> Bool in
+                let index = pixel(x, row, width: size)
+                return Int(pixels[index + 2]) > Int(pixels[index + 1]) + 4
+            }
+            let starts = (1..<reds.count).filter { reds[$0] && !reds[$0 - 1] }
+            guard starts.count > 2, let first = starts.first, let last = starts.last else { return 0 }
+            return Double(last - first) / Double(starts.count - 1)
+        }
+        XCTAssertGreaterThan(
+            CRTParameters.lateModelTV.triadsPerSourcePixel, CRTParameters.consumerTV.triadsPerSourcePixel,
+            "CRT 480p's grille is finer than CRT 240p's slot mask"
+        )
+        XCTAssertTrue(CRTParameters.consumerTV.isSlotMask)
+        XCTAssertFalse(CRTParameters.lateModelTV.isSlotMask)
+        // The mask follows source pixels, so its pitch scales with them and every pixel carries
+        // the same stripes.
+        let televisions: [(DisplayFilter, CRTParameters)] = [(.crt240p, .consumerTV), (.crt480p, .lateModelTV)]
+        for size in [384, 288] {
+            let pixelsPerSource = Double(size / 32)
+            for (filter, parameters) in televisions {
+                XCTAssertEqual(
+                    maskPitch(try picture(filter, size: size), size: size),
+                    pixelsPerSource / Double(parameters.triadsPerSourcePixel), accuracy: 0.3, "\(filter) at \(size)"
+                )
+            }
+            XCTAssertEqual(maskPitch(try picture(.scanlines, size: size), size: size), 0, "Scanlines have no mask")
+        }
+    }
+
+    /// Pixel art stays readable: a one-pixel dark outline stays dark and an edge between source
+    /// pixels takes well under a source pixel. Scanlines are the crispest.
+    func testCRTKeepsOutlinesDarkAndEdgesSharp() throws {
+        let (device, library) = try metal()
+        let scale = 12
+        func row(_ filter: DisplayFilter, source: [UInt8], crt: CRTParameters? = nil) throws -> [Int] {
+            let pixels = try render(
+                filter, fragment: "gameplayTextureFragment", device: device, library: library,
+                sourceWidth: 32, sourceHeight: 32, outputWidth: 32 * scale, outputHeight: 32 * scale,
+                sourcePixels: source, crt: crt
+            )
+            // A line center: CRT 480p draws two lines per source line.
+            let lines = Int(try XCTUnwrap(filter.crtParameters).linesPerSourceLine)
+            let y = 15 * scale + scale / (2 * lines)
+            return (0..<(32 * scale)).map { brightness(pixels, at: pixel($0, y, width: 32 * scale)) }
+        }
+        func picture(_ gray: (Int) -> UInt8) -> [UInt8] {
+            (0..<(32 * 32)).flatMap { index -> [UInt8] in
+                let value = gray(index % 32)
+                return [value, value, value, 255]
+            }
+        }
+        // A black column on white, as an outline is, and white on the left with black on the right.
+        let outline = picture { $0 == 16 ? 0 : 255 }
+        let edge = picture { $0 < 16 ? 255 : 0 }
+        var widths: [DisplayFilter: Int] = [:]
+        for filter in [DisplayFilter.crt240p, .crt480p, .scanlines] {
+            let line = try row(filter, source: outline)
+            let darkest = try XCTUnwrap(line[(16 * scale)..<(17 * scale)].min())
+            let white = try XCTUnwrap(line[(8 * scale)..<(12 * scale)].max())
+            XCTAssertGreaterThan(white, 600, "\(filter) keeps white bright")
+            XCTAssertLessThan(darkest, filter == .scanlines ? 120 : 300, "\(filter) keeps a one-pixel outline dark")
+
+            // The beam alone, without mask or glow, from 10% to 90% of the way across the edge.
+            var beam = try XCTUnwrap(filter.crtParameters)
+            beam.mask = .zero
+            beam.glow = .zero
+            let ramp = try row(filter, source: edge, crt: beam)[(13 * scale)..<(19 * scale)]
+            let low = try XCTUnwrap(ramp.min()), high = try XCTUnwrap(ramp.max())
+            let width = ramp.filter { $0 > low + (high - low) / 10 && $0 < low + (high - low) * 9 / 10 }.count
+            XCTAssertLessThanOrEqual(width, scale * 2 / 3, "\(filter) edges take under two thirds of a source pixel")
+            widths[filter] = width
+        }
+        XCTAssertLessThanOrEqual(try XCTUnwrap(widths[.scanlines]), try XCTUnwrap(widths[.crt480p]))
+        XCTAssertLessThanOrEqual(try XCTUnwrap(widths[.scanlines]), try XCTUnwrap(widths[.crt240p]))
     }
 
     func testCRTCornersAreBlackAndRounded() throws {
         let (device, library) = try metal()
-        for filter in [DisplayFilter.crt240p, .crt480p] {
+        for filter in [DisplayFilter.crt240p, .crt480p, .scanlines] {
             let pixels = try render(
                 filter, fragment: "gameplayTextureFragment", device: device, library: library,
                 frames: [255], sourceWidth: 160, sourceHeight: 144, outputWidth: 320, outputHeight: 288
@@ -202,25 +270,37 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
-    func testCRTGlowsBeyondABrightPixelAndReducedWorkDropsTheGlow() throws {
+    /// Glow spills a little light just past a bright area and stays near it, so it doesn't veil
+    /// the picture; reduced work drops it.
+    func testCRTGlowsNearBrightLightAndReducedWorkDropsTheGlow() throws {
         let (device, library) = try metal()
-        var pixels = [UInt8](repeating: 0, count: 8 * 8 * 4)
-        for offset in stride(from: 3, to: pixels.count, by: 4) { pixels[offset] = 255 }
-        let center = (4 * 8 + 4) * 4
-        pixels.replaceSubrange(center..<(center + 4), with: [255, 255, 255, 255])
-        func crt(_ parameters: CRTParameters) throws -> [UInt8] {
-            try render(
-                .crt240p, fragment: "gameplayTextureFragment", device: device, library: library,
-                sourceWidth: 8, sourceHeight: 8, outputWidth: 160, outputHeight: 160, sourcePixels: pixels, crt: parameters
-            )
+        // White on the left half of a 16-pixel source, black on the right.
+        var pixels = [UInt8]()
+        for _ in 0..<16 {
+            for x in 0..<16 {
+                let value: UInt8 = x < 8 ? 255 : 0
+                pixels += [value, value, value, 255]
+            }
         }
-        let glowing = try crt(.consumerTV)
-        let reduced = try crt(CRTParameters.consumerTV.withoutGlow)
-        // A source pixel and a half right of the bright one, where the beam has no light left.
-        let beside = pixel(120, 90, width: 160)
-        XCTAssertGreaterThan(brightness(glowing, at: beside), brightness(reduced, at: beside) + 3, "glow reaches beside the pixel")
-        XCTAssertEqual(brightness(reduced, at: beside), 0, "without glow the dark stays dark")
-        XCTAssertEqual(Array(glowing[0..<3]), [0, 0, 0])
+        let televisions: [(DisplayFilter, CRTParameters)] = [(.crt240p, .consumerTV), (.crt480p, .lateModelTV)]
+        for (filter, parameters) in televisions {
+            XCTAssertGreaterThan(parameters.glowAmount, 0, "\(filter) glows")
+            func crt(_ parameters: CRTParameters) throws -> [UInt8] {
+                try render(
+                    filter, fragment: "gameplayTextureFragment", device: device, library: library,
+                    sourceWidth: 16, sourceHeight: 16, outputWidth: 320, outputHeight: 320, sourcePixels: pixels, crt: parameters
+                )
+            }
+            let glowing = try crt(parameters)
+            let reduced = try crt(parameters.withoutGlow)
+            // A source pixel and a half into the black, where the beam has no light left, at a
+            // line center; and six and a half pixels in.
+            let beside = pixel(190, 170, width: 320), far = pixel(290, 170, width: 320)
+            XCTAssertGreaterThan(brightness(glowing, at: beside), brightness(reduced, at: beside) + 3, "\(filter) glows beside the light")
+            XCTAssertLessThan(brightness(glowing, at: beside), 120, "\(filter) glow is faint")
+            XCTAssertEqual(brightness(reduced, at: beside), 0, "\(filter) without glow the dark stays dark")
+            XCTAssertEqual(brightness(glowing, at: far), 0, "\(filter) glow stays near the light")
+        }
     }
 
     func testPhysicalTreatmentsDrawTheSameInBothScalingPaths() throws {
