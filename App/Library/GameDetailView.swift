@@ -350,7 +350,8 @@ struct GameDetailView: View {
                     store: container.repositories.settings,
                     plus: container.plus,
                     marksGameBoyColorOnly: container.marksGameBoyColorOnly(gameID: model.gameID, buildID: target.buildID),
-                    hasCamera: container.hasCameraCartridge(gameID: model.gameID, buildID: target.buildID)
+                    hasCamera: container.hasCameraCartridge(gameID: model.gameID, buildID: target.buildID),
+                    gameplayHardware: container.hardware
                 )
             }
             .sheet(item: $buildDetails) { build in

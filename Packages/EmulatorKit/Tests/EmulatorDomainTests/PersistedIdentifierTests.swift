@@ -46,16 +46,25 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(SettingKey.hardwareModel.rawValue, "hardwareModel")
         XCTAssertEqual(SettingKey.advanceColors.rawValue, "advanceColors")
         XCTAssertEqual(SettingKey.gameBoyCamera.rawValue, "gameBoyCameraSetting")
+        XCTAssertEqual(SettingKey.gameplayPreset.rawValue, "gameplayPreset")
+        XCTAssertEqual(SettingKey.automaticHardware.rawValue, "automaticHardware")
+        XCTAssertEqual(SettingKey.superGameBoyBorders.rawValue, "superGameBoyBorders")
+        XCTAssertEqual(GameplayPreset.allCases.map(\.rawValue), ["standard", "accurate", "clean", "custom"])
+        XCTAssertEqual(SettingKey.allCases.filter(\.isBuildOnly), [.automaticHardware])
     }
 
-    func testHardwareModelValuesAreStableAndAutomaticFollowsTheSystem() {
+    func testHardwareModelValuesAreStableAndAutomaticReadsTheHeader() {
         XCTAssertEqual(HardwareModel.allCases.map(\.rawValue), ["automatic", "dmg", "mgb", "sgb", "sgb2", "cgb", "agb", "gbp"])
-        XCTAssertEqual(HardwareModel.automatic.resolved(for: .gameBoy), .gameBoy)
         for retired in ["mgl", "ags101"] {
             XCTAssertNil(HardwareModel(rawValue: retired), "a display-only model is not hardware")
         }
-        XCTAssertEqual(HardwareModel.automatic.resolved(for: .gameBoyColor), .gameBoyColor)
-        XCTAssertEqual(HardwareModel.superGameBoy.resolved(for: .gameBoyColor), .superGameBoy, "a chosen model is kept")
+        XCTAssertEqual(HardwareModel.automatic.resolved(automatic: .superGameBoy2), .superGameBoy2)
+        XCTAssertEqual(HardwareModel.superGameBoy.resolved(automatic: .gameBoyColor), .superGameBoy, "a chosen model is kept")
+        XCTAssertEqual(HardwareModel.automatic.resolved(forImage: Data(count: 0x100), system: .gameBoy), .gameBoyPocket, "no header")
+        XCTAssertEqual(HardwareModel.automatic.resolved(forImage: Data(), system: .gameBoyColor), .gameBoyColor, "no header")
+        XCTAssertEqual(HardwareModel.gameBoy.resolved(forImage: Data(count: 0x8000), system: .gameBoyColor), .gameBoy)
+        XCTAssertEqual(HardwareModel.automaticChoices(for: .gameBoy), [.gameBoyPocket, .superGameBoy2, .gameBoyColor])
+        XCTAssertEqual(HardwareModel.automaticChoices(for: .gameBoyColor), [.gameBoyColor])
         XCTAssertEqual(HardwareFamily.gameBoy.models, [.gameBoy, .gameBoyPocket])
         XCTAssertEqual(HardwareFamily.superGameBoy.models, [.superGameBoy, .superGameBoy2])
         XCTAssertEqual(HardwareFamily.gameBoyColor.models, [.gameBoyColor, .gameBoyAdvance, .gameBoyPlayer])

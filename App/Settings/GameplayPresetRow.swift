@@ -10,7 +10,9 @@ struct GameplayPresetRow: View {
     let system: GameSystem
     let gameID: UUID?
     let buildID: UUID?
-    let hardware: HardwareModel
+    /// The models games here play on; more than one where each game gets its own, as under
+    /// Automatic.
+    let hardware: [HardwareModel]
     let store: any SettingsStore
     @ObservedObject var plus: PlusStore
     let refreshToken: Int
@@ -55,10 +57,10 @@ struct GameplayPresetRow: View {
         .onChange(of: hardware) { load() }
     }
 
-    static func detail(_ preset: GameplayPreset, hardware: HardwareModel, plusUnlocked: Bool) -> String {
+    static func detail(_ preset: GameplayPreset, hardware: [HardwareModel], plusUnlocked: Bool) -> String {
         switch preset {
         case .standard: "The screen as you remember it, cleaned up"
-        case .accurate: "As on a \(hardware.displayName)"
+        case .accurate: hardware.count == 1 ? "As on a \(hardware[0].displayName)" : "As on the hardware each game plays on"
         case .clean: "The game's pixels, with no screen effects"
         case .custom:
             plusUnlocked

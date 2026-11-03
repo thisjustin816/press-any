@@ -59,7 +59,7 @@ final class PlusTests: XCTestCase {
         XCTAssertTrue(ScopedSettingsView.gameplayFooter.contains("Every preset and Screen Colors are free"))
         XCTAssertTrue(ScopedSettingsView.gameplayFooter.contains(GameplayPreset.standardName))
         for preset in GameplayPreset.builtIn {
-            XCTAssertFalse(GameplayPresetRow.detail(preset, hardware: .gameBoyColor, plusUnlocked: false).contains("Plus"), "\(preset) is free")
+            XCTAssertFalse(GameplayPresetRow.detail(preset, hardware: [.gameBoyColor], plusUnlocked: false).contains("Plus"), "\(preset) is free")
         }
         let roadmap = PlusRoadmap.includedToday.map(\.detail).joined(separator: " ")
         XCTAssertTrue(roadmap.contains("presets and Screen Colors palettes are free"))

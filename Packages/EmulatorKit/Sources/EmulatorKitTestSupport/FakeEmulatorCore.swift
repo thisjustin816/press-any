@@ -41,6 +41,7 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
     public private(set) var hardwareModelRequests: [HardwareModel] = []
 
     private var loadedSystem: GameSystem?
+    private var loadedImage: Data?
     private var battery = Data()
     private var frameCounter: UInt64 = 0
     private var pendingAudio = [StereoSample]()
@@ -81,9 +82,9 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
             throw FakeEmulatorCoreError.unsupportedSystem(system)
         }
         loadedSystem = system
+        loadedImage = rom
         frameCounter = 0
         pendingAudio.removeAll(keepingCapacity: true)
-        _ = rom
     }
 
     public func loadPersistentSave(_ data: Data?) throws {
@@ -200,11 +201,16 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
 
     /// The hardware the loaded game runs on.
     public var runningModel: HardwareModel? {
-        loadedSystem.map { hardwareModel.resolved(for: $0) }
+        guard let loadedSystem, let loadedImage else { return nil }
+        return hardwareModel.resolved(forImage: loadedImage, system: loadedSystem)
     }
 
     public func hardwareFamily(ofState state: Data) -> HardwareFamily? {
-        (try? JSONDecoder().decode(SerializedState.self, from: state))?.hardwareModel?.family
+        hardwareModel(ofState: state)?.family
+    }
+
+    public func hardwareModel(ofState state: Data) -> HardwareModel? {
+        (try? JSONDecoder().decode(SerializedState.self, from: state))?.hardwareModel
     }
 
     public var configuredSpeed: EmulationSpeed {

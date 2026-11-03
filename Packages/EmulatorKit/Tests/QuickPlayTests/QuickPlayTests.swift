@@ -1212,3 +1212,43 @@ extension QuickPlayTests {
         XCTAssertTrue(try resumes(harness, saves.session))
     }
 }
+
+extension QuickPlayTests {
+    func testQuickPlayRunsOnWhatAutomaticPicksAndResumesOnTheHardwareItsAutosaveWasMadeOn() throws {
+        let harness = try QuickPlayHarness.make()
+        let image = TestROM.make(title: "SGB", sgbFlag: 0x03, oldLicensee: 0x33)
+        let session = try harness.workspace.start(romURL: harness.writeExternalROM(image))
+
+        let fresh = harness.makeRuntime(session)
+        try fresh.start(resumeAutoState: false)
+        XCTAssertEqual(fresh.runningHardwareModel, .superGameBoy2)
+        try fresh.stop(createAutoState: false)
+
+        // An autosave from before Automatic read the header was made on a Game Boy.
+        let earlier = FakeEmulatorCore(descriptor: CoreDescriptor(identifier: "sameboy", version: "1.0.3"))
+        try earlier.setHardwareModel(.gameBoy)
+        try earlier.loadImage(image, system: .gameBoy)
+        try earlier.serializeState().write(to: session.autoStateURL)
+
+        let resumed = harness.makeRuntime(session)
+        try resumed.start()
+        XCTAssertFalse(resumed.autoStateRejected, "the autosave loads")
+        XCTAssertEqual(resumed.runningHardwareModel, .gameBoy)
+        try resumed.stop(createAutoState: false)
+    }
+
+    func testQuickPlayReadsTheSuperGameBoyBordersSetting() throws {
+        let harness = try QuickPlayHarness.make()
+        let image = TestROM.make(title: "BOTH", cgb: true, sgbFlag: 0x03, oldLicensee: 0x33)
+        let session = try harness.workspace.start(romURL: harness.writeExternalROM(image))
+        for (borders, model) in [(false, HardwareModel.gameBoyColor), (true, .gameBoyPlayer)] {
+            let runtime = QuickPlayRuntimeSession(
+                session: session, coreRegistry: CoreRegistry(factories: [QuickPlayFakeFactory()]),
+                assetStore: harness.store, superGameBoyBorders: borders
+            )
+            try runtime.start(resumeAutoState: false)
+            XCTAssertEqual(runtime.runningHardwareModel, model, "borders \(borders)")
+            try runtime.stop(createAutoState: false)
+        }
+    }
+}

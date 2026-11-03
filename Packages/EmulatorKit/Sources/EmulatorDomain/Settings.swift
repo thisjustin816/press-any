@@ -102,6 +102,19 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// `GameBoyCamera`, unset means `.rear`. Only camera cartridges read it. Test builds saved the
     /// game menu's choice under `gameBoyCamera`; this key leaves those behind.
     case gameBoyCamera = "gameBoyCameraSetting"
+    /// `GameplayPreset`, never `.custom`; unset means no preset is chosen at this scope. A built-in
+    /// preset chosen at a scope, whose values for each game's own hardware apply to every setting it
+    /// controls that the scope doesn't store a value for.
+    case gameplayPreset
+    /// `HardwareModel`; Build scope only, and only the app writes it, the first time the Build
+    /// starts. `.automatic` means Automatic follows the header rule for the Build; any other model
+    /// is the hardware its newest save state was made on when it first started, which Automatic
+    /// keeps so those states load.
+    case automaticHardware
+    /// Bool, unset means false. Super Game Boy borders, which nothing shows or changes yet. With
+    /// them on, Automatic plays a Game Boy Color game that also supports the Super Game Boy on a
+    /// Game Boy Player instead of a Game Boy Color.
+    case superGameBoyBorders
 
     public var isAppOnly: Bool {
         switch self {
@@ -109,6 +122,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
         default: false
         }
     }
+
+    public var isBuildOnly: Bool { self == .automaticHardware }
 }
 
 /// How strongly the on-screen controls tap back when pressed. Raw values are stored in settings.
@@ -444,7 +459,9 @@ public enum TimedStates: Int, Codable, Sendable, CaseIterable {
 
 /// The hardware a game runs on. Raw values are stored in settings.
 public enum HardwareModel: String, Codable, Sendable, CaseIterable {
-    /// A Game Boy Color for games marked for it, and a Game Boy for the rest.
+    /// The hardware the game's header suits (`CartridgeHints.automaticModel(superGameBoyBorders:)`),
+    /// or for a Build that had save states when Automatic began reading the header, the hardware
+    /// its newest state was made on.
     case automatic
     case gameBoy = "dmg"
     case gameBoyPocket = "mgb"
@@ -458,10 +475,27 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     /// Under the Model row.
     public static let settingSummary = "Model is the hardware games run on. An open game restarts on the new hardware when its settings close, keeping its save."
     /// Under the Model picker.
-    public static let settingExplanation = settingSummary + " A save state loads only on the kind of hardware it was made on."
+    public static let settingExplanation = settingSummary + " A save state loads only on the kind of hardware it was made on. " + automaticKeepsStates
+    /// Under the Model picker, with or without Plus.
+    public static let automaticKeepsStates = "On Automatic, a game with save states from an earlier version stays on the hardware its newest state was made on, so they keep loading."
 
     /// What Automatic picks, under it in the Model picker.
-    public static let automaticSummary = "Game Boy Color for its games, Game Boy for the rest"
+    public static let automaticSummary = "Game Boy Color for color and Nintendo games, Super Game Boy 2 for Super Game Boy games, Game Boy Pocket for the rest"
+
+    /// What Automatic plays a game on when its header can't be read: a Game Boy Color for a Game
+    /// Boy Color game, and a Game Boy Pocket for the rest.
+    public static func automaticFallback(for system: GameSystem) -> HardwareModel {
+        system == .gameBoyColor ? .gameBoyColor : .gameBoyPocket
+    }
+
+    /// The models Automatic picks among for games of `system` from their headers, the one it picks
+    /// for most games first.
+    public static func automaticChoices(for system: GameSystem, superGameBoyBorders: Bool = false) -> [HardwareModel] {
+        switch system {
+        case .gameBoy: [.gameBoyPocket, .superGameBoy2, .gameBoyColor]
+        case .gameBoyColor: superGameBoyBorders ? [.gameBoyColor, .gameBoyPlayer] : [.gameBoyColor]
+        }
+    }
 
     public var displayName: String {
         switch self {
@@ -476,13 +510,17 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
         }
     }
 
-    /// The hardware a game of `system` runs on: this model, or for Automatic the system's own.
-    public func resolved(for system: GameSystem) -> HardwareModel {
+    /// The hardware a game runs on: this model, or for Automatic the one it picks for `image`'s
+    /// header.
+    public func resolved(forImage image: Data, system: GameSystem, superGameBoyBorders: Bool = false) -> HardwareModel {
         guard self == .automatic else { return self }
-        return switch system {
-        case .gameBoy: .gameBoy
-        case .gameBoyColor: .gameBoyColor
-        }
+        return CartridgeHints(image: image)?.automaticModel(superGameBoyBorders: superGameBoyBorders)
+            ?? Self.automaticFallback(for: system)
+    }
+
+    /// This model, or `automaticModel` for Automatic.
+    public func resolved(automatic automaticModel: HardwareModel) -> HardwareModel {
+        self == .automatic ? automaticModel : self
     }
 
     /// The console this model is a version of, which the Model picker groups by. Nil for Automatic.

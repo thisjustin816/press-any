@@ -763,18 +763,22 @@ extension EmulationSessionTests {
             return try XCTUnwrap(harness.factory.cores.last).hardwareModel
         }
 
-        XCTAssertEqual(try modelOnStart(harness.contextA), .automatic, "unset is Automatic")
+        XCTAssertEqual(try modelOnStart(harness.contextA), .gameBoyColor, "unset is Automatic, which picks for the game")
+        XCTAssertEqual(
+            try settings.valueJSON(key: SettingKey.automaticHardware.rawValue, scope: .build(harness.buildA.id)), "\"automatic\"",
+            "the first start records that it follows the header"
+        )
 
         try settings.set(HardwareModel.gameBoyPocket, key: key, scope: .app)
         XCTAssertEqual(try modelOnStart(harness.contextA), .gameBoyPocket, "the app-wide setting applies")
 
         try settings.set(HardwareModel.superGameBoy, key: key, scope: .build(harness.buildB.id))
         XCTAssertEqual(try modelOnStart(harness.contextB), .superGameBoy, "a Build override wins")
-        XCTAssertEqual(try modelOnStart(harness.contextB, allowed: false), .automatic, "without Plus the game plays on Automatic")
+        XCTAssertEqual(try modelOnStart(harness.contextB, allowed: false), .gameBoyColor, "without Plus the game plays on Automatic")
         XCTAssertEqual(try settings.valueJSON(key: key, scope: .build(harness.buildB.id)), "\"sgb\"", "and the choice is kept")
 
         try settings.setValueJSON("not json", key: key, scope: .app)
-        XCTAssertEqual(try modelOnStart(harness.contextA), .automatic, "an unreadable value is Automatic")
+        XCTAssertEqual(try modelOnStart(harness.contextA), .gameBoyColor, "an unreadable value is Automatic")
     }
 
     func testRestartRunsTheGameOnAChangedModel() throws {
@@ -783,11 +787,11 @@ extension EmulationSessionTests {
         let session = harness.makeSession(settings: SettingsResolver(store: settings))
         try session.start(context: harness.contextA)
         let core = try XCTUnwrap(harness.factory.cores.last)
-        XCTAssertEqual(core.hardwareModel, .automatic)
+        XCTAssertEqual(core.hardwareModel, .gameBoyColor)
 
         try settings.set(HardwareModel.gameBoyAdvance, key: SettingKey.hardwareModel.rawValue, scope: .game(harness.contextA.gameID))
         _ = try session.stepFrame()
-        XCTAssertEqual(core.hardwareModel, .automatic, "a running game keeps its hardware")
+        XCTAssertEqual(core.hardwareModel, .gameBoyColor, "a running game keeps its hardware")
 
         try session.restart()
         XCTAssertEqual(core.hardwareModel, .gameBoyAdvance, "Restart switches it")
@@ -837,6 +841,212 @@ extension EmulationSessionTests {
             XCTAssertEqual(error as? StateNeedsOtherHardware, StateNeedsOtherHardware(family: .gameBoyColor))
         }
         try session.stop(createAutoState: false)
+    }
+
+    func testAutomaticPlaysEachGameOnTheHardwareItsHeaderSuits() throws {
+        let superGameBoy = TestROM.make(title: "SGB", sgbFlag: 0x03, oldLicensee: 0x33)
+        let nintendo = TestROM.make(title: "NINTENDO", oldLicensee: 0x01)
+        let harness = try SessionHarness.make(imageA: superGameBoy, imageB: nintendo)
+        let settings = InMemorySettingsStore()
+        for allowed in [true, false] {
+            let session = harness.makeSession(settings: SettingsResolver(store: settings), choosesHardwareModel: { allowed })
+            try session.start(context: harness.contextA)
+            XCTAssertEqual(session.runningHardwareModel, .superGameBoy2, "with Plus \(allowed)")
+            try session.stop(createAutoState: false)
+            try session.start(context: harness.contextB)
+            XCTAssertEqual(session.runningHardwareModel, .gameBoyColor, "with Plus \(allowed)")
+            try session.stop(createAutoState: false)
+        }
+
+        let other = try SessionHarness.make(imageA: TestROM.make(title: "OTHER", oldLicensee: 0x33, newLicensee: "8B"))
+        let session = other.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: other.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyPocket)
+        XCTAssertEqual(other.factory.cores.last?.hardwareModel, .gameBoyPocket, "the core is told the model it picked")
+        try session.stop(createAutoState: false)
+    }
+
+    /// A Build with save states from before Automatic read the header has no recorded choice;
+    /// its first start keeps the hardware its newest state was made on, so the states still load.
+    func testABuildWithSaveStatesKeepsTheHardwareItsNewestStateWasMadeOn() throws {
+        let superGameBoy = TestROM.make(title: "SGB", sgbFlag: 0x03, oldLicensee: 0x33)
+        let nintendo = TestROM.make(title: "NINTENDO", oldLicensee: 0x01)
+        let harness = try SessionHarness.make(imageA: superGameBoy, imageB: nintendo)
+        let settings = InMemorySettingsStore()
+        let modelKey = SettingKey.hardwareModel.rawValue
+        let recordKey = SettingKey.automaticHardware.rawValue
+
+        // Earlier versions ran Game Boy games on a Game Boy under Automatic.
+        try settings.set(HardwareModel.gameBoy, key: modelKey, scope: .app)
+        let earlier = harness.makeSession(settings: SettingsResolver(store: settings))
+        try earlier.start(context: harness.contextA)
+        _ = try earlier.stepFrame()
+        _ = try earlier.saveQuickState()
+        try earlier.stop(createAutoState: true)
+        try settings.removeValue(key: modelKey, scope: .app)
+        try settings.removeValue(key: recordKey, scope: .build(harness.buildA.id))
+        try settings.removeValue(key: recordKey, scope: .build(harness.buildB.id))
+
+        let hardware = harness.gameplayHardware(settings: settings)
+        let buildA = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
+        let buildB = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildB.id))
+        XCTAssertEqual(hardware.hardware(for: buildA), .gameBoy, "settings show it before it starts")
+        XCTAssertEqual(hardware.hardware(for: buildB), .gameBoyColor, "a Build with no states moves to the header's choice")
+
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        let autoState = try XCTUnwrap(session.resumableAutoState(for: harness.contextA))
+        XCTAssertNil(session.hardwareFamilyNeeded(for: autoState))
+        XCTAssertEqual(try session.start(context: harness.contextA, resumeFrom: autoState), .restored(autoState))
+        XCTAssertEqual(session.runningHardwareModel, .gameBoy)
+        XCTAssertEqual(try settings.valueJSON(key: recordKey, scope: .build(harness.buildA.id)), "\"dmg\"")
+        for state in try session.saveStates() {
+            XCTAssertNoThrow(try session.loadState(state), "\(state.kind)")
+        }
+        try session.stop(createAutoState: true)
+
+        // Later states don't change it, and neither does the header.
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoy)
+        XCTAssertNil(session.changedHardwareModel())
+        try session.stop(createAutoState: false)
+
+        try session.start(context: harness.contextB)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyColor)
+        XCTAssertEqual(try settings.valueJSON(key: recordKey, scope: .build(harness.buildB.id)), "\"automatic\"")
+        try session.stop(createAutoState: false)
+    }
+
+    func testTheNewestStateDecidesAndAStateThatCantBeReadGivesWay() throws {
+        let harness = try SessionHarness.make(imageA: TestROM.make(title: "GAME"))
+        let settings = InMemorySettingsStore()
+        let modelKey = SettingKey.hardwareModel.rawValue
+        var clock = Date(timeIntervalSince1970: 1_700_000_000)
+        for model in [HardwareModel.gameBoyColor, .superGameBoy] {
+            try settings.set(model, key: modelKey, scope: .build(harness.buildA.id))
+            clock += 60
+            let session = harness.makeSession(settings: SettingsResolver(store: settings), now: clock)
+            try session.start(context: harness.contextA)
+            try session.stop(createAutoState: true)
+        }
+        try settings.removeValue(key: modelKey, scope: .build(harness.buildA.id))
+        try settings.removeValue(key: SettingKey.automaticHardware.rawValue, scope: .build(harness.buildA.id))
+        let hardware = harness.gameplayHardware(settings: settings)
+        let build = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
+        XCTAssertEqual(hardware.hardware(for: build), .superGameBoy, "newest state wins")
+
+        let newest = try XCTUnwrap(harness.states.fetchSaveStates(buildID: build.id, saveProfileID: harness.profile.id)
+            .max { $0.createdAt < $1.createdAt })
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: newest.stateAssetID))
+        try harness.store.writeDataAtomically(Data("not a state".utf8), to: harness.store.managedURL(relativePath: asset.relativePath))
+        XCTAssertEqual(hardware.hardware(for: build), .gameBoyColor, "an unreadable state gives way to the next")
+    }
+
+    func testABuildWhoseModelIsSetByHandIsNotCarriedOver() throws {
+        let harness = try SessionHarness.make(imageA: TestROM.make(title: "GAME"))
+        let settings = InMemorySettingsStore()
+        let modelKey = SettingKey.hardwareModel.rawValue
+        try settings.set(HardwareModel.gameBoyColor, key: modelKey, scope: .build(harness.buildA.id))
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyColor)
+        let madeOnColor = try session.saveQuickState()
+        try session.stop(createAutoState: false)
+        XCTAssertEqual(
+            try settings.valueJSON(key: SettingKey.automaticHardware.rawValue, scope: .build(harness.buildA.id)), "\"automatic\"",
+            "the header's choice is recorded for when Model goes back to Automatic"
+        )
+
+        try settings.removeValue(key: modelKey, scope: .build(harness.buildA.id))
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyPocket)
+        XCTAssertEqual(session.hardwareFamilyNeeded(for: madeOnColor), .gameBoyColor)
+        try session.stop(createAutoState: false)
+    }
+
+    func testEachSettingsScopeShowsTheHardwareItsGamesPlayOn() throws {
+        let harness = try SessionHarness.make(
+            imageA: TestROM.make(title: "SGB", sgbFlag: 0x03, oldLicensee: 0x33),
+            imageB: TestROM.make(title: "GAME")
+        )
+        let settings = InMemorySettingsStore()
+        let plus = PlusSwitch()
+        let hardware = harness.gameplayHardware(settings: settings, choosesModel: { plus.owned })
+        let gameID = harness.game.id
+
+        XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: gameID, buildID: harness.buildA.id), [.superGameBoy2])
+        XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: gameID), [.superGameBoy2, .gameBoyPocket], "each Build's")
+        XCTAssertEqual(hardware.hardware(system: .gameBoy), [.gameBoyPocket, .superGameBoy2, .gameBoyColor], "every choice Automatic has")
+        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor])
+        XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: UUID()), HardwareModel.automaticChoices(for: .gameBoy), "a Game with no Builds")
+
+        try settings.set(HardwareModel.gameBoyPlayer, key: SettingKey.hardwareModel.rawValue, scope: .system(.gameBoy))
+        XCTAssertEqual(hardware.hardware(system: .gameBoy), [.gameBoyPlayer])
+        XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: gameID), [.gameBoyPlayer])
+        plus.owned = false
+        XCTAssertEqual(hardware.hardware(system: .gameBoy), HardwareModel.automaticChoices(for: .gameBoy), "without Plus, Automatic")
+        XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: gameID), [.superGameBoy2, .gameBoyPocket])
+        XCTAssertEqual(hardware.model(system: .gameBoy), .automatic)
+    }
+
+    func testWithoutASettingsStoreNothingIsRecorded() throws {
+        let harness = try SessionHarness.make(imageA: TestROM.make(title: "SGB", sgbFlag: 0x03, oldLicensee: 0x33))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .superGameBoy2)
+        try session.stop(createAutoState: false)
+    }
+
+    func testAPatchedBuildWhoseImageIsMissingFallsBackOnItsSystem() throws {
+        let harness = try SessionHarness.make(imageA: TestROM.make(title: "SGB", sgbFlag: 0x03, oldLicensee: 0x33))
+        let build = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
+        let asset = try XCTUnwrap(harness.assets.fetchAsset(id: build.imageAssetID))
+        try FileManager.default.removeItem(at: harness.store.managedURL(relativePath: asset.relativePath))
+        XCTAssertEqual(harness.gameplayHardware(settings: InMemorySettingsStore()).hardware(for: build), .gameBoyPocket)
+    }
+
+    /// The Super Game Boy borders setting is hidden and off; with it on, Automatic plays a Game Boy
+    /// Color game that supports the Super Game Boy on a Game Boy Player. A Build that keeps its
+    /// states' hardware stays where it is either way.
+    func testSuperGameBoyBordersMoveColorGamesThatSupportTheSuperGameBoyToTheGameBoyPlayer() throws {
+        let colorAndSuperGameBoy = TestROM.make(title: "BOTH", cgb: true, sgbFlag: 0x03, oldLicensee: 0x33)
+        let harness = try SessionHarness.make(imageA: colorAndSuperGameBoy, imageB: TestROM.make(title: "COLOR", cgb: true))
+        let settings = InMemorySettingsStore()
+        let bordersKey = SettingKey.superGameBoyBorders.rawValue
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        let hardware = harness.gameplayHardware(settings: settings)
+
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyColor, "borders are off by default")
+        try session.stop(createAutoState: false)
+        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor])
+
+        try settings.set(true, key: bordersKey, scope: .app)
+        let buildA = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
+        XCTAssertEqual(hardware.hardware(for: buildA), .gameBoyPlayer, "a Build that follows the header moves")
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyPlayer)
+        try session.stop(createAutoState: false)
+        try session.start(context: harness.contextB)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyColor, "a color game without Super Game Boy support stays")
+        try session.stop(createAutoState: false)
+        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor, .gameBoyPlayer])
+        XCTAssertEqual(hardware.hardware(system: .gameBoy), HardwareModel.automaticChoices(for: .gameBoy))
+
+        try settings.set(false, key: bordersKey, scope: .build(harness.buildA.id))
+        XCTAssertEqual(hardware.hardware(for: buildA), .gameBoyColor, "the setting inherits like the others")
+
+        // A state made on a Game Boy Color before the record keeps the Build there with borders on.
+        let pinned = try SessionHarness.make(imageA: colorAndSuperGameBoy)
+        let pinnedSettings = InMemorySettingsStore()
+        let earlier = pinned.makeSession(settings: SettingsResolver(store: pinnedSettings))
+        try earlier.start(context: pinned.contextA)
+        try earlier.stop(createAutoState: true)
+        try pinnedSettings.removeValue(key: SettingKey.automaticHardware.rawValue, scope: .build(pinned.buildA.id))
+        try pinnedSettings.set(true, key: bordersKey, scope: .app)
+        let later = pinned.makeSession(settings: SettingsResolver(store: pinnedSettings))
+        try later.start(context: pinned.contextA)
+        XCTAssertEqual(later.runningHardwareModel, .gameBoyColor, "save-state pinning wins")
+        try later.stop(createAutoState: false)
     }
 
     func testAnAutoStateFromOtherHardwareStartsTheGameFromItsSaveAndIsKept() throws {
@@ -1480,7 +1690,8 @@ private struct SessionHarness {
     let store: ManagedFileStore
     let factory: CapturingCoreFactory
 
-    static func make(seedBattery: Data? = nil) throws -> SessionHarness {
+    /// Without images, both Builds are Game Boy Color games filled with 0s and 1s.
+    static func make(seedBattery: Data? = nil, imageA: Data? = nil, imageB: Data? = nil) throws -> SessionHarness {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let game = Game(
             id: UUID(),
@@ -1494,9 +1705,11 @@ private struct SessionHarness {
         let store = try ManagedFileStore(rootURL: root)
         let assets = InMemoryAssetRepository()
 
-        func makeROMAsset(bytes: UInt8) throws -> ManagedAsset {
+        func makeROMAsset(_ image: Data?, bytes: UInt8) throws -> ManagedAsset {
             let source = root.appendingPathComponent("source-\(UUID().uuidString).gb")
-            try Data(repeating: bytes, count: 0x8000).write(to: source)
+            var filled = Data(repeating: bytes, count: 0x8000)
+            filled[0x143] = 0x80
+            try (image ?? filled).write(to: source)
             let staged = try store.stageCopy(from: source, transactionID: UUID())
             let hash = try store.hashFile(at: staged)
             let destination = try store.commitSourceROM(stagedURL: staged, sha256: hash)
@@ -1505,7 +1718,7 @@ private struct SessionHarness {
                 kind: .sourceImage,
                 storageClass: .source,
                 contentSHA256: hash,
-                byteLength: 0x8000,
+                byteLength: Int64((image ?? filled).count),
                 relativePath: try store.managedRelativePath(for: destination),
                 originalFilename: source.lastPathComponent,
                 integrityStatus: .verified,
@@ -1515,12 +1728,16 @@ private struct SessionHarness {
             return asset
         }
 
-        let romA = try makeROMAsset(bytes: 0)
-        let romB = try makeROMAsset(bytes: 1)
+        func system(_ image: Data?) -> GameSystem {
+            guard let image else { return .gameBoyColor }
+            return image[0x143] == 0x80 || image[0x143] == 0xC0 ? .gameBoyColor : .gameBoy
+        }
+        let romA = try makeROMAsset(imageA, bytes: 0)
+        let romB = try makeROMAsset(imageB, bytes: 1)
         let buildA = Build(
             id: UUID(),
             gameID: game.id,
-            system: .gameBoyColor,
+            system: system(imageA),
             displayName: "A",
             imageAssetID: romA.id,
             imageSHA256: romA.contentSHA256,
@@ -1532,7 +1749,7 @@ private struct SessionHarness {
         let buildB = Build(
             id: UUID(),
             gameID: game.id,
-            system: .gameBoyColor,
+            system: system(imageB),
             displayName: "B",
             imageAssetID: romB.id,
             imageSHA256: romB.contentSHA256,
@@ -1641,6 +1858,20 @@ private struct SessionHarness {
             choosesHardwareModel: choosesHardwareModel,
             now: clock ?? { now },
             playtime: playtime
+        )
+    }
+
+    func gameplayHardware(
+        settings: InMemorySettingsStore, choosesModel: @escaping @Sendable () -> Bool = { true }
+    ) -> GameplayHardware {
+        GameplayHardware(
+            builds: builds,
+            settings: SettingsResolver(store: settings),
+            automatic: AutomaticHardware(
+                profiles: profiles, states: states, assets: assets, assetStore: store,
+                coreRegistry: CoreRegistry(factories: [factory]), settings: settings
+            ),
+            choosesModel: choosesModel
         )
     }
 

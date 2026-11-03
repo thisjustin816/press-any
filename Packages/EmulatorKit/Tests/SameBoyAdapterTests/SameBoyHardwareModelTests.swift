@@ -60,15 +60,46 @@ final class SameBoyHardwareModelTests: XCTestCase {
         }
     }
 
-    func testAutomaticRunsTheGameOnItsSystem() throws {
+    func testAutomaticRunsTheGameOnTheHardwareItsHeaderSuits() throws {
         try SameBoyAdapterTests.requireGeneratedBootROMs()
         let core = SameBoyAdapter()
         try core.loadImage(TestROM.make(title: "AUTO"), system: .gameBoy)
-        XCTAssertEqual(core.runningModel, .gameBoy)
+        XCTAssertEqual(core.runningModel, .gameBoyPocket)
+        try core.loadImage(TestROM.make(title: "AUTO", sgbFlag: 0x03, oldLicensee: 0x33), system: .gameBoy)
+        XCTAssertEqual(core.runningModel, .superGameBoy2)
+        try core.loadImage(TestROM.make(title: "AUTO", oldLicensee: 0x01), system: .gameBoy)
+        XCTAssertEqual(core.runningModel, .gameBoyColor)
+        try core.loadImage(TestROM.make(title: "AUTO", cgb: true, sgbFlag: 0x03, oldLicensee: 0x33), system: .gameBoyColor)
+        XCTAssertEqual(core.runningModel, .gameBoyColor)
         try core.loadImage(TestROM.make(title: "AUTO", cgb: true), system: .gameBoyColor)
         XCTAssertEqual(core.runningModel, .gameBoyColor)
         XCTAssertTrue(try core.skipBootAnimation())
         XCTAssertEqual(core.registers()?.a, 0x11)
+    }
+
+    /// The Super Game Boy fixture, on Automatic, runs on a Super Game Boy 2 and colors the picture
+    /// with the palette it sends. Its border isn't drawn: Scripts/tests/sameboy_sgb_border.c checks
+    /// that on SameBoy directly.
+    func testTheSuperGameBoyFixtureColorsThePictureWithThePaletteItSends() throws {
+        try SameBoyAdapterTests.requireGeneratedBootROMs()
+        let core = SameBoyAdapter()
+        _ = try core.setDisplaySettings(colorCorrection: .off, dmgPalette: .dmgGreen, advanceColors: .gameBoyAdvance)
+        try core.loadImage(TestROMFixtures.rom("sgb-packets.gb"), system: .gameBoy)
+        XCTAssertEqual(core.runningModel, .superGameBoy2)
+        var frame = try core.runFrame(input: .init())
+        for _ in 0..<600 { frame = try core.runFrame(input: .init()) }
+        XCTAssertEqual(frame.width, 160, "no border in the picture")
+        func pixel(_ x: Int, _ y: Int) -> UInt32 {
+            let offset = (y * frame.width + x) * 4
+            return frame.bgra8888[offset..<offset + 4].reversed().reduce(0) { $0 << 8 | UInt32($1) } & 0xFFFFFF
+        }
+        func rgb555(_ r: UInt32, _ g: UInt32, _ b: UInt32) -> UInt32 {
+            (r << 3 | r >> 2) << 16 | (g << 3 | g >> 2) << 8 | (b << 3 | b >> 2)
+        }
+        XCTAssertEqual(pixel(159, 143), rgb555(31, 29, 20), "cream color 0")
+        XCTAssertEqual(pixel(7 * 8, 76), rgb555(31, 16, 4), "orange")
+        XCTAssertEqual(pixel(11 * 8, 76), rgb555(2, 16, 18), "teal")
+        XCTAssertEqual(pixel(15 * 8, 76), rgb555(3, 3, 10), "navy")
     }
 
     func testSwitchingModelsRestartsTheGameOnTheNewHardwareKeepingItsSave() throws {
@@ -121,6 +152,8 @@ final class SameBoyHardwareModelTests: XCTestCase {
             _ = try core.runFrame(input: .init())
             states[model] = try core.serializeState()
             XCTAssertEqual(SameBoyAdapter.stateFamily(try XCTUnwrap(states[model])), model.family, "\(model)")
+            // A Game Boy Player writes the same model as a Game Boy Advance.
+            XCTAssertEqual(core.hardwareModel(ofState: try XCTUnwrap(states[model])), model == .gameBoyPlayer ? .gameBoyAdvance : model)
         }
 
         for (stateModel, state) in states {
@@ -138,6 +171,7 @@ final class SameBoyHardwareModelTests: XCTestCase {
             }
         }
         XCTAssertNil(SameBoyAdapter.stateFamily(Data([1, 2, 3])))
+        XCTAssertNil(SameBoyAdapter().hardwareModel(ofState: Data([1, 2, 3])))
         XCTAssertEqual(
             StateNeedsOtherHardware(family: .gameBoyColor).errorDescription,
             "It was made on a Game Boy Color, Game Boy Advance or Game Boy Player. Set Model to one of those to load it."

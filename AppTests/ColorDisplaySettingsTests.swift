@@ -109,12 +109,58 @@ final class ColorDisplaySettingsTests: XCTestCase {
         for (model, choices) in expected {
             try store.set(model, key: SettingKey.hardwareModel.rawValue, scope: .app)
             XCTAssertEqual(view(.gameBoy, ownsPlus: true).screenColorChoices, choices, "\(model)")
-            XCTAssertEqual(view(.gameBoy, ownsPlus: true).resolvedHardware.isGameBoyAdvance, model.isGameBoyAdvance, "\(model)")
+            XCTAssertEqual(view(.gameBoy, ownsPlus: true).resolvedHardware.contains(where: \.isGameBoyAdvance), model.isGameBoyAdvance, "\(model)")
             XCTAssertEqual(view(.gameBoy, ownsPlus: false).screenColorChoices, palettes, "\(model) plays on Automatic without Plus")
             XCTAssertEqual(view(.gameBoyColor, ownsPlus: false).screenColorChoices, corrections, "\(model) plays on Automatic without Plus")
         }
         try store.set(HardwareModel.automatic, key: SettingKey.hardwareModel.rawValue, scope: .app)
-        XCTAssertEqual(view(.gameBoyColor, ownsPlus: true).resolvedHardware, .gameBoyColor)
+        XCTAssertEqual(view(.gameBoyColor, ownsPlus: true).resolvedHardware, [.gameBoyColor])
+        XCTAssertEqual(view(.gameBoy, ownsPlus: true).resolvedHardware, [.gameBoyPocket, .superGameBoy2, .gameBoyColor], "each game gets its own")
+    }
+
+    /// Where the games at a scope play on several models, the palettes show when any of them shows
+    /// one, and Color Correction otherwise when any corrects colors.
+    func testScreenColorsWhereGamesPlayOnSeveralModels() {
+        XCTAssertEqual(ScreenColorChoices(hardware: [.superGameBoy2, .gameBoyPocket]), .dmg(DMGPalette.selectableCases))
+        XCTAssertEqual(ScreenColorChoices(hardware: [.superGameBoy2, .gameBoyColor]), .correction(ColorCorrection.allCases))
+        XCTAssertEqual(ScreenColorChoices(hardware: [.superGameBoy2, .superGameBoy]), .superGameBoy)
+    }
+
+    /// Automatic is free: without Plus a Super Game Boy game plays on a Super Game Boy 2, a Nintendo
+    /// game on a Game Boy Color and anything else on a Game Boy Pocket, each with that model's
+    /// preset values.
+    func testAutomaticPicksTheHardwareForEachGameWithoutPlus() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root, plus: .fixed(ownsPlus: false))
+        func importGame(_ title: String, sgb: UInt8 = 0, old: UInt8 = 0) throws -> LaunchContext {
+            var image = Data(repeating: 0, count: 0x8000)
+            image[0x146] = sgb
+            image[0x14B] = old
+            image[0x134] = UInt8(ascii: "A") &+ UInt8(title.count)
+            let file = root.appendingPathComponent("\(title).gb")
+            try image.write(to: file)
+            let analysis = try container.importAnalyzer.analyzeROM(at: file, targetGameID: nil)
+            let result = try container.importCommitter.commit(ROMImportPlan(
+                analysis: analysis, disposition: .createGame(title: title),
+                buildDisplayName: "Original", markAsBase: true
+            ))
+            return LaunchContext(gameID: result.build.gameID, buildID: result.build.id, saveProfileID: UUID())
+        }
+        let expected: [(LaunchContext, HardwareModel)] = [
+            (try importGame("SGB", sgb: 0x03, old: 0x33), .superGameBoy2),
+            (try importGame("Nintendo", old: 0x01), .gameBoyColor),
+            (try importGame("Other", old: 0x33), .gameBoyPocket),
+        ]
+        try container.repositories.settings.set(HardwareModel.gameBoy, key: SettingKey.hardwareModel.rawValue, scope: .app)
+        for (context, model) in expected {
+            XCTAssertEqual(container.gameplayHardware(system: .gameBoy, gameID: context.gameID, buildID: context.buildID), model)
+            XCTAssertEqual(
+                container.gameplayValues(for: context).displayFilter,
+                GameplayPresetValues.standard(for: model).displayFilter, "\(model)"
+            )
+        }
+        XCTAssertTrue(PlusGate(isUnlocked: false).isLocked(HardwareModel.gameBoy.needsPlus), "choosing a model still needs Plus")
     }
 
     func testModelPickerGroupsModelsByConsoleAndNotesGamesMarkedGameBoyColorOnly() throws {

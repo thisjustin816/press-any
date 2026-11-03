@@ -72,7 +72,14 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy).displayFilter, .curvedScanlines)
         XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy2).displayFilter, .curvedScanlines)
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyPlayer).displayFilter, .slightlyCurvedScanlines)
-        XCTAssertEqual(GameplayPresetValues.standard(for: .automatic), GameplayPresetValues.standard(for: .gameBoy))
+        XCTAssertEqual(GameplayPresetValues.standard(for: .automatic), GameplayPresetValues.standard(for: .gameBoyPocket))
+        for preset in GameplayPreset.builtIn {
+            XCTAssertEqual(
+                GameplayPresetValues.values(for: preset, hardware: .automatic),
+                GameplayPresetValues.values(for: preset, hardware: .gameBoyPocket),
+                "an unresolved Automatic reads as the Pocket it picks for most games"
+            )
+        }
         for hardware in models {
             XCTAssertTrue(GameplayPresetValues.standard(for: hardware).buttonBounce, "\(hardware) Nostalgic bounces")
             XCTAssertEqual(accurate(hardware)?.buttonBounce, true, "\(hardware) Accurate bounces")
@@ -109,12 +116,13 @@ final class GameplayPresetSettingsTests: XCTestCase {
         let store = InMemorySettingsStore()
         let presets = GameplayPresetSettings(store: store)
         try presets.apply(.standard, at: .system(.gameBoyColor), hardware: .gameBoyColor, system: .gameBoyColor)
-        for key in GameplayPresetSettings.controlledKeys {
+        for key in GameplayPresetSettings.controlledKeys + [.gameplayPreset] {
             XCTAssertNil(try store.valueJSON(key: key.rawValue, scope: .system(.gameBoyColor)), "\(key)")
         }
         try presets.apply(.accurate, at: .system(.gameBoyColor), hardware: .gameBoyColor, system: .gameBoyColor)
         try presets.apply(.standard, at: .system(.gameBoyColor), hardware: .gameBoyColor, system: .gameBoyColor)
         XCTAssertNil(try store.valueJSON(key: SettingKey.lcdFilter.rawValue, scope: .system(.gameBoyColor)))
+        XCTAssertNil(presets.storedPreset(at: .system(.gameBoyColor)))
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoyColor, hardware: .gameBoyColor), .standard)
     }
 
@@ -126,7 +134,8 @@ final class GameplayPresetSettingsTests: XCTestCase {
         try presets.apply(.standard, at: .game(gameID), hardware: .gameBoy, system: .gameBoy, gameID: gameID)
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, gameID: gameID, hardware: .gameBoy), .standard)
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: .gameBoy), .accurate)
-        XCTAssertEqual(try decode(DisplayFilter.self, .lcdFilter, store, gameID: gameID), .lcd1x)
+        XCTAssertEqual(presets.storedPreset(at: .game(gameID)), .standard)
+        XCTAssertEqual(presets.effectiveValues(system: .gameBoy, gameID: gameID, hardware: .gameBoy).displayFilter, .lcd1x)
     }
 
     func testEachControlledValueChangedByHandLeavesThePresetUntilRestored() throws {
@@ -212,37 +221,153 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertFalse(GameplayPresetSettings.controlledKeys.contains(.dmgPalette))
     }
 
-    func testModelChangeRetargetsOnlyAPresetStoredAtThatScope() throws {
+    func testModelChangeConvertsOnlyValuesStoredAtThatScopeToTheirPreset() throws {
         let store = InMemorySettingsStore()
         let presets = GameplayPresetSettings(store: store)
         let gameID = UUID()
         let game = SettingsScope.game(gameID)
 
         // Inherited: nothing is written at the Game, and the unset values follow the new hardware.
-        try presets.retargetBuiltInPreset(from: .gameBoy, to: .superGameBoy, at: game, system: .gameBoy, gameID: gameID)
-        for key in GameplayPresetSettings.controlledKeys {
+        try presets.retargetBuiltInPreset(from: [.gameBoy], to: [.superGameBoy], at: game, system: .gameBoy, gameID: gameID)
+        for key in GameplayPresetSettings.controlledKeys + [.gameplayPreset] {
             XCTAssertNil(try store.valueJSON(key: key.rawValue, scope: game))
         }
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, gameID: gameID, hardware: .superGameBoy), .standard)
 
         // Inherited from the system: still nothing written at the Game.
         try presets.apply(.accurate, at: .system(.gameBoy), hardware: .gameBoy, system: .gameBoy)
-        try presets.retargetBuiltInPreset(from: .gameBoy, to: .superGameBoy, at: game, system: .gameBoy, gameID: gameID)
+        try presets.retargetBuiltInPreset(from: [.gameBoy], to: [.superGameBoy], at: game, system: .gameBoy, gameID: gameID)
         XCTAssertNil(try store.valueJSON(key: SettingKey.lcdFilter.rawValue, scope: game))
+        XCTAssertNil(presets.storedPreset(at: game))
 
-        // Stored at the Game: the same preset for the new hardware.
+        // A preset chosen at the Game follows the new hardware with nothing to convert.
         try presets.apply(.accurate, at: game, hardware: .gameBoy, system: .gameBoy, gameID: gameID)
-        try presets.retargetBuiltInPreset(from: .gameBoy, to: .superGameBoy, at: game, system: .gameBoy, gameID: gameID)
+        try presets.retargetBuiltInPreset(from: [.gameBoy], to: [.superGameBoy], at: game, system: .gameBoy, gameID: gameID)
+        XCTAssertEqual(presets.storedPreset(at: game), .accurate)
+        XCTAssertEqual(presets.effectiveValues(system: .gameBoy, gameID: gameID, hardware: .superGameBoy).displayFilter, .crt240p)
+
+        // Values stored one by one that made Accurate on the old hardware become Accurate itself.
+        try presets.reset(at: game)
+        let accurateOnGameBoy = try XCTUnwrap(GameplayPresetValues.values(for: .accurate, hardware: .gameBoy))
+        try store.set(accurateOnGameBoy.displayFilter, key: SettingKey.lcdFilter.rawValue, scope: game)
+        try store.set(accurateOnGameBoy.frameBlending, key: SettingKey.frameBlending.rawValue, scope: game)
+        try store.set(accurateOnGameBoy.buttonBounce, key: SettingKey.buttonBounce.rawValue, scope: game)
+        try presets.retargetBuiltInPreset(from: [.gameBoy], to: [.superGameBoy], at: game, system: .gameBoy, gameID: gameID)
+        XCTAssertEqual(presets.storedPreset(at: game), .accurate)
+        XCTAssertNil(try store.valueJSON(key: SettingKey.lcdFilter.rawValue, scope: game))
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, gameID: gameID, hardware: .superGameBoy), .accurate)
-        XCTAssertEqual(try decode(DisplayFilter.self, .lcdFilter, store, gameID: gameID), .crt240p)
 
         // Custom stays as it is, including a bounce turned off by hand, which Accurate on the
         // new hardware would turn on.
+        try presets.reset(at: game)
         try store.set(DisplayFilter.lcd3x, key: SettingKey.lcdFilter.rawValue, scope: game)
         try store.set(false, key: SettingKey.buttonBounce.rawValue, scope: game)
-        try presets.retargetBuiltInPreset(from: .superGameBoy, to: .gameBoyColor, at: game, system: .gameBoy, gameID: gameID)
+        try presets.retargetBuiltInPreset(from: [.superGameBoy], to: [.gameBoyColor], at: game, system: .gameBoy, gameID: gameID)
         XCTAssertEqual(try decode(DisplayFilter.self, .lcdFilter, store, gameID: gameID), .lcd3x)
         XCTAssertEqual(try decode(Bool.self, .buttonBounce, store, gameID: gameID), false)
+        XCTAssertNil(presets.storedPreset(at: game))
+    }
+
+    /// When presets wrote their values, choosing Accurate at a Game whose settings showed a Game
+    /// Boy wrote the Game Boy's Accurate values at the Game, and its Game Boy Color Build played
+    /// them: a monochrome LCD with ghosting. Now each game gets the preset's values for its own
+    /// hardware, at every scope.
+    func testAPresetChosenWhereGamesRunOnSeveralModelsResolvesPerGame() throws {
+        let gameID = UUID(), buildID = UUID()
+        let scopes: [(SettingsScope, UUID?, UUID?)] = [
+            (.app, nil, nil), (.system(.gameBoy), nil, nil), (.game(gameID), gameID, nil), (.build(buildID), gameID, buildID),
+        ]
+        let automatic = HardwareModel.automaticChoices(for: .gameBoy)
+        for (scope, game, build) in scopes {
+            for preset in GameplayPreset.builtIn {
+                let store = InMemorySettingsStore()
+                let presets = GameplayPresetSettings(store: store)
+                try presets.apply(preset, at: scope, hardware: automatic, system: .gameBoy, gameID: game, buildID: build)
+                for hardware in models {
+                    let values = try XCTUnwrap(GameplayPresetValues.values(for: preset, hardware: hardware))
+                    let effective = presets.effectiveValues(system: .gameBoy, gameID: game, buildID: build, hardware: hardware)
+                    XCTAssertEqual(effective.displayFilter, values.displayFilter, "\(scope) \(preset) \(hardware)")
+                    XCTAssertEqual(effective.frameBlending, values.frameBlending, "\(scope) \(preset) \(hardware)")
+                    XCTAssertEqual(effective.buttonBounce, values.buttonBounce, "\(scope) \(preset) \(hardware)")
+                    if let correction = values.colorCorrection {
+                        XCTAssertEqual(effective.colorCorrection, correction, "\(scope) \(preset) \(hardware)")
+                    }
+                    XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, gameID: game, buildID: build, hardware: hardware), preset)
+                }
+                XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, gameID: game, buildID: build, hardware: automatic), preset)
+                for key in GameplayPresetSettings.controlledKeys {
+                    XCTAssertNil(try store.valueJSON(key: key.rawValue, scope: scope), "no one model's values are stored")
+                }
+            }
+        }
+    }
+
+    func testAScopeWhereGamesDisagreeIsCustomUntilEveryModelPlaysOnePreset() throws {
+        let store = InMemorySettingsStore()
+        let presets = GameplayPresetSettings(store: store)
+        let automatic = HardwareModel.automaticChoices(for: .gameBoy)
+        try presets.apply(.accurate, at: .system(.gameBoy), hardware: automatic, system: .gameBoy)
+        // Monochrome LCD is Accurate on a Pocket but not on a Super Game Boy 2 or Game Boy Color.
+        try store.set(DisplayFilter.monochromeLCD, key: SettingKey.lcdFilter.rawValue, scope: .system(.gameBoy))
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: .gameBoyPocket), .accurate)
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: .superGameBoy2), .custom)
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: automatic), .custom)
+        try store.removeValue(key: SettingKey.lcdFilter.rawValue, scope: .system(.gameBoy))
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: automatic), .accurate)
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: []), .custom, "no hardware plays anything")
+    }
+
+    func testTheEditorShowsThePresetsValueForTheHardwareAndWhereItIsChosen() throws {
+        let store = InMemorySettingsStore()
+        let presets = GameplayPresetSettings(store: store)
+        let gameID = UUID()
+        try presets.apply(.accurate, at: .system(.gameBoy), hardware: .superGameBoy2, system: .gameBoy)
+
+        let atGame = try presets.edit(.lcdFilter, at: .game(gameID), system: .gameBoy, gameID: gameID, hardware: .superGameBoy2)
+        XCTAssertNil(atGame.overrideJSON)
+        XCTAssertEqual(atGame.inherited?.source, .system(.gameBoy))
+        XCTAssertEqual(atGame.inherited?.preset, .accurate)
+        XCTAssertEqual(try atGame.inherited?.decode(DisplayFilter.self), .crt240p)
+
+        let onPocket = try presets.edit(.lcdFilter, at: .game(gameID), system: .gameBoy, gameID: gameID, hardware: .gameBoyPocket)
+        XCTAssertEqual(try onPocket.inherited?.decode(DisplayFilter.self), .monochromeLCD)
+
+        // The preset at the scope itself gives the value Reset to Inherited would leave.
+        let atSystem = try presets.edit(.frameBlending, at: .system(.gameBoy), system: .gameBoy, hardware: .gameBoyPocket)
+        XCTAssertEqual(atSystem.inherited?.source, .system(.gameBoy))
+        XCTAssertEqual(try atSystem.inherited?.decode(FrameBlending.self), .blend)
+
+        // A preset that leaves a setting alone on this hardware passes it on from below.
+        try store.set(ColorCorrection.boostContrast, key: SettingKey.colorCorrection.rawValue, scope: .app)
+        let correction = try presets.edit(.colorCorrection, at: .system(.gameBoy), system: .gameBoy, hardware: .gameBoyPocket)
+        XCTAssertEqual(correction.inherited?.source, .app)
+        XCTAssertNil(correction.inherited?.preset)
+
+        // A value stored by hand wins over the preset at the same scope.
+        try store.set(DisplayFilter.off, key: SettingKey.lcdFilter.rawValue, scope: .system(.gameBoy))
+        XCTAssertEqual(presets.effectiveValues(system: .gameBoy, gameID: gameID, hardware: .superGameBoy2).displayFilter, .off)
+        XCTAssertThrowsError(try presets.edit(.lcdFilter, at: .build(UUID()), system: .gameBoy, hardware: .gameBoyPocket))
+    }
+
+    func testResettingAScopeRemovesItsPresetAndAnUnreadablePresetReadsAsNone() throws {
+        let store = InMemorySettingsStore()
+        let presets = GameplayPresetSettings(store: store)
+        try presets.apply(.clean, at: .system(.gameBoy), hardware: .gameBoyPocket, system: .gameBoy)
+        XCTAssertEqual(presets.storedPreset(at: .system(.gameBoy)), .clean)
+        try presets.reset(at: .system(.gameBoy))
+        XCTAssertNil(try store.valueJSON(key: SettingKey.gameplayPreset.rawValue, scope: .system(.gameBoy)))
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: .gameBoyPocket), .standard)
+
+        try store.setValueJSON("\"custom\"", key: SettingKey.gameplayPreset.rawValue, scope: .system(.gameBoy))
+        XCTAssertNil(presets.storedPreset(at: .system(.gameBoy)), "Custom is never a stored preset")
+        try store.setValueJSON("\"retro\"", key: SettingKey.gameplayPreset.rawValue, scope: .system(.gameBoy))
+        XCTAssertNil(presets.storedPreset(at: .system(.gameBoy)))
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: .gameBoyPocket), .standard)
+        try presets.apply(.custom, at: .system(.gameBoy), hardware: .gameBoyPocket, system: .gameBoy)
+        XCTAssertEqual(
+            try store.valueJSON(key: SettingKey.gameplayPreset.rawValue, scope: .system(.gameBoy)), "\"retro\"",
+            "Custom can't be applied"
+        )
     }
 
     func testVersionOneSettingsKeepTheirValuesAndLCD1xMatchesTheStandardPreset() throws {

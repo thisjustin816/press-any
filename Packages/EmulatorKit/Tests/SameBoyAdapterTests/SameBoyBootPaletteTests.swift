@@ -224,6 +224,8 @@ final class SameBoyBootPaletteTests: XCTestCase {
                 rom[0x14b] = 1
                 rom[0x14d] = rom[0x134...0x14c].reduce(UInt8(0)) { $0 &- $1 &- 1 }
             }
+            // The palette a Game Boy Color's boot ROM picks for this Game Boy game.
+            try reference.setHardwareModel(.gameBoyColor)
             try reference.loadImage(rom, system: .gameBoyColor)
             var frames = 0
             while (reference.readMemory(0xff50) ?? 0) & 1 == 0, frames < 1200 {

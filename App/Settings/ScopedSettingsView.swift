@@ -27,12 +27,15 @@ struct ScopedSettingsView: View {
     /// A Game Boy Camera cartridge, which shows the Game Boy Camera setting. System pages always
     /// show it, since they set it for every camera game.
     var hasCamera = false
+    /// What games here play on. Without it, as in previews, the Model setting decides, and
+    /// Automatic counts as every model it picks among for the system.
+    var gameplayHardware: GameplayHardware?
 
     @Environment(\.dismiss) private var dismiss
     @State private var showsPlus = false
-    /// The hardware games here run on, which decides the Screen Colors row and whether Game Boy
-    /// Advance Colors shows. Read again after each change.
-    @State private var hardware: HardwareModel?
+    /// The models games here run on, which decide the Screen Colors row and which Customize rows
+    /// show. Read again after each change.
+    @State private var hardware: [HardwareModel]?
     @State private var settingsRevision = 0
     @State private var presetError: String?
 
@@ -88,13 +91,17 @@ struct ScopedSettingsView: View {
         onChange?()
     }
 
-    /// Never Automatic: that resolves to the system's own hardware. Without Plus every game plays
-    /// on Automatic.
-    var resolvedHardware: HardwareModel {
+    /// Never Automatic and never empty: a Build's own model, each of a Game's Builds' models, or
+    /// for a system on Automatic every model Automatic picks among, since each game gets its own.
+    /// Without Plus every game plays on Automatic.
+    var resolvedHardware: [HardwareModel] {
         hardware ?? currentHardware()
     }
 
-    private func currentHardware() -> HardwareModel {
+    private func currentHardware() -> [HardwareModel] {
+        if let gameplayHardware {
+            return gameplayHardware.hardware(system: system, gameID: gameID, buildID: buildID)
+        }
         let stored = try? SettingsResolver(store: store).decode(
             HardwareModel.self,
             key: SettingKey.hardwareModel.rawValue,
@@ -103,7 +110,19 @@ struct ScopedSettingsView: View {
             buildID: buildID
         )
         let model = plus.isUnlocked ? stored ?? .automatic : .automatic
-        return model.resolved(for: system)
+        return model == .automatic ? HardwareModel.automaticChoices(for: system) : [model]
+    }
+
+    /// The model whose values a Customize row shows by default: the first here that has the
+    /// setting, or the first here when none does.
+    private func defaultsHardware(for key: SettingKey) -> HardwareModel {
+        let models = resolvedHardware
+        let match: HardwareModel? = switch key {
+        case .colorCorrection: models.first(where: ScreenColorChoices.correctsColors)
+        case .advanceColors: models.first(where: \.isGameBoyAdvance)
+        default: nil
+        }
+        return match ?? models[0]
     }
 
     private var gameplayPresetSection: some View {
@@ -172,30 +191,31 @@ struct ScopedSettingsView: View {
         )
     }
 
-    /// What unset preset settings show and play with on this hardware.
-    private var standard: GameplayPresetValues { GameplayPresetValues.standard(for: resolvedHardware) }
+    /// What a Customize row shows when nothing sets it: the standard preset's value on the hardware.
+    private func standard(_ key: SettingKey) -> GameplayPresetValues {
+        GameplayPresetValues.standard(for: defaultsHardware(for: key))
+    }
 
+    /// Color Correction shows when any game here plays on a model that corrects colors.
     @ViewBuilder private var customGameplayRows: some View {
-        switch screenColorChoices {
-        case .correction(let corrections):
+        if resolvedHardware.contains(where: ScreenColorChoices.correctsColors) {
+            let corrections = ColorCorrection.allCases
             InheritableSettingRow(
                 title: "Color Correction",
                 key: .colorCorrection,
-                defaultValue: standard.colorCorrection ?? ColorCorrection.defaultValue,
+                defaultValue: standard(.colorCorrection).colorCorrection ?? ColorCorrection.defaultValue,
                 options: corrections.map { ($0, $0.displayName) },
                 listSections: [SettingOptionSection(title: "Color Correction", values: corrections)],
                 explanation: ColorCorrection.explanation,
                 reloadToken: settingsRevision,
                 context: context
             )
-        case .dmg, .superGameBoy:
-            EmptyView()
         }
-        if resolvedHardware.isGameBoyAdvance {
+        if resolvedHardware.contains(where: \.isGameBoyAdvance) {
             InheritableSettingRow(
                 title: "Game Boy Advance Colors",
                 key: .advanceColors,
-                defaultValue: standard.advanceColors ?? AdvanceColors.gameBoyAdvance,
+                defaultValue: standard(.advanceColors).advanceColors ?? AdvanceColors.gameBoyAdvance,
                 options: AdvanceColors.allCases.map { ($0, $0.displayName) },
                 listSections: [SettingOptionSection(title: "Game Boy Advance Colors", values: AdvanceColors.allCases)],
                 explanation: AdvanceColors.explanation,
@@ -206,7 +226,7 @@ struct ScopedSettingsView: View {
         InheritableSettingRow(
             title: "Display Filter",
             key: .lcdFilter,
-            defaultValue: standard.displayFilter,
+            defaultValue: standard(.lcdFilter).displayFilter,
             options: DisplayFilter.selectable.map { ($0, $0.displayName) },
             reloadToken: settingsRevision,
             context: context
@@ -214,7 +234,7 @@ struct ScopedSettingsView: View {
         InheritableSettingRow(
             title: "Frame Blending",
             key: .frameBlending,
-            defaultValue: standard.frameBlending,
+            defaultValue: standard(.frameBlending).frameBlending,
             options: FrameBlending.allCases.map { ($0, $0.displayName) },
             reloadToken: settingsRevision,
             context: context
@@ -222,7 +242,7 @@ struct ScopedSettingsView: View {
         InheritableSettingRow(
             title: "Button Bounce",
             key: .buttonBounce,
-            defaultValue: standard.buttonBounce,
+            defaultValue: standard(.buttonBounce).buttonBounce,
             options: [(true, "On"), (false, "Off")],
             reloadToken: settingsRevision,
             context: context
@@ -403,25 +423,39 @@ struct ScopedSettingsView: View {
             store: store,
             onChange: settingsChanged,
             plus: plus.gate,
-            openPlus: { showsPlus = true }
+            openPlus: { showsPlus = true },
+            presetHardware: defaultsHardware(for:)
         )
     }
 }
 
-/// The Screen Colors that apply on the hardware a game runs on.
+/// The Screen Colors that apply on the hardware games run on.
 enum ScreenColorChoices: Equatable {
     case dmg([DMGPalette])
     case correction([ColorCorrection])
     /// The game or the Super Game Boy sets the colors, so there is nothing to choose.
     case superGameBoy
 
-    /// `hardware` is resolved, so Automatic doesn't arrive here.
-    init(hardware: HardwareModel) {
-        switch hardware {
-        case .automatic, .gameBoy, .gameBoyPocket: self = .dmg(DMGPalette.selectableCases)
-        case .superGameBoy, .superGameBoy2: self = .superGameBoy
-        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: self = .correction(ColorCorrection.allCases)
+    /// `hardware` is resolved, so Automatic arrives only by mistake, and counts as the Game Boy
+    /// Pocket it picks for most games. Where games run on several models, the palettes show when
+    /// any of them shows a palette, then Color Correction when any corrects colors.
+    init(hardware: [HardwareModel]) {
+        if hardware.contains(where: Self.showsPalette) {
+            self = .dmg(DMGPalette.selectableCases)
+        } else if hardware.contains(where: Self.correctsColors) {
+            self = .correction(ColorCorrection.allCases)
+        } else {
+            self = .superGameBoy
         }
+    }
+
+    static func showsPalette(_ model: HardwareModel) -> Bool {
+        [.automatic, .gameBoy, .gameBoyPocket].contains(model)
+    }
+
+    /// A Game Boy Color, Advance or Player, whose colors are Color Correction.
+    static func correctsColors(_ model: HardwareModel) -> Bool {
+        [.gameBoyColor, .gameBoyAdvance, .gameBoyPlayer].contains(model)
     }
 }
 
@@ -434,9 +468,17 @@ struct InheritableSettingContext {
     var onChange: (() -> Void)?
     var plus = PlusGate(isUnlocked: true)
     var openPlus: () -> Void = {}
+    /// The model whose preset values a row for one of the preset settings shows.
+    var presetHardware: (SettingKey) -> HardwareModel = { _ in .gameBoyPocket }
 
+    /// A preset setting inherits a preset's value as well as a stored one.
     func edit(_ key: SettingKey) -> ScopedSetting? {
-        try? SettingsResolver(store: store).edit(
+        if GameplayPresetSettings.controlledKeys.contains(key) {
+            return try? GameplayPresetSettings(store: store).edit(
+                key, at: scope, system: system, gameID: gameID, buildID: buildID, hardware: presetHardware(key)
+            )
+        }
+        return try? SettingsResolver(store: store).edit(
             key: key.rawValue,
             at: scope,
             system: system,
@@ -664,9 +706,13 @@ private struct InheritableSettingRow<Value: Codable & Hashable>: View {
     }
 
     /// "Default" when no level above sets the value, since there is nothing to inherit then;
-    /// otherwise the level it comes from.
+    /// otherwise the level it comes from, and the preset chosen there when that gives it.
     private var inheritNote: String {
-        (inherited?.source).map { "From \(sourceName($0))" } ?? "Default"
+        guard let inherited else { return "Default" }
+        guard let preset = inherited.preset else { return "From \(sourceName(inherited.source))" }
+        return inherited.source == context.scope
+            ? "From \(preset.displayName)"
+            : "From \(preset.displayName) in \(sourceName(inherited.source))"
     }
 
     private func label(for value: Value) -> String {

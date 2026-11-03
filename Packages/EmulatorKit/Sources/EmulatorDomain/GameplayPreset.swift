@@ -104,7 +104,9 @@ public struct GameplayPresetValues: Equatable, Sendable {
         values(for: .standard, hardware: hardware)!
     }
 
-    /// `hardware` is expected to be resolved. Automatic is treated as the original Game Boy.
+    /// `hardware` is expected to be resolved; callers pass the model each game runs on. Automatic
+    /// arrives only by mistake and reads as a Game Boy Pocket, the model Automatic picks for most
+    /// games.
     /// Only Clean turns button bounce off: Nostalgic and Accurate bounce on every model, the
     /// television models included. A Game Boy or Pocket shows a palette, which color correction
     /// doesn't apply to in the way the presets mean, so those presets leave correction alone.
@@ -141,10 +143,10 @@ public struct GameplayPresetValues: Equatable, Sendable {
                 colorCorrection: .balanced, advanceColors: .gameBoyColor
             )
 
-        case (.accurate, .automatic), (.accurate, .gameBoy):
+        case (.accurate, .gameBoy):
             // The original screen's slow response leaves a trail behind moving things.
             return Self(displayFilter: .monochromeLCD, frameBlending: .ghosting, buttonBounce: true)
-        case (.accurate, .gameBoyPocket):
+        case (.accurate, .automatic), (.accurate, .gameBoyPocket):
             return Self(displayFilter: .monochromeLCD, frameBlending: .blend, buttonBounce: true)
         case (.accurate, .superGameBoy), (.accurate, .superGameBoy2):
             return Self(displayFilter: .crt240p, frameBlending: .off, buttonBounce: true, colorCorrection: .balanced)
