@@ -1119,10 +1119,10 @@ filter, which Nostalgic uses on a Game Boy Advance.
 - **Game Boy Color LCD**: Authentic GBC's notched subpixels.
 - **Backlit GBA SP LCD**: the Pixel Grid with the AGS-101 SP's color profile.
 - **Scanlines**: sharp scanlines with no mask or glow.
-- **CRT 240p**: a consumer television, as a Super Game Boy on a SNES showed: a flat picture
-  with rounded corners, one beam per line with dark gaps, a coarse slot mask, soft horizontal
-  reconstruction, glow and a vignette.
-- **CRT 480p**: a late-model television, as a Game Boy Player showed: a flat picture with
+- **CRT 240p**: a consumer television, as a Super Game Boy on a SNES showed: a clearly curved
+  tube with rounded corners, one beam per line with dark gaps, a coarse slot mask, soft
+  horizontal reconstruction, glow and a vignette.
+- **CRT 480p**: a late-model television, as a Game Boy Player showed: a gently curved face with
   rounded corners, each line drawn twice as the player's 480-line output does so the gaps nearly
   close, a fine aperture grille, light glow and vignette. It shows no interlacing: a CRT shows
   the two fields of 480i one after the other, so they never comb, and the player's 480p over

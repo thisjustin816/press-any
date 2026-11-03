@@ -34,7 +34,7 @@ extension DisplayFilter {
 /// is the exponent of a base-2 Gaussian, so more negative is narrower; CRT-Lottes uses -8 across
 /// a line and -3 along it. Mask pitch is in screen pixels for one red, green and blue triad.
 struct CRTParameters: Equatable {
-    /// Barrel curvature x and y (0 is flat; no built-in television uses it), corner radius in
+    /// Barrel curvature x and y (0 is flat; CRT-Lottes uses 0.031 and 0.042), corner radius in
     /// half-heights, and vignette strength.
     var geometry: SIMD4<Float>
     /// Raster lines per source line, scanline hardness, horizontal hardness and brightness.
@@ -48,19 +48,20 @@ struct CRTParameters: Equatable {
     var maskPitch: Float { mask.x }
     var linesPerSourceLine: Float { beam.x }
 
-    /// A Super Game Boy on a consumer set: a flat picture, one visible scanline per SNES line, a
-    /// coarse slot mask and a soft analog picture.
+    /// A Super Game Boy on a consumer set: a clearly curved tube (about three times CRT-Lottes's
+    /// warp), one visible scanline per SNES line, a coarse slot mask and a soft analog picture.
     static let consumerTV = CRTParameters(
-        geometry: SIMD4(0, 0, 0.10, 0.22),
+        geometry: SIMD4(0.09, 0.12, 0.06, 0.22),
         beam: SIMD4(1, -8, -2.5, 1.55),
         mask: SIMD4(6, 0.6, 1.4, 1),
         glow: SIMD4(0.18, 1.6, 0, 0)
     )
 
-    /// A Game Boy Player on a late-model set: a flat picture with rounded corners, the player's
-    /// line-doubled 480-line picture so the lines nearly close up, and a fine aperture grille.
+    /// A Game Boy Player on a late-model set: a gently curved face (about CRT-Lottes's warp) with
+    /// rounded corners, the player's line-doubled 480-line picture so the lines nearly close up,
+    /// and a fine aperture grille.
     static let lateModelTV = CRTParameters(
-        geometry: SIMD4(0, 0, 0.10, 0.08),
+        geometry: SIMD4(0.03, 0.04, 0.10, 0.08),
         beam: SIMD4(2, -6, -2.0, 1.25),
         mask: SIMD4(3, 0.75, 1.25, 0),
         glow: SIMD4(0.10, 1.6, 0, 0)

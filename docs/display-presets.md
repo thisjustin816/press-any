@@ -44,11 +44,11 @@ code is not.
 ## Televisions
 
 The CRT treatments are one shader with a `CRTParameters` value per television
-(`App/Gameplay/DisplayFilterRendering.swift`), and tests assert that neither bends the
-picture and that CRT 480p has a finer mask than CRT 240p.
+(`App/Gameplay/DisplayFilterRendering.swift`), and tests assert that both curve the
+picture, CRT 240p more, and that CRT 480p has a finer mask.
 
 - **CRT 240p** (Super Game Boy, Accurate): a 1990s consumer set showing a SNES's 240-line
-  picture. Neither television curves the picture, so the barrel warp is zero; one beam per line with CRT-Lottes's default hardness leaves dark gaps; the
+  picture. Tubes of that era bowed visibly, so the barrel warp is about three times CRT-Lottes's default; one beam per line with CRT-Lottes's default hardness leaves dark gaps; the
   slot mask has a 6-pixel triad; horizontal reconstruction is soft; glow and a vignette follow.
 - **CRT 480p** (Game Boy Player, Accurate): the Game Boy Player was sold until the GameCube's end
   (2007). By then many sets were flat-faced tubes: Sony sold flat FD Trinitron WEGA sets from the late 1990s
@@ -57,9 +57,8 @@ picture and that CRT 480p has a finer mask than CRT 240p.
   The Game Boy Player's start-up disc outputs 480i on every cable and 480p over component or
   digital ([Nintendo World Report](http://www.nintendoworldreport.com/guide/2147/the-ultimate-game-boy-player-faq)
   calls it progressive scan compatible), and it draws each Game Boy line on two TV lines, with a
-  Sharpness setting that softens the picture. So the treatment is flat with rounded corners, two softer beams per source line, an
-  aperture grille with a 3-pixel triad and lighter glow. That flat Trinitron-style tube is
-  typical rather than universal.
+  Sharpness setting that softens the picture. So the treatment is gently curved (a warp about CRT-Lottes's default) with rounded corners, two softer beams per source line, an
+  aperture grille with a 3-pixel triad and lighter glow. Many sets were flatter and many were more curved.
 - Interlacing isn't drawn. A CRT shows 480i's two fields one after the other, so a viewer never
   sees them combed together, and with each line drawn twice both fields carry the same picture
   until it moves. Drawing the previous frame on alternate lines, as a progressive screen weaving

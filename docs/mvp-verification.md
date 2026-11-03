@@ -401,9 +401,9 @@ Record the phone, iOS version, commit and lighting.
   inherits (Customize shows From Game Boy settings or Default) and plays with Scanlines. Choose
   Accurate on the Game, then set its Model to Game Boy Color: the Game shows Accurate for the
   Game Boy Color.
-- [ ] Super Game Boy, Accurate: CRT 240p is flat with rounded corners, dark gaps between lines, a coarse
+- [ ] Super Game Boy, Accurate: CRT 240p is clearly curved with rounded corners, dark gaps between lines, a coarse
   slot mask, soft edges and glow, and text stays readable. Game Boy Player, Accurate: CRT 480p is
-  flat with rounded corners, finer lines and a fine aperture grille. Moving content on
+  gently curved with rounded corners, finer lines and a fine aperture grille. Moving content on
   either shows no combing.
 - [ ] A Game Boy Advance on Nostalgic shows the backlit SP colors with the grid; on Accurate it is
   darker with SameBoy's LCD.

@@ -117,20 +117,22 @@ final class LCDFilterTests: XCTestCase {
         }
     }
 
-    func testNoCRTCurvesThePicture() throws {
-        for parameters in [CRTParameters.consumerTV, .lateModelTV, .scanlines] {
-            XCTAssertEqual(parameters.curvature, .zero)
-        }
+    func testBothCRTsCurveThePictureAndTheSuperGameBoyMoreThanTheGameBoyPlayer() throws {
+        XCTAssertGreaterThan(CRTParameters.lateModelTV.curvature.x, 0)
+        XCTAssertGreaterThan(CRTParameters.lateModelTV.curvature.y, 0)
+        XCTAssertLessThan(CRTParameters.lateModelTV.curvature.x, CRTParameters.consumerTV.curvature.x)
+        XCTAssertLessThan(CRTParameters.lateModelTV.curvature.y, CRTParameters.consumerTV.curvature.y)
         XCTAssertLessThan(CRTParameters.lateModelTV.maskPitch, CRTParameters.consumerTV.maskPitch)
         XCTAssertGreaterThan(CRTParameters.lateModelTV.maskPitch, 0)
         XCTAssertEqual(CRTParameters.consumerTV.linesPerSourceLine, 1)
         XCTAssertEqual(CRTParameters.lateModelTV.linesPerSourceLine, 2)
+        XCTAssertEqual(CRTParameters.scanlines.curvature, .zero)
         XCTAssertEqual(CRTParameters.scanlines.maskPitch, 0)
 
         // Measured on the picture: how far the raster's top edge bows down at a quarter of the
-        // width, away from the rounded corners, compared with its middle. A flat picture's is 0.
+        // width, away from the rounded corners, compared with its middle.
         let (device, library) = try metal()
-        for filter in [DisplayFilter.crt240p, .crt480p, .scanlines] {
+        func bow(_ filter: DisplayFilter) throws -> Int {
             let pixels = try render(
                 filter, fragment: "gameplayTextureFragment", device: device, library: library,
                 frames: [255], sourceWidth: 160, sourceHeight: 144, outputWidth: 320, outputHeight: 288
@@ -138,8 +140,14 @@ final class LCDFilterTests: XCTestCase {
             func firstLitRow(_ x: Int) -> Int {
                 (0..<288).first { brightness(pixels, at: pixel(x, $0, width: 320)) > 60 } ?? 288
             }
-            XCTAssertLessThanOrEqual(abs(firstLitRow(40) - firstLitRow(160)), 1, "\(filter) is flat")
+            return firstLitRow(40) - firstLitRow(160)
         }
+        let consumer = try bow(.crt240p)
+        let lateModel = try bow(.crt480p)
+        XCTAssertGreaterThanOrEqual(consumer, 7, "CRT 240p is clearly curved")
+        XCTAssertGreaterThanOrEqual(lateModel, 2, "CRT 480p is gently curved")
+        XCTAssertLessThan(lateModel, consumer, "CRT 480p is flatter than CRT 240p")
+        XCTAssertEqual(try bow(.scanlines), 0, "Scanlines are flat")
     }
 
     func testCRTRastersAndMasksDifferInDensity() throws {
