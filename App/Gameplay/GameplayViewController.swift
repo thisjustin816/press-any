@@ -1010,13 +1010,11 @@ final class GameplayViewController: UIViewController {
             menuButtons.append(button)
         }
         for (index, button) in menuButtons.enumerated() {
-            guard index < areas.count else {
-                button.isHidden = true
-                continue
-            }
-            let area = areas[index]
-            button.isHidden = false
-            button.frame = CGRect(x: area.x, y: area.y, width: area.width, height: area.height)
+            // A button past the layout's areas is hidden; the button itself holds the change
+            // while its menu is open or closing.
+            let area = index < areas.count ? areas[index] : nil
+            button.place(in: area.map { CGRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height) })
+            guard area != nil else { continue }
             // The first area is the logo; VoiceOver finds the menu there, once.
             button.isAccessibilityElement = index == 0
             // The screenshot UI tests wait for this before their own wait.
@@ -1479,10 +1477,31 @@ final class GameplayViewController: UIViewController {
 
 /// The logo has a raised face with the wordmark pressed into it; an optional game-picture target
 /// remains clear.
+///
+/// The menu opens by morphing out of this button and closes by morphing back into it, and on
+/// iOS 27.2 that morph crashed inside UIKit when an item was chosen (issue #199). It reads the
+/// button as it was when the menu opened, so from the menu's opening to the end of its closing
+/// animation the button holds still: a placement or palette asked for meanwhile is kept and
+/// applied once the menu has closed.
 final class GameMenuButton: UIButton {
     private(set) var isMenuPresented = false
     private(set) var isMenuDismissing = false
     var onMenuDismissed: (() -> Void)?
+
+    /// Whether the menu is open or still morphing back into the button.
+    var isMenuActive: Bool { isMenuPresented || isMenuDismissing }
+
+    /// Where the button was last asked to sit, or nil to hide it.
+    private var requestedFrame: CGRect?
+    /// The palette last asked for, or nil for the clear game-picture target.
+    private var requestedPalette: ControllerPalette?
+    /// Set when a request arrived under an active menu and waits for the menu to close.
+    private var placementWaits = false
+    private var paletteWaits = false
+
+    /// Persists on the device, so a later crash report can be read beside what the button was
+    /// doing when its menu opened and closed: `log collect --device --last 1h`, category GameMenu.
+    private static let log = Logger(subsystem: "Gameplay", category: "GameMenu")
 
     override func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
@@ -1490,6 +1509,7 @@ final class GameMenuButton: UIButton {
         animator: (any UIContextMenuInteractionAnimating)?
     ) {
         isMenuPresented = true
+        Self.log.notice("Game menu opening: \(self.stateDescription, privacy: .public)")
         super.contextMenuInteraction(interaction, willDisplayMenuFor: configuration, animator: animator)
     }
 
@@ -1500,6 +1520,7 @@ final class GameMenuButton: UIButton {
     ) {
         isMenuPresented = false
         isMenuDismissing = true
+        Self.log.notice("Game menu closing: \(self.stateDescription, privacy: .public)")
         super.contextMenuInteraction(interaction, willEndFor: configuration, animator: animator)
         if let animator {
             animator.addCompletion { [weak self] in self?.menuDidDismiss() }
@@ -1510,7 +1531,34 @@ final class GameMenuButton: UIButton {
 
     private func menuDidDismiss() {
         isMenuDismissing = false
+        if placementWaits { applyRequestedPlacement() }
+        if paletteWaits { applyRequestedPalette() }
         onMenuDismissed?()
+    }
+
+    /// Puts the button at `frame`, or hides it for nil. Under an active menu the change waits.
+    func place(in frame: CGRect?) {
+        requestedFrame = frame
+        guard !isMenuActive else {
+            if !placementWaits {
+                Self.log.notice("Game menu button placement waits for the menu: \(self.stateDescription, privacy: .public)")
+            }
+            placementWaits = true
+            return
+        }
+        applyRequestedPlacement()
+    }
+
+    private func applyRequestedPlacement() {
+        placementWaits = false
+        isHidden = requestedFrame == nil
+        if let requestedFrame { frame = requestedFrame }
+    }
+
+    private var stateDescription: String {
+        let windowed = window == nil ? "no window" : "in window"
+        let placement = requestedFrame.map { "placed at \($0)" } ?? "unplaced"
+        return "\(windowed), hidden \(isHidden), alpha \(alpha), frame \(frame), \(placement), superview \(superview == nil ? "none" : "set")"
     }
 
     private let face = CAGradientLayer()
@@ -1543,7 +1591,20 @@ final class GameMenuButton: UIButton {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// Draws the face and wordmark in `palette`, or clears them for nil. Under an active menu the
+    /// change waits.
     func configureWordmark(palette: ControllerPalette?) {
+        requestedPalette = palette
+        guard !isMenuActive else {
+            paletteWaits = true
+            return
+        }
+        applyRequestedPalette()
+    }
+
+    private func applyRequestedPalette() {
+        paletteWaits = false
+        let palette = requestedPalette
         self.palette = palette
         face.isHidden = palette == nil
         wordmark.isHidden = palette == nil
