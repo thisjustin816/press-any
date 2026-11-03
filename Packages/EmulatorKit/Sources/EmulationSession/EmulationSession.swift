@@ -326,8 +326,8 @@ public final class EmulationSession: @unchecked Sendable {
         return skip ?? false
     }
 
-    /// Whether buttons chatter after a change, as the setting resolved for this Build says. An
-    /// unreadable setting keeps SameBoy's default, on.
+    /// Whether buttons chatter after a change, as the setting resolved for this Build says. Unset
+    /// or unreadable means the standard gameplay preset's choice for the hardware it runs on.
     private func buttonBounce(_ build: Build) -> Bool {
         let bounce = try? settings?.decode(
             Bool.self,
@@ -336,7 +336,7 @@ public final class EmulationSession: @unchecked Sendable {
             gameID: build.gameID,
             buildID: build.id
         )
-        return bounce ?? true
+        return bounce ?? GameplayPresetValues.standard(for: hardwareModel(build).resolved(for: build.system)).buttonBounce
     }
 
     /// The hardware the open game runs on, or nil with no game open.
@@ -419,8 +419,10 @@ public final class EmulationSession: @unchecked Sendable {
         lock.withLock { playtime.setSpeed(speed) }
     }
 
+    /// Changes button bounce on the open game. With no game open there is nothing to change: the
+    /// next start reads the setting.
     public func setButtonBounce(_ enabled: Bool) throws {
-        let (worker, _, _) = try snapshotActive()
+        guard let (worker, _, _) = try? snapshotActive() else { return }
         try worker.perform { core in
             (core as? any ButtonBounceCapability)?.setButtonBounce(enabled)
         }

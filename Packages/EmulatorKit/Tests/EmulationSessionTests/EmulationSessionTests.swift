@@ -698,16 +698,15 @@ extension EmulationSessionTests {
         try session.start(context: harness.contextA)
         try session.pause()
         let core = try XCTUnwrap(harness.factory.cores.last)
+        try session.setButtonBounce(true)
         XCTAssertTrue(core.buttonBounce)
         try session.setButtonBounce(false)
         XCTAssertFalse(core.buttonBounce)
-        try session.setButtonBounce(true)
-        XCTAssertTrue(core.buttonBounce)
         XCTAssertEqual(harness.factory.cores.count, 1)
         try session.stop(createAutoState: false)
     }
 
-    func testButtonBounceStaysOnUnlessTheResolvedSettingTurnsItOff() throws {
+    func testButtonBounceFollowsTheStandardPresetUnlessASettingChoosesIt() throws {
         let harness = try SessionHarness.make()
         let settings = InMemorySettingsStore()
         let key = SettingKey.buttonBounce.rawValue
@@ -719,16 +718,22 @@ extension EmulationSessionTests {
             return try XCTUnwrap(harness.factory.cores.last).buttonBounce
         }
 
-        XCTAssertTrue(try bounceOnStart(harness.contextA), "unset keeps SameBoy's default")
+        XCTAssertEqual(
+            try bounceOnStart(harness.contextA), GameplayPresetValues.standard(for: .gameBoy).buttonBounce,
+            "unset takes the standard preset's value"
+        )
 
-        try settings.set(false, key: key, scope: .app)
-        XCTAssertFalse(try bounceOnStart(harness.contextA), "the app-wide setting turns it off")
+        try settings.set(true, key: key, scope: .app)
+        XCTAssertTrue(try bounceOnStart(harness.contextA), "the app-wide setting turns it on")
 
-        try settings.set(true, key: key, scope: .build(harness.buildB.id))
-        XCTAssertTrue(try bounceOnStart(harness.contextB), "a Build override wins")
+        try settings.set(false, key: key, scope: .build(harness.buildB.id))
+        XCTAssertFalse(try bounceOnStart(harness.contextB), "a Build override wins")
 
         try settings.setValueJSON("not json", key: key, scope: .app)
-        XCTAssertTrue(try bounceOnStart(harness.contextA), "an unreadable value keeps the default")
+        XCTAssertEqual(
+            try bounceOnStart(harness.contextA), GameplayPresetValues.standard(for: .gameBoy).buttonBounce,
+            "an unreadable value reads as unset"
+        )
 
         try settings.set(true, key: key, scope: .app)
         let session = harness.makeSession(settings: SettingsResolver(store: settings))
@@ -737,6 +742,13 @@ extension EmulationSessionTests {
         try session.restart()
         XCTAssertFalse(try XCTUnwrap(harness.factory.cores.last).buttonBounce, "a restart reads the changed setting")
         try session.stop(createAutoState: false)
+    }
+
+    func testChangingButtonBounceWithNoGameOpenDoesNothing() throws {
+        let harness = try SessionHarness.make()
+        let session = harness.makeSession()
+        XCTAssertNoThrow(try session.setButtonBounce(false))
+        XCTAssertTrue(harness.factory.cores.isEmpty)
     }
 
     func testTheResolvedModelIsSetBeforeTheImageLoads() throws {

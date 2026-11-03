@@ -52,13 +52,15 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case controllerTheme
     /// The game picture's scaling (GameplayInput's `ScreenScaling`), unset means `integer`.
     case screenScaling
-    /// `DisplayFilter`, unset means `.off`. The stored key keeps its v1.0 name for compatibility.
+    /// `DisplayFilter`. Unset or unreadable means the standard gameplay preset's value for the
+    /// hardware (`GameplayPresetValues.standard`). The key keeps its v1.0 name.
     case lcdFilter
-    /// `ColorCorrection`, unset means `.balanced`.
+    /// `ColorCorrection`. Unset means the standard gameplay preset's value for the hardware, or
+    /// `.balanced` where the preset leaves it alone.
     case colorCorrection = "colorCorrection"
-    /// `DMGPalette`, unset means `.dmgGreen`.
+    /// `DMGPalette`, unset means `.dmgGreen`. Free to choose, and no gameplay preset changes it.
     case dmgPalette = "dmgPalette"
-    /// `FrameBlending`, unset means `.off`.
+    /// `FrameBlending`. Unset means the standard gameplay preset's value for the hardware.
     case frameBlending
     /// `FastForwardSpeed`, unset means `.x2`.
     case fastForwardSpeed
@@ -90,10 +92,12 @@ public enum SettingKey: String, Sendable, CaseIterable {
     case timedStates
     /// `HardwareModel`, unset means `.automatic`. Read when a game starts or restarts.
     case hardwareModel
-    /// Bool, unset means true. A button chatters briefly after each press and release, as the
-    /// hardware's contacts do. Also applied to an open game when its settings change.
+    /// Bool. Unset means the standard gameplay preset's value for the hardware. When true, a button
+    /// chatters briefly after each press and release, as the hardware's contacts do. Also applied
+    /// to an open game when its settings change.
     case buttonBounce
-    /// `AdvanceColors`, unset means `.gameBoyAdvance`.
+    /// `AdvanceColors`. Unset means the standard gameplay preset's value for the hardware, or
+    /// `.gameBoyAdvance` where the preset leaves it alone.
     case advanceColors
     /// `GameBoyCamera`, unset means `.rear`. Only camera cartridges read it. Test builds saved the
     /// game menu's choice under `gameBoyCamera`; this key leaves those behind.
@@ -444,12 +448,10 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     case automatic
     case gameBoy = "dmg"
     case gameBoyPocket = "mgb"
-    case gameBoyLight = "mgl"
     case superGameBoy = "sgb"
     case superGameBoy2 = "sgb2"
     case gameBoyColor = "cgb"
     case gameBoyAdvance = "agb"
-    case gameBoyAdvanceSP101 = "ags101"
     /// A Game Boy Advance inside the GameCube's Game Boy Player.
     case gameBoyPlayer = "gbp"
 
@@ -466,12 +468,10 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
         case .automatic: "Automatic"
         case .gameBoy: "Game Boy"
         case .gameBoyPocket: "Game Boy Pocket"
-        case .gameBoyLight: "Game Boy Light"
         case .superGameBoy: "Super Game Boy"
         case .superGameBoy2: "Super Game Boy 2"
         case .gameBoyColor: "Game Boy Color"
         case .gameBoyAdvance: "Game Boy Advance"
-        case .gameBoyAdvanceSP101: "Game Boy Advance SP (AGS-101)"
         case .gameBoyPlayer: "Game Boy Player"
         }
     }
@@ -489,16 +489,16 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     public var console: HardwareConsole? {
         switch self {
         case .automatic: nil
-        case .gameBoy, .gameBoyPocket, .gameBoyLight, .superGameBoy, .superGameBoy2: .gameBoy
+        case .gameBoy, .gameBoyPocket, .superGameBoy, .superGameBoy2: .gameBoy
         case .gameBoyColor: .gameBoyColor
-        case .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer: .gameBoyAdvance
+        case .gameBoyAdvance, .gameBoyPlayer: .gameBoyAdvance
         }
     }
 
     /// A Game Boy Advance, alone or in a Game Boy Player, whose darker screen Game Boy Advance
     /// Colors can undo.
     public var isGameBoyAdvance: Bool {
-        console == .gameBoyAdvance
+        self == .gameBoyAdvance || self == .gameBoyPlayer
     }
 
     /// Models whose save states load on one another. A state made on one family doesn't load on
@@ -506,9 +506,9 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     public var family: HardwareFamily? {
         switch self {
         case .automatic: nil
-        case .gameBoy, .gameBoyPocket, .gameBoyLight: .gameBoy
+        case .gameBoy, .gameBoyPocket: .gameBoy
         case .superGameBoy, .superGameBoy2: .superGameBoy
-        case .gameBoyColor, .gameBoyAdvance, .gameBoyAdvanceSP101, .gameBoyPlayer: .gameBoyColor
+        case .gameBoyColor, .gameBoyAdvance, .gameBoyPlayer: .gameBoyColor
         }
     }
 }
@@ -561,7 +561,7 @@ public enum HardwareFamily: Sendable {
         HardwareModel.allCases.filter { $0.family == self }
     }
 
-    /// Names every compatible model for a state-load message.
+    /// "Game Boy Color, Game Boy Advance or Game Boy Player".
     public var modelList: String {
         let names = models.map(\.displayName)
         return names.dropLast().joined(separator: ", ") + " or " + names.last!

@@ -27,6 +27,16 @@ final class QuickPlayTests: XCTestCase {
         try runtime.stop(createAutoState: false)
     }
 
+    func testQuickPlayButtonBounceChangeBeforeStartDoesNothing() throws {
+        let harness = try QuickPlayHarness.make()
+        defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+        let session = try harness.workspace.start(romURL: harness.writeExternalROM(TestROM.make(title: "BOUNCE")))
+        let factory = CapturingQuickPlayFactory()
+        let runtime = harness.makeRuntime(session, factory: factory)
+        XCTAssertNoThrow(try runtime.setButtonBounce(false))
+        XCTAssertTrue(factory.cores.isEmpty)
+    }
+
     func testQuickPlayAppliesTheButtonBounceItWasGiven() throws {
         for bounce in [true, false] {
             let harness = try QuickPlayHarness.make()

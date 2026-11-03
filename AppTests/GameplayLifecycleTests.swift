@@ -430,7 +430,7 @@ final class GameplayLifecycleTests: XCTestCase {
     func testResumingOnOtherHardwareSaysWhereThatPointLoads() {
         XCTAssertEqual(
             RootView.otherHardwareResumeMessage(family: .gameBoyColor, running: .gameBoy),
-            "Where you left off was on a Game Boy Color, Game Boy Advance, Game Boy Advance SP (AGS-101) or Game Boy Player, so the game started on a Game Boy from its battery save. That point is kept in States, and loads once Model is set to one of those."
+            "Where you left off was on a Game Boy Color, Game Boy Advance or Game Boy Player, so the game started on a Game Boy from its battery save. That point is kept in States, and loads once Model is set to one of those."
         )
     }
 

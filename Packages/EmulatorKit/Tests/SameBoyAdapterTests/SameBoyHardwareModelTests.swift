@@ -34,12 +34,10 @@ final class SameBoyHardwareModelTests: XCTestCase {
         let expected: [(HardwareModel, a: UInt8, gba: Bool)] = [
             (.gameBoy, 0x01, false),
             (.gameBoyPocket, 0xff, false),
-            (.gameBoyLight, 0xff, false),
             (.superGameBoy, 0x01, false),
             (.superGameBoy2, 0xff, false),
             (.gameBoyColor, 0x11, false),
             (.gameBoyAdvance, 0x11, true),
-            (.gameBoyAdvanceSP101, 0x11, true),
             (.gameBoyPlayer, 0x11, true),
         ]
         for (model, a, gba) in expected {
@@ -142,7 +140,7 @@ final class SameBoyHardwareModelTests: XCTestCase {
         XCTAssertNil(SameBoyAdapter.stateFamily(Data([1, 2, 3])))
         XCTAssertEqual(
             StateNeedsOtherHardware(family: .gameBoyColor).errorDescription,
-            "It was made on a Game Boy Color, Game Boy Advance, Game Boy Advance SP (AGS-101) or Game Boy Player. Set Model to one of those to load it."
+            "It was made on a Game Boy Color, Game Boy Advance or Game Boy Player. Set Model to one of those to load it."
         )
     }
 

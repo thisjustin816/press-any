@@ -158,8 +158,9 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         lock.withLock { playtime.setSpeed(speed) }
     }
 
+    /// Changes button bounce on the running game. With none running there is nothing to change.
     public func setButtonBounce(_ enabled: Bool) throws {
-        let worker = try activeWorker(requireRunning: false)
+        guard let worker = try? activeWorker(requireRunning: false) else { return }
         try worker.perform { core in
             (core as? any ButtonBounceCapability)?.setButtonBounce(enabled)
         }
