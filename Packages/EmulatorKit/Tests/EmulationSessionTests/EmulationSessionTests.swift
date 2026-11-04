@@ -979,7 +979,7 @@ extension EmulationSessionTests {
         XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: gameID, buildID: harness.buildA.id), [.superGameBoy2])
         XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: gameID), [.superGameBoy2, .gameBoyPocket], "each Build's")
         XCTAssertEqual(hardware.hardware(system: .gameBoy), [.gameBoyPocket, .superGameBoy2, .gameBoyColor], "every choice Automatic has")
-        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor])
+        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor, .gameBoyAdvance])
         XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: UUID()), HardwareModel.automaticChoices(for: .gameBoy), "a Game with no Builds")
 
         try settings.set(HardwareModel.gameBoyPlayer, key: SettingKey.hardwareModel.rawValue, scope: .system(.gameBoy))
@@ -989,6 +989,121 @@ extension EmulationSessionTests {
         XCTAssertEqual(hardware.hardware(system: .gameBoy), HardwareModel.automaticChoices(for: .gameBoy), "without Plus, Automatic")
         XCTAssertEqual(hardware.hardware(system: .gameBoy, gameID: gameID), [.superGameBoy2, .gameBoyPocket])
         XCTAssertEqual(hardware.model(system: .gameBoy), .automatic)
+    }
+
+    /// A listed game with Game Boy Advance features plays on a Game Boy Advance under Automatic,
+    /// with borders on and without Plus too. A Build with the same header and title that ties to no
+    /// listed release stays on a Game Boy Color, and a Model set by hand wins.
+    func testAutomaticPlaysAGameWithGameBoyAdvanceFeaturesOnAGameBoyAdvance() throws {
+        let harness = try SessionHarness.make(
+            imageA: TestROM.make(title: "SHANTAE", cgb: true, oldLicensee: 0x33, newLicensee: "8B"),
+            imageB: TestROM.make(title: "SHANTAE", cgb: true, payloadByte: 1, oldLicensee: 0x33, newLicensee: "8B")
+        )
+        let settings = InMemorySettingsStore()
+        let plus = PlusSwitch()
+        let hardware = harness.gameplayHardware(settings: settings, choosesModel: { plus.owned })
+        let listed = try XCTUnwrap(GameBoyAdvanceFeatures.releases.first { $0.name == "Shantae (USA)" })
+        // Build B is listed; Build A, the Base, has the same header but another image.
+        try harness.builds.setImageSHA1(buildID: harness.buildB.id, sha1: listed.sha1)
+        try harness.builds.setImageSHA1(buildID: harness.buildA.id, sha1: String(repeating: "0", count: 40))
+        let buildA = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
+        let buildB = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildB.id))
+        XCTAssertEqual(hardware.hardware(for: buildA), .gameBoyColor, "the same title isn't the same game")
+        XCTAssertEqual(hardware.hardware(for: buildB), .gameBoyAdvance)
+        XCTAssertEqual(hardware.presetHardware(for: buildB), PresetHardware(automatic: .gameBoyAdvance))
+        XCTAssertTrue(hardware.presetHardware(for: buildB).forGameBoyAdvanceFeatures)
+        XCTAssertEqual(
+            hardware.presetHardware(system: .gameBoyColor, gameID: harness.game.id),
+            [PresetHardware(.gameBoyColor), PresetHardware(automatic: .gameBoyAdvance)]
+        )
+        XCTAssertEqual(
+            hardware.presetHardware(system: .gameBoyColor),
+            [PresetHardware(.gameBoyColor), PresetHardware(automatic: .gameBoyAdvance)], "every choice Automatic has"
+        )
+
+        let session = harness.makeSession(settings: SettingsResolver(store: settings), choosesHardwareModel: { plus.owned })
+        try session.start(context: harness.contextB)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyAdvance)
+        XCTAssertEqual(harness.factory.cores.last?.hardwareModel, .gameBoyAdvance, "the core is told the model it picked")
+        XCTAssertEqual(try settings.valueJSON(key: SettingKey.automaticHardware.rawValue, scope: .build(buildB.id)), "\"automatic\"")
+        try session.stop(createAutoState: true)
+
+        try settings.set(true, key: SettingKey.superGameBoyBorders.rawValue, scope: .app)
+        XCTAssertEqual(hardware.hardware(for: buildB), .gameBoyAdvance, "borders don't move it to the Game Boy Player")
+        plus.owned = false
+        XCTAssertEqual(hardware.hardware(for: buildB), .gameBoyAdvance, "Automatic is free")
+
+        // A Model set by hand wins, and its Game Boy Advance is the presets' usual one.
+        plus.owned = true
+        try settings.set(HardwareModel.gameBoyColor, key: SettingKey.hardwareModel.rawValue, scope: .build(buildB.id))
+        XCTAssertEqual(hardware.hardware(for: buildB), .gameBoyColor)
+        try session.start(context: harness.contextB)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyColor)
+        try session.stop(createAutoState: false)
+        try settings.set(HardwareModel.gameBoyAdvance, key: SettingKey.hardwareModel.rawValue, scope: .build(buildB.id))
+        XCTAssertEqual(hardware.presetHardware(for: buildB), PresetHardware(.gameBoyAdvance))
+        XCTAssertFalse(hardware.presetHardware(for: buildB).forGameBoyAdvanceFeatures)
+    }
+
+    /// Patched Builds, Builds in a Game whose Base is listed and imported hacks identified as
+    /// patched from a listed release all count; Automatic needs no image to tell.
+    func testBuildsMadeFromAListedReleasePlayOnAGameBoyAdvance() throws {
+        let harness = try SessionHarness.make(
+            imageA: TestROM.make(title: "ZELDA DIN", cgb: true), imageB: TestROM.make(title: "OTHER", cgb: true)
+        )
+        let hardware = harness.gameplayHardware(settings: InMemorySettingsStore())
+        let seasons = try XCTUnwrap(GameBoyAdvanceFeatures.releases.first { $0.name.contains("Oracle of Seasons (USA") })
+        XCTAssertEqual(hardware.hardware(for: harness.buildB), .gameBoyColor)
+        try harness.builds.setImageSHA1(buildID: harness.buildA.id, sha1: seasons.sha1)
+        XCTAssertEqual(hardware.hardware(for: harness.buildB), .gameBoyAdvance, "the Game's Base is listed")
+
+        func record(parent: UUID? = nil, source: BuildSourceKind, reference: BaseGameReference? = nil) throws -> Build {
+            // A Game of its own, so its Base doesn't decide, and an image that isn't on disk.
+            let build = Build(
+                id: UUID(), gameID: UUID(), system: .gameBoyColor, displayName: "Hack", imageAssetID: UUID(),
+                imageSHA256: UUID().uuidString, sourceKind: source, parentBuildID: parent,
+                baseGameReference: reference, createdAt: .distantPast, modifiedAt: .distantPast
+            )
+            try harness.builds.insertBuild(build)
+            return build
+        }
+        let patched = try record(parent: harness.buildA.id, source: .patchRecipe)
+        XCTAssertEqual(hardware.hardware(for: try record(parent: patched.id, source: .patchRecipe)), .gameBoyAdvance)
+        XCTAssertEqual(hardware.hardware(for: try record(parent: harness.buildB.id, source: .patchRecipe)), .gameBoyAdvance,
+                       "patched from a Build in a Game whose Base is listed")
+        let unlisted = try record(source: .importedImage)
+        XCTAssertEqual(hardware.hardware(for: try record(parent: unlisted.id, source: .patchRecipe)), .gameBoyColor,
+                       "nothing listed: the header decides, and with the image missing, the system")
+        let identified = BaseGameReference(
+            title: "Legend of Zelda, The - Oracle of Seasons", system: .gameBoyColor,
+            familyName: seasons.name, releaseName: seasons.name
+        )
+        XCTAssertEqual(hardware.hardware(for: try record(source: .importedImage, reference: identified)), .gameBoyAdvance)
+        XCTAssertEqual(hardware.hardware(for: try record(source: .importedImage)), .gameBoyColor)
+    }
+
+    /// A listed Build with save states from before Automatic read the header keeps the Game Boy
+    /// Color they were made on, so they keep loading.
+    func testSaveStatesKeepAListedBuildOnTheGameBoyColorTheyWereMadeOn() throws {
+        let harness = try SessionHarness.make(imageA: TestROM.make(title: "ZELDA NAYRU", cgb: true))
+        let settings = InMemorySettingsStore()
+        let earlier = harness.makeSession(settings: SettingsResolver(store: settings))
+        try earlier.start(context: harness.contextA)
+        XCTAssertEqual(earlier.runningHardwareModel, .gameBoyColor)
+        try earlier.stop(createAutoState: true)
+        try settings.removeValue(key: SettingKey.automaticHardware.rawValue, scope: .build(harness.buildA.id))
+
+        let ages = try XCTUnwrap(GameBoyAdvanceFeatures.releases.first { $0.name.contains("Oracle of Ages (USA") })
+        try harness.builds.setImageSHA1(buildID: harness.buildA.id, sha1: ages.sha1)
+        let build = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
+        let hardware = harness.gameplayHardware(settings: settings)
+        XCTAssertEqual(hardware.hardware(for: build), .gameBoyColor)
+        XCTAssertFalse(hardware.presetHardware(for: build).forGameBoyAdvanceFeatures)
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(session.runningHardwareModel, .gameBoyColor)
+        XCTAssertEqual(try settings.valueJSON(key: SettingKey.automaticHardware.rawValue, scope: .build(build.id)), "\"cgb\"")
+        try session.stop(createAutoState: false)
     }
 
     func testWithoutASettingsStoreNothingIsRecorded() throws {
@@ -1021,7 +1136,7 @@ extension EmulationSessionTests {
         try session.start(context: harness.contextA)
         XCTAssertEqual(session.runningHardwareModel, .gameBoyColor, "borders are off by default")
         try session.stop(createAutoState: false)
-        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor])
+        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor, .gameBoyAdvance])
 
         try settings.set(true, key: bordersKey, scope: .app)
         let buildA = try XCTUnwrap(harness.builds.fetchBuild(id: harness.buildA.id))
@@ -1032,7 +1147,7 @@ extension EmulationSessionTests {
         try session.start(context: harness.contextB)
         XCTAssertEqual(session.runningHardwareModel, .gameBoyColor, "a color game without Super Game Boy support stays")
         try session.stop(createAutoState: false)
-        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor, .gameBoyPlayer])
+        XCTAssertEqual(hardware.hardware(system: .gameBoyColor), [.gameBoyColor, .gameBoyPlayer, .gameBoyAdvance])
         XCTAssertEqual(hardware.hardware(system: .gameBoy), HardwareModel.automaticChoices(for: .gameBoy))
 
         try settings.set(false, key: bordersKey, scope: .build(harness.buildA.id))
@@ -1871,7 +1986,7 @@ private struct SessionHarness {
             builds: builds,
             settings: SettingsResolver(store: settings),
             automatic: AutomaticHardware(
-                profiles: profiles, states: states, assets: assets, assetStore: store,
+                builds: builds, profiles: profiles, states: states, assets: assets, assetStore: store,
                 coreRegistry: CoreRegistry(factories: [factory]), settings: settings
             ),
             choosesModel: choosesModel

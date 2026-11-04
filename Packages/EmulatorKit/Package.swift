@@ -40,7 +40,7 @@ let package = Package(
         .target(name: "Patching", dependencies: ["EmulatorDomain", "EmulatorApplication", "Importing", "ToolchainDetection"]),
         .target(name: "EmulationCore", dependencies: ["EmulatorDomain"]),
         .target(name: "EmulationSession", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore"]),
-        .target(name: "QuickPlay", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore", "EmulationSession", "Importing"]),
+        .target(name: "QuickPlay", dependencies: ["EmulatorDomain", "EmulatorApplication", "EmulationCore", "EmulationSession", "Importing", "GameIdentity"]),
         .target(name: "GameplayInput", dependencies: ["EmulationCore"]),
         .target(name: "GameplayAudio", dependencies: ["EmulationCore"]),
         // Test doubles shared by the test targets; not a product, so the app never links it.

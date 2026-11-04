@@ -124,7 +124,7 @@ public final class EmulationSession: @unchecked Sendable {
             builds: builds,
             settings: settings,
             automatic: AutomaticHardware(
-                profiles: profiles, states: states, assets: assets, assetStore: assetStore,
+                builds: builds, profiles: profiles, states: states, assets: assets, assetStore: assetStore,
                 coreRegistry: coreRegistry, settings: settings?.store
             ),
             choosesModel: choosesHardwareModel

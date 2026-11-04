@@ -489,9 +489,10 @@ public enum TimedStates: Int, Codable, Sendable, CaseIterable {
 
 /// The hardware a game runs on. Raw values are stored in settings.
 public enum HardwareModel: String, Codable, Sendable, CaseIterable {
-    /// The hardware the game's header suits (`CartridgeHints.automaticModel(superGameBoyBorders:)`),
-    /// or for a Build that had save states when Automatic began reading the header, the hardware
-    /// its newest state was made on.
+    /// A Game Boy Advance for a game with Game Boy Advance features (`GameBoyAdvanceFeatures`),
+    /// otherwise the hardware the game's header suits
+    /// (`CartridgeHints.automaticModel(superGameBoyBorders:)`), or for a Build that had save states
+    /// when Automatic began reading the header, the hardware its newest state was made on.
     case automatic
     case gameBoy = "dmg"
     case gameBoyPocket = "mgb"
@@ -510,7 +511,7 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
     public static let automaticKeepsStates = "On Automatic, a game with save states from an earlier version stays on the Game Boy or Game Boy Color its newest state was made on, so they keep loading."
 
     /// What Automatic picks, under it in the Model picker.
-    public static let automaticSummary = "Game Boy Color for color and Nintendo games, Super Game Boy 2 for Super Game Boy games, Game Boy Pocket for the rest"
+    public static let automaticSummary = "Game Boy Color for color and Nintendo games, Game Boy Advance for color games with extras there, Super Game Boy 2 for Super Game Boy games, Game Boy Pocket for the rest"
 
     /// What Automatic plays a game on when its header can't be read: a Game Boy Color for a Game
     /// Boy Color game, and a Game Boy Pocket for the rest.
@@ -518,12 +519,14 @@ public enum HardwareModel: String, Codable, Sendable, CaseIterable {
         system == .gameBoyColor ? .gameBoyColor : .gameBoyPocket
     }
 
-    /// The models Automatic picks among for games of `system` from their headers, the one it picks
-    /// for most games first.
+    /// The models Automatic picks among for games of `system`, the one it picks for most games
+    /// first: those their headers suit, and for Game Boy Color games the Game Boy Advance it picks
+    /// for the few with Game Boy Advance features.
     public static func automaticChoices(for system: GameSystem, superGameBoyBorders: Bool = false) -> [HardwareModel] {
         switch system {
         case .gameBoy: [.gameBoyPocket, .superGameBoy2, .gameBoyColor]
-        case .gameBoyColor: superGameBoyBorders ? [.gameBoyColor, .gameBoyPlayer] : [.gameBoyColor]
+        case .gameBoyColor:
+            superGameBoyBorders ? [.gameBoyColor, .gameBoyPlayer, .gameBoyAdvance] : [.gameBoyColor, .gameBoyAdvance]
         }
     }
 

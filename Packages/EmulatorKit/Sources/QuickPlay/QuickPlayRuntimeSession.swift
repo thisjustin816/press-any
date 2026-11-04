@@ -3,6 +3,7 @@ import EmulatorApplication
 import EmulationSession
 import EmulatorDomain
 import Foundation
+import GameIdentity
 
 public enum QuickPlayRuntimeState: Equatable, Sendable {
     case idle
@@ -64,8 +65,10 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
     public var playtimeSeconds: Double { lock.withLock { Double(playtime.nanoseconds) / 1_000_000_000 } }
 
     /// The hardware the game runs on, or nil before it starts. Quick Play always runs on
-    /// Automatic: the hardware the game's header suits, except that a resumed Auto State keeps the
-    /// hardware it was made on, so a state from before Automatic read the header still loads.
+    /// Automatic: a Game Boy Advance for a listed release with Game Boy Advance features
+    /// (`GameBoyAdvanceFeatures`), otherwise the hardware the game's header suits, except that a
+    /// resumed Auto State keeps the hardware it was made on, so a state from before Automatic read
+    /// the header still loads.
     public var runningHardwareModel: HardwareModel? { lock.withLock { _runningHardwareModel } }
 
     /// True when the last start found an autosave the core rejected. The game booted normally and
@@ -87,6 +90,12 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
 
         // The save as the core reports it, so an unchanged save isn't mistaken for a new one.
         var savedBattery = Data()
+        // Quick Play has no Build, so only the image itself can be a listed release.
+        let automatic = GameBoyAdvanceFeatures.lists(sha1: SHA1Digest.data(rom))
+            ? .gameBoyAdvance
+            : HardwareModel.automatic.resolved(
+                forImage: rom, system: session.system, superGameBoyBorders: superGameBoyBorders
+            )
 
         func bootedWorker(madeOn state: Data? = nil) throws -> SessionWorker {
             let worker = SessionWorker(
@@ -96,9 +105,6 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             try worker.perform { core in
                 (core as? any ButtonBounceCapability)?.setButtonBounce(self.buttonBounce)
                 if let hardware = core as? any HardwareModelCapability {
-                    let automatic = HardwareModel.automatic.resolved(
-                        forImage: rom, system: self.session.system, superGameBoyBorders: self.superGameBoyBorders
-                    )
                     try hardware.setHardwareModel(state.flatMap(hardware.hardwareModel(ofState:)) ?? automatic)
                 }
                 try core.loadImage(rom, system: self.session.system)

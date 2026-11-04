@@ -146,7 +146,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
             XCTAssertEqual(view(.gameBoyColor, ownsPlus: false).screenColorChoices, corrections, "\(model) plays on Automatic without Plus")
         }
         try store.set(HardwareModel.automatic, key: SettingKey.hardwareModel.rawValue, scope: .app)
-        XCTAssertEqual(view(.gameBoyColor, ownsPlus: true).resolvedHardware, [.gameBoyColor])
+        XCTAssertEqual(view(.gameBoyColor, ownsPlus: true).resolvedHardware, [.gameBoyColor, .gameBoyAdvance], "for the games with Game Boy Advance features")
         XCTAssertEqual(view(.gameBoy, ownsPlus: true).resolvedHardware, [.gameBoyPocket, .superGameBoy2, .gameBoyColor], "each game gets its own")
     }
 

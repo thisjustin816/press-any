@@ -339,7 +339,7 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: automatic), .custom)
         try store.removeValue(key: SettingKey.lcdFilter.rawValue, scope: .system(.gameBoy))
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: automatic), .accurate)
-        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: []), .custom, "no hardware plays anything")
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoy, hardware: [HardwareModel]()), .custom, "no hardware plays anything")
     }
 
     func testTheEditorShowsThePresetsValueForTheHardwareAndWhereItIsChosen() throws {
@@ -416,6 +416,79 @@ final class GameplayPresetSettingsTests: XCTestCase {
             GameplayPresetValues.standard(for: .gameBoyColor).displayFilter
         )
         XCTAssertEqual(presets.resolvedPreset(system: .gameBoyColor, hardware: .gameBoyColor), .standard)
+    }
+
+    /// A game Automatic plays on a Game Boy Advance for its features brightens its own colors, so
+    /// Nostalgic colors it as that screen does; a Game Boy Advance chosen by hand keeps Nostalgic's
+    /// usual As on a Game Boy Color. Accurate and Clean are the same on both.
+    func testNostalgicDarkensAGameAutomaticPlaysOnAGameBoyAdvanceForItsFeatures() throws {
+        let listed = PresetHardware(automatic: .gameBoyAdvance)
+        let byHand = PresetHardware(.gameBoyAdvance)
+        XCTAssertTrue(listed.forGameBoyAdvanceFeatures)
+        XCTAssertFalse(byHand.forGameBoyAdvanceFeatures)
+        for model in models where model != .gameBoyAdvance {
+            XCTAssertFalse(PresetHardware(automatic: model).forGameBoyAdvanceFeatures, "\(model)")
+        }
+
+        XCTAssertEqual(
+            GameplayPresetValues.standard(for: listed),
+            GameplayPresetValues(
+                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true,
+                colorCorrection: .accurate, advanceColors: .gameBoyAdvance
+            )
+        )
+        XCTAssertEqual(GameplayPresetValues.standard(for: byHand).advanceColors, .gameBoyColor, "unlisted games keep it")
+        XCTAssertEqual(GameplayPresetValues.standard(for: byHand).colorCorrection, .off)
+        XCTAssertEqual(GameplayPresetValues.standard(for: byHand), GameplayPresetValues.standard(for: .gameBoyAdvance))
+        for preset in [GameplayPreset.accurate, .clean] {
+            XCTAssertEqual(
+                GameplayPresetValues.values(for: preset, hardware: listed),
+                GameplayPresetValues.values(for: preset, hardware: byHand), "\(preset)"
+            )
+            XCTAssertEqual(GameplayPresetValues.values(for: preset, hardware: listed)?.advanceColors, .gameBoyAdvance)
+        }
+
+        // Untouched, and with Nostalgic chosen at a level, both play their own values and read as
+        // Nostalgic, never Custom.
+        let store = InMemorySettingsStore()
+        let presets = GameplayPresetSettings(store: store)
+        let gameID = UUID()
+        let buildID = UUID()
+        func check(_ expected: GameplayPreset, _ message: String) {
+            for hardware in [listed, byHand] {
+                XCTAssertEqual(
+                    presets.resolvedPreset(system: .gameBoyColor, gameID: gameID, buildID: buildID, hardware: hardware),
+                    expected, "\(hardware) \(message)"
+                )
+            }
+            XCTAssertEqual(
+                presets.resolvedPreset(system: .gameBoyColor, gameID: gameID, buildID: buildID, hardware: [listed, byHand]),
+                expected, message
+            )
+        }
+        check(.standard, "untouched")
+        XCTAssertEqual(presets.effectiveValues(system: .gameBoyColor, hardware: listed).advanceColors, .gameBoyAdvance)
+        XCTAssertEqual(presets.effectiveValues(system: .gameBoyColor, hardware: listed).colorCorrection, .accurate)
+        XCTAssertEqual(presets.effectiveValues(system: .gameBoyColor, hardware: byHand).advanceColors, .gameBoyColor)
+        XCTAssertEqual(presets.effectiveValues(system: .gameBoyColor, hardware: byHand).colorCorrection, .off)
+
+        try presets.apply(.accurate, at: .system(.gameBoyColor), hardware: [listed, byHand], system: .gameBoyColor)
+        check(.accurate, "Accurate in Game Boy Color settings")
+        try presets.apply(.standard, at: .game(gameID), hardware: [listed], system: .gameBoyColor, gameID: gameID)
+        check(.standard, "Nostalgic over Accurate")
+        XCTAssertEqual(
+            presets.effectiveValues(system: .gameBoyColor, gameID: gameID, buildID: buildID, hardware: listed).advanceColors,
+            .gameBoyAdvance
+        )
+
+        // Values stored one by one count as the preset they match on the hardware they're read for.
+        try presets.reset(at: .game(gameID))
+        try presets.reset(at: .system(.gameBoyColor))
+        let nostalgic = GameplayPresetValues.standard(for: listed)
+        try store.set(nostalgic.colorCorrection, key: SettingKey.colorCorrection.rawValue, scope: .build(buildID))
+        try store.set(nostalgic.advanceColors, key: SettingKey.advanceColors.rawValue, scope: .build(buildID))
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoyColor, gameID: gameID, buildID: buildID, hardware: listed), .standard)
+        XCTAssertEqual(presets.resolvedPreset(system: .gameBoyColor, gameID: gameID, buildID: buildID, hardware: byHand), .custom)
     }
 
     func testControlledKeysAreExactlyTheCustomGameplayEditor() {

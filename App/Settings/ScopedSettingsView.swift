@@ -33,9 +33,9 @@ struct ScopedSettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showsPlus = false
-    /// The models games here run on, which decide the Screen Colors row and which Customize rows
-    /// show. Read again after each change.
-    @State private var hardware: [HardwareModel]?
+    /// The models games here run on, as the presets read them, which decide the preset values, the
+    /// Screen Colors row and which Customize rows show. Read again after each change.
+    @State private var hardware: [PresetHardware]?
     @State private var settingsRevision = 0
     @State private var presetError: String?
 
@@ -95,12 +95,22 @@ struct ScopedSettingsView: View {
     /// for a system on Automatic every model Automatic picks among, since each game gets its own.
     /// Without Plus every game plays on Automatic.
     var resolvedHardware: [HardwareModel] {
+        var models: [HardwareModel] = []
+        for model in resolvedPresetHardware.map(\.model) where !models.contains(model) {
+            models.append(model)
+        }
+        return models
+    }
+
+    /// The same models as the presets read them, where a Game Boy Advance Automatic picked for a
+    /// game's Game Boy Advance features differs from one chosen by hand.
+    var resolvedPresetHardware: [PresetHardware] {
         hardware ?? currentHardware()
     }
 
-    private func currentHardware() -> [HardwareModel] {
+    private func currentHardware() -> [PresetHardware] {
         if let gameplayHardware {
-            return gameplayHardware.hardware(system: system, gameID: gameID, buildID: buildID)
+            return gameplayHardware.presetHardware(system: system, gameID: gameID, buildID: buildID)
         }
         let stored = try? SettingsResolver(store: store).decode(
             HardwareModel.self,
@@ -110,16 +120,18 @@ struct ScopedSettingsView: View {
             buildID: buildID
         )
         let model = plus.isUnlocked ? stored ?? .automatic : .automatic
-        return model == .automatic ? HardwareModel.automaticChoices(for: system) : [model]
+        return model == .automatic
+            ? HardwareModel.automaticChoices(for: system).map { PresetHardware(automatic: $0) }
+            : [PresetHardware(model)]
     }
 
     /// The model whose values a Customize row shows by default: the first here that has the
     /// setting, or the first here when none does.
-    private func defaultsHardware(for key: SettingKey) -> HardwareModel {
-        let models = resolvedHardware
-        let match: HardwareModel? = switch key {
-        case .colorCorrection: models.first(where: ScreenColorChoices.correctsColors)
-        case .advanceColors: models.first(where: \.isGameBoyAdvance)
+    private func defaultsHardware(for key: SettingKey) -> PresetHardware {
+        let models = resolvedPresetHardware
+        let match: PresetHardware? = switch key {
+        case .colorCorrection: models.first { ScreenColorChoices.correctsColors($0.model) }
+        case .advanceColors: models.first(where: \.model.isGameBoyAdvance)
         default: nil
         }
         return match ?? models[0]
@@ -132,7 +144,7 @@ struct ScopedSettingsView: View {
                 system: system,
                 gameID: gameID,
                 buildID: buildID,
-                hardware: resolvedHardware,
+                hardware: resolvedPresetHardware,
                 store: store,
                 plus: plus,
                 refreshToken: settingsRevision,
@@ -478,7 +490,7 @@ struct InheritableSettingContext {
     var plus = PlusGate(isUnlocked: true)
     var openPlus: () -> Void = {}
     /// The model whose preset values a row for one of the preset settings shows.
-    var presetHardware: (SettingKey) -> HardwareModel = { _ in .gameBoyPocket }
+    var presetHardware: (SettingKey) -> PresetHardware = { _ in PresetHardware(.gameBoyPocket) }
 
     /// A preset setting inherits a preset's value as well as a stored one.
     func edit(_ key: SettingKey) -> ScopedSetting? {

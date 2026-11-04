@@ -2,12 +2,15 @@ import EmulationCore
 import EmulatorDomain
 import Foundation
 
-/// The hardware Automatic runs each Build on. Automatic reads the game's header and the Super Game
-/// Boy borders setting (`CartridgeHints.automaticModel(superGameBoyBorders:)`), except that a
-/// Build that already has save states the first time it starts on Automatic keeps the hardware its
-/// newest state was made on, so its states keep loading. The first start records which of the two
-/// applies under `SettingKey.automaticHardware`, so states made afterwards never pin a Build.
+/// The hardware Automatic runs each Build on, by its rule: a Game Boy Advance for a game with Game
+/// Boy Advance features (`GameBoyAdvanceFeatures`), otherwise what the game's header and the Super
+/// Game Boy borders setting suit (`CartridgeHints.automaticModel(superGameBoyBorders:)`). A Build
+/// that already has save states the first time it starts on Automatic keeps the hardware its
+/// newest state was made on instead, so its states keep loading. The first start records which of
+/// the two applies under `SettingKey.automaticHardware`, so states made afterwards never pin a
+/// Build.
 public struct AutomaticHardware: Sendable {
+    private let builds: any BuildRepository
     private let profiles: any SaveProfileRepository
     private let states: any SaveStateRepository
     private let assets: any ManagedAssetRepository
@@ -17,6 +20,7 @@ public struct AutomaticHardware: Sendable {
 
     /// Without `settings` nothing is recorded, every start decides again, and borders are off.
     public init(
+        builds: any BuildRepository,
         profiles: any SaveProfileRepository,
         states: any SaveStateRepository,
         assets: any ManagedAssetRepository,
@@ -24,6 +28,7 @@ public struct AutomaticHardware: Sendable {
         coreRegistry: CoreRegistry,
         settings: (any SettingsStore)?
     ) {
+        self.builds = builds
         self.profiles = profiles
         self.states = states
         self.assets = assets
@@ -32,20 +37,31 @@ public struct AutomaticHardware: Sendable {
         self.settings = settings
     }
 
-    /// What Automatic runs `build` on: the hardware its states keep, or the header rule. Before
-    /// the first start, a Build with states counts as keeping them. `image` is the Build's image
-    /// when it's at hand; otherwise the image file is read, and when it's missing, as a patched
-    /// Build's evicted image can be, the system decides (`HardwareModel.automaticFallback`).
+    /// What Automatic runs `build` on: the hardware its states keep, or the rule. Before the first
+    /// start, a Build with states counts as keeping them. `image` is the Build's image when it's at
+    /// hand; otherwise the image file is read, and when it's missing, as a patched Build's evicted
+    /// image can be, the system decides (`HardwareModel.automaticFallback`).
     public func hardware(for build: Build, image: Data? = nil) -> HardwareModel {
         switch recorded(for: build) {
-        case .automatic?: headerModel(of: build, image: image)
+        case .automatic?: ruleModel(of: build, image: image)
         case let kept?: kept
-        case nil: newestStateModel(of: build) ?? headerModel(of: build, image: image)
+        case nil: newestStateModel(of: build) ?? ruleModel(of: build, image: image)
         }
     }
 
+    /// Whether `build` is a game with Game Boy Advance features, by its own image or what it was
+    /// made from (`GameBoyAdvanceFeatures.includes(_:lookup:gameBuilds:)`). A Build that can't be
+    /// read counts as not one.
+    public func hasGameBoyAdvanceFeatures(_ build: Build) -> Bool {
+        GameBoyAdvanceFeatures.includes(
+            build,
+            lookup: { try? builds.fetchBuild(id: $0) },
+            gameBuilds: { (try? builds.fetchBuilds(gameID: $0)) ?? [] }
+        )
+    }
+
     /// Records, unless it already is, whether `build` keeps the hardware of its newest save state
-    /// or follows the header rule, and returns what it runs on. With `keepsStateHardware` false, as
+    /// or follows the rule, and returns what it runs on. With `keepsStateHardware` false, as
     /// for a Build whose Model is set by hand, it follows the rule even when it has save states.
     @discardableResult
     public func record(for build: Build, image: Data, keepsStateHardware: Bool) throws -> HardwareModel {
@@ -57,7 +73,7 @@ public struct AutomaticHardware: Sendable {
         return hardware(for: build, image: image)
     }
 
-    /// The recorded choice: `.automatic` for the header rule, another model for the hardware the
+    /// The recorded choice: `.automatic` for the rule, another model for the hardware the
     /// Build's states keep, or nil before the first start or when it can't be read.
     public func recorded(for build: Build) -> HardwareModel? {
         guard let json = try? settings?.valueJSON(key: SettingKey.automaticHardware.rawValue, scope: .build(build.id)) else {
@@ -76,7 +92,10 @@ public struct AutomaticHardware: Sendable {
         return borders ?? false
     }
 
-    private func headerModel(of build: Build, image: Data?) -> HardwareModel {
+    /// A game with Game Boy Advance features plays on one whatever its header says, Super Game Boy
+    /// borders included.
+    private func ruleModel(of build: Build, image: Data?) -> HardwareModel {
+        if hasGameBoyAdvanceFeatures(build) { return .gameBoyAdvance }
         let header = (image ?? storedImage(of: build)).flatMap(CartridgeHints.init(image:))
         return header?.automaticModel(superGameBoyBorders: superGameBoyBorders(for: build))
             ?? HardwareModel.automaticFallback(for: build.system)
@@ -149,8 +168,15 @@ public struct GameplayHardware: Sendable {
 
     /// What `build` plays on, never Automatic. `image` is the Build's image when it's at hand.
     public func hardware(for build: Build, image: Data? = nil) -> HardwareModel {
+        presetHardware(for: build, image: image).model
+    }
+
+    /// What `build` plays on, as the gameplay presets read it: on Automatic, a Game Boy Advance
+    /// counts as picked for the game's Game Boy Advance features.
+    public func presetHardware(for build: Build, image: Data? = nil) -> PresetHardware {
         let model = model(system: build.system, gameID: build.gameID, buildID: build.id)
-        return model == .automatic ? automatic.hardware(for: build, image: image) : model
+        guard model == .automatic else { return PresetHardware(model) }
+        return PresetHardware(automatic: automatic.hardware(for: build, image: image))
     }
 
     /// Records whether `build` keeps its states' hardware under Automatic, the first time it
@@ -167,22 +193,34 @@ public struct GameplayHardware: Sendable {
     /// with no Builds, the Model when one is chosen, and otherwise every model Automatic picks
     /// among for that system (`HardwareModel.automaticChoices`).
     public func hardware(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> [HardwareModel] {
+        var models: [HardwareModel] = []
+        for model in presetHardware(system: system, gameID: gameID, buildID: buildID).map(\.model)
+        where !models.contains(model) {
+            models.append(model)
+        }
+        return models
+    }
+
+    /// The same as `hardware(system:gameID:buildID:)`, as the gameplay presets read it
+    /// (`presetHardware(for:image:)`), so a Game Boy Advance can appear twice: picked by Automatic
+    /// for a game's features, and chosen by hand.
+    public func presetHardware(system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil) -> [PresetHardware] {
         if let buildID, let build = try? builds.fetchBuild(id: buildID) {
-            return [hardware(for: build)]
+            return [presetHardware(for: build)]
         }
         if let gameID, let gameBuilds = try? builds.fetchBuilds(gameID: gameID), !gameBuilds.isEmpty {
-            var models: [HardwareModel] = []
+            var models: [PresetHardware] = []
             for build in gameBuilds {
-                let model = hardware(for: build)
+                let model = presetHardware(for: build)
                 if !models.contains(model) { models.append(model) }
             }
             return models
         }
         let model = model(system: system, gameID: gameID)
-        guard model == .automatic else { return [model] }
+        guard model == .automatic else { return [PresetHardware(model)] }
         let borders = try? settings?.decode(
             Bool.self, key: SettingKey.superGameBoyBorders.rawValue, system: system, gameID: gameID
         )
-        return HardwareModel.automaticChoices(for: system, superGameBoyBorders: borders ?? false)
+        return HardwareModel.automaticChoices(for: system, superGameBoyBorders: borders ?? false).map(PresetHardware.init(automatic:))
     }
 }
