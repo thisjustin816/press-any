@@ -58,7 +58,7 @@ public struct GameplayPresetSettings: Sendable {
         system: GameSystem,
         gameID: UUID? = nil,
         buildID: UUID? = nil,
-        hardware: HardwareModel
+        hardware: PresetHardware
     ) -> GameplayEffectiveValues {
         let scopes = SettingsResolver.precedence(system: system, gameID: gameID, buildID: buildID)
         // The first value found decides, as for other settings: one that can't be read plays the
@@ -91,7 +91,7 @@ public struct GameplayPresetSettings: Sendable {
         system: GameSystem,
         gameID: UUID? = nil,
         buildID: UUID? = nil,
-        hardware: HardwareModel
+        hardware: PresetHardware
     ) -> GameplayPreset {
         resolvedPreset(system: system, gameID: gameID, buildID: buildID, hardware: [hardware])
     }
@@ -103,7 +103,7 @@ public struct GameplayPresetSettings: Sendable {
         system: GameSystem,
         gameID: UUID? = nil,
         buildID: UUID? = nil,
-        hardware: [HardwareModel]
+        hardware: [PresetHardware]
     ) -> GameplayPreset {
         GameplayPreset.builtIn.first { preset in
             !hardware.isEmpty && hardware.allSatisfy { model in
@@ -124,7 +124,7 @@ public struct GameplayPresetSettings: Sendable {
     public func apply(
         _ preset: GameplayPreset,
         at scope: SettingsScope,
-        hardware: HardwareModel,
+        hardware: PresetHardware,
         system: GameSystem,
         gameID: UUID? = nil,
         buildID: UUID? = nil
@@ -138,7 +138,7 @@ public struct GameplayPresetSettings: Sendable {
     public func apply(
         _ preset: GameplayPreset,
         at scope: SettingsScope,
-        hardware: [HardwareModel],
+        hardware: [PresetHardware],
         system: GameSystem,
         gameID: UUID? = nil,
         buildID: UUID? = nil
@@ -165,8 +165,8 @@ public struct GameplayPresetSettings: Sendable {
     /// preset, the scope gets that preset, which follows the new hardware. A stored preset already
     /// follows the hardware, and inherited and unset values are left alone.
     public func retargetBuiltInPreset(
-        from oldHardware: [HardwareModel],
-        to newHardware: [HardwareModel],
+        from oldHardware: [PresetHardware],
+        to newHardware: [PresetHardware],
         at scope: SettingsScope,
         system: GameSystem,
         gameID: UUID? = nil,
@@ -192,7 +192,7 @@ public struct GameplayPresetSettings: Sendable {
         system: GameSystem,
         gameID: UUID? = nil,
         buildID: UUID? = nil,
-        hardware: HardwareModel
+        hardware: PresetHardware
     ) throws -> ScopedSetting {
         let scopes = SettingsResolver.precedence(system: system, gameID: gameID, buildID: buildID)
         guard let index = scopes.firstIndex(of: scope) else {
@@ -227,7 +227,7 @@ public struct GameplayPresetSettings: Sendable {
 
     /// The value the preset chosen at `scope` sets for `key` on `hardware`, or nil when no preset
     /// is chosen there or it leaves `key` alone on that hardware.
-    private func presetValue(_ key: SettingKey, at scope: SettingsScope, hardware: HardwareModel) -> ResolvedSetting? {
+    private func presetValue(_ key: SettingKey, at scope: SettingsScope, hardware: PresetHardware) -> ResolvedSetting? {
         guard let preset = storedPreset(at: scope),
               let values = GameplayPresetValues.values(for: preset, hardware: hardware),
               let json = Self.json(of: values, key: key) else { return nil }
@@ -248,5 +248,84 @@ public struct GameplayPresetSettings: Sendable {
         case .advanceColors: encoded(values.advanceColors)
         default: nil
         }
+    }
+}
+
+/// The same, for hardware chosen by hand (`PresetHardware.init(_:)`).
+public extension GameplayPresetSettings {
+    func effectiveValues(
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil,
+        hardware: HardwareModel
+    ) -> GameplayEffectiveValues {
+        effectiveValues(system: system, gameID: gameID, buildID: buildID, hardware: PresetHardware(hardware))
+    }
+
+    func resolvedPreset(
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil,
+        hardware: HardwareModel
+    ) -> GameplayPreset {
+        resolvedPreset(system: system, gameID: gameID, buildID: buildID, hardware: PresetHardware(hardware))
+    }
+
+    func resolvedPreset(
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil,
+        hardware: [HardwareModel]
+    ) -> GameplayPreset {
+        resolvedPreset(system: system, gameID: gameID, buildID: buildID, hardware: hardware.map { PresetHardware($0) })
+    }
+
+    func apply(
+        _ preset: GameplayPreset,
+        at scope: SettingsScope,
+        hardware: HardwareModel,
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil
+    ) throws {
+        try apply(preset, at: scope, hardware: PresetHardware(hardware), system: system, gameID: gameID, buildID: buildID)
+    }
+
+    func apply(
+        _ preset: GameplayPreset,
+        at scope: SettingsScope,
+        hardware: [HardwareModel],
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil
+    ) throws {
+        try apply(
+            preset, at: scope, hardware: hardware.map { PresetHardware($0) }, system: system, gameID: gameID, buildID: buildID
+        )
+    }
+
+    func retargetBuiltInPreset(
+        from oldHardware: [HardwareModel],
+        to newHardware: [HardwareModel],
+        at scope: SettingsScope,
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil
+    ) throws {
+        try retargetBuiltInPreset(
+            from: oldHardware.map { PresetHardware($0) }, to: newHardware.map { PresetHardware($0) },
+            at: scope, system: system, gameID: gameID, buildID: buildID
+        )
+    }
+
+    func edit(
+        _ key: SettingKey,
+        at scope: SettingsScope,
+        system: GameSystem,
+        gameID: UUID? = nil,
+        buildID: UUID? = nil,
+        hardware: HardwareModel
+    ) throws -> ScopedSetting {
+        try edit(key, at: scope, system: system, gameID: gameID, buildID: buildID, hardware: PresetHardware(hardware))
     }
 }

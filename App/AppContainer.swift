@@ -629,6 +629,7 @@ final class AppContainer {
             builds: repositories.builds,
             settings: settingsResolver,
             automatic: AutomaticHardware(
+                builds: repositories.builds,
                 profiles: repositories.saveProfiles,
                 states: repositories.saveStates,
                 assets: repositories.assets,
@@ -654,13 +655,16 @@ final class AppContainer {
 
     /// The preset-controlled settings a game plays with. Unset or unreadable values take the
     /// standard preset's for the hardware. Stored values apply with or without Plus; Plus only
-    /// gates editing them.
+    /// gates editing them. `hardware` is the model Automatic picked, as Quick Play passes it;
+    /// without it the scope's first model decides, as `gameplayHardware` gives it.
     func gameplayValues(
         system: GameSystem, gameID: UUID? = nil, buildID: UUID? = nil, hardware: HardwareModel? = nil
     ) -> GameplayEffectiveValues {
+        let presetHardware = hardware.map { PresetHardware(automatic: $0) }
+            ?? self.hardware.presetHardware(system: system, gameID: gameID, buildID: buildID).first
+            ?? PresetHardware(HardwareModel.automaticFallback(for: system))
         var values = GameplayPresetSettings(store: repositories.settings).effectiveValues(
-            system: system, gameID: gameID, buildID: buildID,
-            hardware: hardware ?? gameplayHardware(system: system, gameID: gameID, buildID: buildID)
+            system: system, gameID: gameID, buildID: buildID, hardware: presetHardware
         )
         if let filter = ScreenshotScene.lcdFilterOverride { values.displayFilter = filter }
         return values

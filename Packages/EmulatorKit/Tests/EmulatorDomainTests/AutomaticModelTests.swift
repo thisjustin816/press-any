@@ -50,7 +50,7 @@ final class AutomaticModelTests: XCTestCase {
             XCTAssertEqual(automatic(CartridgeHints(oldLicensee: 0x01), borders: borders), .gameBoyColor)
             XCTAssertEqual(automatic(CartridgeHints(), borders: borders), .gameBoyPocket)
         }
-        XCTAssertEqual(HardwareModel.automaticChoices(for: .gameBoyColor, superGameBoyBorders: true), [.gameBoyColor, .gameBoyPlayer])
+        XCTAssertEqual(HardwareModel.automaticChoices(for: .gameBoyColor, superGameBoyBorders: true), [.gameBoyColor, .gameBoyPlayer, .gameBoyAdvance])
         XCTAssertEqual(HardwareModel.automaticChoices(for: .gameBoy, superGameBoyBorders: true), [.gameBoyPocket, .superGameBoy2, .gameBoyColor])
         XCTAssertEqual(
             HardwareModel.automatic.resolved(forImage: image(cgb: 0x80, sgb: 0x03, old: 0x33), system: .gameBoyColor, superGameBoyBorders: true),

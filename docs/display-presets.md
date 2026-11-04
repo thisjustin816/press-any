@@ -14,7 +14,9 @@ looked and felt" and "Just the game, with no effects added" (`GameplayPresetRow.
   and Button Bounce on. A Game Boy Color gets Soft, SameBoy's Modern Accurate correction made
   softer: the game's colors as a bright backlit screen shows them (see Game Boy Color colors).
   The Game Boy Advance gets the backlit AGS-101 SP's
-  colors, the screen most players remember as the good one. The television models get sharp
+  colors, the screen most players remember as the good one, with Modern Accurate for the games
+  that brighten their own colors there (see Games that brighten their colors on a Game Boy
+  Advance). The television models get sharp
   scanlines on a curved screen with small rounded corners, the look most players picture for a
   console on a TV, without the mask, glow and vignette that Accurate draws: Curved Scanlines on
   a Super Game Boy and Slightly Curved Scanlines on a Game Boy Player.
@@ -130,6 +132,39 @@ every picture taken from it matches gameplay. On a Game Boy Advance or Game Boy 
 starts from that screen's Modern Accurate, or a Game Boy Color's with As on a Game Boy Color.
 Game Boy palettes don't change. A Game Boy Color boot palette chosen on a Game Boy is softened as
 the Game Boy Color would show it, and a Super Game Boy shows Modern Accurate.
+
+## Games that brighten their colors on a Game Boy Advance
+
+Automatic plays the four Game Boy Color games with Game Boy Advance features on a Game Boy
+Advance (`docs/product.md`, Settings). Each brightens its own colors there for the darker
+screen: the Oracle games pass every color channel through a table
+(`gbaModePaletteData` in [oracles-disasm](https://github.com/Stewmath/oracles-disasm)) that
+lifts 4 of 31 to 10 and 8 to 16. Nostalgic's usual Game Boy Advance colors, Original under the
+backlit SP's profile, show those brightened colors as stored, so the game looks washed out next
+to the same scene on a Game Boy Color. Game Boy Advance Colors alone doesn't help: with Original
+the core draws the same colors on both screens, so As on a Game Boy Advance changes nothing.
+SameBoy's darker Game Boy Advance curve applies only with a correction on.
+
+So for those games, Nostalgic on a Game Boy Advance is Modern Accurate with As on a Game Boy
+Advance under the same backlit SP filter. The choice comes from modelling each candidate on all
+32,768 colors, brightened by the Oracle table, through SameBoy's `GB_convert_rgb15`, the bridge's
+Soft and the SP101 profile, and comparing in OKLab with the unbrightened color on a Game Boy
+Color under Nostalgic:
+
+| On a Game Boy Advance | Mean difference | Lightness |
+|---|---|---|
+| Original, SP profile (Nostalgic for other games) | 6.6 | +3.9 |
+| Modern Accurate, As on a Game Boy Advance, SP profile (chosen) | 3.4 | +1.6 |
+| Balanced, As on a Game Boy Advance, SP profile | 3.6 | +1.1 |
+| Soft, As on a Game Boy Advance, SP profile | 4.4 | +3.1 |
+| Modern Accurate, As on a Game Boy Advance, no profile | 5.0 | +3.1 |
+| Modern Accurate, As on a Game Boy Color, SP profile | 11.3 | +9.8 |
+
+Differences are OKLab distances ×100, and lightness is the mean OKLab L difference ×100, where
+positive is lighter than the Game Boy Color. The SP profile doesn't darken the picture twice: with
+it the result is still slightly lighter than the Game Boy Color, and closer than without it.
+Accurate and Clean don't change: Accurate's Game Boy Advance profile darkens the picture as that
+screen did, and Clean shows the game's colors as stored.
 
 ## Televisions
 

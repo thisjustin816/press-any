@@ -64,7 +64,7 @@ final class PersistedIdentifierTests: XCTestCase {
         XCTAssertEqual(HardwareModel.automatic.resolved(forImage: Data(), system: .gameBoyColor), .gameBoyColor, "no header")
         XCTAssertEqual(HardwareModel.gameBoy.resolved(forImage: Data(count: 0x8000), system: .gameBoyColor), .gameBoy)
         XCTAssertEqual(HardwareModel.automaticChoices(for: .gameBoy), [.gameBoyPocket, .superGameBoy2, .gameBoyColor])
-        XCTAssertEqual(HardwareModel.automaticChoices(for: .gameBoyColor), [.gameBoyColor])
+        XCTAssertEqual(HardwareModel.automaticChoices(for: .gameBoyColor), [.gameBoyColor, .gameBoyAdvance])
         XCTAssertEqual(HardwareFamily.gameBoy.models, [.gameBoy, .gameBoyPocket])
         XCTAssertEqual(HardwareFamily.superGameBoy.models, [.superGameBoy, .superGameBoy2])
         XCTAssertEqual(HardwareFamily.gameBoyColor.models, [.gameBoyColor, .gameBoyAdvance, .gameBoyPlayer])

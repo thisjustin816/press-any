@@ -75,6 +75,29 @@ public enum GameplayPreset: String, Codable, Sendable, CaseIterable {
     }
 }
 
+/// The hardware a game plays on, as the gameplay presets choose their values for it. Automatic
+/// picks a Game Boy Advance only for a game with Game Boy Advance features
+/// (`GameBoyAdvanceFeatures`), which brightens its own colors there, so the presets tell that Game
+/// Boy Advance apart from one chosen by hand.
+public struct PresetHardware: Hashable, Sendable {
+    /// Resolved: the model the game runs on, never Automatic but by mistake.
+    public let model: HardwareModel
+    /// Automatic picked this Game Boy Advance for the game's Game Boy Advance features.
+    public let forGameBoyAdvanceFeatures: Bool
+
+    /// `model` chosen by hand.
+    public init(_ model: HardwareModel) {
+        self.model = model
+        forGameBoyAdvanceFeatures = false
+    }
+
+    /// `model` as Automatic picked it.
+    public init(automatic model: HardwareModel) {
+        self.model = model
+        forGameBoyAdvanceFeatures = model == .gameBoyAdvance
+    }
+}
+
 /// The low-level settings a built-in gameplay preset controls for one resolved hardware model. A
 /// nil value is a setting the preset leaves alone on that hardware. Screen palettes are never
 /// part of a preset.
@@ -100,8 +123,18 @@ public struct GameplayPresetValues: Equatable, Sendable {
     }
 
     /// What unset settings resolve to on `hardware`.
-    public static func standard(for hardware: HardwareModel) -> Self {
+    public static func standard(for hardware: PresetHardware) -> Self {
         values(for: .standard, hardware: hardware)!
+    }
+
+    /// What unset settings resolve to on `hardware` chosen by hand.
+    public static func standard(for hardware: HardwareModel) -> Self {
+        standard(for: PresetHardware(hardware))
+    }
+
+    /// `preset`'s values on `hardware` chosen by hand.
+    public static func values(for preset: GameplayPreset, hardware: HardwareModel) -> Self? {
+        values(for: preset, hardware: PresetHardware(hardware))
     }
 
     /// `hardware` is expected to be resolved; callers pass the model each game runs on. Automatic
@@ -110,8 +143,8 @@ public struct GameplayPresetValues: Equatable, Sendable {
     /// Only Clean turns button bounce off: Nostalgic and Accurate bounce on every model, the
     /// television models included. A Game Boy or Pocket shows a palette, which color correction
     /// doesn't apply to in the way the presets mean, so those presets leave correction alone.
-    public static func values(for preset: GameplayPreset, hardware: HardwareModel) -> Self? {
-        switch (preset, hardware) {
+    public static func values(for preset: GameplayPreset, hardware: PresetHardware) -> Self? {
+        switch (preset, hardware.model) {
         case (.custom, _):
             return nil
 
@@ -133,6 +166,15 @@ public struct GameplayPresetValues: Equatable, Sendable {
             // The screen as people remember it: Modern Accurate softened, as a bright backlit
             // screen shows it.
             return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .soft)
+        case (.standard, .gameBoyAdvance) where hardware.forGameBoyAdvanceFeatures:
+            // The game brightens its own colors for the Game Boy Advance's darker screen, which
+            // Original would show washed out. Modern Accurate darkens them as that screen does, and
+            // with the backlit SP's profile on top comes closest to the same colors on a Game Boy
+            // Color in Nostalgic (docs/display-presets.md).
+            return Self(
+                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true,
+                colorCorrection: .accurate, advanceColors: .gameBoyAdvance
+            )
         case (.standard, .gameBoyAdvance):
             // The backlit SP's profile colors the picture, so the core leaves colors as they are.
             return Self(
