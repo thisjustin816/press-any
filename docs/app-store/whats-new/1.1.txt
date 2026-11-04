@@ -29,7 +29,7 @@ Also new
 - A warning before you launch an older Build on a newer save, and a copy of the save kept before you switch Builds
 - A fade and chevron on lists with more below
 - The screen stays awake while a game runs
-- An updated SameBoy core with camera and clock fixes
+- SameBoy 1.0.5, with camera, clock and Game Boy sound fixes
 
 Fixes
 - Import names and matching after restoring a backup
