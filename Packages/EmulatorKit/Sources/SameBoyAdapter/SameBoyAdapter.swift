@@ -20,14 +20,15 @@ public enum SameBoyAdapterError: Error, Equatable {
 
 public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability, ButtonBounceCapability,
     CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability, TiltCapability {
-    /// SameBoy at the master commit THIRD_PARTY_NOTICES.md records, 53 commits after the 1.0.4
-    /// release, labeled as a prerelease of the next one with the commit after `+`.
-    public static let coreDescriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.5-prerelease.53+19a7b14")
-    /// Earlier pins keep the same state format and load unchanged, so their Builds and states move
-    /// to this one. "1.0.4" is this same commit under the label it shipped with first.
+    /// SameBoy at the `v1.0.5` release tag THIRD_PARTY_NOTICES.md records.
+    public static let coreDescriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.5")
+    /// States from earlier pins load with the same registers and memory, so their Builds and states
+    /// move to this one. "1.0.4" and "1.0.5-prerelease.53+19a7b14" are the previous pin, master
+    /// commit `19a7b14`, under the two labels it shipped with.
     public static let replacedCoreDescriptors: Set<CoreDescriptor> = [
         CoreDescriptor(identifier: "sameboy", version: "1.0.3"),
         CoreDescriptor(identifier: "sameboy", version: "1.0.4"),
+        CoreDescriptor(identifier: "sameboy", version: "1.0.5-prerelease.53+19a7b14"),
     ]
     public let descriptor = SameBoyAdapter.coreDescriptor
     public let replacedDescriptors = SameBoyAdapter.replacedCoreDescriptors
