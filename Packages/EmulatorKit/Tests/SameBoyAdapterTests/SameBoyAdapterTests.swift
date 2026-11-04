@@ -10,14 +10,13 @@ final class SameBoyAdapterTests: XCTestCase {
         let factory = SameBoyCoreFactory()
 
         XCTAssertEqual(factory.descriptor.identifier, "sameboy")
-        XCTAssertEqual(factory.descriptor.version, "1.0.5-prerelease.53+19a7b14")
-        XCTAssertEqual(factory.replacedDescriptors, [
-            CoreDescriptor(identifier: "sameboy", version: "1.0.3"), CoreDescriptor(identifier: "sameboy", version: "1.0.4"),
-        ])
+        XCTAssertEqual(factory.descriptor.version, "1.0.5")
+        let earlierPins = ["1.0.3", "1.0.4", "1.0.5-prerelease.53+19a7b14"]
+        XCTAssertEqual(factory.replacedDescriptors, Set(earlierPins.map { CoreDescriptor(identifier: "sameboy", version: $0) }))
         XCTAssertEqual(factory.supportedSystems, [.gameBoy, .gameBoyColor])
         let pinned = CoreRegistry(factories: [factory])
-        for earlier in ["1.0.3", "1.0.4"] {
-            XCTAssertEqual(try pinned.factory(for: CoreDescriptor(identifier: "sameboy", version: earlier)).descriptor.version, "1.0.5-prerelease.53+19a7b14")
+        for earlier in earlierPins {
+            XCTAssertEqual(try pinned.factory(for: CoreDescriptor(identifier: "sameboy", version: earlier)).descriptor.version, "1.0.5")
         }
     }
 

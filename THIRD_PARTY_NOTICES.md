@@ -9,17 +9,21 @@ copying source snapshots into this repository. Adapted code, artwork and data ca
 - Author: Lior Halphon
 - Upstream: https://github.com/LIJI32/SameBoy
 - Location: git submodule at `Packages/EmulatorKit/Dependencies/SameBoy`
-- Pinned commit: `19a7b14cfb10bb20b0f931b3d77359c11f866e17` (`v1.0.4-53-g19a7b14c`, master on
-  2026-10-28)
-- Why this commit and not the `v1.0.4` tag: the commits after the tag include upstream
-  `ecd0b5f`, which stops a WX register write from also landing in `hram`, where it overwrote a
-  byte of the Game Boy Camera's dither matrix. They also stop MBC3 and TPP1 clocks from counting
-  time while a game has halted them, apply six-digit Game Genie codes and cheats in cartridge RAM
-  banks, expose the camera's shoot flags, fix Super Game Boy `MLT_REQ`, refuse truncated states
-  with an error, and model the infrared sensor more closely. Version 1.0.4 itself fixes Super
-  Game Boy command reading, MMM01 detection and reads past the core's memory when loading a
-  damaged state. States saved by the previous pin (`213a12c`) load unchanged. Move to a release
-  tag once one contains these fixes.
+- Pinned commit: `ea667ad79aa28409f034b1fd6da7304e1844750d`, the `v1.0.5` release tag
+  (2026-11-02)
+- Why this release: it is the first release with the fixes the previous pin, master commit
+  `19a7b14` (`v1.0.4-53-g19a7b14c`), was taken for. Upstream `ecd0b5f` stops a WX register write
+  from also landing in `hram`, where it overwrote a byte of the Game Boy Camera's dither matrix;
+  MBC3 and TPP1 clocks stop counting time while a game has halted them; six-digit Game Genie
+  codes and cheats in cartridge RAM banks apply; the camera's shoot flags are exposed; Super Game
+  Boy `MLT_REQ` is fixed; truncated states are refused with an error; and the infrared sensor is
+  modeled more closely. Since `19a7b14`, 1.0.5 brings Game Boy (DMG) audio closer to the hardware
+  (upstream #790: DAC envelopes, the mixer disconnecting while every channel's DAC is off, latched
+  pulse duty and noise feedback, inactive wave reads, DMG-B wave RAM corruption on retrigger),
+  keeps an NR50 or NR51 write from changing a silent channel's DC offset on every model, applies
+  key changes in the emulation loop rather than when they are set (upstream #774), and validates
+  ISX files. States saved by the previous pins (`213a12c` and `19a7b14`) load with the same
+  registers and memory; 1.0.5 adds APU fields to its states, which it checks on load.
 - Usage: only `Core/` is compiled, behind Press Any's `SameBoyBridge`. The boot ROMs are built
   from the submodule's `BootROMs/` sources. Nothing from SameBoy's iOS frontend (`iOS/`), whose
   license needs the author's written permission for App Store distribution, is compiled,
@@ -195,8 +199,8 @@ core migration candidate: existing Builds keep their pinned core until they are 
 deliberately. An update that keeps the state format and the behavior saves depend on, checked by
 loading states from the previous pin, can instead name the previous version in the core's
 `replacedDescriptors`: Builds pinned to it then run on the new one and their states load.
-`1.0.5-prerelease.53+19a7b14` replaces 1.0.3 this way, and 1.0.4, the label this commit first
-shipped under.
+`1.0.5` replaces 1.0.3 this way, and 1.0.4 and `1.0.5-prerelease.53+19a7b14`, the two labels
+the previous pin, `19a7b14`, shipped under.
 
 A pin on a release tag takes that version as its core version, such as `1.0.5`. A pin between
 releases takes the next patch version as a prerelease numbered by the commits since the last tag,
