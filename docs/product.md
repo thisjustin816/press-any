@@ -1135,7 +1135,8 @@ gets its own Game Boy Advance row: the game brightens its own colors for that da
 Nostalgic's usual Original shows washed out, so Nostalgic darkens them again with Modern Accurate
 and As on a Game Boy Advance, the closest match to the same scene on a Game Boy Color in
 Nostalgic. Those values are Nostalgic for that game, so its Preset row reads Nostalgic, not
-Custom. A Game Boy Advance chosen by hand under Model gets the usual row. The Game Boy Light and the
+Custom. The same applies when Model is set to the Game Boy Advance by hand for one of those
+games; for any other game a hand-set Game Boy Advance gets the usual row. The Game Boy Light and the
 backlit Game Boy Advance SP (AGS-101) run as a Pocket and a Game Boy Advance, so they aren't
 models: the Light's look is the Teal (Light) palette, and the SP's is the Backlit GBA SP LCD
 filter, which Nostalgic uses on a Game Boy Advance.

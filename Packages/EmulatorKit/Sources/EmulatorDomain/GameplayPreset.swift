@@ -75,14 +75,14 @@ public enum GameplayPreset: String, Codable, Sendable, CaseIterable {
     }
 }
 
-/// The hardware a game plays on, as the gameplay presets choose their values for it. Automatic
-/// picks a Game Boy Advance only for a game with Game Boy Advance features
-/// (`GameBoyAdvanceFeatures`), which brightens its own colors there, so the presets tell that Game
-/// Boy Advance apart from one chosen by hand.
+/// The hardware a game plays on, as the gameplay presets choose their values for it. A game with
+/// Game Boy Advance features (`GameBoyAdvanceFeatures`) brightens its own colors on a Game Boy
+/// Advance, so the presets tell that game's Game Boy Advance apart from one any other game plays
+/// on, whether Automatic picked it or Model was set to it by hand.
 public struct PresetHardware: Hashable, Sendable {
     /// Resolved: the model the game runs on, never Automatic but by mistake.
     public let model: HardwareModel
-    /// Automatic picked this Game Boy Advance for the game's Game Boy Advance features.
+    /// A Game Boy Advance playing a game with Game Boy Advance features.
     public let forGameBoyAdvanceFeatures: Bool
 
     /// `model` chosen by hand.
@@ -93,6 +93,13 @@ public struct PresetHardware: Hashable, Sendable {
 
     /// `model` as Automatic picked it.
     public init(automatic model: HardwareModel) {
+        self.model = model
+        forGameBoyAdvanceFeatures = model == .gameBoyAdvance
+    }
+
+    /// `model` chosen by hand for a game with Game Boy Advance features: on a Game Boy Advance the
+    /// presets treat it as Automatic's pick would be.
+    public init(chosenForGameWithGameBoyAdvanceFeatures model: HardwareModel) {
         self.model = model
         forGameBoyAdvanceFeatures = model == .gameBoyAdvance
     }

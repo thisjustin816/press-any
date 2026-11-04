@@ -171,10 +171,14 @@ public struct GameplayHardware: Sendable {
         presetHardware(for: build, image: image).model
     }
 
-    /// What `build` plays on, as the gameplay presets read it: on Automatic, a Game Boy Advance
-    /// counts as picked for the game's Game Boy Advance features.
+    /// What `build` plays on, as the gameplay presets read it: a Game Boy Advance counts as playing
+    /// a game with Game Boy Advance features when Automatic picked it for them, or when Model is set
+    /// to it by hand for such a game.
     public func presetHardware(for build: Build, image: Data? = nil) -> PresetHardware {
         let model = model(system: build.system, gameID: build.gameID, buildID: build.id)
+        if model == .gameBoyAdvance, automatic.hasGameBoyAdvanceFeatures(build) {
+            return PresetHardware(chosenForGameWithGameBoyAdvanceFeatures: model)
+        }
         guard model == .automatic else { return PresetHardware(model) }
         return PresetHardware(automatic: automatic.hardware(for: build, image: image))
     }

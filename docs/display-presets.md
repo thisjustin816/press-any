@@ -148,7 +148,8 @@ the core draws the same colors on both screens, so As on a Game Boy Advance chan
 SameBoy's darker Game Boy Advance curve applies only with a correction on.
 
 So for those games, Nostalgic on a Game Boy Advance is Modern Accurate with As on a Game Boy
-Advance under the same backlit SP filter. The choice comes from modelling each candidate on all
+Advance under the same backlit SP filter, whether Automatic picked the Game Boy Advance or Model
+was set to it by hand (the owner's call, November 2026). The choice comes from modelling each candidate on all
 32,768 colors, brightened by the Oracle table, through SameBoy's `GB_convert_rgb15`, the bridge's
 Soft and the SP101 profile, and comparing in OKLab with the unbrightened color on a Game Boy
 Color under Nostalgic:
