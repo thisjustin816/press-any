@@ -22,7 +22,7 @@ screenshots come from the Screenshots workflow ([CI](../ci.md)) and aren't store
   and the credit for the game in the listing screenshots. The 1.0 text is in this file's history.
 - **What's New:** [whats-new/1.1.txt](whats-new/1.1.txt) is saved in the draft.
 - **Plus purchase:** its description and review notes match `plus-purchase.md`. The description
-  change is saved as Prepare for Submission.
+  change is Ready for Review in the same draft submission as the app.
 - **Keywords and promotional text:** `listing.md` records the values saved in the 1.1 draft.
 - **Screenshots:** ten light-appearance screenshots are placed in numbered order for both
   6.5-inch ([run 41816155374](https://github.com/thisjustin816/press-any/actions/runs/41816155374))
@@ -31,5 +31,10 @@ screenshots come from the Screenshots workflow ([CI](../ci.md)) and aren't store
   Gameplay shows Tobu Tobu Girl Deluxe by Tangram Games (CC BY 4.0), credited at the end of the
   description. Capture settings are in [TestFlight](../testflight.md).
 
-The 1.1 draft has no build selected and uses manual release. Its original review test-game
-attachment is processed. App and Plus metadata have not been submitted for review.
+The 1.1 draft has build 223 selected and uses manual release. `testflight/223` and
+`v1.1.0-beta.1` identify its source commit, `7f85634`. CI and the iOS build passed on that commit.
+The original review test-game attachment is processed. The app and Plus metadata are staged
+together as two items ready to submit; neither has been submitted to App Store review.
+
+Build 223 is assigned to the Public Beta group and is waiting for Beta App Review. Wait for
+external testing and review any reported issues before submitting the App Store candidate.
