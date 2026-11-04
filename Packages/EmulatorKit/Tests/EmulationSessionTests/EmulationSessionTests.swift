@@ -1033,7 +1033,8 @@ extension EmulationSessionTests {
         plus.owned = false
         XCTAssertEqual(hardware.hardware(for: buildB), .gameBoyAdvance, "Automatic is free")
 
-        // A Model set by hand wins, and its Game Boy Advance is the presets' usual one.
+        // A Model set by hand wins. Set to the Game Boy Advance, the game still brightens its
+        // colors there, so the presets darken it as they do when Automatic picks it.
         plus.owned = true
         try settings.set(HardwareModel.gameBoyColor, key: SettingKey.hardwareModel.rawValue, scope: .build(buildB.id))
         XCTAssertEqual(hardware.hardware(for: buildB), .gameBoyColor)
@@ -1041,8 +1042,12 @@ extension EmulationSessionTests {
         XCTAssertEqual(session.runningHardwareModel, .gameBoyColor)
         try session.stop(createAutoState: false)
         try settings.set(HardwareModel.gameBoyAdvance, key: SettingKey.hardwareModel.rawValue, scope: .build(buildB.id))
-        XCTAssertEqual(hardware.presetHardware(for: buildB), PresetHardware(.gameBoyAdvance))
-        XCTAssertFalse(hardware.presetHardware(for: buildB).forGameBoyAdvanceFeatures)
+        XCTAssertEqual(hardware.presetHardware(for: buildB), PresetHardware(chosenForGameWithGameBoyAdvanceFeatures: .gameBoyAdvance))
+        XCTAssertTrue(hardware.presetHardware(for: buildB).forGameBoyAdvanceFeatures)
+        try settings.set(HardwareModel.gameBoyAdvance, key: SettingKey.hardwareModel.rawValue, scope: .build(buildA.id))
+        XCTAssertFalse(hardware.presetHardware(for: buildA).forGameBoyAdvanceFeatures, "a game without the features keeps the usual look")
+        try settings.set(HardwareModel.gameBoyPlayer, key: SettingKey.hardwareModel.rawValue, scope: .build(buildB.id))
+        XCTAssertFalse(hardware.presetHardware(for: buildB).forGameBoyAdvanceFeatures, "only the Game Boy Advance")
     }
 
     /// Patched Builds, Builds in a Game whose Base is listed and imported hacks identified as
