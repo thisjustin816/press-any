@@ -43,4 +43,4 @@ change without a new version).
 
 ## Description
 
-[description.txt](description.txt), the 1.0 text as published.
+[description.txt](description.txt), the 1.1 text. The 1.0 text as published is in its history.
