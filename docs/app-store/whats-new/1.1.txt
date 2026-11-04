@@ -13,6 +13,9 @@ Choose how games look and feel for each system, free: Nostalgic, the new default
 Games look different now
 If you never changed how the screen looks, your games now use Nostalgic and its screen filter. For sharp, unfiltered pixels, choose Clean in Settings. Settings you chose yourself stay as they were.
 
+Automatic hardware
+Automatic now picks the hardware for each game, free: a Game Boy Color for color games and Nintendo's own games, a Super Game Boy 2 for Super Game Boy games, a Game Boy Advance for the games with extras there, and a Game Boy Pocket for the rest. A game with save states from an earlier version stays on the Game Boy or Game Boy Color they were made on, so they keep loading.
+
 Model (Plus)
 Run games on a Game Boy, Game Boy Pocket, Super Game Boy, Game Boy Color, Game Boy Advance or Game Boy Player, each with its own boot ROM.
 
@@ -26,7 +29,7 @@ Also new
 - A warning before you launch an older Build on a newer save, and a copy of the save kept before you switch Builds
 - A fade and chevron on lists with more below
 - The screen stays awake while a game runs
-- An updated SameBoy core with camera and clock fixes
+- SameBoy 1.0.5, with camera, clock and Game Boy sound fixes
 
 Fixes
 - Import names and matching after restoring a backup

@@ -17,11 +17,13 @@ screenshots come from the Screenshots workflow ([CI](../ci.md)) and aren't store
 
 ## For 1.1
 
-- **Description:** `description.txt` is the 1.0 text as published. It doesn't mention Game Boy
-  Printer, Game Boy Camera, tilt cartridges, gameplay presets, Model or artwork, and needs a 1.1
-  revision before submission.
+- **Description:** `description.txt` is the 1.1 text, ready to paste: it adds the Game Boy
+  Printer, Game Boy Camera, tilt cartridges, gameplay presets, Automatic hardware, artwork, Plus,
+  and the credit for the game in the listing screenshots. The 1.0 text is in this file's history.
 - **What's New:** [whats-new/1.1.txt](whats-new/1.1.txt) is ready.
 - **Plus purchase:** its description still fits 1.1; its review notes are current.
 - **Keywords and promotional text** aren't recorded yet: copy them from App Store Connect into
   `listing.md`.
-- **Screenshots:** re-shoot the listing set after #196 (Game Boy Advance extras) is in.
+- **Screenshots:** the 1.1 set shows Tobu Tobu Girl Deluxe by Tangram Games (CC BY 4.0), credited
+  at the end of the description. Shoot it with the Screenshots workflow and that game's URL,
+  SHA-256 and button script (see [TestFlight](../testflight.md)).
