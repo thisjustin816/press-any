@@ -1,8 +1,8 @@
 # App Store listing
 
-The 1.0 listing as published (App Store ID 6819330326,
-[apps.apple.com](https://apps.apple.com/us/app/press-any-retro-game-emulator/id6819330326)).
-Values come from Apple's public lookup data and the store page, November 2026.
+App Store ID: [6819330326](https://apps.apple.com/us/app/press-any-retro-game-emulator/id6819330326).
+App information comes from the published 1.0 listing. Version text reflects the 1.1 draft
+in App Store Connect.
 
 ## App Information
 
@@ -15,7 +15,7 @@ Values come from Apple's public lookup data and the store page, November 2026.
 | Age rating | 4+ | |
 | Copyright | © 2026 thisJUSTin816 | |
 | Bundle ID | `com.thisjustin816.PressAny` | |
-| Minimum iOS | 17.4 | The description says "iOS 17 or later" |
+| Minimum iOS | 17.4 | The description says "iOS 17.4 or later" |
 | Languages | English | |
 | Price | Free, with one in-app purchase ([plus-purchase.md](plus-purchase.md)) | |
 
@@ -23,7 +23,8 @@ Values come from Apple's public lookup data and the store page, November 2026.
 
 | Field | Value |
 |---|---|
-| Developer website and support | https://github.com/thisjustin816/press-any |
+| Marketing URL | https://github.com/thisjustin816/press-any |
+| Support URL | https://github.com/thisjustin816/press-any/issues |
 | Privacy policy | Linked from the store page; the in-app copy is Settings > Privacy Policy |
 
 ## App Privacy
@@ -33,13 +34,12 @@ developer; artwork lookups go to Libretro only when the player allows them ([pro
 
 ## Keywords
 
-Not recorded yet. Copy them from App Store Connect (the version page, up to 100 characters,
-comma-separated). They never include Nintendo trademarks.
+`emulator,retro,homebrew,ROM,GB,GBC,patches,IPS,BPS,saves,controller,8bit,pixel,offline`
 
 ## Promotional text
 
-Not recorded yet. Copy it from App Store Connect (the version page, up to 170 characters; it can
-change without a new version).
+Play Game Boy and Game Boy Color games on your iPhone, with Camera and Printer support. Keep
+game versions and saves together, or jump into Quick Play.
 
 ## Description
 

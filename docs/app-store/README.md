@@ -17,13 +17,19 @@ screenshots come from the Screenshots workflow ([CI](../ci.md)) and aren't store
 
 ## For 1.1
 
-- **Description:** `description.txt` is the 1.1 text, ready to paste: it adds the Game Boy
+- **Description:** `description.txt` is saved in the 1.1 draft: it adds the Game Boy
   Printer, Game Boy Camera, tilt cartridges, gameplay presets, Automatic hardware, artwork, Plus,
   and the credit for the game in the listing screenshots. The 1.0 text is in this file's history.
-- **What's New:** [whats-new/1.1.txt](whats-new/1.1.txt) is ready.
-- **Plus purchase:** its description still fits 1.1; its review notes are current.
-- **Keywords and promotional text** aren't recorded yet: copy them from App Store Connect into
-  `listing.md`.
-- **Screenshots:** the 1.1 set shows Tobu Tobu Girl Deluxe by Tangram Games (CC BY 4.0), credited
-  at the end of the description. Shoot it with the Screenshots workflow and that game's URL,
-  SHA-256 and button script (see [TestFlight](../testflight.md)).
+- **What's New:** [whats-new/1.1.txt](whats-new/1.1.txt) is saved in the draft.
+- **Plus purchase:** its description and review notes match `plus-purchase.md`. The description
+  change is saved as Prepare for Submission.
+- **Keywords and promotional text:** `listing.md` records the values saved in the 1.1 draft.
+- **Screenshots:** ten light-appearance screenshots are placed in numbered order for both
+  6.5-inch ([run 41816155374](https://github.com/thisjustin816/press-any/actions/runs/41816155374))
+  and 6.9-inch ([run 41816150929](https://github.com/thisjustin816/press-any/actions/runs/41816150929))
+  iPhones. Smaller displays use Apple's scaled assets. Both runs captured commit `9461ba6`.
+  Gameplay shows Tobu Tobu Girl Deluxe by Tangram Games (CC BY 4.0), credited at the end of the
+  description. Capture settings are in [TestFlight](../testflight.md).
+
+The 1.1 draft has no build selected and uses manual release. Its original review test-game
+attachment is processed. App and Plus metadata have not been submitted for review.
