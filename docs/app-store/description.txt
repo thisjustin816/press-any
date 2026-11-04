@@ -1,0 +1,21 @@
+Press Any is a Game Boy and Game Boy Color emulator for iPhone, built for players and people making Game Boy games.
+
+Keep every version of a game together. Import a ROM, review its details, and organize original releases, homebrew revisions, and patched versions in one library.
+
+Keep your progress organized with Save Profiles. Use separate saves for different playthroughs, share compatible saves between versions, and return to an exact moment with save states.
+
+Want to try something quickly? Quick Play opens a ROM without adding it to your library. Add it later and keep your progress.
+
+Features:
+• Game Boy and Game Boy Color emulation powered by SameBoy
+• Touch controls and compatible game controller support
+• Save Profiles and save states
+• IPS and BPS patching while preserving your original files
+• Fast Forward
+• Import review and duplicate detection
+• Technical information and homebrew toolchain detection
+• Offline play with your library stored on your device
+
+No games are included. Import your own .gb and .gbc files to play.
+
+Requires iOS 17 or later.
