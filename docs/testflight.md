@@ -388,30 +388,10 @@ review. Until then, Settings > Press Any Plus says the App Store isn't available
 2. **Small Business Program.** Enroll at
    [developer.apple.com/app-store/small-business-program](https://developer.apple.com/app-store/small-business-program/)
    for the reduced commission. It applies once Apple approves the enrollment.
-3. **Create the purchase.** In **Apps → Press Any → Monetization → In-App Purchases**, choose **+**:
-
-   | Field | Value |
-   |---|---|
-   | Type | Non-Consumable |
-   | Reference Name | Press Any Plus |
-   | Product ID | `com.thisjustin816.PressAny.plus` |
-
-   The product ID must match `PlusProduct.id` in the app, and Apple never lets it be reused or
-   changed. Then fill in the purchase's page:
-
-   - **Availability**: every country or region the app is in.
-   - **Price Schedule**: $0.99 in the United States; Apple sets the other storefronts.
-   - **Family Sharing**: Turn On. It can't be turned off again.
-   - **App Store Localization** (English (U.S.)): Display Name `Press Any Plus`, Description
-     `Custom gameplay settings, app icons, Auto State history and more.`
-   - **Review Information**: a screenshot of Settings > Press Any Plus from an iPhone, and these
-     notes: "Settings > Press Any Plus shows what Plus includes, the price, Buy and Restore
-     Purchases. Plus unlocks changing the Gameplay preset's settings one by one (Settings > Game Boy > Customize, also in a game's settings; the Nostalgic, Accurate and Clean presets and the screen palettes are free), app icon colors (Settings >
-     App Icon), Auto State history and Timed States (Settings > Playing > Keep Auto States and
-     Timed States), Model, which runs a game on other Game Boy hardware (Settings > Playing >
-     Model), and, for Game Boy Printer games, the Wood, Printer, Game Artwork and Custom print
-     backgrounds in the print preview and a longer print history (Settings > Playing > Keep
-     Prints). Everything else is free and works without it."
+3. **Create the purchase.** In **Apps → Press Any → Monetization → In-App Purchases**, choose **+**
+   and enter the values in [the Plus purchase page](app-store/plus-purchase.md): type, reference
+   name and product ID, then availability, price, Family Sharing, the English (U.S.) display name
+   and description, and the review screenshot and notes.
 4. **Submit it with the first build that uses it.** A first in-app purchase goes to review with an
    app version: on the version page, under **In-App Purchases and Subscriptions**, select Press Any
    Plus before **Add for Review**. Later changes to it can go on their own.

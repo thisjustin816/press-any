@@ -129,7 +129,9 @@ Modern Accurate and the steps above (`SBSoftenColor`). The frame the core hands 
 every picture taken from it matches gameplay. On a Game Boy Advance or Game Boy Player the table
 starts from that screen's Modern Accurate, or a Game Boy Color's with As on a Game Boy Color.
 Game Boy palettes don't change. A Game Boy Color boot palette chosen on a Game Boy is softened as
-the Game Boy Color would show it, and a Super Game Boy shows Modern Accurate.
+the Game Boy Color would show it, and a Super Game Boy shows Modern Accurate. The owner kept the
+boot palettes softened (November 2026), so everything on a Game Boy Color screen looks consistent
+under Nostalgic.
 
 ## Televisions
 
@@ -150,9 +152,9 @@ against the picture and fades to its average when it's finer than the screen.
   picture: a standard-radius spherical shadow-mask tube (the research below), one beam per line
   with CRT-Lottes's default scanline hardness, which leaves dark gaps; a slot mask of two triads
   per SNES pixel, roughly what a 20-inch set's dot pitch gives; horizontal reconstruction (-5)
-  that stays a little soft, as a composite picture did; a faint glow and a vignette. Its
-  sharpness is the owner's call: `LCDFilterTests.testCRT240pSharpnessComparisonCapture` attaches
-  the shipped tuning beside a crisper one (-6, glow 0.04) on the same picture.
+  that stays a little soft, as a composite picture did; a faint glow and a vignette. The owner
+  kept this sharpness after comparing it with a crisper one (-6, glow 0.04), which
+  `LCDFilterTests.testCRT240pSharpnessComparisonCapture` still attaches beside it.
 - **CRT 480p** (Game Boy Player, Accurate): a 2000s set showing the player's 480-line output. The
   Game Boy Player's start-up disc outputs 480i on every cable and 480p over component or digital
   ([Nintendo World Report](http://www.nintendoworldreport.com/guide/2147/the-ultimate-game-boy-player-faq)
@@ -245,7 +247,7 @@ screen heights.
 
 **The viewing distance (a choice).** The one unsourced number. The treatments use two screen
 heights, about 60 cm from a 20-inch set: the close look at which the bulge of the glass is
-plain. From ITU-R's preferred distance for a set that size, 7 heights
+plain. The owner confirmed two heights after using it on device (November 2026). From ITU-R's preferred distance for a set that size, 7 heights
 ([ITU-R BT.500 as tabulated by screenfont.ca](https://screenfont.ca/tech/PVD.php)), the same
 tubes bow under a third as much and the curve would be lost at a phone's size. Two heights also
 puts the 1R set at CRT-Lottes's default warp (0.031, 0.042), the look libretro's CRT page calls
@@ -259,7 +261,8 @@ a good general-purpose choice.
 | Flat face | none | 0, 0 | 0, 0 | not used: no curve, or a slight concave look |
 
 Nostalgic's scanlines aren't research-bound: Curved Scanlines take three quarters of CRT 240p's
-warp (0.017, 0.031) and Slightly Curved Scanlines two thirds of CRT 480p's (0.008, 0.014).
+warp (0.017, 0.031) and Slightly Curved Scanlines two thirds of CRT 480p's (0.008, 0.014). The
+owner kept Slightly Curved Scanlines this gentle.
 
 **The measured bow.** At a phone's size (a 160 by 144 picture drawn 1120 by 1008), the top
 edge an eighth of the width in from a side drops below its middle by about 270 times the warp's
