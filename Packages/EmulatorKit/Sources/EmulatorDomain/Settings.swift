@@ -179,6 +179,9 @@ public enum AutoResumePolicy: String, Codable, Sendable, CaseIterable {
 public enum ColorCorrection: String, Codable, Sendable, CaseIterable {
     case balanced = "balanced"
     case accurate = "accurate"
+    /// Modern Accurate with gentler color and slightly lighter middle tones, as a bright modern
+    /// backlit screen shows the game. Only Game Boy Color colors change.
+    case soft = "soft"
     case boostContrast = "boostContrast"
     case reduceContrast = "reduceContrast"
     case lowContrast = "lowContrast"
@@ -191,10 +194,19 @@ public enum ColorCorrection: String, Codable, Sendable, CaseIterable {
         switch self {
         case .balanced: "Balanced"
         case .accurate: "Modern Accurate"
+        case .soft: "Soft"
         case .boostContrast: "Boost Contrast"
         case .reduceContrast: "Reduce Contrast"
         case .lowContrast: "Low Contrast"
         case .off: "Original"
+        }
+    }
+
+    /// A line under the choice's name in the picker, where its name alone doesn't say enough.
+    public var summary: String? {
+        switch self {
+        case .soft: "Modern Accurate made softer, like a bright modern backlit screen"
+        default: nil
         }
     }
 }

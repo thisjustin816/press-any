@@ -22,7 +22,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
         let target = try XCTUnwrap(container.gameplaySettingsTarget(for: context))
         XCTAssertEqual(container.colorCorrection(for: context), .balanced)
         XCTAssertEqual(container.dmgPalette(for: context), .pocket, "Automatic plays a plain Game Boy game on a Pocket")
-        XCTAssertEqual(container.colorCorrection(system: .gameBoyColor), .accurate, "Nostalgic on a Game Boy Color")
+        XCTAssertEqual(container.colorCorrection(system: .gameBoyColor), .soft, "Nostalgic on a Game Boy Color")
         XCTAssertEqual(container.dmgPalette(system: .gameBoy), .pocket, "Automatic plays a plain Game Boy game on a Pocket")
         let store = container.repositories.settings
         let correctionKey = SettingKey.colorCorrection.rawValue
@@ -112,7 +112,11 @@ final class ColorDisplaySettingsTests: XCTestCase {
                 ])
             case .correction(let choices):
                 XCTAssertEqual(system, .gameBoyColor)
-                XCTAssertEqual(choices, [.balanced, .accurate, .boostContrast, .reduceContrast, .lowContrast, .off])
+                XCTAssertEqual(choices, [.balanced, .accurate, .soft, .boostContrast, .reduceContrast, .lowContrast, .off])
+                XCTAssertEqual(choices.map(\.displayName), [
+                    "Balanced", "Modern Accurate", "Soft", "Boost Contrast", "Reduce Contrast", "Low Contrast", "Original",
+                ])
+                XCTAssertEqual(choices.compactMap(\.summary), ["Modern Accurate made softer, like a bright modern backlit screen"])
             case .superGameBoy:
                 XCTFail("Automatic never runs on a Super Game Boy")
             }

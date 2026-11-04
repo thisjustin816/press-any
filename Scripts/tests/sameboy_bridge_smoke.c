@@ -62,6 +62,13 @@ static void test_every_model(const uint8_t *rom, size_t rom_size)
             SBFrameView frame = SBRunFrame(instance);
             assert(frame.width == 160 && frame.height == 144 && frame.pixels);
         }
+        // Soft colors Game Boy Color models' frames, and a Game Boy's boot palettes, through a table.
+        SBSetColorCorrection(instance, SB_COLOR_CORRECTION_SOFT);
+        SBSetDMGPalette(instance, SB_DMG_PALETTE_CGB_UP);
+        for (int frame_index = 0; frame_index < 30; frame_index++) {
+            SBFrameView frame = SBRunFrame(instance);
+            assert(frame.width == 160 && frame.height == 144 && frame.pixels);
+        }
         size_t state_size = SBStateSize(instance);
         uint8_t *state = malloc(state_size);
         assert(state);

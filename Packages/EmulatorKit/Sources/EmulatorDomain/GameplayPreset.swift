@@ -130,8 +130,9 @@ public struct GameplayPresetValues: Equatable, Sendable {
         case (.standard, .superGameBoy), (.standard, .superGameBoy2):
             return Self(displayFilter: .curvedScanlines, frameBlending: .off, buttonBounce: true, colorCorrection: .balanced)
         case (.standard, .gameBoyColor):
-            // SameBoy's Modern Accurate: the game's colors as a bright modern screen shows them.
-            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .accurate)
+            // The screen as people remember it: Modern Accurate softened, as a bright backlit
+            // screen shows it.
+            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .soft)
         case (.standard, .gameBoyAdvance):
             // The backlit SP's profile colors the picture, so the core leaves colors as they are.
             return Self(

@@ -11,9 +11,9 @@ looked and felt" and "Just the game, with no effects added" (`GameplayPresetRow.
 
 - **Nostalgic** is the standard: the game as people remember it, idealized, on a bright modern
   screen. Handhelds get a faint pixel grid, the frame blending their games' flicker effects expect
-  and Button Bounce on. A Game Boy Color gets SameBoy's Modern Accurate correction, the game's
-  colors as a bright, color-accurate modern screen shows them; the reference is a modern
-  handheld such as the ModRetro Chromatic. The Game Boy Advance gets the backlit AGS-101 SP's
+  and Button Bounce on. A Game Boy Color gets Soft, SameBoy's Modern Accurate correction made
+  softer: the game's colors as a bright backlit screen shows them (see Game Boy Color colors).
+  The Game Boy Advance gets the backlit AGS-101 SP's
   colors, the screen most players remember as the good one. The television models get sharp
   scanlines on a curved screen with small rounded corners, the look most players picture for a
   console on a TV, without the mask, glow and vignette that Accurate draws: Curved Scanlines on
@@ -107,8 +107,29 @@ as the lightest and black as the darkest, and light gaps.
 
 BGB's reality page measures a Game Boy Color in light at white #d9e1c6 and black #17282d,
 38:1. SameBoy's Reduce Contrast correction gives white #dbdfd7 and black #282420, 40:1, close
-to it, so Accurate uses it with Authentic GBC's subpixels. Nostalgic uses
-Modern Accurate, which shows the game's colors as a color-accurate modern screen would.
+to it, so Accurate uses it with Authentic GBC's subpixels.
+
+Nostalgic is the screen as people remember it, idealized: a bright backlit screen, which the
+original Game Boy Color never had. SameBoy's Modern Accurate shows the game's colors as a
+color-accurate modern screen would, stronger than that memory. Soft starts from Modern Accurate and works on each color in Björn Ottosson's OKLab color space
+(https://bottosson.github.io/posts/oklab/), where lightness and color are separate:
+
+- chroma (OKLab's a and b) is multiplied by 0.80;
+- lightness L is raised to the power 0.92, which keeps black (0) and white (1) and lifts the
+  middle tones a little;
+- the result goes back to sRGB, clamped to the screen's range.
+
+The amounts were chosen by eye, from rendered comparisons of a Game Boy Color game's first room
+with chroma at 80%, 70% and 60% and Modern Accurate and Reduce Contrast beside them; 80% was the
+one approved. True black stays black, which Reduce Contrast lifts.
+
+The bridge does this in `SameBoyBridge.c`. SameBoy draws the game's colors uncorrected, and each
+frame goes through a table of all 32,768 Game Boy Color colors, built when Soft is chosen from
+Modern Accurate and the steps above (`SBSoftenColor`). The frame the core hands over already has Soft's colors, so
+every picture taken from it matches gameplay. On a Game Boy Advance or Game Boy Player the table
+starts from that screen's Modern Accurate, or a Game Boy Color's with As on a Game Boy Color.
+Game Boy palettes don't change. A Game Boy Color boot palette chosen on a Game Boy is softened as
+the Game Boy Color would show it, and a Super Game Boy shows Modern Accurate.
 
 ## Televisions
 

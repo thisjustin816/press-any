@@ -7,7 +7,7 @@ final class ColorDisplaySettingsTests: XCTestCase {
         XCTAssertEqual(SettingKey.colorCorrection.rawValue, "colorCorrection")
         XCTAssertEqual(SettingKey.dmgPalette.rawValue, "dmgPalette")
         XCTAssertEqual(ColorCorrection.allCases.map(\.rawValue), [
-            "balanced", "accurate", "boostContrast", "reduceContrast", "lowContrast", "off",
+            "balanced", "accurate", "soft", "boostContrast", "reduceContrast", "lowContrast", "off",
         ])
         XCTAssertEqual(DMGPalette.allCases.map(\.rawValue), [
             "dmgGreen", "pocket", "light", "grey",
@@ -32,6 +32,12 @@ final class ColorDisplaySettingsTests: XCTestCase {
         ])
         XCTAssertEqual(String(data: try JSONEncoder().encode(ColorCorrection.accurate), encoding: .utf8), "\"accurate\"")
         XCTAssertEqual(String(data: try JSONEncoder().encode(DMGPalette.dmgGreen), encoding: .utf8), "\"dmgGreen\"")
+    }
+
+    func testSoftIsNamedAndDescribedForThePicker() {
+        XCTAssertEqual(ColorCorrection.soft.displayName, "Soft")
+        XCTAssertEqual(ColorCorrection.soft.summary, "Modern Accurate made softer, like a bright modern backlit screen")
+        XCTAssertEqual(ColorCorrection.allCases.filter { $0.summary != nil }, [.soft])
     }
 
     func testDisplayDefaults() {

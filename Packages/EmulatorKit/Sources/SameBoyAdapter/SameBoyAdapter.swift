@@ -301,6 +301,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         let correction: SBColorCorrection = switch colorCorrection {
         case .off: SB_COLOR_CORRECTION_OFF
         case .accurate: SB_COLOR_CORRECTION_ACCURATE
+        case .soft: SB_COLOR_CORRECTION_SOFT
         case .balanced: SB_COLOR_CORRECTION_BALANCED
         case .boostContrast: SB_COLOR_CORRECTION_BOOST_CONTRAST
         case .reduceContrast: SB_COLOR_CORRECTION_REDUCE_CONTRAST

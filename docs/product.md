@@ -1116,7 +1116,7 @@ level that inherits keeps inheriting.
 |---|---|---|---|
 | Game Boy | Pixel Grid, Blend, bounce on | Monochrome LCD, LCD Ghosting, bounce on | Off |
 | Game Boy Pocket | Pixel Grid, Blend, bounce on | Monochrome LCD, Blend, bounce on | Off |
-| Game Boy Color | Pixel Grid, Blend, Modern Accurate, bounce on | Game Boy Color LCD, Blend, Reduce Contrast, bounce on | Off, Original |
+| Game Boy Color | Pixel Grid, Blend, Soft, bounce on | Game Boy Color LCD, Blend, Reduce Contrast, bounce on | Off, Original |
 | Game Boy Advance | Backlit GBA SP LCD, Blend, Original, As on a Game Boy Color, bounce on | Game Boy Advance LCD, Blend, Original, As on a Game Boy Advance, bounce on | Off, Original |
 | Super Game Boy and Super Game Boy 2 | Curved Scanlines, Balanced, bounce on | CRT 240p, Balanced, bounce on | Off, Original |
 | Game Boy Player | Slightly Curved Scanlines, Balanced, As on a Game Boy Color, bounce on | CRT 480p, Original, As on a Game Boy Advance, bounce on | Off, Original |
@@ -1124,8 +1124,8 @@ level that inherits keeps inheriting.
 Frame blending is Off on the television models and in Clean. Button Bounce is on in Nostalgic and
 Accurate on every model, the television models included, and off only in Clean. On a Game Boy or
 Pocket the presets leave color correction alone, since those show a palette. On a Game Boy Color,
-Nostalgic's Modern Accurate shows the game's colors as a bright modern screen would, and
-Accurate's Reduce Contrast is close to BGB's measurement of a Game Boy Color in light (see
+Nostalgic's Soft is Modern Accurate made softer, the game's colors as a bright backlit screen
+shows them, and Accurate's Reduce Contrast is close to BGB's measurement of a Game Boy Color in light (see
 [Display presets](display-presets.md)). Under Automatic the presets follow the model it picks for
 each game (see Settings): a Super Game Boy game gets the Super Game Boy row, a Nintendo Game Boy
 game the Game Boy Color row, other Game Boy games the Pocket row, and a Build that kept a Game Boy
@@ -1213,8 +1213,13 @@ emulation is later work.
     color correction setting. Game Boy Color games keep their own colors and correction choices.
   - On a Game Boy Color, Advance or Player, colors are **Color Correction**, a preset setting
     under Customize: Balanced (SameBoy's Modern Balanced, and the default outside a preset),
-    Modern Accurate, Boost Contrast, Reduce Contrast, Low Contrast, or Original, which shows the
-    colors as the game stores them.
+    Modern Accurate, Soft, Boost Contrast, Reduce Contrast, Low Contrast, or Original, which shows
+    the colors as the game stores them. Soft, described in the list as "Modern Accurate made
+    softer, like a bright modern backlit screen", takes a fifth of Modern Accurate's color away
+    and lifts the middle tones a little, keeping black and white (see
+    [Display presets](display-presets.md)). Its colors are in the picture the core draws, so
+    screenshots, shares, artwork taken from a frame, thumbnails and save state previews show what
+    gameplay shows. On a Super Game Boy, Soft plays as Modern Accurate.
 
   Both change the open picture at once, including behind a paused Settings sheet, and stay
   applied through reset and state loads. A boot palette changes only the displayed colors;

@@ -146,6 +146,10 @@ ported. libretro's `lcd1x`, `crt-geom`, `crt-easymode`, `crt-pi`, `crt-aperture`
   luminance of `handheld/shaders/color/gba-color.slang` and `sp101-color.slang`, by Pokefan531
   and hunterk, optimized by crashGG, "License: Public domain". Core color correction is off in the
   presets that use them, so colors are corrected once.
+- Soft color correction: Björn Ottosson's OKLab color space
+  (https://bottosson.github.io/posts/oklab/), whose conversion matrices
+  `Packages/EmulatorKit/Sources/SameBoyBridge/SameBoyBridge.c` uses. The page puts its code in the
+  public domain and also offers it under the MIT license. Settings > Acknowledgements credits it.
 - CRT 240p, CRT 480p, Scanlines, Curved Scanlines and Slightly Curved Scanlines: Press Any's
   own shader, modelled on CRT-Lottes by Timothy
   Lottes (`crt/shaders/crt-lottes.slang`), whose header reads "PUBLIC DOMAIN CRT STYLED
@@ -180,7 +184,7 @@ ported. libretro's `lcd1x`, `crt-geom`, `crt-easymode`, `crt-pi`, `crt-aperture`
 Settings > Acknowledgements lists the code, artwork and data used in the app. SameBoy's,
 GRDB.swift's and Corporatus's notices are bundled in `App/Acknowledgements/`, as are the display
 filters' (see Display filters); gbtoolsid, which is in the public domain, No-Intro, the libretro LCD
-shaders and the Game Boy Printer firmware research get a credit.
+shaders, OKLab and the Game Boy Printer firmware research get a credit.
 
 ## Updating a dependency
 

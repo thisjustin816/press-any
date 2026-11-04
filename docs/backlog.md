@@ -428,7 +428,7 @@ accessible from in-game Settings: Game Boy Green (DMG, default) / Olive (Pocket)
 twelve button-combo boot palettes (including Black & White), and six game palettes
 (Mole Mania, Link's Awakening, Super Mario Land, Super Mario Land 2, Donkey Kong Land and Game
 Boy Camera); color names and background/sprite thumbnails,
-Game Boy Color Color Correction (a preset setting under Customize) Balanced / Modern Accurate / Boost Contrast / Reduce Contrast / Low Contrast /
+Game Boy Color Color Correction (a preset setting under Customize) Balanced / Modern Accurate / Soft / Boost Contrast / Reduce Contrast / Low Contrast /
 Original. Both inherit App -> System -> Game -> Build, with the lists from System down, update
 the open picture from Settings, and survive reset and state loads.
 

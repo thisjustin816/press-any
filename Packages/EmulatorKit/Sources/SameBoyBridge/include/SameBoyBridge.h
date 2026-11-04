@@ -27,6 +27,9 @@ typedef enum {
     SB_COLOR_CORRECTION_BOOST_CONTRAST,
     SB_COLOR_CORRECTION_REDUCE_CONTRAST,
     SB_COLOR_CORRECTION_LOW_CONTRAST,
+    /// Modern Accurate made softer (SBSoftenColor). Only Game Boy Color colors soften: a Game Boy's
+    /// palette and a Super Game Boy's colors are as Modern Accurate shows them.
+    SB_COLOR_CORRECTION_SOFT,
 } SBColorCorrection;
 
 typedef enum {
@@ -99,6 +102,9 @@ bool SBSkipBootROM(SBInstance *instance, const uint8_t *fast_boot_rom, size_t fa
 void SBSetInput(SBInstance *instance, SBInputState input);
 SBFrameView SBRunFrame(SBInstance *instance);
 void SBSetColorCorrection(SBInstance *instance, SBColorCorrection mode);
+/// What Soft makes of a Modern Accurate color, both 0xAARRGGBB: in OKLab, chroma at 0.80 and
+/// lightness raised to the power 0.92, so black and white stay and the middle tones lift.
+uint32_t SBSoftenColor(uint32_t argb);
 /// Changes only DMG render colors, including separate BG/OBJ0/OBJ1 boot palettes.
 /// CGB and Super Game Boy hardware ignore this setting. Emulated palette RAM and state bytes are unchanged.
 void SBSetDMGPalette(SBInstance *instance, SBDMGPalette palette);

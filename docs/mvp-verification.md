@@ -425,9 +425,12 @@ Record the phone, iOS version, commit and lighting.
   Pocket's paler, brighter gray-green with thinner gaps. Choose Teal (Light) or Black & White:
   the palette keeps its colors with the same softened contrast. Preset menu options each show
   their description under the name, and the Preset row shows the chosen one's.
-- [ ] A Game Boy Color game on Nostalgic shows bright, saturated colors (Modern Accurate); on
-  Accurate it is paler, with lighter blacks (Reduce Contrast), through the Game Boy Color LCD's
-  subpixels.
+- [ ] A Game Boy Color game on Nostalgic shows bright, gentle colors with true black (Soft); in
+  Customize > Color Correction, Modern Accurate is visibly more saturated, and Soft's line reads
+  "Modern Accurate made softer, like a bright modern backlit screen". A screenshot, a share,
+  artwork set from the frame, the library thumbnail and a save state preview made on Nostalgic
+  show Soft's colors, not Modern Accurate's. On Accurate the game is paler, with lighter blacks
+  (Reduce Contrast), through the Game Boy Color LCD's subpixels.
 - [ ] Start a game with Button Bounce on, choose Clean in its settings, then Accurate: bounce
   changes without restarting, in library play and Quick Play.
 - [ ] Play 10 minutes each with CRT 240p and with Pixel Grid on the minimum QA device: full speed,
