@@ -14,7 +14,7 @@ How to set up agreements, the Small Business Program and the first review is in
 | Price Schedule | $0.99 in the United States; Apple sets the other storefronts |
 | Family Sharing | On (it can't be turned off again) |
 | Display Name (English (U.S.)) | Press Any Plus |
-| Description (English (U.S.)) | Custom gameplay settings, app icons, Auto State history and more. |
+| Description (English (U.S.)) | Custom gameplay settings, app icons and save history. |
 
 ## Review information
 
