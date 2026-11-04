@@ -91,6 +91,15 @@ struct AcknowledgementsView: View {
             """)
         ),
         Component(
+            name: "OKLab",
+            use: "The color space Soft color correction works in",
+            license: .publicDomain(credit: """
+            OKLab by Björn Ottosson (https://bottosson.github.io/posts/oklab/) is in the public \
+            domain, and also available under the MIT license. Soft uses its published conversion \
+            matrices.
+            """)
+        ),
+        Component(
             name: "Game Boy Printer disassembly",
             use: "How the Game Boy Printer behaves",
             license: .rightsNotice(credit: """

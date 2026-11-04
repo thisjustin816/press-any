@@ -69,8 +69,8 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoy).displayFilter, .lcd1x)
         XCTAssertEqual(
             GameplayPresetValues.standard(for: .gameBoyColor),
-            GameplayPresetValues(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .accurate),
-            "Nostalgic shows a Game Boy Color's colors as a bright modern screen does"
+            GameplayPresetValues(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .soft),
+            "Nostalgic shows a Game Boy Color's colors softened, as a bright backlit screen does"
         )
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyAdvance).displayFilter, .sp101LCD)
         XCTAssertEqual(GameplayPresetValues.standard(for: .superGameBoy).displayFilter, .curvedScanlines)
@@ -90,6 +90,27 @@ final class GameplayPresetSettingsTests: XCTestCase {
             XCTAssertEqual(GameplayPresetValues.values(for: .clean, hardware: hardware)?.buttonBounce, false, "only Clean turns bounce off")
         }
         XCTAssertFalse(GameplayPresetValues.values(for: .standard, hardware: .superGameBoy)?.displayFilter == .scanlines, "flat Scanlines are a manual choice")
+    }
+
+    /// Only Nostalgic on a Game Boy Color plays Soft.
+    func testColorCorrectionEachPresetSetsOnEachModel() {
+        // Nostalgic, Accurate, Clean.
+        let expected: [HardwareModel: [ColorCorrection?]] = [
+            .gameBoy: [nil, nil, nil],
+            .gameBoyPocket: [nil, nil, nil],
+            .superGameBoy: [.balanced, .balanced, .off],
+            .superGameBoy2: [.balanced, .balanced, .off],
+            .gameBoyColor: [.soft, .reduceContrast, .off],
+            .gameBoyAdvance: [.off, .off, .off],
+            .gameBoyPlayer: [.balanced, .off, .off],
+        ]
+        for (hardware, corrections) in expected {
+            XCTAssertEqual(
+                GameplayPreset.builtIn.map { GameplayPresetValues.values(for: $0, hardware: hardware)?.colorCorrection },
+                corrections,
+                "\(hardware)"
+            )
+        }
     }
 
     func testBuiltInPresetsRoundTripForEveryHardwareModelAndScope() throws {

@@ -205,6 +205,7 @@ struct ScopedSettingsView: View {
                 key: .colorCorrection,
                 defaultValue: standard(.colorCorrection).colorCorrection ?? ColorCorrection.defaultValue,
                 options: corrections.map { ($0, $0.displayName) },
+                optionSubtitle: { $0.summary },
                 listSections: [SettingOptionSection(title: "Color Correction", values: corrections)],
                 explanation: ColorCorrection.explanation,
                 reloadToken: settingsRevision,
