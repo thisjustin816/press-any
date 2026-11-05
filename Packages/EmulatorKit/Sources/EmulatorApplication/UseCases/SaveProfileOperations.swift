@@ -10,6 +10,8 @@ public enum SaveProfileOperationError: Error, Equatable {
     case profileNotFound(UUID)
     /// A badge is one emoji, or none.
     case invalidBadge(String)
+    /// A profile's name can't be blank.
+    case invalidProfileName
 }
 
 public struct CreateBlankSaveProfile: Sendable {
@@ -251,6 +253,28 @@ public struct SetSaveProfileBadge: Sendable {
         let scalars = character.unicodeScalars
         guard let first = scalars.first, first.properties.isEmoji else { return false }
         return first.properties.isEmojiPresentation || scalars.count > 1
+    }
+}
+
+/// Renames a profile. As with a badge, modifiedAt is left alone: it marks battery writes, which
+/// decide whether an Auto State is still safe to restore.
+public struct RenameSaveProfile: Sendable {
+    private let profiles: any SaveProfileRepository
+
+    public init(profiles: any SaveProfileRepository) {
+        self.profiles = profiles
+    }
+
+    @discardableResult
+    public func execute(profileID: UUID, name: String) throws -> SaveProfile {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw SaveProfileOperationError.invalidProfileName }
+        guard var profile = try profiles.fetchSaveProfile(id: profileID) else {
+            throw SaveProfileOperationError.profileNotFound(profileID)
+        }
+        profile.displayName = trimmed
+        try profiles.updateSaveProfile(profile)
+        return profile
     }
 }
 

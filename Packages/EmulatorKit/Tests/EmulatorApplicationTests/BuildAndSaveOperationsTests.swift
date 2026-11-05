@@ -175,6 +175,52 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: profile.id)?.modifiedAt, profile.modifiedAt)
     }
 
+    func testRenamingAProfileTrimsTheNameAndLeavesTheBadgeAndSaveTimeAlone() throws {
+        let harness = try Harness.make()
+        let profile = try harness.createProfile(name: "Main", battery: Data([1]))
+        try SetSaveProfileBadge(profiles: harness.profiles).execute(profileID: profile.id, badge: "🐉")
+        let rename = RenameSaveProfile(profiles: harness.profiles)
+
+        XCTAssertEqual(try rename.execute(profileID: profile.id, name: "  Boss Rush \n").displayName, "Boss Rush")
+        let stored = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: profile.id))
+        XCTAssertEqual(stored.displayName, "Boss Rush")
+        XCTAssertEqual(stored.badge, "🐉")
+        XCTAssertEqual(stored.modifiedAt, profile.modifiedAt)
+
+        for blank in ["", "   ", "\n\t"] {
+            XCTAssertThrowsError(try rename.execute(profileID: profile.id, name: blank)) { error in
+                XCTAssertEqual(error as? SaveProfileOperationError, .invalidProfileName)
+            }
+        }
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: profile.id)?.displayName, "Boss Rush",
+                       "a refused name changes nothing")
+
+        let missing = UUID()
+        XCTAssertThrowsError(try rename.execute(profileID: missing, name: "Ghost")) { error in
+            XCTAssertEqual(error as? SaveProfileOperationError, .profileNotFound(missing))
+        }
+    }
+
+    func testEveryEmojiTheBadgePickerOffersIsAValidBadgeAndListedOnce() throws {
+        let harness = try Harness.make()
+        let profile = try harness.createProfile(name: "Main", battery: Data([1]))
+        let setBadge = SetSaveProfileBadge(profiles: harness.profiles)
+        let groups = SaveProfileBadgeCatalog.groups
+
+        XCTAssertFalse(groups.isEmpty)
+        XCTAssertEqual(Set(groups.map(\.title)).count, groups.count, "group titles are distinct")
+        for group in groups {
+            XCTAssertFalse(group.emoji.isEmpty, group.title)
+            for emoji in group.emoji {
+                XCTAssertEqual(emoji.count, 1, "\(emoji) is one character")
+                XCTAssertEqual(try setBadge.execute(profileID: profile.id, badge: emoji).badge, emoji, "\(emoji) in \(group.title)")
+            }
+        }
+        let all = groups.flatMap(\.emoji)
+        XCTAssertEqual(Set(all).count, all.count, "no emoji is offered twice")
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: profile.id)?.modifiedAt, profile.modifiedAt)
+    }
+
     func testDeletingAProfileRemovesItsSaveAndStatesAndWhatPointedAtIt() throws {
         let harness = try Harness.make(twoBuilds: true)
         let doomed = try harness.createProfile(name: "Doomed", battery: Data([1]))
