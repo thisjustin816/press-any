@@ -11,6 +11,9 @@ import XCTest
 /// only as Resume Games says.
 @MainActor
 final class GameplayLifecycleTests: XCTestCase {
+    /// Windows the menu button tests built, kept alive so their buttons stay in a window.
+    private var windows: [UIWindow] = []
+
     func testCameraMenuFollowsTheCartridgeWithoutLoadingTheGameplayView() throws {
         let runtime = LifecycleRuntime()
         let gameplay = GameplayViewController(runtime: runtime, autoResumePolicy: .always)
@@ -224,6 +227,67 @@ final class GameplayLifecycleTests: XCTestCase {
         button.contextMenuInteraction(interaction, willEndFor: configuration, animator: nil)
         XCTAssertTrue(button.isHidden)
         XCTAssertTrue(wordmark.isHidden)
+    }
+
+    /// Issue #199: the menu closes into a capsule of the logo button on a clear background, rather
+    /// than the shape the system derives, which is what crashed inside iOS 27.2.
+    func testTheLogoButtonClosesItsMenuIntoACapsuleOfItself() throws {
+        let (button, interaction, configuration) = menuButtonInAWindow(palette: .classic)
+
+        let preview = try XCTUnwrap(
+            button.contextMenuInteraction(interaction, previewForDismissingMenuWithConfiguration: configuration)
+        )
+
+        XCTAssertTrue(preview.view === button)
+        XCTAssertEqual(preview.parameters.backgroundColor, .clear)
+        let path = try XCTUnwrap(preview.parameters.visiblePath)
+        XCTAssertEqual(path.bounds, button.bounds)
+        XCTAssertTrue(path.contains(CGPoint(x: button.bounds.midX, y: button.bounds.midY)))
+        XCTAssertFalse(path.contains(CGPoint(x: 0.5, y: 0.5)), "the corners are rounded off")
+    }
+
+    func testAButtonWithNothingToLandOnClosesItsMenuWithTheDefaultAnimation() {
+        func preview(_ prepare: (GameMenuButton) -> Void, palette: ControllerPalette? = .classic) -> UITargetedPreview? {
+            let (button, interaction, configuration) = menuButtonInAWindow(palette: palette)
+            prepare(button)
+            return button.contextMenuInteraction(interaction, previewForDismissingMenuWithConfiguration: configuration)
+        }
+
+        XCTAssertNil(preview({ $0.isHidden = true }), "hidden")
+        XCTAssertNil(preview({ $0.alpha = 0 }), "clear")
+        XCTAssertNil(preview({ $0.frame = CGRect(x: 2_000, y: 2_000, width: 180, height: 44) }), "off screen")
+        XCTAssertNil(preview({ $0.removeFromSuperview() }), "out of its window")
+        XCTAssertNil(preview({ _ in }, palette: nil), "the clear game-picture target is not a capsule")
+    }
+
+    /// A Focus or shortcut can switch Reduce Motion or Reduce Transparency while the menu is open.
+    /// The button only logs it, and holds its place and its menu.
+    func testADisplaySettingChangingUnderAnOpenMenuLeavesTheButtonAlone() {
+        let (button, interaction, configuration) = menuButtonInAWindow(palette: .classic)
+        button.contextMenuInteraction(interaction, willDisplayMenuFor: configuration, animator: nil)
+        let frame = button.frame
+
+        NotificationCenter.default.post(name: UIAccessibility.reduceMotionStatusDidChangeNotification, object: nil)
+        NotificationCenter.default.post(name: UIAccessibility.reduceTransparencyStatusDidChangeNotification, object: nil)
+
+        XCTAssertTrue(button.isMenuActive)
+        XCTAssertEqual(button.frame, frame)
+        XCTAssertFalse(button.isHidden)
+    }
+
+    /// A logo button, or the clear game-picture target for a nil `palette`, placed inside a window.
+    private func menuButtonInAWindow(palette: ControllerPalette?)
+        -> (GameMenuButton, UIContextMenuInteraction, UIContextMenuConfiguration) {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        let button = GameMenuButton(menu: UIMenu(children: []))
+        window.addSubview(button)
+        button.place(in: CGRect(x: 10, y: 20, width: 180, height: 44))
+        button.configureWordmark(palette: palette)
+        button.layoutIfNeeded()
+        let interaction = button.contextMenuInteraction ?? UIContextMenuInteraction(delegate: button)
+        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in UIMenu(children: []) }
+        windows.append(window)
+        return (button, interaction, configuration)
     }
 
     /// Where the logo's menu button lands on a freshly laid-out gameplay screen of this size.

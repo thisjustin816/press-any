@@ -1478,11 +1478,11 @@ final class GameplayViewController: UIViewController {
 /// The logo has a raised face with the wordmark pressed into it; an optional game-picture target
 /// remains clear.
 ///
-/// The menu opens by morphing out of this button and closes by morphing back into it, and on
-/// iOS 27.2 that morph crashed inside UIKit when an item was chosen (issue #199). It reads the
-/// button as it was when the menu opened, so from the menu's opening to the end of its closing
-/// animation the button holds still: a placement or palette asked for meanwhile is kept and
-/// applied once the menu has closed.
+/// The menu opens by morphing out of this button and closes into a capsule preview of it, and on
+/// iOS 27.2 the system's closing morph crashed inside UIKit when an item was chosen (issue #199).
+/// The closing animation reads the button as it was when the menu opened, so from the menu's
+/// opening to the end of its closing animation the button holds still: a placement or palette
+/// asked for meanwhile is kept and applied once the menu has closed.
 final class GameMenuButton: UIButton {
     private(set) var isMenuPresented = false
     private(set) var isMenuDismissing = false
@@ -1529,6 +1529,23 @@ final class GameMenuButton: UIButton {
         }
     }
 
+    /// The menu closes into this preview. On iOS 27.2 the system's own closing morph crashed
+    /// when an item was chosen (issue #199), so the logo button hands it a capsule of itself on a
+    /// clear background. A button with nothing to land on (out of its window, hidden, clear or off
+    /// screen) and the clear game-picture target, whose area is not a capsule, close with the
+    /// default animation.
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration
+    ) -> UITargetedPreview? {
+        guard palette != nil, let window, !isHidden, alpha > 0, bounds.width > 0, bounds.height > 0,
+              window.bounds.intersects(convert(bounds, to: window)) else { return nil }
+        let parameters = UIPreviewParameters()
+        parameters.backgroundColor = .clear
+        parameters.visiblePath = UIBezierPath(roundedRect: bounds, cornerRadius: bounds.height / 2)
+        return UITargetedPreview(view: self, parameters: parameters)
+    }
+
     private func menuDidDismiss() {
         isMenuDismissing = false
         if placementWaits { applyRequestedPlacement() }
@@ -1555,10 +1572,17 @@ final class GameMenuButton: UIButton {
         if let requestedFrame { frame = requestedFrame }
     }
 
+    /// A Focus or shortcut can switch Reduce Motion or Reduce Transparency while the menu is open;
+    /// the log keeps when that happened beside the menu's opening and closing.
+    @objc private func displaySettingChanged() {
+        Self.log.notice("Display setting changed, menu \(self.isMenuActive ? "active" : "closed"): \(self.stateDescription, privacy: .public)")
+    }
+
     private var stateDescription: String {
         let windowed = window == nil ? "no window" : "in window"
         let placement = requestedFrame.map { "placed at \($0)" } ?? "unplaced"
-        return "\(windowed), hidden \(isHidden), alpha \(alpha), frame \(frame), \(placement), superview \(superview == nil ? "none" : "set")"
+        let display = "reduce motion \(UIAccessibility.isReduceMotionEnabled), reduce transparency \(UIAccessibility.isReduceTransparencyEnabled)"
+        return "\(windowed), hidden \(isHidden), alpha \(alpha), frame \(frame), \(placement), superview \(superview == nil ? "none" : "set"), \(display)"
     }
 
     private let face = CAGradientLayer()
@@ -1585,6 +1609,10 @@ final class GameMenuButton: UIButton {
         addSubview(wordmark)
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowRadius = 2
+        for name in [UIAccessibility.reduceMotionStatusDidChangeNotification,
+                     UIAccessibility.reduceTransparencyStatusDidChangeNotification] {
+            NotificationCenter.default.addObserver(self, selector: #selector(displaySettingChanged), name: name, object: nil)
+        }
     }
 
     required init?(coder: NSCoder) {
