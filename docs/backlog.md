@@ -493,6 +493,7 @@ passed and remain as regression coverage in mvp-verification.md.
 Done: In-game menu from the wordmark with or without a controller: Pause/Resume, Fast Forward,
 Save State, Load State and Close; Quick Play offers Add to Library and explains disabled Save State.
 Close and Add to Library wait for the menu's dismissal animation to finish before leaving gameplay.
+The Press Any button closes the menu into a capsule preview of itself, against a crash in the system's closing morph on iOS 27.2 when Reduce Motion or Reduce Transparency changed under an open menu (issue #199); the device checks are pending.
 
 ### Manuals / documents
 
