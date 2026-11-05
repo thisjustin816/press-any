@@ -335,13 +335,12 @@ Names use No-Intro for the game and GoodTools' codes for what was done to it:
 A save exports at the size the library holds it, under a plain name, "Moon Garden - Main.sav". A
 cartridge writer sizes a save from the cartridge, so a 128 KB save written to a cartridge with a
 32 KB chip wraps over its own data. For a cartridge with plain banked RAM, Export Save therefore
-asks for a size when the save can shrink: Original Size, Minimized, which is the smallest real RAM
-size (8, 32, 64 or 128 KB) that holds everything but an erased `0xFF` tail, or Custom Size, which
-opens a second list of the real sizes between, and is left out when there are none. A smaller file
-is the start of the original, has its size in its name, "Moon Garden - Main (8 KB).sav", and loads
-back into Press Any at the full size with the missing bytes erased. No size below the data is
-offered. The save is exported at its own size, with no question,
-when the cartridge keeps a clock after its RAM, is MBC2, MBC7, MMM01, TPP1 or HuC3, when its length
+asks for a size when the save can shrink, with every real RAM size (8, 32, 64 or 128 KB) from the
+smallest that holds everything but an erased `0xFF` tail, marked minimum, up to the original,
+marked original. A smaller file is the start of the original, has its size in its name, "Moon
+Garden - Main (8 KB).sav", and loads back into Press Any at the full size with the missing bytes
+erased. The original keeps the plain name. No size below the data is offered. The save is exported
+at its own size, with no question, when the cartridge keeps a clock after its RAM, is MBC2, MBC7, MMM01, TPP1 or HuC3, when its length
 isn't what the header declares, or when the header can't be read. The header comes from the Build
 that last wrote the save, else the Game's preferred Build. Every size is free, and an export never
 changes the profile.

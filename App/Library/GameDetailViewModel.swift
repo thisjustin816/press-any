@@ -6,8 +6,8 @@ import Foundation
 import Importing
 import Patching
 
-/// The sizes a save can be exported at. The size prompt offers the original and the smallest that
-/// holds the data, and Custom Size leads to a second prompt with any real size between.
+/// The sizes a save can be exported at, as the buttons of the size prompt: every real size from
+/// the smallest that holds the data up to the original, smallest first.
 struct SaveExportChoice: Identifiable {
     struct Entry: Identifiable {
         let title: String
@@ -16,21 +16,19 @@ struct SaveExportChoice: Identifiable {
     }
 
     let profile: SaveProfile
-    /// The first prompt's sizes: the original, and the smallest that holds the data.
     let entries: [Entry]
-    /// The sizes between those two, behind Custom Size. Empty when there are none.
-    let customEntries: [Entry]
     var id: UUID { profile.id }
 
     init(profile: SaveProfile, options: SaveExportOptions) {
         self.profile = profile
         func text(_ bytes: Int) -> String { GBROMHeader.sizeDescription(bytes) }
-        var entries = [Entry(title: "Original Size (\(text(options.originalBytes)))", size: .original)]
+        var entries: [Entry] = []
         if let minimized = options.minimizedBytes {
-            entries.append(Entry(title: "Minimized (\(text(minimized)))", size: .minimized))
+            entries.append(Entry(title: "\(text(minimized)) (minimum)", size: .minimized))
         }
+        entries += options.customSizes.map { Entry(title: text($0), size: .custom(bytes: $0)) }
+        entries.append(Entry(title: "\(text(options.originalBytes)) (original)", size: .original))
         self.entries = entries
-        customEntries = options.customSizes.map { Entry(title: text($0), size: .custom(bytes: $0)) }
     }
 }
 
@@ -50,8 +48,6 @@ final class GameDetailViewModel: ObservableObject {
     @Published var pendingDeletion: DeletionPlan?
     /// Set while a save that can be exported smaller waits for the player to pick a size.
     @Published var saveExportChoice: SaveExportChoice?
-    /// Set once Custom Size is chosen, for the prompt that lists the sizes between.
-    @Published var saveExportCustomChoice: SaveExportChoice?
     @Published var selection = ItemSelection<LibraryDeletionTarget>()
     @Published var pendingBatchDeletion: BatchDeletionPlan?
 
@@ -393,13 +389,6 @@ final class GameDetailViewModel: ObservableObject {
             }
             saveExportChoice = SaveExportChoice(profile: profile, options: options)
         }
-    }
-
-    /// Opens the second prompt after the first has closed. A dialog presented while another is still
-    /// dismissing is dropped, so `delay` leaves the first time to go.
-    func chooseCustomSaveSize(of choice: SaveExportChoice, after delay: Duration = .milliseconds(400)) async {
-        try? await Task.sleep(for: delay)
-        saveExportCustomChoice = choice
     }
 
     func exportSave(of profile: SaveProfile, size: SaveExportSize) {

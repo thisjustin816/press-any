@@ -412,26 +412,8 @@ struct GameDetailView: View {
                 ForEach(choice.entries) { entry in
                     Button(entry.title) { model.exportSave(of: choice.profile, size: entry.size) }
                 }
-                if !choice.customEntries.isEmpty {
-                    Button("Custom Size…") { Task { await model.chooseCustomSaveSize(of: choice) } }
-                }
             } message: { _ in
-                Text("A smaller file keeps all of the save and has its size in its name. Pick the size your cartridge or tool expects.")
-            }
-            .confirmationDialog(
-                "Custom Size",
-                isPresented: Binding(
-                    get: { model.saveExportCustomChoice != nil },
-                    set: { if !$0 { model.saveExportCustomChoice = nil } }
-                ),
-                titleVisibility: .visible,
-                presenting: model.saveExportCustomChoice
-            ) { choice in
-                ForEach(choice.customEntries) { entry in
-                    Button(entry.title) { model.exportSave(of: choice.profile, size: entry.size) }
-                }
-            } message: { _ in
-                Text("A size between the smallest and the original, for a cartridge with that much save RAM.")
+                Text("The original keeps the plain name. A smaller file keeps all of the save and has its size in its name. Pick the size your cartridge or tool expects.")
             }
             .sheet(item: $badgeTarget) { profile in
                 BadgePickerSheet(profile: profile) {
