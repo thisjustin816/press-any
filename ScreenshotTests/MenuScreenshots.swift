@@ -86,10 +86,12 @@ final class MenuScreenshots: XCTestCase {
         let create = app.alerts.buttons["Create"]
         XCTAssertTrue(create.waitForExistence(timeout: 5), "the New Save Profile alert opens")
         create.tap()
-        let profile = app.staticTexts["New Save"]
+        // A tap opens a profile's menu, so its name sits inside the row's menu button and isn't
+        // hittable alone. Tap the row that holds the name.
+        let profile = app.cells.containing(.staticText, identifier: "New Save").firstMatch
         XCTAssertTrue(profile.waitForExistence(timeout: 5), "the new profile is listed")
         scrollTo(profile, in: app)
-        profile.press(forDuration: 1)
+        profile.tap()
         try expect(app.buttons["Duplicate"], then: "menu-save-profile")
     }
 
