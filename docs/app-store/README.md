@@ -20,7 +20,9 @@ screenshots come from the Screenshots workflow ([CI](../ci.md)) and aren't store
 - **Description:** `description.txt` is saved in the 1.1 draft: it adds the Game Boy
   Printer, Game Boy Camera, tilt cartridges, gameplay presets, Automatic hardware, artwork, Plus,
   and the credit for the game in the listing screenshots. The 1.0 text is in this file's history.
-- **What's New:** [whats-new/1.1.txt](whats-new/1.1.txt) is saved in the draft.
+- **What's New:** [whats-new/1.1.txt](whats-new/1.1.txt) is saved in the draft. Its lines for the save
+  menu and badges, the haptics and the Export Save sizes describe changes made after build 223, so
+  the draft needs a newer build before they are true.
 - **Plus purchase:** its description and review notes match `plus-purchase.md`. The description
   change is Ready for Review in the same draft submission as the app.
 - **Keywords and promotional text:** `listing.md` records the values saved in the 1.1 draft.
