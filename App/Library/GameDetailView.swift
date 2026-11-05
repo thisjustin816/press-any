@@ -42,7 +42,6 @@ struct GameDetailView: View {
     @State private var pendingReplacement: PendingReplacement?
     @State private var badgeTarget: SaveProfile?
     @State private var statesProfile: SaveProfile?
-    @State private var badgeText = ""
     @State private var renamingProfile: SaveProfile?
     @State private var profileName = ""
     @State private var renamingBuild: Build?
@@ -390,18 +389,8 @@ struct GameDetailView: View {
 
     private func withProfileAlerts(_ content: some View) -> some View {
         content
-            .alert("Badge", isPresented: Binding(
-                get: { badgeTarget != nil },
-                set: { if !$0 { badgeTarget = nil } }
-            ), presenting: badgeTarget) { profile in
-                TextField("Emoji", text: $badgeText)
-                Button("Save") { model.setBadge(badgeText, of: profile) }
-                if profile.badge != nil {
-                    Button("Remove Badge", role: .destructive) { model.setBadge("", of: profile) }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: { profile in
-                Text("One emoji shown beside \(profile.displayName).")
+            .sheet(item: $badgeTarget) { profile in
+                BadgePickerSheet(profile: profile) { model.setBadge($0 ?? "", of: profile) }
             }
             .alert(deletionTitle, isPresented: Binding(
                 get: { model.pendingDeletion != nil },
@@ -690,10 +679,7 @@ struct GameDetailView: View {
                 profileName = profile.displayName
                 renamingProfile = profile
             }
-            Button("Badge…", systemImage: "face.smiling") {
-                badgeText = profile.badge ?? ""
-                badgeTarget = profile
-            }
+            Button("Badge…", systemImage: "face.smiling") { badgeTarget = profile }
             Button("Duplicate", systemImage: "plus.square.on.square") {
                 model.duplicate(profile, name: profile.displayName + " Copy")
             }

@@ -671,9 +671,11 @@ isn't stored.
 
 ### Profiles
 
-- Tapping a profile, or touching and holding it, opens its menu. Rename changes its name, and
-  Badge sets a one-emoji badge, shown before its name everywhere. Neither changes the profile's
-  modified time, since that time decides whether an Auto State can restore.
+- Tapping a profile, or touching and holding it, opens its menu. Rename changes its name. Badge
+  opens a grid of about 150 common emoji in groups, marks the current one and offers Remove when
+  a badge is set; there is no text field, since iOS gives an app no emoji picker. A badge is one
+  emoji, shown before the name everywhere. Neither change touches the profile's modified time,
+  since that time decides whether an Auto State can restore.
 - Deleting a profile asks first, naming it, and sends it to Recently Deleted with its save and
   states. A Game or Build that played it plays the Game's default instead.
 - **Replace from File** asks first when the profile has a save, copies it to "<profile>

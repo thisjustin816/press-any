@@ -201,6 +201,26 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         }
     }
 
+    func testEveryEmojiTheBadgePickerOffersIsAValidBadgeAndListedOnce() throws {
+        let harness = try Harness.make()
+        let profile = try harness.createProfile(name: "Main", battery: Data([1]))
+        let setBadge = SetSaveProfileBadge(profiles: harness.profiles)
+        let groups = SaveProfileBadgeCatalog.groups
+
+        XCTAssertFalse(groups.isEmpty)
+        XCTAssertEqual(Set(groups.map(\.title)).count, groups.count, "group titles are distinct")
+        for group in groups {
+            XCTAssertFalse(group.emoji.isEmpty, group.title)
+            for emoji in group.emoji {
+                XCTAssertEqual(emoji.count, 1, "\(emoji) is one character")
+                XCTAssertEqual(try setBadge.execute(profileID: profile.id, badge: emoji).badge, emoji, "\(emoji) in \(group.title)")
+            }
+        }
+        let all = groups.flatMap(\.emoji)
+        XCTAssertEqual(Set(all).count, all.count, "no emoji is offered twice")
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: profile.id)?.modifiedAt, profile.modifiedAt)
+    }
+
     func testDeletingAProfileRemovesItsSaveAndStatesAndWhatPointedAtIt() throws {
         let harness = try Harness.make(twoBuilds: true)
         let doomed = try harness.createProfile(name: "Doomed", battery: Data([1]))
