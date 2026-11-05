@@ -10,11 +10,12 @@ final class SaveExportChoiceTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         let container = try AppContainer(rootURL: root)
+        let exports = root.appendingPathComponent("Exports", isDirectory: true)
         let build = try importROM(into: container, root: root, ramSizeCode: 0x04)
         var save = Data(repeating: 0xFF, count: 128 * 1024)
         save[0] = 0x42
         let profile = try savedProfile(in: container, root: root, build: build, save: save)
-        let model = detailModel(container, gameID: build.gameID)
+        let model = detailModel(container, gameID: build.gameID, exports: exports)
         model.reload()
 
         model.exportSave(of: profile)
@@ -24,14 +25,14 @@ final class SaveExportChoiceTests: XCTestCase {
             ["Original Size (128 KB)", "Minimized (8 KB)", "Custom: 32 KB", "Custom: 64 KB"]
         )
         XCTAssertNil(model.infoMessage)
-        XCTAssertEqual(try exported(container), [], "nothing is written until a size is chosen")
+        XCTAssertEqual(try exported(exports), [], "nothing is written until a size is chosen")
 
         model.exportSave(of: profile, size: .minimized)
 
-        let files = try exported(container)
+        let files = try exported(exports)
         XCTAssertEqual(files.count, 1)
         XCTAssertTrue(files[0].hasSuffix(" (8 KB).sav"), files[0])
-        XCTAssertEqual(try Data(contentsOf: container.exportsDirectory.appendingPathComponent(files[0])), save.prefix(8 * 1024))
+        XCTAssertEqual(try Data(contentsOf: exports.appendingPathComponent(files[0])), save.prefix(8 * 1024))
         XCTAssertEqual(model.infoMessage?.contains(files[0]), true)
     }
 
@@ -39,24 +40,27 @@ final class SaveExportChoiceTests: XCTestCase {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         let container = try AppContainer(rootURL: root)
+        let exports = root.appendingPathComponent("Exports", isDirectory: true)
         let build = try importROM(into: container, root: root, ramSizeCode: 0x04)
         // Not the 128 KB the header declares, so it is exported as it is.
         let profile = try savedProfile(in: container, root: root, build: build, save: Data([1, 2, 3]))
-        let model = detailModel(container, gameID: build.gameID)
+        let model = detailModel(container, gameID: build.gameID, exports: exports)
         model.reload()
 
         model.exportSave(of: profile)
 
         XCTAssertNil(model.saveExportChoice)
-        let files = try exported(container)
+        let files = try exported(exports)
         XCTAssertEqual(files.count, 1)
         XCTAssertTrue(files[0].hasSuffix(" - Main.sav"), "the original size keeps the plain name: \(files[0])")
-        XCTAssertEqual(try Data(contentsOf: container.exportsDirectory.appendingPathComponent(files[0])), Data([1, 2, 3]))
+        XCTAssertEqual(try Data(contentsOf: exports.appendingPathComponent(files[0])), Data([1, 2, 3]))
     }
 
-    private func exported(_ container: AppContainer) throws -> [String] {
-        guard FileManager.default.fileExists(atPath: container.exportsDirectory.path) else { return [] }
-        return try FileManager.default.contentsOfDirectory(atPath: container.exportsDirectory.path).sorted()
+    /// What is in `exports`, which is each test's own folder: the container's is the app's real
+    /// Exports folder, shared by every test.
+    private func exported(_ exports: URL) throws -> [String] {
+        guard FileManager.default.fileExists(atPath: exports.path) else { return [] }
+        return try FileManager.default.contentsOfDirectory(atPath: exports.path).sorted()
     }
 
     /// A profile that holds `save`, last written by `build` as a played profile is.
@@ -81,7 +85,7 @@ final class SaveExportChoiceTests: XCTestCase {
         return try review.commit().build
     }
 
-    private func detailModel(_ container: AppContainer, gameID: UUID) -> GameDetailViewModel {
+    private func detailModel(_ container: AppContainer, gameID: UUID, exports: URL) -> GameDetailViewModel {
         GameDetailViewModel(
             gameID: gameID, games: container.repositories.games, builds: container.repositories.builds,
             profiles: container.repositories.saveProfiles, buildOperations: container.buildOperations,
@@ -91,7 +95,7 @@ final class SaveExportChoiceTests: XCTestCase {
             importSave: container.importBatterySave, patchCreator: container.patchCreator,
             evictImage: container.evictGeneratedImage, artwork: container.gameArtwork,
             variableMaps: container.attachVariableMap, replaceSave: container.replaceBatterySave,
-            exporter: container.exportFiles, exportsDirectory: container.exportsDirectory
+            exporter: container.exportFiles, exportsDirectory: exports
         )
     }
 }
