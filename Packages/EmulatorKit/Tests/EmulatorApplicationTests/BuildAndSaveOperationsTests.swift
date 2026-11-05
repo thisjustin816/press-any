@@ -175,6 +175,32 @@ final class BuildAndSaveOperationsTests: XCTestCase {
         XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: profile.id)?.modifiedAt, profile.modifiedAt)
     }
 
+    func testRenamingAProfileTrimsTheNameAndLeavesTheBadgeAndSaveTimeAlone() throws {
+        let harness = try Harness.make()
+        let profile = try harness.createProfile(name: "Main", battery: Data([1]))
+        try SetSaveProfileBadge(profiles: harness.profiles).execute(profileID: profile.id, badge: "🐉")
+        let rename = RenameSaveProfile(profiles: harness.profiles)
+
+        XCTAssertEqual(try rename.execute(profileID: profile.id, name: "  Boss Rush \n").displayName, "Boss Rush")
+        let stored = try XCTUnwrap(harness.profiles.fetchSaveProfile(id: profile.id))
+        XCTAssertEqual(stored.displayName, "Boss Rush")
+        XCTAssertEqual(stored.badge, "🐉")
+        XCTAssertEqual(stored.modifiedAt, profile.modifiedAt)
+
+        for blank in ["", "   ", "\n\t"] {
+            XCTAssertThrowsError(try rename.execute(profileID: profile.id, name: blank)) { error in
+                XCTAssertEqual(error as? SaveProfileOperationError, .invalidProfileName)
+            }
+        }
+        XCTAssertEqual(try harness.profiles.fetchSaveProfile(id: profile.id)?.displayName, "Boss Rush",
+                       "a refused name changes nothing")
+
+        let missing = UUID()
+        XCTAssertThrowsError(try rename.execute(profileID: missing, name: "Ghost")) { error in
+            XCTAssertEqual(error as? SaveProfileOperationError, .profileNotFound(missing))
+        }
+    }
+
     func testDeletingAProfileRemovesItsSaveAndStatesAndWhatPointedAtIt() throws {
         let harness = try Harness.make(twoBuilds: true)
         let doomed = try harness.createProfile(name: "Doomed", battery: Data([1]))

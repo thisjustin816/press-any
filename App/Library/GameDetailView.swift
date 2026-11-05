@@ -43,6 +43,8 @@ struct GameDetailView: View {
     @State private var badgeTarget: SaveProfile?
     @State private var statesProfile: SaveProfile?
     @State private var badgeText = ""
+    @State private var renamingProfile: SaveProfile?
+    @State private var profileName = ""
     @State private var renamingBuild: Build?
     @State private var buildName = ""
     @State private var showRenameGame = false
@@ -72,6 +74,7 @@ struct GameDetailView: View {
             createBlank: container.createBlankSaveProfile,
             duplicateProfile: container.duplicateSaveProfile,
             badges: container.setSaveProfileBadge,
+            renames: container.renameSaveProfile,
             deletion: container.libraryDeletion,
             importSave: container.importBatterySave,
             patchCreator: container.patchCreator,
@@ -229,7 +232,7 @@ struct GameDetailView: View {
         } header: {
             Text("Save Profiles")
         } footer: {
-            Text("\(Image(systemName: "star.fill")) The preferred save, which Play uses unless a Build picks its own. Touch and hold for more.")
+            Text("\(Image(systemName: "star.fill")) The preferred save, which Play uses unless a Build picks its own. Tap a save for more.")
         }
     }
 
@@ -435,6 +438,14 @@ struct GameDetailView: View {
                 Button("Rename") { model.rename(build, to: buildName) }
                 Button("Cancel", role: .cancel) {}
             }
+            .alert("Rename Save", isPresented: Binding(
+                get: { renamingProfile != nil },
+                set: { if !$0 { renamingProfile = nil } }
+            ), presenting: renamingProfile) { profile in
+                TextField("Save Name", text: $profileName)
+                Button("Rename") { model.renameProfile(profile, to: profileName) }
+                Button("Cancel", role: .cancel) {}
+            }
             .alert("New Save Profile", isPresented: $showNewProfile) {
                 TextField("Name", text: $newProfileName)
                 Button("Create") {
@@ -626,7 +637,24 @@ struct GameDetailView: View {
         }
     }
 
+    @ViewBuilder
     private func profileRow(_ profile: SaveProfile) -> some View {
+        if model.selection.isSelecting {
+            profileLabel(profile)
+        } else {
+            // A save has no single obvious action, so a tap opens the menu a touch and hold would.
+            Menu {
+                profileMenu(profile)
+            } label: {
+                profileLabel(profile)
+                    .contentShape(Rectangle())
+            }
+            .tint(.primary)
+            .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: profile) } }
+        }
+    }
+
+    private func profileLabel(_ profile: SaveProfile) -> some View {
         HStack {
             VStack(alignment: .leading) {
                 Text(profile.title)
@@ -649,31 +677,34 @@ struct GameDetailView: View {
                     .accessibilityLabel("Preferred Save")
             }
         }
-        .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: profile) } }
-        .contextMenu {
-            if !model.selection.isSelecting {
-                Button("Play with This Save", systemImage: "play.fill") { launch(build: model.preferredBuild, profile: profile) }
-                Section {
-                    Button("Save States", systemImage: "square.stack") { statesProfile = profile }
-                    Button("Set as Preferred Save", systemImage: "star") { model.setPreferredSave(profile) }
-                        .disabled(model.defaultSaveProfile?.id == profile.id)
-                    Button("Badge…", systemImage: "face.smiling") {
-                        badgeText = profile.badge ?? ""
-                        badgeTarget = profile
-                    }
-                    Button("Duplicate", systemImage: "plus.square.on.square") {
-                        model.duplicate(profile, name: profile.displayName + " Copy")
-                    }
-                }
-                Section {
-                    Button("Replace from File…", systemImage: "square.and.arrow.down") { request(.replacementSave(profile)) }
-                    if profile.persistentSaveAssetID != nil {
-                        Button("Export Save", systemImage: "square.and.arrow.up") { model.exportSave(of: profile) }
-                    }
-                }
-                Button(role: .destructive) { model.requestDeletion(of: profile) } label: { Label("Delete Save Profile", systemImage: "trash") }
+    }
+
+    @ViewBuilder
+    private func profileMenu(_ profile: SaveProfile) -> some View {
+        Button("Play with This Save", systemImage: "play.fill") { launch(build: model.preferredBuild, profile: profile) }
+        Section {
+            Button("Save States", systemImage: "square.stack") { statesProfile = profile }
+            Button("Set as Preferred Save", systemImage: "star") { model.setPreferredSave(profile) }
+                .disabled(model.defaultSaveProfile?.id == profile.id)
+            Button("Rename…", systemImage: "pencil") {
+                profileName = profile.displayName
+                renamingProfile = profile
+            }
+            Button("Badge…", systemImage: "face.smiling") {
+                badgeText = profile.badge ?? ""
+                badgeTarget = profile
+            }
+            Button("Duplicate", systemImage: "plus.square.on.square") {
+                model.duplicate(profile, name: profile.displayName + " Copy")
             }
         }
+        Section {
+            Button("Replace from File…", systemImage: "square.and.arrow.down") { request(.replacementSave(profile)) }
+            if profile.persistentSaveAssetID != nil {
+                Button("Export Save", systemImage: "square.and.arrow.up") { model.exportSave(of: profile) }
+            }
+        }
+        Button(role: .destructive) { model.requestDeletion(of: profile) } label: { Label("Delete Save Profile", systemImage: "trash") }
     }
 
     private func request(_ request: FileRequest) {

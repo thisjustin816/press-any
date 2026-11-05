@@ -159,6 +159,7 @@ final class LibraryDeletionFlowTests: XCTestCase {
             createBlank: container.createBlankSaveProfile,
             duplicateProfile: container.duplicateSaveProfile,
             badges: container.setSaveProfileBadge,
+            renames: container.renameSaveProfile,
             deletion: container.libraryDeletion,
             importSave: container.importBatterySave,
             patchCreator: container.patchCreator,

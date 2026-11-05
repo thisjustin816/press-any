@@ -671,8 +671,9 @@ isn't stored.
 
 ### Profiles
 
-- A profile's menu sets a one-emoji badge, shown before its name everywhere. Setting it leaves
-  the profile's modified time alone, since that time decides whether an Auto State can restore.
+- Tapping a profile, or touching and holding it, opens its menu. Rename changes its name, and
+  Badge sets a one-emoji badge, shown before its name everywhere. Neither changes the profile's
+  modified time, since that time decides whether an Auto State can restore.
 - Deleting a profile asks first, naming it, and sends it to Recently Deleted with its save and
   states. A Game or Build that played it plays the Game's default instead.
 - **Replace from File** asks first when the profile has a save, copies it to "<profile>
@@ -1590,9 +1591,10 @@ Game Boy Player). The list shows no model numbers. App Settings has it on the Pl
   or one of its own. ROM and Patches groups Apply Patch, Attach Variable Map, Export ROM and,
   for patched Builds, Remove Generated Image. Organize groups Rename Build and Make Separate
   Game. Play, Build Info, Cheats and Delete Build remain directly available.
-- A Save Profile's menu has Play with This Save; Save States, Set as Preferred Save, Badge and
-  Duplicate; Replace from File and Export Save; then Delete Save Profile. A star marks the Game's
-  preferred save, which Play uses unless a Build picks its own.
+- A Save Profile's menu, which a tap or a touch and hold opens, has Play with This Save; Save
+  States, Set as Preferred Save, Rename, Badge and Duplicate; Replace from File and Export Save;
+  then Delete Save Profile. A star marks the Game's preferred save, which Play uses unless a Build
+  picks its own.
 - Build Info opens Build Details, which links to Technical Info. Technical Info shows hashes (four
   groups of 16 on two lines, copied by touch and hold), the stored metadata, verification, when
   the Build was added, the cartridge header, read-only, and Made With: an engine such as GB

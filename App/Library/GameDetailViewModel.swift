@@ -39,6 +39,7 @@ final class GameDetailViewModel: ObservableObject {
     private let createBlank: CreateBlankSaveProfile
     private let duplicateProfile: DuplicateSaveProfile
     private let badges: SetSaveProfileBadge
+    private let renames: RenameSaveProfile
     private let deletion: LibraryDeletionOperations
     private let saveImporter: ImportBatterySave
     private let patchCreator: CreatePatchedBuild
@@ -58,6 +59,7 @@ final class GameDetailViewModel: ObservableObject {
         createBlank: CreateBlankSaveProfile,
         duplicateProfile: DuplicateSaveProfile,
         badges: SetSaveProfileBadge,
+        renames: RenameSaveProfile,
         deletion: LibraryDeletionOperations,
         importSave: ImportBatterySave,
         patchCreator: CreatePatchedBuild,
@@ -76,6 +78,7 @@ final class GameDetailViewModel: ObservableObject {
         self.createBlank = createBlank
         self.duplicateProfile = duplicateProfile
         self.badges = badges
+        self.renames = renames
         self.deletion = deletion
         self.saveImporter = importSave
         self.patchCreator = patchCreator
@@ -216,6 +219,17 @@ final class GameDetailViewModel: ObservableObject {
 
     func createBlankProfile(name: String) {
         perform { _ = try createBlank.execute(gameID: gameID, name: name) }
+    }
+
+    func renameProfile(_ profile: SaveProfile, to name: String) {
+        do {
+            _ = try renames.execute(profileID: profile.id, name: name)
+            reload()
+        } catch SaveProfileOperationError.invalidProfileName {
+            errorMessage = "A save name can’t be blank."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func setBadge(_ badge: String, of profile: SaveProfile) {

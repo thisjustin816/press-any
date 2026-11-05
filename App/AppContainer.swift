@@ -31,6 +31,7 @@ final class AppContainer {
     let createBlankSaveProfile: CreateBlankSaveProfile
     let duplicateSaveProfile: DuplicateSaveProfile
     let setSaveProfileBadge: SetSaveProfileBadge
+    let renameSaveProfile: RenameSaveProfile
     let libraryDeletion: LibraryDeletionOperations
     /// Prints kept in each Game's Captures.
     let printCaptures: PrintCaptures
@@ -156,6 +157,7 @@ final class AppContainer {
             profiles: repositories.saveProfiles
         )
         setSaveProfileBadge = SetSaveProfileBadge(profiles: repositories.saveProfiles)
+        renameSaveProfile = RenameSaveProfile(profiles: repositories.saveProfiles)
         libraryDeletion = LibraryDeletionOperations(
             games: repositories.games,
             builds: repositories.builds,
