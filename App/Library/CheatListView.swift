@@ -76,6 +76,7 @@ struct CheatListView: View {
             } message: {
                 Text(model.errorMessage ?? "")
             }
+            .errorHaptic(isShowing: model.errorMessage != nil && !model.isEditing)
         }
     }
 

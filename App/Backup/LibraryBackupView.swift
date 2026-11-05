@@ -38,8 +38,8 @@ struct LibraryBackupView: View {
             .scrollOverflowCue()
             // The outcome sits outside the list, so it is on screen however far the list is scrolled.
             .safeAreaInset(edge: .bottom) { statusCard }
-            .sensoryFeedback(.success, trigger: model.exportedURL) { _, new in new != nil }
-            .sensoryFeedback(.error, trigger: model.errorMessage) { _, new in new != nil }
+            .uiHaptic(.success, trigger: model.exportedURL) { _, new in new != nil }
+            .uiHaptic(.error, trigger: model.errorMessage) { _, new in new != nil }
             .navigationTitle(model.gameID == nil ? "Back Up Library" : "Export Game")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

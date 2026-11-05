@@ -41,6 +41,8 @@ struct GameDetailView: View {
     @State private var cheatsBuild: Build?
     @State private var pendingReplacement: PendingReplacement?
     @State private var badgeTarget: SaveProfile?
+    /// Counts badge choices, since the picker has closed by the time the choice is saved.
+    @State private var badgesChosen = 0
     @State private var statesProfile: SaveProfile?
     @State private var renamingProfile: SaveProfile?
     @State private var profileName = ""
@@ -87,7 +89,7 @@ struct GameDetailView: View {
     }
 
     var body: some View {
-        withProfileAlerts(withAlerts(withPresentations(list)))
+        withHaptics(withProfileAlerts(withAlerts(withPresentations(list))))
             .navigationTitle(model.game?.primaryTitle ?? "Game")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -387,10 +389,22 @@ struct GameDetailView: View {
             }
     }
 
+    private func withHaptics(_ content: some View) -> some View {
+        content
+            .uiHaptic(.selection, trigger: model.selection.ids)
+            // A favorite toggling, not the first value arriving when the Game loads.
+            .uiHaptic(.selection, trigger: model.game?.isFavorite) { old, _ in old != nil }
+            .uiHaptic(.selection, trigger: badgesChosen)
+            .errorHaptic(isShowing: model.errorMessage != nil)
+    }
+
     private func withProfileAlerts(_ content: some View) -> some View {
         content
             .sheet(item: $badgeTarget) { profile in
-                BadgePickerSheet(profile: profile) { model.setBadge($0 ?? "", of: profile) }
+                BadgePickerSheet(profile: profile) {
+                    model.setBadge($0 ?? "", of: profile)
+                    badgesChosen += 1
+                }
             }
             .alert(deletionTitle, isPresented: Binding(
                 get: { model.pendingDeletion != nil },

@@ -68,6 +68,7 @@ struct MetadataDetailsView: View {
         } message: {
             Text(errorMessage ?? "Unknown error")
         }
+        .errorHaptic(isShowing: errorMessage != nil && !isEditing)
     }
 
     private var editor: some View {

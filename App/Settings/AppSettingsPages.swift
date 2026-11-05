@@ -79,7 +79,7 @@ struct ControlsSettingsPage: View {
             } header: {
                 Text("Touch")
             } footer: {
-                Text("Touch Haptics is how the on-screen buttons tap back when pressed. Tap Game for Menu lets a tap on the game open the menu, as the \(AppBrand.displayName) button does.")
+                Text("Touch Haptics is how the on-screen buttons tap back when pressed. Off also silences the taps the library gives as you select items or when something fails. Tap Game for Menu lets a tap on the game open the menu, as the \(AppBrand.displayName) button does.")
             }
 
             Section {
