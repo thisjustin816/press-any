@@ -6,7 +6,7 @@ public enum SaveExportSize: Equatable, Sendable {
     case original
     /// The smallest real cartridge RAM size that holds the save's data.
     case minimized
-    /// One of the sizes in `SaveExportOptions.customSizes`.
+    /// A size that is neither the original nor the minimum: one of `SaveExportOptions.customSizes`.
     case custom(bytes: Int)
 }
 
@@ -22,16 +22,24 @@ public struct SaveExportOptions: Equatable, Sendable {
     /// Real RAM sizes below the original that hold all of the save's data, smallest first.
     /// Empty when the save can't be shrunk safely.
     public let smallerSizes: [Int]
+    /// Real RAM sizes above the original that the cartridge's mapper can address, smallest first,
+    /// for a chip with more RAM than the game declares. The save is padded with erased `0xFF`
+    /// bytes. Empty when the save can't be grown safely.
+    public let largerSizes: [Int]
 
-    public init(originalBytes: Int, smallerSizes: [Int] = []) {
+    public init(originalBytes: Int, smallerSizes: [Int] = [], largerSizes: [Int] = []) {
         self.originalBytes = originalBytes
         self.smallerSizes = smallerSizes
+        self.largerSizes = largerSizes
     }
 
     public var minimizedBytes: Int? { smallerSizes.first }
 
-    /// The sizes between the minimum and the original, which a player picks by hand.
-    public var customSizes: [Int] { Array(smallerSizes.dropFirst()) }
+    /// Whether any size besides the original is offered.
+    public var hasChoices: Bool { !smallerSizes.isEmpty || !largerSizes.isEmpty }
+
+    /// The sizes that are neither the minimum nor the original, smallest first.
+    public var customSizes: [Int] { Array(smallerSizes.dropFirst()) + largerSizes }
 }
 
 /// Which smaller sizes a battery save can be exported at. A cartridge writer sizes the save from
@@ -46,25 +54,41 @@ public enum BatterySaveSizing {
     /// remaps its banks, and TPP1 and HuC3 carry a clock after the RAM.
     private static let unshrinkableTypes: Set<UInt8> = [0x05, 0x06, 0x0B, 0x0C, 0x0D, 0x22, 0xBC, 0xFE]
 
-    /// The smaller sizes `data` can be exported at. Only a save that is exactly the size its header
-    /// declares is shrunk: a longer file has a clock after the RAM that a shorter one would read
-    /// as RAM, and a different length means something else wrote it. Only an erased `0xFF` tail
-    /// counts as unused, since that is what the core fills missing bytes with.
+    /// The most RAM a mapper can address, for the cartridges a save can be padded for. MBC1 and
+    /// MBC3 reach four 8 KB banks and MBC5 sixteen. Any other cartridge is never grown, since its
+    /// limit isn't known to be a real RAM size.
+    private static func largestRAM(cartridgeType: UInt8) -> Int? {
+        switch cartridgeType {
+        case 0x01...0x03, 0x0F...0x13: 0x8000
+        case 0x19...0x1E: 0x20000
+        default: nil
+        }
+    }
+
+    /// The other sizes `data` can be exported at. Only a save that is exactly the size its header
+    /// declares changes size: a longer file has a clock after the RAM that a different length
+    /// would misplace, and a different length means something else wrote it. Only an erased
+    /// `0xFF` tail counts as unused, since that is what the core fills missing bytes with, and
+    /// it is what a larger file is padded with.
     public static func options(for data: Data, header: GBROMHeader?) -> SaveExportOptions {
         let original = SaveExportOptions(originalBytes: data.count)
         guard let header,
               !unshrinkableTypes.contains(header.cartridgeType),
-              [0x03, 0x04, 0x05].contains(header.ramSizeCode),
+              [0x02, 0x03, 0x04, 0x05].contains(header.ramSizeCode),
               let declared = header.ramSizeBytes,
               declared == data.count
         else { return original }
         let used = bytesInUse(data)
+        let largest = largestRAM(cartridgeType: header.cartridgeType) ?? declared
         return SaveExportOptions(
-            originalBytes: data.count, smallerSizes: realSizes.filter { $0 >= used && $0 < declared }
+            originalBytes: data.count,
+            smallerSizes: realSizes.filter { $0 >= used && $0 < declared },
+            largerSizes: realSizes.filter { $0 > declared && $0 <= largest }
         )
     }
 
-    /// `data` at `size`, which is always the start of `data`.
+    /// `data` at `size`. A smaller size is the start of `data`, and a larger one is `data` followed
+    /// by erased `0xFF` bytes.
     public static func bytes(of data: Data, size: SaveExportSize, options: SaveExportOptions) throws -> Data {
         switch size {
         case .original:
@@ -73,8 +97,12 @@ public enum BatterySaveSizing {
             guard let minimized = options.minimizedBytes else { throw SaveExportSizeError.notOffered }
             return Data(data.prefix(minimized))
         case .custom(let bytes):
-            guard options.smallerSizes.contains(bytes) else { throw SaveExportSizeError.notOffered }
-            return Data(data.prefix(bytes))
+            guard options.smallerSizes.contains(bytes) || options.largerSizes.contains(bytes) else {
+                throw SaveExportSizeError.notOffered
+            }
+            return bytes <= data.count
+                ? Data(data.prefix(bytes))
+                : data + Data(repeating: 0xFF, count: bytes - data.count)
         }
     }
 

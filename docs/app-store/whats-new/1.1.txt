@@ -29,7 +29,7 @@ Also new
 - A warning before you launch an older Build on a newer save, and a copy of the save kept before you switch Builds
 - A tap on a save opens its menu, which has Rename, and a badge is chosen from a grid of emoji
 - A tap you can feel as you select items or when something goes wrong, which Touch Haptics Off silences
-- Export Save can write a smaller file for a cartridge with less save RAM, with its size in the name
+- Export Save can write a save at another size, smaller or larger, for a cartridge with different save RAM, with its size in the name
 - A fade and chevron on lists with more below
 - The screen stays awake while a game runs
 - SameBoy 1.0.5, with camera, clock and Game Boy sound fixes

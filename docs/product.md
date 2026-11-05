@@ -334,16 +334,20 @@ Names use No-Intro for the game and GoodTools' codes for what was done to it:
 
 A save exports at the size the library holds it, under a plain name, "Moon Garden - Main.sav". A
 cartridge writer sizes a save from the cartridge, so a 128 KB save written to a cartridge with a
-32 KB chip wraps over its own data. For a cartridge with plain banked RAM, Export Save therefore
-asks for a size when the save can shrink, with every real RAM size (8, 32, 64 or 128 KB) from the
-smallest that holds everything but an erased `0xFF` tail, marked minimum, up to the original,
-marked original. A smaller file is the start of the original, has its size in its name, "Moon
-Garden - Main (8 KB).sav", and loads back into Press Any at the full size with the missing bytes
-erased. The original keeps the plain name. No size below the data is offered. The save is exported
-at its own size, with no question, when the cartridge keeps a clock after its RAM, is MBC2, MBC7, MMM01, TPP1 or HuC3, when its length
-isn't what the header declares, or when the header can't be read. The header comes from the Build
-that last wrote the save, else the Game's preferred Build. Every size is free, and an export never
-changes the profile.
+32 KB chip wraps over its own data, and an 8 KB save may need to be 32 KB for a chip that size.
+For a cartridge with plain banked RAM, Export Save therefore asks for a size when the save can
+change size, with every real RAM size (8, 32, 64 or 128 KB) in one list, smallest first: from the
+smallest that holds everything but an erased `0xFF` tail, marked minimum, through the original,
+marked original, to the most the cartridge's mapper reaches, which is 32 KB for MBC1 and MBC3 and
+128 KB for MBC5. A smaller file is the start of the original. A larger file is the original
+followed by erased `0xFF` bytes, the same bytes the core fills missing RAM with. Either has its
+size in its name, "Moon Garden - Main (8 KB).sav", and loads back into Press Any at the size the
+game declares. The original keeps the plain name. No size below the data is offered. The save is
+exported at its own size, with no question, when nothing else is offered: when the cartridge
+keeps a clock after its RAM, is MBC2, MBC7, MMM01, TPP1 or HuC3, or has a mapper whose limit isn't
+known, when its length isn't what the header declares, or when the header can't be read. The
+header comes from the Build that last wrote the save, else the Game's preferred Build. Every size
+is free, and an export never changes the profile.
 
 Settings > Library > Back Up Library writes an ordinary `.zip` backup there and offers sharing.
 Game Details > More > Export Game writes a Game package in the

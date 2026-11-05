@@ -102,7 +102,7 @@ final class SaveExportChoiceTests: XCTestCase {
         )
     }
 
-    func testASaveWithOnlyOneSmallerSizeListsTheMinimumAndTheOriginal() throws {
+    func testAnMBC5SaveOf32KBListsTheSmallerAndTheLargerSizes() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         let container = try AppContainer(rootURL: root)
@@ -116,7 +116,56 @@ final class SaveExportChoiceTests: XCTestCase {
 
         model.exportSave(of: profile)
 
-        XCTAssertEqual(model.saveExportChoice?.entries.map(\.title), ["8 KB (minimum)", "32 KB (original)"])
+        XCTAssertEqual(
+            model.saveExportChoice?.entries.map(\.title),
+            ["8 KB (minimum)", "32 KB (original)", "64 KB", "128 KB"]
+        )
+    }
+
+    func testAnMBC1SaveOf8KBOffersOnlyTheNextSizeUp() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let exports = root.appendingPathComponent("Exports", isDirectory: true)
+        let build = try importROM(into: container, root: root, ramSizeCode: 0x02, cartridgeType: 0x03)
+        var save = Data(repeating: 0xFF, count: 8 * 1024)
+        save[0] = 0x42
+        let profile = try savedProfile(in: container, root: root, build: build, save: save)
+        let model = detailModel(container, gameID: build.gameID, exports: exports)
+        model.reload()
+
+        model.exportSave(of: profile)
+
+        let choice = try XCTUnwrap(model.saveExportChoice, "an 8 KB save is asked about when it can grow")
+        XCTAssertEqual(choice.entries.map(\.title), ["8 KB (original)", "32 KB"])
+        XCTAssertEqual(try exported(exports), [], "nothing is written until a size is chosen")
+
+        model.exportSave(of: choice.profile, size: try XCTUnwrap(choice.entries.last).size)
+
+        let files = try exported(exports)
+        XCTAssertEqual(files.count, 1)
+        XCTAssertTrue(files[0].hasSuffix(" (32 KB).sav"), files[0])
+        let written = try Data(contentsOf: exports.appendingPathComponent(files[0]))
+        XCTAssertEqual(written, save + Data(repeating: 0xFF, count: 24 * 1024))
+    }
+
+    func testASaveOfAMapperWithNoKnownLimitOf8KBExportsStraightAway() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let exports = root.appendingPathComponent("Exports", isDirectory: true)
+        // A Pocket Camera cartridge, whose RAM isn't one of the mappers with a known limit.
+        let build = try importROM(into: container, root: root, ramSizeCode: 0x02, cartridgeType: 0xFC)
+        let profile = try savedProfile(
+            in: container, root: root, build: build, save: Data(repeating: 0xFF, count: 8 * 1024)
+        )
+        let model = detailModel(container, gameID: build.gameID, exports: exports)
+        model.reload()
+
+        model.exportSave(of: profile)
+
+        XCTAssertNil(model.saveExportChoice)
+        XCTAssertEqual(try exported(exports).count, 1)
     }
 
     func testASaveThatCannotShrinkExportsStraightAway() throws {
@@ -156,11 +205,14 @@ final class SaveExportChoiceTests: XCTestCase {
         return profile
     }
 
-    /// A 32 KB image whose header declares MBC5 with RAM and a battery, and `ramSizeCode` of RAM.
-    private func importROM(into container: AppContainer, root: URL, ramSizeCode: UInt8) throws -> Build {
+    /// A 32 KB image whose header declares `cartridgeType` (MBC5 with RAM and a battery unless
+    /// given) and `ramSizeCode` of RAM.
+    private func importROM(
+        into container: AppContainer, root: URL, ramSizeCode: UInt8, cartridgeType: UInt8 = 0x1B
+    ) throws -> Build {
         let file = root.appendingPathComponent("Example.gb")
         var data = Data(repeating: 0, count: 0x8000)
-        data[0x147] = 0x1B
+        data[0x147] = cartridgeType
         data[0x149] = ramSizeCode
         try data.write(to: file)
         let coordinator = ImportCoordinator(analyzer: container.importAnalyzer, committer: container.importCommitter, assetStore: container.fileStore)

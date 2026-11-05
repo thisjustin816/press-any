@@ -6,8 +6,9 @@ import Foundation
 import Importing
 import Patching
 
-/// The sizes a save can be exported at, as the buttons of the size prompt: every real size from
-/// the smallest that holds the data up to the original, smallest first.
+/// The sizes a save can be exported at, as the buttons of the size prompt: every real size, smallest
+/// first, from the smallest that holds the data to the most the cartridge's mapper reaches, with the
+/// first marked minimum when it is smaller than the original, and the original marked as such.
 struct SaveExportChoice: Identifiable {
     struct Entry: Identifiable {
         let title: String
@@ -23,11 +24,13 @@ struct SaveExportChoice: Identifiable {
         self.profile = profile
         func text(_ bytes: Int) -> String { GBROMHeader.sizeDescription(bytes) }
         var entries: [Entry] = []
-        if let minimized = options.minimizedBytes {
-            entries.append(Entry(title: "\(text(minimized)) (minimum)", size: .minimized))
+        for (index, bytes) in options.smallerSizes.enumerated() {
+            entries.append(index == 0
+                ? Entry(title: "\(text(bytes)) (minimum)", size: .minimized)
+                : Entry(title: text(bytes), size: .custom(bytes: bytes)))
         }
-        entries += options.customSizes.map { Entry(title: text($0), size: .custom(bytes: $0)) }
         entries.append(Entry(title: "\(text(options.originalBytes)) (original)", size: .original))
+        entries += options.largerSizes.map { Entry(title: text($0), size: .custom(bytes: $0)) }
         self.entries = entries
     }
 }
@@ -46,7 +49,7 @@ final class GameDetailViewModel: ObservableObject {
     @Published var baseMismatch: PendingPatch?
     /// A deletion waiting on its confirmation, with everything it takes.
     @Published var pendingDeletion: DeletionPlan?
-    /// Set while a save that can be exported smaller waits for the player to pick a size.
+    /// Set while a save that can be exported at another size waits for the player to pick one.
     @Published var saveExportChoice: SaveExportChoice?
     @Published var selection = ItemSelection<LibraryDeletionTarget>()
     @Published var pendingBatchDeletion: BatchDeletionPlan?
@@ -377,12 +380,12 @@ final class GameDetailViewModel: ObservableObject {
         }
     }
 
-    /// A save that can be exported smaller asks which size first. Any other save goes straight to
-    /// Files.
+    /// A save that can be exported at another size asks which size first. Any other save goes
+    /// straight to Files.
     func exportSave(of profile: SaveProfile) {
         perform {
             let options = try exporter.saveExportOptions(profileID: profile.id)
-            guard options.minimizedBytes != nil else {
+            guard options.hasChoices else {
                 let url = try exporter.exportSave(profileID: profile.id, to: exportsDirectory)
                 infoMessage = Self.exportedMessage(url)
                 return

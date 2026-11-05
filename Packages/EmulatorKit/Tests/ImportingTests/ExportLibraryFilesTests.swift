@@ -114,6 +114,27 @@ final class ExportLibraryFilesTests: XCTestCase {
         XCTAssertEqual(try fixture.assets.fetchAsset(id: XCTUnwrap(profile.persistentSaveAssetID)), assetBefore)
     }
 
+    func testASaveExportsAtALargerSizePaddedWithErasedBytes() throws {
+        let fixture = try Fixture(title: "Pokemon Crystal", rom: Self.rom(ram: 0x02))
+        let battery = Self.battery(8 * 1024, writing: [0: 0x42, 0x1FFF: 0x01])
+        let profile = try fixture.createProfile(name: "Main", battery: battery, writtenBy: fixture.build.id)
+        let profileBefore = try fixture.profiles.fetchSaveProfile(id: profile.id)
+
+        let options = try fixture.exporter.saveExportOptions(profileID: profile.id)
+        let larger = try fixture.exporter.exportSave(
+            profileID: profile.id, to: fixture.exports, size: .custom(bytes: 32 * 1024)
+        )
+
+        XCTAssertNil(options.minimizedBytes)
+        XCTAssertEqual(options.largerSizes, [32 * 1024, 64 * 1024, 128 * 1024])
+        XCTAssertEqual(larger.lastPathComponent, "Pokemon Crystal - Main (32 KB).sav")
+        let written = try Data(contentsOf: larger)
+        XCTAssertEqual(written.prefix(8 * 1024), battery)
+        XCTAssertEqual(Set(written.dropFirst(8 * 1024)), [0xFF])
+        XCTAssertEqual(written.count, 32 * 1024)
+        XCTAssertEqual(try fixture.profiles.fetchSaveProfile(id: profile.id), profileBefore, "an export leaves the profile alone")
+    }
+
     func testASizeThatIsNotOfferedWritesNothing() throws {
         let fixture = try Fixture(title: "Pokemon Crystal", rom: Self.rom(ram: 0x04))
         let profile = try fixture.createProfile(

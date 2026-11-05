@@ -43,12 +43,22 @@ final class BatterySaveSizingTests: XCTestCase {
         XCTAssertEqual(options.originalBytes, 128 * kb)
     }
 
-    func testA32KBSaveShrinksButHasNoCustomSizeBetween() {
+    func testA32KBSaveShrinksToTheMinimumAndAnMBC5ACanAlsoGrow() {
         let save = Self.save(32 * kb, writing: [0: 0x01])
 
         let options = BatterySaveSizing.options(for: save, header: Self.header(ram: 0x03))
 
         XCTAssertEqual(options.minimizedBytes, 8 * kb)
+        XCTAssertEqual(options.smallerSizes, [8 * kb])
+        XCTAssertEqual(options.largerSizes, [64 * kb, 128 * kb])
+    }
+
+    func testA32KBMBC1SaveShrinksButHasNothingBetweenOrAbove() {
+        let save = Self.save(32 * kb, writing: [0: 0x01])
+
+        let options = BatterySaveSizing.options(for: save, header: Self.header(type: 0x03, ram: 0x03))
+
+        XCTAssertEqual(options.smallerSizes, [8 * kb])
         XCTAssertEqual(options.customSizes, [])
     }
 
@@ -58,7 +68,8 @@ final class BatterySaveSizingTests: XCTestCase {
         let options = BatterySaveSizing.options(for: save, header: Self.header(ram: 0x05))
 
         XCTAssertEqual(options.minimizedBytes, 8 * kb)
-        XCTAssertEqual(options.customSizes, [32 * kb])
+        XCTAssertEqual(options.smallerSizes, [8 * kb, 32 * kb])
+        XCTAssertEqual(options.largerSizes, [128 * kb])
     }
 
     func testAClockTrailerKeepsTheSaveAtItsOriginalSize() {
@@ -89,6 +100,69 @@ final class BatterySaveSizingTests: XCTestCase {
         }
     }
 
+    func testAnMBC5SaveOf8KBCanGrowToEveryLargerRealSize() {
+        let save = Self.save(8 * kb, writing: [0: 0x42])
+
+        let options = BatterySaveSizing.options(for: save, header: Self.header(type: 0x1B, ram: 0x02))
+
+        XCTAssertNil(options.minimizedBytes)
+        XCTAssertEqual(options.largerSizes, [32 * kb, 64 * kb, 128 * kb])
+        XCTAssertEqual(options.customSizes, [32 * kb, 64 * kb, 128 * kb])
+        XCTAssertTrue(options.hasChoices)
+    }
+
+    func testAnMBC1OrMBC3SaveGrowsNoFurtherThanTheMapperReaches() {
+        for type: UInt8 in [0x01, 0x02, 0x03, 0x11, 0x12, 0x13] {
+            let options = BatterySaveSizing.options(
+                for: Self.save(8 * kb, writing: [0: 0x42]), header: Self.header(type: type, ram: 0x02)
+            )
+            XCTAssertEqual(options.largerSizes, [32 * kb], "type \(type)")
+        }
+    }
+
+    func testAMapperWithNoKnownLimitIsNeverGrown() {
+        // Pocket Camera, HuC1, MBC6 and a ROM-and-RAM cartridge with no mapper.
+        for type: UInt8 in [0xFC, 0xFF, 0x20, 0x08, 0x09, 0x00] {
+            let options = BatterySaveSizing.options(
+                for: Self.save(8 * kb, writing: [0: 0x42]), header: Self.header(type: type, ram: 0x02)
+            )
+            XCTAssertEqual(options.largerSizes, [], "type \(type)")
+        }
+    }
+
+    func testASaveAtTheMappersLimitHasNoLargerSize() {
+        let options = BatterySaveSizing.options(
+            for: Self.save(128 * kb, writing: [0: 0x42]), header: Self.header(type: 0x1B, ram: 0x04)
+        )
+        XCTAssertEqual(options.largerSizes, [])
+        let mbc1 = BatterySaveSizing.options(
+            for: Self.save(32 * kb, writing: [0: 0x42]), header: Self.header(type: 0x03, ram: 0x03)
+        )
+        XCTAssertEqual(mbc1.largerSizes, [])
+    }
+
+    func testCartridgesWhoseRAMIsNotPlainBankedRAMAreNeverGrown() {
+        for type: UInt8 in [0x05, 0x06, 0x0B, 0x0C, 0x0D, 0x22, 0xBC, 0xFE] {
+            let options = BatterySaveSizing.options(
+                for: Self.save(8 * kb, writing: [0: 0x01]), header: Self.header(type: type, ram: 0x02)
+            )
+            XCTAssertEqual(options.largerSizes, [], "type \(type)")
+            XCTAssertFalse(options.hasChoices, "type \(type)")
+        }
+    }
+
+    func testASaveWithAClockOrAnotherLengthIsNeverGrown() {
+        // MBC3 with a timer keeps the clock after the RAM, so more RAM would put RAM over it.
+        let clock = BatterySaveSizing.options(
+            for: Self.save(8 * kb + 48, writing: [0: 0x01]), header: Self.header(type: 0x10, ram: 0x02)
+        )
+        XCTAssertEqual(clock.largerSizes, [])
+        let other = BatterySaveSizing.options(
+            for: Self.save(32 * kb, writing: [0: 0x01]), header: Self.header(type: 0x1B, ram: 0x02)
+        )
+        XCTAssertEqual(other.largerSizes, [])
+    }
+
     func testASaveThatIsNotTheHeadersSizeIsLeftAlone() {
         // An imported save keeps its own length until the game first saves over it.
         let save = Self.save(32 * kb, writing: [0: 0x01])
@@ -115,6 +189,18 @@ final class BatterySaveSizingTests: XCTestCase {
         XCTAssertEqual(
             try BatterySaveSizing.bytes(of: save, size: .custom(bytes: 32 * kb), options: options), save.prefix(32 * kb)
         )
+    }
+
+    func testAGrownSaveIsTheOriginalFollowedByErasedBytes() throws {
+        let save = Self.save(8 * kb, writing: [0: 0x42, 0x1FFF: 0x01])
+        let options = BatterySaveSizing.options(for: save, header: Self.header(type: 0x1B, ram: 0x02))
+
+        let grown = try BatterySaveSizing.bytes(of: save, size: .custom(bytes: 32 * kb), options: options)
+
+        XCTAssertEqual(grown.count, 32 * kb)
+        XCTAssertEqual(grown.prefix(8 * kb), save)
+        XCTAssertEqual(Set(grown.dropFirst(8 * kb)), [0xFF])
+        XCTAssertEqual(try BatterySaveSizing.bytes(of: save, size: .original, options: options), save)
     }
 
     func testASizeThatIsNotOfferedIsRefused() {

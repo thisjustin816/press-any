@@ -413,7 +413,7 @@ struct GameDetailView: View {
                     Button(entry.title) { model.exportSave(of: choice.profile, size: entry.size) }
                 }
             } message: { _ in
-                Text("The original keeps the plain name. A smaller file keeps all of the save and has its size in its name. Pick the size your cartridge or tool expects.")
+                Text("The original keeps the plain name. Another size has its size in its name: a smaller file keeps all of the save, and a larger one is padded with empty space. Pick the size your cartridge or tool expects.")
             }
             .sheet(item: $badgeTarget) { profile in
                 BadgePickerSheet(profile: profile) {
