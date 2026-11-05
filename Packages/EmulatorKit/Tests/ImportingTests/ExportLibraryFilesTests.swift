@@ -88,6 +88,83 @@ final class ExportLibraryFilesTests: XCTestCase {
         XCTAssertEqual(ExportLibraryFiles.safeFilename("..."), "Export")
     }
 
+    func testASaveExportsAtAShrunkSizeUnderANameThatSaysSo() throws {
+        let fixture = try Fixture(title: "Pokemon Crystal", rom: Self.rom(ram: 0x04))
+        let battery = Self.battery(128 * 1024, writing: [0: 0x42, 1557: 0x01])
+        let profile = try fixture.createProfile(name: "Main", battery: battery, writtenBy: fixture.build.id)
+        let profileBefore = try fixture.profiles.fetchSaveProfile(id: profile.id)
+        let assetBefore = try fixture.assets.fetchAsset(id: XCTUnwrap(profile.persistentSaveAssetID))
+
+        let options = try fixture.exporter.saveExportOptions(profileID: profile.id)
+        let smallest = try fixture.exporter.exportSave(profileID: profile.id, to: fixture.exports, size: .minimized)
+        let middle = try fixture.exporter.exportSave(
+            profileID: profile.id, to: fixture.exports, size: .custom(bytes: 32 * 1024)
+        )
+        let original = try fixture.exporter.exportSave(profileID: profile.id, to: fixture.exports, size: .original)
+
+        XCTAssertEqual(options.minimizedBytes, 8 * 1024)
+        XCTAssertEqual(options.customSizes, [32 * 1024, 64 * 1024])
+        XCTAssertEqual(smallest.lastPathComponent, "Pokemon Crystal - Main (8 KB).sav")
+        XCTAssertEqual(try Data(contentsOf: smallest), battery.prefix(8 * 1024))
+        XCTAssertEqual(middle.lastPathComponent, "Pokemon Crystal - Main (32 KB).sav")
+        XCTAssertEqual(try Data(contentsOf: middle), battery.prefix(32 * 1024))
+        XCTAssertEqual(original.lastPathComponent, "Pokemon Crystal - Main.sav", "the original size keeps the plain name")
+        XCTAssertEqual(try Data(contentsOf: original), battery)
+        XCTAssertEqual(try fixture.profiles.fetchSaveProfile(id: profile.id), profileBefore, "an export leaves the profile alone")
+        XCTAssertEqual(try fixture.assets.fetchAsset(id: XCTUnwrap(profile.persistentSaveAssetID)), assetBefore)
+    }
+
+    func testASizeThatIsNotOfferedWritesNothing() throws {
+        let fixture = try Fixture(title: "Pokemon Crystal", rom: Self.rom(ram: 0x04))
+        let profile = try fixture.createProfile(
+            name: "Main", battery: Self.battery(128 * 1024, writing: [0x2000: 0x01]), writtenBy: fixture.build.id
+        )
+
+        for size: SaveExportSize in [.custom(bytes: 8 * 1024), .custom(bytes: 100)] {
+            XCTAssertThrowsError(try fixture.exporter.exportSave(profileID: profile.id, to: fixture.exports, size: size)) {
+                XCTAssertEqual($0 as? ExportLibraryFilesError, .sizeNotOffered)
+            }
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.exports.path), "nothing is written")
+    }
+
+    func testASaveWithNoKnownHeaderOnlyExportsAtItsOriginalSize() throws {
+        let fixture = try Fixture(title: "Pokemon Crystal")
+        let profile = try fixture.createProfile(name: "Main", battery: Data([1, 2, 3]))
+
+        XCTAssertEqual(try fixture.exporter.saveExportOptions(profileID: profile.id).minimizedBytes, nil)
+        XCTAssertThrowsError(try fixture.exporter.exportSave(profileID: profile.id, to: fixture.exports, size: .minimized)) {
+            XCTAssertEqual($0 as? ExportLibraryFilesError, .sizeNotOffered)
+        }
+    }
+
+    func testTheHeaderComesFromTheBuildThatWroteTheSaveBeforeThePreferredBuild() {
+        let writer = UUID(), preferred = UUID()
+        let game = Game(
+            id: UUID(), primaryTitle: "Pokemon Crystal", systemFamily: "gameboy", preferredBuildID: preferred,
+            createdAt: now, modifiedAt: now
+        )
+        var profile = SaveProfile(id: UUID(), gameID: game.id, displayName: "Main", createdAt: now, modifiedAt: now)
+
+        XCTAssertEqual(ExportLibraryFiles.headerBuildID(for: profile, in: game), preferred)
+        profile.saveWrittenByBuildID = writer
+        XCTAssertEqual(ExportLibraryFiles.headerBuildID(for: profile, in: game), writer)
+    }
+
+    private static func rom(ram: UInt8, type: UInt8 = 0x1B) -> Data {
+        var rom = Data(count: 0x150)
+        rom[0x147] = type
+        rom[0x148] = 0x06
+        rom[0x149] = ram
+        return rom
+    }
+
+    private static func battery(_ size: Int, writing bytes: [Int: UInt8]) -> Data {
+        var data = Data(repeating: 0xFF, count: size)
+        for (offset, byte) in bytes { data[offset] = byte }
+        return data
+    }
+
     private final class RecordingResolver: BuildImageResolving, @unchecked Sendable {
         let url: URL
         private(set) var resolvedBuildIDs: [UUID] = []
@@ -109,10 +186,14 @@ final class ExportLibraryFilesTests: XCTestCase {
         let store: ManagedFileStore
         let resolver: RecordingResolver
         let exports: URL
-        let romBytes = Data([0x00, 0xC3, 0x50, 0x01])
+        let romBytes: Data
         let now = Date(timeIntervalSince1970: 1_700_000_000)
 
-        init(title: String, region: String? = nil, revision: String? = nil) throws {
+        init(
+            title: String, region: String? = nil, revision: String? = nil,
+            rom: Data = Data([0x00, 0xC3, 0x50, 0x01])
+        ) throws {
+            romBytes = rom
             let root = FileManager.default.temporaryDirectory.appendingPathComponent("export-tests-\(UUID())", isDirectory: true)
             store = try ManagedFileStore(rootURL: root.appendingPathComponent("Library", isDirectory: true))
             exports = root.appendingPathComponent("Exports", isDirectory: true)
@@ -163,11 +244,18 @@ final class ExportLibraryFilesTests: XCTestCase {
             )
         }
 
-        func createProfile(name: String, battery: Data) throws -> SaveProfile {
+        /// `writtenBy` records the Build that last wrote the save, as a played profile has.
+        func createProfile(name: String, battery: Data, writtenBy buildID: UUID? = nil) throws -> SaveProfile {
             let source = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).sav")
             try battery.write(to: source)
-            return try ImportBatterySave(games: games, profiles: profiles, assets: assets, assetStore: store, now: { now })
-                .execute(gameID: game.id, sourceURL: source, name: name)
+            var profile = try ImportBatterySave(
+                games: games, profiles: profiles, assets: assets, assetStore: store, now: { now }
+            ).execute(gameID: game.id, sourceURL: source, name: name)
+            if let buildID {
+                profile.saveWrittenByBuildID = buildID
+                try profiles.updateSaveProfile(profile)
+            }
+            return profile
         }
     }
 }

@@ -6,6 +6,31 @@ import Foundation
 import Importing
 import Patching
 
+/// The sizes a save can be exported at, as the buttons of the size prompt: the original, the
+/// smallest that holds the data, then any real size between.
+struct SaveExportChoice: Identifiable {
+    struct Entry: Identifiable {
+        let title: String
+        let size: SaveExportSize
+        var id: String { title }
+    }
+
+    let profile: SaveProfile
+    let entries: [Entry]
+    var id: UUID { profile.id }
+
+    init(profile: SaveProfile, options: SaveExportOptions) {
+        self.profile = profile
+        func text(_ bytes: Int) -> String { GBROMHeader.sizeDescription(bytes) }
+        var entries = [Entry(title: "Original Size (\(text(options.originalBytes)))", size: .original)]
+        if let minimized = options.minimizedBytes {
+            entries.append(Entry(title: "Minimized (\(text(minimized)))", size: .minimized))
+        }
+        entries += options.customSizes.map { Entry(title: "Custom: \(text($0))", size: .custom(bytes: $0)) }
+        self.entries = entries
+    }
+}
+
 @MainActor
 final class GameDetailViewModel: ObservableObject {
     @Published private(set) var game: Game?
@@ -20,6 +45,8 @@ final class GameDetailViewModel: ObservableObject {
     @Published var baseMismatch: PendingPatch?
     /// A deletion waiting on its confirmation, with everything it takes.
     @Published var pendingDeletion: DeletionPlan?
+    /// Set while a save that can be exported smaller waits for the player to pick a size.
+    @Published var saveExportChoice: SaveExportChoice?
     @Published var selection = ItemSelection<LibraryDeletionTarget>()
     @Published var pendingBatchDeletion: BatchDeletionPlan?
 
@@ -349,9 +376,23 @@ final class GameDetailViewModel: ObservableObject {
         }
     }
 
+    /// A save that can be exported smaller asks which size first. Any other save goes straight to
+    /// Files.
     func exportSave(of profile: SaveProfile) {
         perform {
-            let url = try exporter.exportSave(profileID: profile.id, to: exportsDirectory)
+            let options = try exporter.saveExportOptions(profileID: profile.id)
+            guard options.minimizedBytes != nil else {
+                let url = try exporter.exportSave(profileID: profile.id, to: exportsDirectory)
+                infoMessage = Self.exportedMessage(url)
+                return
+            }
+            saveExportChoice = SaveExportChoice(profile: profile, options: options)
+        }
+    }
+
+    func exportSave(of profile: SaveProfile, size: SaveExportSize) {
+        perform {
+            let url = try exporter.exportSave(profileID: profile.id, to: exportsDirectory, size: size)
             infoMessage = Self.exportedMessage(url)
         }
     }
