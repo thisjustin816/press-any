@@ -20,10 +20,8 @@ final class SaveExportChoiceTests: XCTestCase {
 
         model.exportSave(of: profile)
 
-        XCTAssertEqual(
-            model.saveExportChoice?.entries.map(\.title),
-            ["Original Size (128 KB)", "Minimized (8 KB)", "Custom: 32 KB", "Custom: 64 KB"]
-        )
+        XCTAssertEqual(model.saveExportChoice?.entries.map(\.title), ["Original Size (128 KB)", "Minimized (8 KB)"])
+        XCTAssertEqual(model.saveExportChoice?.customEntries.map(\.title), ["32 KB", "64 KB"])
         XCTAssertNil(model.infoMessage)
         XCTAssertEqual(try exported(exports), [], "nothing is written until a size is chosen")
 
@@ -34,6 +32,52 @@ final class SaveExportChoiceTests: XCTestCase {
         XCTAssertTrue(files[0].hasSuffix(" (8 KB).sav"), files[0])
         XCTAssertEqual(try Data(contentsOf: exports.appendingPathComponent(files[0])), save.prefix(8 * 1024))
         XCTAssertEqual(model.infoMessage?.contains(files[0]), true)
+    }
+
+    func testCustomSizeOpensItsOwnPromptAndExportsTheSizeChosen() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let exports = root.appendingPathComponent("Exports", isDirectory: true)
+        let build = try importROM(into: container, root: root, ramSizeCode: 0x04)
+        var save = Data(repeating: 0xFF, count: 128 * 1024)
+        save[0] = 0x42
+        let profile = try savedProfile(in: container, root: root, build: build, save: save)
+        let model = detailModel(container, gameID: build.gameID, exports: exports)
+        model.reload()
+        model.exportSave(of: profile)
+        let choice = try XCTUnwrap(model.saveExportChoice)
+        XCTAssertNil(model.saveExportCustomChoice)
+
+        await model.chooseCustomSaveSize(of: choice, after: .zero)
+
+        let custom = try XCTUnwrap(model.saveExportCustomChoice)
+        XCTAssertEqual(try exported(exports), [], "choosing Custom Size writes nothing")
+        let entry = try XCTUnwrap(custom.customEntries.first { $0.title == "32 KB" })
+        model.exportSave(of: custom.profile, size: entry.size)
+
+        let files = try exported(exports)
+        XCTAssertEqual(files.count, 1)
+        XCTAssertTrue(files[0].hasSuffix(" (32 KB).sav"), files[0])
+        XCTAssertEqual(try Data(contentsOf: exports.appendingPathComponent(files[0])), save.prefix(32 * 1024))
+    }
+
+    func testASaveWhoseOnlySmallerSizeIsTheMinimumOffersNoCustomSize() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = try AppContainer(rootURL: root)
+        let exports = root.appendingPathComponent("Exports", isDirectory: true)
+        let build = try importROM(into: container, root: root, ramSizeCode: 0x03)
+        var save = Data(repeating: 0xFF, count: 32 * 1024)
+        save[0] = 0x42
+        let profile = try savedProfile(in: container, root: root, build: build, save: save)
+        let model = detailModel(container, gameID: build.gameID, exports: exports)
+        model.reload()
+
+        model.exportSave(of: profile)
+
+        XCTAssertEqual(model.saveExportChoice?.entries.map(\.title), ["Original Size (32 KB)", "Minimized (8 KB)"])
+        XCTAssertEqual(model.saveExportChoice?.customEntries.isEmpty, true)
     }
 
     func testASaveThatCannotShrinkExportsStraightAway() throws {
