@@ -1955,6 +1955,13 @@ An Advanced toggle with an explanation. Its tools (memory search and editing, wa
 patch provenance, frame advance, RTC controls, save details) appear in context rather than
 replacing the interface.
 
+A performance overlay shows frame time, dropped frames and sound buffer shortfalls while a game
+plays. Frame time is measured per emulated frame, and a drop is a stall the frame scheduler
+clamped, so the game lost time. A frame repeated because the display refreshes faster than the
+game, such as 59.73 Hz on a 60 or 120 Hz screen, is not a drop. The overlay reads only the
+device's clocks. A game that overruns its own frame budget still runs each emulated frame on
+time, so a slowdown with clean readings comes from the game.
+
 ### Privacy and telemetry
 
 Crash reports and anonymous usage counts (v2.0) are both opt-in. Usage counts are numbers only (Games,
