@@ -626,8 +626,13 @@ struct GameDetailView: View {
         }
     }
 
-    @ViewBuilder
     private func profileRow(_ profile: SaveProfile) -> some View {
+        profileContent(profile)
+            .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: profile) } }
+    }
+
+    @ViewBuilder
+    private func profileContent(_ profile: SaveProfile) -> some View {
         if model.selection.isSelecting {
             profileLabel(profile)
         } else {
@@ -639,7 +644,6 @@ struct GameDetailView: View {
                     .contentShape(Rectangle())
             }
             .tint(.primary)
-            .swipeActions(edge: .trailing) { SwipeDeleteButton { model.requestDeletion(of: profile) } }
         }
     }
 

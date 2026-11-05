@@ -1,6 +1,6 @@
 import Foundation
 
-/// The emoji the badge picker offers, in groups. `SetSaveProfileBadge` still checks every badge, so
+/// The emoji the badge picker offers, in groups. `SetSaveProfileBadge` checks every badge, so
 /// this list only limits what the picker shows. It leaves out emoji newer than the oldest iOS the
 /// app supports, which would draw as an empty box, and any emoji built from several people.
 public enum SaveProfileBadgeCatalog {
