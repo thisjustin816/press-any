@@ -81,6 +81,9 @@ struct RootView: View {
             } message: {
                 Text(errorMessage ?? "Unknown error")
             }
+            .errorHaptic(isShowing: errorMessage != nil)
+            // Last, so every screen and sheet below reads it.
+            .environment(\.uiHaptics, UIHaptics(container: bootstrap.container))
     }
 
     // Split from the body so the compiler can type-check each part in reasonable time.

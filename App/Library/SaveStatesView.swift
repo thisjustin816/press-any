@@ -76,6 +76,7 @@ struct SaveStatesView: View {
             } message: {
                 Text(model.errorMessage ?? "")
             }
+            .errorHaptic(isShowing: model.errorMessage != nil)
         }
     }
 

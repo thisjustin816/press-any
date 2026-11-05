@@ -43,6 +43,7 @@ struct RecentlyDeletedView: View {
             } message: {
                 Text(failure?.message ?? "")
             }
+            .errorHaptic(isShowing: failure != nil)
     }
 
     private var content: some View {
@@ -51,6 +52,7 @@ struct RecentlyDeletedView: View {
             .navigationBarTitleDisplayMode(.inline)
             .environment(\.editMode, .constant(selection.isSelecting ? .active : .inactive))
             .toolbar { toolbar }
+            .uiHaptic(.selection, trigger: selection.ids)
             .task { reload() }
     }
 

@@ -70,6 +70,7 @@ struct BuildDetailView: View {
             } message: {
                 Text(model.errorMessage ?? "Unknown error")
             }
+            .errorHaptic(isShowing: model.errorMessage != nil && !model.isEditingNotes && !model.isAddingCompatibility)
         }
     }
 

@@ -126,7 +126,8 @@ public enum SettingKey: String, Sendable, CaseIterable {
     public var isBuildOnly: Bool { self == .automaticHardware }
 }
 
-/// How strongly the on-screen controls tap back when pressed. Raw values are stored in settings.
+/// How strongly the on-screen controls tap back when pressed. Off also silences the app's own taps
+/// outside gameplay. Raw values are stored in settings.
 public enum TouchHaptics: String, Codable, Sendable, CaseIterable {
     case off
     case light

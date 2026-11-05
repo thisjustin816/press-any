@@ -218,6 +218,7 @@ struct LibraryView: View {
             ) {
                 model.requestSelectedDeletion()
             }
+            .uiHaptic(.selection, trigger: model.selection.ids)
             .batchDeletionAlert(plan: $model.pendingBatchDeletion, noun: "Games", confirm: model.confirm)
             .onAppear {
                 model.sort = sort
@@ -317,6 +318,7 @@ struct LibraryView: View {
             } message: {
                 Text(model.errorMessage ?? "Unknown error")
             }
+            .errorHaptic(isShowing: model.errorMessage != nil)
         }
     }
 

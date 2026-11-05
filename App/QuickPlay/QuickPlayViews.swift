@@ -294,6 +294,7 @@ struct QuickPlaySessionsView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+            .errorHaptic(isShowing: errorMessage != nil)
         }
     }
 

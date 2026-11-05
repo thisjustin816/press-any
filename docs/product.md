@@ -1324,7 +1324,13 @@ beyond 2 g reads as 2 g. The motion sensor runs only while the game runs and nee
   Controls, under With a Controller, is on by default.
 - An unexpected disconnect pauses the game, releases held controller input, restores the chosen
   touch layout and shows a notice.
-- Touch Haptics: Off, Light (default) or Medium, off while a controller is in use.
+- Touch Haptics: Off, Light (default) or Medium. The on-screen buttons tap back at that strength,
+  and a controller in use turns them off. Off also silences the app haptics below, which stay the
+  same under Light and Medium and don't depend on a controller.
+- App haptics: the library, Game Details and their sheets tap when a selection changes (ticking
+  items in Select mode, the favorite star, a badge picked) and as an alert reports a failure. Library
+  Backup's success also taps. A finished import, rename or delete taps nothing, since the screen
+  already shows it. The iOS haptics switch silences all of them too.
 - Cartridge rumble goes to the controller when it can, the phone otherwise.
 - v2.0: choosing Player 1 among several controllers (Player 2 is reserved for link play); Phone,
   Controller, Both or Off rumble routing with separate intensities.
