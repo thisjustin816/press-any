@@ -678,7 +678,7 @@ Add to Library, never before the first frame; Feeds the save compatibility check
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | done | Data and audit pipelines: no-intro-update, toolchain-fingerprints-update, fixtures, license-audit, privacy-audit | v1.0 | No-Intro data stays a human refresh by policy, with a CI reminder at 90 days and generator tests; toolchain detection is checked against gbtoolsid on every push; `verify-repo-hygiene.sh` checks the test-ROM manifest; the iOS build verifies the privacy manifest; `verify-third-party-notices.py` fails when a pinned dependency or submodule commit is missing from THIRD_PARTY_NOTICES.md. shader-catalog-update and included-games-verify arrive with shaders and included games in v2.0; openvgdb-update stays disabled |
-| partial | MVP gate | MVP | package tests cover required tests 1-13 and 15, and an app test covers 14 (controller disconnect); every physical-iPhone (L4c) check is unchecked |
+| partial | MVP gate | MVP | package tests cover required tests 1-13 and 15, and an app test covers 14 (controller disconnect) |
 
 Done: ci.yml (L1/L2/L3, gbtoolsid differential, test-coverage, hygiene) and ios-build.yml (simulator
 build/tests).

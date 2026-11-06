@@ -1896,9 +1896,7 @@ There's no paid artwork agreement, and the app bundles no Libretro game artwork.
 Remaining v2.0 artwork work adds included-file and Community Catalog providers, OpenVGDB pending
 its license, optional SteamGridDB with the player's own key, and a title-screen fallback recorded
 as generated. Priority will distinguish the player's choice, hack-specific art, inherited base
-art and generated art. Several typed images per Game (box front and back, cartridge, title screen,
-screenshots, logo, custom), a primary that follows the preferred region, Build overrides and
-non-destructive crops remain pending.
+art and generated art.
 
 ### External display (v2.0)
 
