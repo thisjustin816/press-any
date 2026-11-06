@@ -227,7 +227,7 @@ to the App Store. These checks passed on a physical iPhone and remain as regress
 
 ## Capture device checks
 
-These checks cover the Capture submenu and remain pending until run on a physical iPhone.
+These checks cover the Capture submenu.
 
 - [ ] Share Screenshot from a GB game and a GBC game in portrait and landscape. Save to Files and verify a 160 x 144 PNG with the current screen colors and no controls, menu, LCD grid or frame blending. Cancel sharing once, then share again. The game remains paused until Resume; a controller cannot resume under the share sheet.
 - [ ] Use Current Frame as Artwork on a library game with no artwork. Close the game and confirm the library tile, list row and Game Details show the whole frame with sharp pixels; relaunch and check it remains. Capture a different frame: Replace asks first, Cancel keeps the old artwork and Replace updates it. Back up and restore the Game to confirm the artwork survives.

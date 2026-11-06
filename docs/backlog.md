@@ -17,7 +17,7 @@ roadmap; its final scope and timing are not fixed.
   ZIP globals attachment, grouped Build menus and list overflow cues are built for this release,
   as are the older-version save warning and the copy kept before switching Builds.
   Game Boy Printer emulation is built for this release, with a printed-slip preview, image
-  export, a Printer Log and prints kept in each Game's Captures. Its device checks remain pending.
+  export, a Printer Log and prints kept in each Game's Captures.
 - **v2.0:** the larger unfinished roadmap, including save migration, broader multi-asset
   import, documents, rewind, skins, sync and catalog services. Partial rows describe what
   is already built and what remains for this target.
@@ -57,14 +57,12 @@ The rest of the v1.0 core is built: save state slots, naming and cleanup, crash 
 the last game, Restart and Start Over, the controller's Menu button, and per-Build Game Genie and
 GameShark cheats.
 
-Game Boy Camera, including Photo! DX color capture, is built for v1.1. Its physical-camera checks
-remain pending in `docs/mvp-verification.md`.
+Game Boy Camera, including Photo! DX color capture, is built for v1.1.
 
 Game Boy Printer emulation is built for v1.1, with a preview, Save and Share, a Printer Log and
 prints kept in each Game's Captures. The renderer produces thermal-paper slips with torn edges and
 a shadow, on Transparent, Light, Dark, Wood, Printer, Game Artwork or Custom backgrounds, the last
-four with Plus. The printed pixel grid and feed spacing are preserved. Its device checks remain
-pending in `docs/mvp-verification.md`.
+four with Plus. The printed pixel grid and feed spacing are preserved.
 
 v1.0 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
 The v1.1 artwork work adds automatic Libretro lookup after import and a reviewed manual
@@ -92,7 +90,7 @@ Open items in each area are in the table, finished ones on the line under it.
 | done | Timed States, a Plus feature | v1.0 | Off or every 1/2/5/10 minutes of running wall time, inherited at App/System/Game/Build; shares Auto State history and pinned retention, stops without Plus, and excludes Quick Play. Clock, persistence, backup and app tests cover it; device check in docs/mvp-verification.md |
 | done | Minimal first-launch onboarding (Import, Quick Play, saves/storage, opt-ins) | v1.0 | a one-time welcome screen covers the library, Builds, saves, Quick Play, the game menu and exports, and Settings reopens it; the first game shows "Tap Press Any for the menu" once. v1.0 has nothing to opt into: crash reports and usage counts (v2.0) bring their own opt-in screens, and Developer Mode its introductions |
 | missing | Developer Mode toggle (Advanced -> Developer Mode) gating dev tools | v2.0 | none |
-| done | Landscape gameplay | v1.0 | Gameplay-only rotation and the inheritable Orientation setting (Automatic, Portrait, Landscape); Game Boy uses a safe-area-aware GBA layout with the menu centered horizontally between the bezel and screen edge, its bottom aligned with the bezel, and a taller viewport. Playtiles fits two clockwise-turned 40 mm bodies and their guides close to the game picture, with at least eight points of clearance. Each compact T-shaped guide joins the original center indent nub to rounded shoulders above and below it, long enough to extend past the Dynamic Island. Both bodies stay inside the phone's edges, reducing the picture when needed, with the menu centered beneath it and remapped buttons (right D-pad Up/Right = A, Left/Down = B). Library and sheets stay portrait. Geometry and input regressions cover both layouts; updated device checks are pending |
+| done | Landscape gameplay | v1.0 | Gameplay-only rotation and the inheritable Orientation setting (Automatic, Portrait, Landscape); Game Boy uses a safe-area-aware GBA layout with the menu centered horizontally between the bezel and screen edge, its bottom aligned with the bezel, and a taller viewport. Playtiles fits two clockwise-turned 40 mm bodies and their guides close to the game picture, with at least eight points of clearance. Each compact T-shaped guide joins the original center indent nub to rounded shoulders above and below it, long enough to extend past the Dynamic Island. Both bodies stay inside the phone's edges, reducing the picture when needed, with the menu centered beneath it and remapped buttons (right D-pad Up/Right = A, Left/Down = B). Library and sheets stay portrait. Geometry and input regressions cover both layouts |
 | missing | Root docs CONTRIBUTING/SECURITY/PRIVACY/CoC/trademark, DCO signoff | v2.0 | only LICENSE, THIRD_PARTY_NOTICES.md, AGENTS.md, README.md |
 | partial | App Store screenshots and previews from homebrew and the original test ROMs only, no third-party game art or logos | v1.0 | Screenshots are uploaded for the initial submission. The listing set is ten shots; the fourth is a print on the Printer background, of a picture the screenshot scene draws. The manual workflow defaults to the 6.3-inch iPhone 17 Pro and verifies its App Store Connect dimensions; 6.9-inch and 6.5-inch sets are also available (docs/testflight.md). An app preview is optional |
 

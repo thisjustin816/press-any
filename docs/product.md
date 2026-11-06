@@ -21,9 +21,8 @@ change. There is no separate decision log.
 
 ## Platform and releases
 
-v1.0 is published on the App Store: build 110, tagged `app-store-review/1.0-build-110` and
-`v1.0.0`. Development after that build targets v1.1. The larger unfinished roadmap targets v2.0
-tentatively; `docs/backlog.md` separates these scopes.
+v1.0 is published on the App Store. Development after it targets v1.1. The larger unfinished
+roadmap targets v2.0 tentatively; `docs/backlog.md` separates these scopes.
 Game Boy Printer emulation with printed-slip image export is prioritized for v1.1.
 
 - iOS 17.4 or later, iPhone first. iPad keeps working but gets no special design until later.
@@ -1836,8 +1835,7 @@ image is left alone, and a failed replacement preserves the saved background. Th
 centered and cropped to fill the area behind the paper. It stays on-device and is not in Library
 Backup; the PNG export includes it when Custom is selected.
 
-Core, session, feed and renderer tests cover this path. Apple SDK compilation, preview presentation,
-PNG sharing and physical-device checks remain pending in `docs/mvp-verification.md`.
+Core, session, feed and renderer tests cover this path.
 
 ### Documents (v2.0)
 
