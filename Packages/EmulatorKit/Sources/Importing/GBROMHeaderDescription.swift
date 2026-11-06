@@ -68,7 +68,7 @@ extension GBROMHeader {
     }
 
     /// "32 KB", "1 MB", "1.1 MB": binary units, as cartridge sizes are always quoted.
-    static func sizeDescription(_ bytes: Int) -> String {
+    public static func sizeDescription(_ bytes: Int) -> String {
         if bytes >= 0x100000 {
             let megabytes = Double(bytes) / Double(0x100000)
             return megabytes == megabytes.rounded() ? "\(Int(megabytes)) MB" : String(format: "%.1f MB", megabytes)

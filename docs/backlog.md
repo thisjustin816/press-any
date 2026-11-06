@@ -581,9 +581,11 @@ title placeholder fallback; Artwork follows Builds when a Game is emptied by pro
 | not planned | Optional password encryption | none | Backups have no password. The manifest's encrypted flag stays so an archive marked encrypted is refused before changes |
 | done | Merge restore by stable IDs/hashes with conflict review; Replace Entire Library | v1.0 | Per-item choices and independent save copies; Recently Deleted and purged records left alone; automatic safety backup with ROMs before destructive confirmation; atomic commit and rollback tests |
 | done | Migration Report before commit + retained summary | v1.0 | Review before writes, report after commit, Settings > Library > Last Restore retained in the database |
+| done | Export Save sizes: every real size the cartridge can use | v1.1 | a save that is exactly the header's RAM size and has plain banked RAM exports at another size on request: any real size (8, 32, 64 or 128 KB) from the smallest that holds everything but a `0xFF` tail up to what the mapper reaches (32 KB for MBC1 and MBC3, 128 KB for MBC5), listed with the minimum and the original marked, a larger file padded with `0xFF`; the size is in the name, nothing below the data is offered, clock-carrying, MBC2, MBC7, MMM01, TPP1, HuC3 and unknown-mapper saves are left alone, and every size is free; package and app tests, device checks pending |
 | missing | Delta/Manic/Afterplay/Playtiles import adapters | future |  |
 
-Done: Export Save writes a Save Profile's battery save as a .sav named for the Game and profile;
+Done: Export Save writes a Save Profile's battery save as a .sav named for the Game and profile,
+at its own size or, when it can shrink, at a smaller real RAM size with the size in the name;
 Export ROM writes a Build's ROM, rebuilt first when patched, under its canonical name; both land in
 Files without replacing an earlier export.
 

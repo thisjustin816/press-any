@@ -128,7 +128,7 @@ struct WelcomeView: View {
         Topic(
             symbol: "folder",
             title: "Exports",
-            text: "Export ROM and Export Save on a game’s page put a copy in Files, in the \(AppBrand.displayName) folder. That folder belongs to the app, so deleting \(AppBrand.displayName) deletes it. To keep a backup, share it to iCloud Drive or another place."
+            text: "Export ROM and Export Save on a game’s page put a copy in Files, in the \(AppBrand.displayName) folder. That folder belongs to the app, so deleting \(AppBrand.displayName) deletes it. To keep a backup, share it to iCloud Drive or another place. Export Save can write the save at another size, for a cartridge whose save RAM differs from what the game declares."
         ),
         Topic(
             symbol: "hand.raised",

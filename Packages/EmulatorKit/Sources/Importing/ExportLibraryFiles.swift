@@ -9,6 +9,8 @@ public enum ExportLibraryFilesError: LocalizedError, Equatable {
     case saveProfileNotFound(UUID)
     /// The profile is blank: the game hasn't saved to it yet.
     case noSave(UUID)
+    /// The size isn't one this save can be exported at.
+    case sizeNotOffered
 
     public var errorDescription: String? {
         switch self {
@@ -16,6 +18,8 @@ public enum ExportLibraryFilesError: LocalizedError, Equatable {
             "It’s no longer in the library."
         case .noSave:
             "There’s no save to export yet. The game hasn’t saved to this profile."
+        case .sizeNotOffered:
+            "That size isn’t available for this save."
         }
     }
 }
@@ -105,6 +109,54 @@ public struct ExportLibraryFiles: Sendable {
 
     /// The profile's battery save, named for the Game and the profile.
     public func exportSave(profileID: UUID, to directory: URL) throws -> URL {
+        try exportSave(profileID: profileID, to: directory, size: .original)
+    }
+
+    /// The sizes the profile's save can be exported at.
+    public func saveExportOptions(profileID: UUID) throws -> SaveExportOptions {
+        let save = try batterySave(profileID: profileID)
+        return BatterySaveSizing.options(
+            for: try Data(contentsOf: save.source), header: header(for: save.profile, in: save.game)
+        )
+    }
+
+    /// The save at `size`. The original size is the file as the library holds it, under the plain
+    /// name. A smaller size is the start of it, and its name ends with the size, as in
+    /// "Moon Garden - Main (8 KB).sav", so exports of different sizes stay apart.
+    public func exportSave(profileID: UUID, to directory: URL, size: SaveExportSize) throws -> URL {
+        let save = try batterySave(profileID: profileID)
+        let name = "\(save.game.primaryTitle) - \(save.profile.displayName)"
+        guard size != .original else { return try copy(save.source, named: "\(name).sav", into: directory) }
+
+        let data = try Data(contentsOf: save.source)
+        let options = BatterySaveSizing.options(for: data, header: header(for: save.profile, in: save.game))
+        let resized: Data
+        do {
+            resized = try BatterySaveSizing.bytes(of: data, size: size, options: options)
+        } catch {
+            throw ExportLibraryFilesError.sizeNotOffered
+        }
+        let destination = try availableDestination(
+            named: "\(name) (\(GBROMHeader.sizeDescription(resized.count))).sav", in: directory
+        )
+        try resized.write(to: destination, options: .withoutOverwriting)
+        return destination
+    }
+
+    /// The Build whose header says how big the save's RAM is: the one that last wrote the save,
+    /// else the Game's preferred Build.
+    static func headerBuildID(for profile: SaveProfile, in game: Game) -> UUID? {
+        profile.saveWrittenByBuildID ?? game.preferredBuildID
+    }
+
+    /// Nil when that Build's image can't be read, which leaves the save at its original size.
+    private func header(for profile: SaveProfile, in game: Game) -> GBROMHeader? {
+        guard let buildID = Self.headerBuildID(for: profile, in: game),
+              let image = try? images.readImage(buildID: buildID) else { return nil }
+        return try? GBROMHeaderParser.parse(image)
+    }
+
+    private func batterySave(profileID: UUID) throws -> (profile: SaveProfile, game: Game, source: URL) {
         guard let profile = try profiles.fetchSaveProfile(id: profileID) else {
             throw ExportLibraryFilesError.saveProfileNotFound(profileID)
         }
@@ -116,7 +168,7 @@ public struct ExportLibraryFiles: Sendable {
         }
         let source = try assetStore.managedURL(relativePath: asset.relativePath)
         guard assetStore.fileExists(at: source) else { throw ExportLibraryFilesError.noSave(profileID) }
-        return try copy(source, named: "\(game.primaryTitle) - \(profile.displayName).sav", into: directory)
+        return (profile, game, source)
     }
 
     private func copy(_ source: URL, named name: String, into directory: URL) throws -> URL {

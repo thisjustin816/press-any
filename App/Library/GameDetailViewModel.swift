@@ -6,6 +6,35 @@ import Foundation
 import Importing
 import Patching
 
+/// The sizes a save can be exported at, as the buttons of the size prompt: every real size, smallest
+/// first, from the smallest that holds the data to the most the cartridge's mapper reaches, with the
+/// first marked minimum when it is smaller than the original, and the original marked as such.
+struct SaveExportChoice: Identifiable {
+    struct Entry: Identifiable {
+        let title: String
+        let size: SaveExportSize
+        var id: String { title }
+    }
+
+    let profile: SaveProfile
+    let entries: [Entry]
+    var id: UUID { profile.id }
+
+    init(profile: SaveProfile, options: SaveExportOptions) {
+        self.profile = profile
+        func text(_ bytes: Int) -> String { GBROMHeader.sizeDescription(bytes) }
+        var entries: [Entry] = []
+        for (index, bytes) in options.smallerSizes.enumerated() {
+            entries.append(index == 0
+                ? Entry(title: "\(text(bytes)) (minimum)", size: .minimized)
+                : Entry(title: text(bytes), size: .custom(bytes: bytes)))
+        }
+        entries.append(Entry(title: "\(text(options.originalBytes)) (original)", size: .original))
+        entries += options.largerSizes.map { Entry(title: text($0), size: .custom(bytes: $0)) }
+        self.entries = entries
+    }
+}
+
 @MainActor
 final class GameDetailViewModel: ObservableObject {
     @Published private(set) var game: Game?
@@ -20,6 +49,8 @@ final class GameDetailViewModel: ObservableObject {
     @Published var baseMismatch: PendingPatch?
     /// A deletion waiting on its confirmation, with everything it takes.
     @Published var pendingDeletion: DeletionPlan?
+    /// Set while a save that can be exported at another size waits for the player to pick one.
+    @Published var saveExportChoice: SaveExportChoice?
     @Published var selection = ItemSelection<LibraryDeletionTarget>()
     @Published var pendingBatchDeletion: BatchDeletionPlan?
 
@@ -349,9 +380,23 @@ final class GameDetailViewModel: ObservableObject {
         }
     }
 
+    /// A save that can be exported at another size asks which size first. Any other save goes
+    /// straight to Files.
     func exportSave(of profile: SaveProfile) {
         perform {
-            let url = try exporter.exportSave(profileID: profile.id, to: exportsDirectory)
+            let options = try exporter.saveExportOptions(profileID: profile.id)
+            guard options.hasChoices else {
+                let url = try exporter.exportSave(profileID: profile.id, to: exportsDirectory)
+                infoMessage = Self.exportedMessage(url)
+                return
+            }
+            saveExportChoice = SaveExportChoice(profile: profile, options: options)
+        }
+    }
+
+    func exportSave(of profile: SaveProfile, size: SaveExportSize) {
+        perform {
+            let url = try exporter.exportSave(profileID: profile.id, to: exportsDirectory, size: size)
             infoMessage = Self.exportedMessage(url)
         }
     }

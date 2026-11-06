@@ -400,6 +400,21 @@ struct GameDetailView: View {
 
     private func withProfileAlerts(_ content: some View) -> some View {
         content
+            .confirmationDialog(
+                "Export Save",
+                isPresented: Binding(
+                    get: { model.saveExportChoice != nil },
+                    set: { if !$0 { model.saveExportChoice = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: model.saveExportChoice
+            ) { choice in
+                ForEach(choice.entries) { entry in
+                    Button(entry.title) { model.exportSave(of: choice.profile, size: entry.size) }
+                }
+            } message: { _ in
+                Text("The original keeps the plain name. Another size has its size in its name: a smaller file keeps all of the save, and a larger one is padded with empty space. Pick the size your cartridge or tool expects.")
+            }
             .sheet(item: $badgeTarget) { profile in
                 BadgePickerSheet(profile: profile) {
                     model.setBadge($0 ?? "", of: profile)
