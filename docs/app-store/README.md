@@ -15,28 +15,9 @@ Names, the subtitle and trademark rules are also in [NAMING.md](../NAMING.md); t
 name, keywords and icon never carry Nintendo trademarks ([product](../product.md)). Listing
 screenshots come from the Screenshots workflow ([CI](../ci.md)) and aren't stored here.
 
-## For 1.1
+## Screenshots
 
-- **Description:** `description.txt` is saved in the 1.1 draft: it adds the Game Boy
-  Printer, Game Boy Camera, tilt cartridges, gameplay presets, Automatic hardware, artwork, Plus,
-  and the credit for the game in the listing screenshots. The 1.0 text is in this file's history.
-- **What's New:** [whats-new/1.1.txt](whats-new/1.1.txt) is saved in the draft. Its lines for the save
-  menu and badges, the haptics and the Export Save sizes describe changes made after build 223, so
-  the draft needs a newer build before they are true.
-- **Plus purchase:** its description and review notes match `plus-purchase.md`. The description
-  change is Ready for Review in the same draft submission as the app.
-- **Keywords and promotional text:** `listing.md` records the values saved in the 1.1 draft.
-- **Screenshots:** ten light-appearance screenshots are placed in numbered order for both
-  6.5-inch ([run 41816155374](https://github.com/thisjustin816/press-any/actions/runs/41816155374))
-  and 6.9-inch ([run 41816150929](https://github.com/thisjustin816/press-any/actions/runs/41816150929))
-  iPhones. Smaller displays use Apple's scaled assets. Both runs captured commit `9461ba6`.
-  Gameplay shows Tobu Tobu Girl Deluxe by Tangram Games (CC BY 4.0), credited at the end of the
-  description. Capture settings are in [TestFlight](../testflight.md).
-
-The 1.1 draft has build 223 selected and uses manual release. `testflight/223` and
-`v1.1.0-beta.1` identify its source commit, `7f85634`. CI and the iOS build passed on that commit.
-The original review test-game attachment is processed. The app and Plus metadata are staged
-together as two items ready to submit; neither has been submitted to App Store review.
-
-Build 223 is assigned to the Public Beta group and is waiting for Beta App Review. Wait for
-external testing and review any reported issues before submitting the App Store candidate.
+Ten light-appearance screenshots in numbered order for the 6.5-inch and 6.9-inch iPhone slots;
+smaller displays use Apple's scaled assets. Capture settings are in [TestFlight](../testflight.md).
+Gameplay shows Tobu Tobu Girl Deluxe by Tangram Games (CC BY 4.0), credited at the end of the
+description.

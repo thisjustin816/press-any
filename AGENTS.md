@@ -17,6 +17,15 @@ built and what's left. When a decision changes behavior, update the section of `
 it touches, and the backlog row, in the same change. Describe the app as it is; don't add dated
 decision entries, plans or history, which git already keeps.
 
+Keep status out of the docs. A build number, the build a draft has selected, a review or submission
+state, a CI run ID, the commit a screenshot was captured at, and wording such as "pending" or
+"waiting for" go stale, and they repeat what App Store Connect, the git tags (`testflight/<build>`,
+`app-store-review/...`), the GitHub releases and the device checklist already hold. Only two files
+track state: the status column in `docs/backlog.md` and the checkboxes in
+`docs/mvp-verification.md`. A sentence anywhere else saying a check is pending or a build is under
+review is a second copy of what those say. A build number used as a worked example, as in
+`docs/testflight.md`, is not status.
+
 `docs/acceptance-matrix.md` defines the L1-L4 evidence levels that CI and the device checks use,
 and `docs/mvp-verification.md` is the device checklist.
 
