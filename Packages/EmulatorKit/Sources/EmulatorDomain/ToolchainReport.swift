@@ -76,3 +76,19 @@ public struct ToolchainDetectionReport: Codable, Hashable, Sendable {
         components.filter { $0.kind == kind }
     }
 }
+
+extension Collection where Element == ToolchainDetectionReport {
+    /// Whether the image was built with GBDK or an engine on it, GB Studio or ZGB. GBDK writes 1 to
+    /// the header's mask ROM version byte (0x14C) unless the developer sets it, so in these images
+    /// that byte doesn't name a release revision.
+    public var isBuiltWithGBDK: Bool {
+        contains { report in
+            report.components.contains { component in
+                switch (component.kind, component.name) {
+                case (.toolchain, "GBDK"), (.engine, "GBStudio"), (.engine, "ZGB"): true
+                default: false
+                }
+            }
+        }
+    }
+}

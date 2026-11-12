@@ -321,11 +321,16 @@ final class AppContainer {
             RefreshKnownDumpMetadata(builds: repositories.builds, settings: repositories.settings,
                 index: $0, transactions: repositories.transactions)
         }
+        let clearGBDKRevisions = ClearGBDKHeaderRevisions(builds: repositories.builds, assets: repositories.assets,
+            reports: repositories.toolchainReports, images: launchImageResolver, knownDumps: knownDumps,
+            transactions: repositories.transactions)
         backgroundMaintenance = Task.detached(priority: .utility) {
             _ = try? trimCache.execute()
             _ = try? fillSHA1.execute()
             _ = try? fillFingerprints.execute()
             try metadataRefresh?.execute()
+            // After the No-Intro refresh, which can replace a header Revision with No-Intro's.
+            try clearGBDKRevisions.execute()
         }
         try? fileStore.removeStagedFiles()
     }

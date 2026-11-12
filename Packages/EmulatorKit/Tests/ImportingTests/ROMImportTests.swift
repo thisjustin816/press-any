@@ -72,6 +72,47 @@ final class ROMImportTests: XCTestCase {
         XCTAssertNil(cleared.build.revision)
     }
 
+    func testGBDKFamilyHeaderRevisionIsNotARevision() throws {
+        let harness = try ImportHarness.make()
+        let roms = try TestROMFixtures.manifest().roms.filter { ["GBDK-2020", "GB Studio", "ZGB"].contains($0.sdk) }
+        XCTAssertFalse(roms.filter { $0.sdk == "GB Studio" }.isEmpty)
+        XCTAssertFalse(roms.filter { $0.sdk == "ZGB" }.isEmpty)
+        for rom in roms {
+            let image = try TestROMFixtures.rom(rom.filename)
+            XCTAssertEqual(image[0x14c], 1, rom.filename)
+            let file = harness.external.appendingPathComponent(rom.filename)
+            try image.write(to: file)
+            let analysis = try harness.analyzer.analyzeROM(at: file, targetGameID: nil)
+            let plan = ROMImportPlan(analysis: analysis, disposition: .createGame(title: "Homebrew"),
+                buildDisplayName: "Original", markAsBase: true)
+            XCTAssertNil(plan.metadata.revision, rom.filename)
+            let exported = FilenameMetadataParser.canonicalFilename(fileExtension: "gb", title: "Homebrew",
+                metadata: plan.metadata, unknownGroups: [])
+            XCTAssertFalse(exported.contains("(Rev"), "\(rom.filename): \(exported)")
+        }
+    }
+
+    func testGBDKFilenameRevisionStillWins() throws {
+        let harness = try ImportHarness.make()
+        let file = harness.external.appendingPathComponent("Homebrew (Rev 2).gb")
+        try TestROMFixtures.rom("gbdk450-dmg.gb").write(to: file)
+        let analysis = try harness.analyzer.analyzeROM(at: file, targetGameID: nil)
+        let plan = ROMImportPlan(analysis: analysis, disposition: .createGame(title: "Homebrew"),
+            buildDisplayName: "Original", markAsBase: true)
+        XCTAssertEqual(plan.metadata.revision, "2")
+    }
+
+    func testHeaderRevisionStaysForAnRGBDSImage() throws {
+        let harness = try ImportHarness.make()
+        var image = try TestROMFixtures.rom("rgbds-dmg.gb")
+        image[0x14c] = 1
+        let analysis = try harness.analyzer.analyzeROM(at: try harness.writeExternalROM(image), targetGameID: nil)
+        XCTAssertFalse(analysis.toolchainReports.isBuiltWithGBDK)
+        let plan = ROMImportPlan(analysis: analysis, disposition: .createGame(title: "Assembly"),
+            buildDisplayName: "Original", markAsBase: true)
+        XCTAssertEqual(plan.metadata.revision, "1")
+    }
+
     func testFilenameRevisionWinsOverHeaderAndDuplicateDoesNotOverwriteMetadata() throws {
         let harness = try ImportHarness.make()
         var rom = TestROM.make(title: "REVISION")
