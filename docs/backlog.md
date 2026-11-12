@@ -2,7 +2,7 @@
 
 What's built and what's left of `docs/product.md`, which says what each item means. Update an
 item's row when its status changes, and move it to its area's "Done" line when it's finished.
-Targets are releases: v1.0, v1.1, v1.1.1, v2.0 or later. v2.0 is a planning target for the larger
+Targets are releases: v1.0, v1.1, v1.1.1, v1.2, v2.0 or later. v2.0 is a planning target for the larger
 roadmap; its final scope and timing are not fixed.
 
 ## Release scope
@@ -23,6 +23,8 @@ roadmap; its final scope and timing are not fixed.
   It also checks the Game Boy Printer after a save state loads during a print (#219) and the
   cartridge clock across pause, relaunch and state restore (#220). A problem either check finds is
   fixed in v1.1.1 when the fix is small, and moves to a later release otherwise. New features wait for later releases.
+- **v1.2:** minor features before v2.0: rewind (#221), local link cable play between two emulated
+  systems (#222) and infrared between those linked games (#223).
 - **v2.0:** the larger unfinished roadmap, including save migration, broader multi-asset
   import, documents, rewind, skins, sync and catalog services. Partial rows describe what
   is already built and what remains for this target.
@@ -36,7 +38,8 @@ in its table row; this list records its v1.1 updates.
 
 ## Suggested order
 
-The v1.1 release follows v1.0, build 110. The larger open roadmap targets v2.0.
+The v1.1 release follows v1.0, build 110, and v1.1.1 fixes it. v1.2 adds minor features, and
+the larger open roadmap targets v2.0.
 
 The MVP is complete and working. Its device checklist remains a regression record.
 
@@ -72,7 +75,7 @@ four with Plus. The printed pixel grid and feed spacing are preserved.
 v1.0 also includes clean screenshot sharing and artwork from a game frame chosen in the menu.
 The v1.1 artwork work adds automatic Libretro lookup after import and a reviewed manual
 check. The rest waits for v2.0: 7z and multi-asset import, additional artwork providers and documents with the
-manual reader, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
+manual reader, slow motion, frame advance and Quick Actions, Super Game Boy borders,
 shaders and the layout editor with skin import,
 a screenshot gallery and gameplay notes, external displays, tags and collections, iCloud sync once the schema has
 settled, the Community Catalog and metadata providers, crash reporting and usage counts, Developer
@@ -408,7 +411,7 @@ the temporary file after sharing. Free, with no gallery or capture metadata.
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Rewind, presets 5 s/15 s/30 s/1 m/2 m/5 m, memory-budgeted, effective duration shown, muted by default (optional audio), survives brief background | v2.0 | no RewindCapability; time spent rewinding counts as playtime through `PlaytimeClock`, as real time, never subtracting the rewound game time |
+| missing | Rewind, presets 5 s/15 s/30 s/1 m/2 m/5 m, memory-budgeted, effective duration shown, muted by default (optional audio), survives brief background | v1.2 | no RewindCapability; time spent rewinding counts as playtime through `PlaytimeClock`, as real time, never subtracting the rewound game time |
 | partial | Fast-forward | MVP basic / v2.0 full | menu toggle at the Fast Forward Speed setting (1.5x/2x/3x/4x/8x/Unlimited, default 2x, inheritable, changes live from the game menu's Settings); Fast Forward Audio setting Muted (default) or Accelerated up to 4x; hold vs toggle waits for Quick Actions |
 | missing | Slow motion 0.25x/0.5x/0.75x | v2.0 | `PlaytimeClock` already counts a slowed frame's real time as playtime |
 
@@ -696,8 +699,8 @@ build/tests).
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Link cable, local dual-core first; nearby/SharePlay initiation; no Multipeer | v2.0 | no LinkCableCapability. SameBoy's core links two Game Boys, but its own apps can't connect them (SameBoy #18, #691, #416). The bridge can run two `GB_gameboy_t` in lockstep with each one's serial bit callbacks wired to the other, the way it drives the printer |
-| missing | Infrared between linked games: Mystery Gift in Pokémon Gold, Silver and Crystal, Card Pop in Pokémon TCG | v2.0 | with the link cable, through `GB_set_infrared_callback` and `GB_set_infrared_input` on each core (SameBoy #74, #488). Comes after the pin moves to master, which rewrote the infrared sensor model |
+| missing | Link cable, local dual-core first; nearby/SharePlay initiation; no Multipeer | v1.2 local / v2.0 nearby and SharePlay | no LinkCableCapability. SameBoy's core links two Game Boys, but its own apps can't connect them (SameBoy #18, #691, #416). The bridge can run two `GB_gameboy_t` in lockstep with each one's serial bit callbacks wired to the other, the way it drives the printer |
+| missing | Infrared between linked games: Mystery Gift in Pokémon Gold, Silver and Crystal, Card Pop in Pokémon TCG | v1.2 | with the link cable, through `GB_set_infrared_callback` and `GB_set_infrared_input` on each core (SameBoy #74, #488). Comes after the pin moves to master, which rewrote the infrared sensor model |
 | missing | GB Studio save migration with old/new variable maps | v2.0 |  |
 | partial | Game Boy Printer emulation with printed-slip preview/save/share | v1.1 | SameBoy attachment, completed-output queue, library/Quick Play integration, slip assembly and paper renderer implemented. Game-menu controls, preview and PNG share flow added; Connected and Transparent by default, latest 10 slips per session in the preview, every print kept in the Game's Captures; receiving/printing progress and direct View Print action; CC0 Wood Table photo, a drawn Press Any printer the slip comes out of, plus one saved custom image from Photos/Files with replace/remove, and the Game's library artwork as a background; Wood, Printer, Game Artwork and Custom need Plus, with a remembered one shown and exported as Transparent without it and Transparent, Light and Dark free; the ready banner waits for a multi-page print to finish. The printer follows the printer firmware's timeouts, status bits, errors, copies and Break (`SBGameBoyPrinter.c`), checked byte for byte against the firmware running in an emulator, except data after a finished print: it needs an Init first, as on a physical printer, which refused it with status 0x14. Synthetic serial-ROM, session and renderer tests |
 | done | Copies feed their top margin once | v1.1 | A Print's copies come out as one slip: its top margin once, then each copy with its bottom margin after it. The model reports the top margin with the first copy only and marks each later copy as following one, which joins the slip after a bottom margin; another Print still starts a new slip. The short feed before each later copy adds no paper, like the feed before every copy's first band, since how far either moves the paper is not known. C model, bridge, feed, renderer and archive tests. No game seen prints more than one copy, so no game or device has checked it |
