@@ -2,7 +2,7 @@
 
 What's built and what's left of `docs/product.md`, which says what each item means. Update an
 item's row when its status changes, and move it to its area's "Done" line when it's finished.
-Targets are releases: v1.0, v1.1, v2.0 or later. v2.0 is a planning target for the larger
+Targets are releases: v1.0, v1.1, v1.1.1, v2.0 or later. v2.0 is a planning target for the larger
 roadmap; its final scope and timing are not fixed.
 
 ## Release scope
@@ -18,6 +18,11 @@ roadmap; its final scope and timing are not fixed.
   as are the older-version save warning and the copy kept before switching Builds.
   Game Boy Printer emulation is built for this release, with a printed-slip preview, image
   export, a Printer Log and prints kept in each Game's Captures.
+- **v1.1.1:** a fix release on v1.1. It fixes the quiet-game audio clicks (#218) and the
+  "Rev 1" homebrew names (#224), listed under Known bugs. It also checks the Game Boy Printer after
+  a save state loads during a print (#219) and the cartridge clock across pause, relaunch and state
+  restore (#220). A problem either check finds is fixed in v1.1.1 when the fix is small, and moves
+  to a later release otherwise. New features wait for later releases.
 - **v2.0:** the larger unfinished roadmap, including save migration, broader multi-asset
   import, documents, rewind, skins, sync and catalog services. Partial rows describe what
   is already built and what remains for this target.
@@ -76,7 +81,10 @@ RTC offsets, rumble routing, Undo, core updates, and the internal registries and
 
 ## Known bugs
 
-None known.
+| Status | Item | Target | Notes |
+|---|---|---|---|
+| missing | Periodic clicks on quiet games (#218) | v1.1.1 | A game that leaves a sound channel's DAC on at volume 0 holds a constant offset, and the bridge sets no SameBoy high-pass filter, so the offset reaches the speaker. The adaptive audio buffer outputs zeros when it runs dry, so each shortfall and refill steps between that offset and silence. Fix: the high-pass mode becomes a Gameplay preset value (Off for Clean, Accurate for Nostalgic and Accurate, Remove DC Offset as a Customize choice), inherited App -> System -> Game -> Build and reapplied on reset, state load and model change; the buffer ramps to and from silence. What sets the 60 Hz click rate is not yet measured |
+| missing | GBDK, GB Studio and ZGB homebrew named "Rev 1" (#224) | v1.1.1 | Import takes a nonzero header mask ROM version as the Revision when neither No-Intro nor the filename gives one. GBDK writes 1 there by default, so these Builds get Revision 1 and export as `(Rev 1)`. Fix: skip the header value for GBDK-family toolchains, and clear it once on existing Builds whose provenance records it as from the ROM header and unchanged by the player |
 
 ## Inventory by area
 
