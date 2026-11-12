@@ -150,8 +150,8 @@ does not publish an App Store release or add builds to tester groups; a beta rel
 group with **automatic distribution** turned on receives each processed build; other
 groups get a build once it is added to them in App Store Connect.
 
-The marketing version comes from `MARKETING_VERSION` in `project.yml` (currently
-`1.1`), and TestFlight shows it with the build number beside it, as `1.0 (57)`.
+The marketing version comes from `MARKETING_VERSION` in `project.yml`, and TestFlight shows it
+with the build number beside it, as `1.0 (57)`.
 The version changes only when that value is edited. The build number is the
 workflow's run number; a retried run adds its attempt, as `57.2`, because Apple
 refuses a second binary with the same build number. Builds uploaded before this
