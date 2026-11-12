@@ -49,7 +49,7 @@ public struct BuildImportMetadata: Equatable, Sendable {
         self.init(
             region: filename.region,
             language: filename.language,
-            revision: filename.revision ?? (analysis.header.revisionNumber > 0 ? String(analysis.header.revisionNumber) : nil),
+            revision: filename.revision ?? Self.headerRevision(analysis.header, reports: analysis.toolchainReports),
             versionString: filename.versionString,
             baseTitle: filename.baseTitle,
             hackTitle: filename.hackTitle,
@@ -61,6 +61,12 @@ public struct BuildImportMetadata: Equatable, Sendable {
 
     public var versionSortKey: String? {
         Build.versionSortKey(for: versionString)
+    }
+
+    /// The Revision a ROM's header offers when nothing better names one: its mask ROM version, when
+    /// nonzero and not a GBDK default.
+    public static func headerRevision(_ header: GBROMHeader, reports: [ToolchainDetectionReport]) -> String? {
+        header.revisionNumber > 0 && !reports.isBuiltWithGBDK ? String(header.revisionNumber) : nil
     }
 }
 

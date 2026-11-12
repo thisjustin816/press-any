@@ -446,7 +446,10 @@ changes the library; review shows what will happen; commit is all or nothing.
   Build starts without a Base mark. A role the player sets stays when the destination changes.
 - **Metadata.** Region, language, revision, version and status fill from a matched No-Intro dump
   or the filename (see Naming). Without a match, a missing filename revision falls back to a
-  nonzero header revision. The player can correct or clear the fields. Unknown tags stay as written.
+  nonzero header revision, except in an image built with GBDK, GB Studio or ZGB: GBDK writes 1
+  there unless the developer sets it, so the byte names no release. Builds stored with that
+  header value lose it at launch, unless the player has changed it. The player can correct or
+  clear the fields. Unknown tags stay as written.
   Review labels its fields and explains Base Build and a wrong header checksum.
 - **Toolchain detection** runs when an image becomes a Build, and review shows what it found.
 - **Artwork.** Review can add the Game's artwork from Photos or Files. The image is checked and
