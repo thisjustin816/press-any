@@ -1820,7 +1820,13 @@ seconds before its bands. The slip draws margins only, so that short feed, like 
 every copy's first band, adds no paper. Break lets the band being printed finish or stops the paper at its
 next feed step, and the bands printed by then come out. The printer keeps its own time, so a
 Super Game Boy's faster clock does not shorten it. A game that breaks these rules fails here as
-it would on a printer. The timings come from the printer's firmware run in an emulator; how far
+it would on a printer.
+
+A save state holds the Game Boy, not the printer, so loading one leaves the printer as it was, as
+a separate device would be: a print under way comes out once, and prints already out stay. A
+state loaded while the game was sending a packet ends that packet with an error the game reads,
+and a bit that follows a quiet longer than 5.12 ms starts a new byte, so the game's next packet
+is read correctly and a game that retries prints. The timings come from the printer's firmware run in an emulator; how far
 a margin unit feeds the paper was not measured on a printer.
 
 **Printer Log** in the game menu's Game Boy Printer menu lists what the printer made of the game's
