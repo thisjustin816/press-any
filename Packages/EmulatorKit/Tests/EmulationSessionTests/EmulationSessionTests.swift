@@ -1619,6 +1619,29 @@ extension EmulationSessionTests {
         XCTAssertFalse(try session.flushBatteryIfChanged(), "an unchanged save isn't written again")
     }
 
+    func testASaveWhoseClockOnlyKeptTimeIsNotWrittenOrNewerThanAState() throws {
+        // The first byte stands for the cartridge RAM and the second for a clock that moves on
+        // every read, as an MBC3 cartridge's does.
+        let harness = try SessionHarness.make(seedBattery: Data([1, 0]))
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        core.saveChanged = { old, new in old.first != new.first }
+
+        core.writeBattery(Data([1, 5]))
+        for _ in 0..<300 { _ = try session.stepFrame() }
+        XCTAssertFalse(try session.flushBatteryIfChanged(), "a clock that kept time isn't written")
+        let state = try session.saveManualState(label: "before")
+        core.writeBattery(Data([1, 9]))
+        XCTAssertFalse(try session.loadingWouldRollBackSave(state), "loading asks nothing when the game hasn't saved")
+
+        core.writeBattery(Data([2, 10]))
+        XCTAssertTrue(try session.loadingWouldRollBackSave(state), "a save the game made is newer than the state")
+        for _ in 0..<300 { _ = try session.stepFrame() }
+        XCTAssertTrue(try session.flushBatteryIfChanged())
+        XCTAssertEqual(try harness.batteryData(of: harness.profile), Data([2, 10]))
+    }
+
     func testAFailedBatteryWriteStillSavesTheAutoState() throws {
         let harness = try SessionHarness.make(seedBattery: Data([1, 2]))
         let session = harness.makeSession()

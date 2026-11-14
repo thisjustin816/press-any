@@ -31,7 +31,7 @@ public struct FakeCoreFactory: EmulatorCoreFactory {
     }
 }
 
-public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability, ButtonBounceCapability, AudioFilterCapability, CameraCapability, PrinterCapability {
+public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability, ButtonBounceCapability, AudioFilterCapability, PersistentSaveComparing, CameraCapability, PrinterCapability {
     public let descriptor: CoreDescriptor
     public let replacedDescriptors: Set<CoreDescriptor>
     public let supportedSystems: Set<GameSystem>
@@ -98,6 +98,13 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
     /// Stands in for the game writing its cartridge RAM.
     public func writeBattery(_ data: Data) {
         battery = data
+    }
+
+    /// How the core tells a changed save from one that only aged; unset compares bytes.
+    public var saveChanged: ((Data, Data) -> Bool)?
+
+    public func persistentSaveChanged(from old: Data, to new: Data) -> Bool {
+        saveChanged?(old, new) ?? (old != new)
     }
 
     public func runFrame(input: EmulatorInputState) throws -> EmulatorVideoFrame {

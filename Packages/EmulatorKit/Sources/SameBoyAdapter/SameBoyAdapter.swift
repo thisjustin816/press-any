@@ -18,7 +18,7 @@ public enum SameBoyAdapterError: Error, Equatable {
     case cheatCodeRefused
 }
 
-public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability, ButtonBounceCapability, AudioFilterCapability,
+public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability, ButtonBounceCapability, AudioFilterCapability, PersistentSaveComparing,
     CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability, TiltCapability {
     /// SameBoy at the `v1.0.5` release tag THIRD_PARTY_NOTICES.md records.
     public static let coreDescriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.5")
@@ -236,6 +236,22 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
         data.withUnsafeBytes { bytes in
             SBLoadBattery(instance, bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count)
         }
+    }
+
+    /// An MBC3 cartridge's clock follows its RAM in the save and moves on every read, so a save whose
+    /// RAM is the same and whose clock only moved with the time between the reads hasn't changed.
+    public func persistentSaveChanged(from old: Data, to new: Data) -> Bool {
+        guard old != new else { return false }
+        guard hasCartridgeClock, old.count == new.count,
+              let before = MBC3ClockTrailer(endOf: old), let after = MBC3ClockTrailer(endOf: new) else { return true }
+        let ram = old.count - MBC3ClockTrailer.byteCount
+        return old.prefix(ram) != new.prefix(ram) || !before.onlyAged(into: after)
+    }
+
+    /// MBC3+TIMER+BATTERY and MBC3+TIMER+RAM+BATTERY.
+    private var hasCartridgeClock: Bool {
+        guard let image = loadedImage, image.count > 0x147 else { return false }
+        return [0x0f, 0x10].contains(image[image.startIndex + 0x147])
     }
 
     public func persistentSaveData() throws -> Data {

@@ -52,6 +52,14 @@ public protocol ButtonBounceCapability: AnyObject {
     func setButtonBounce(_ enabled: Bool)
 }
 
+/// A core whose battery save holds more than the game writes, such as a cartridge clock that moves
+/// on its own, and can tell a save the game changed from one that only aged. A core without it is
+/// compared byte for byte.
+public protocol PersistentSaveComparing: AnyObject {
+    /// Whether `new` holds anything the game wrote since `old` was read.
+    func persistentSaveChanged(from old: Data, to new: Data) -> Bool
+}
+
 /// A core whose sound output can pass through the hardware's output filter.
 public protocol AudioFilterCapability: AnyObject {
     /// Takes effect on the next sample and lasts through resets, state loads and model changes.

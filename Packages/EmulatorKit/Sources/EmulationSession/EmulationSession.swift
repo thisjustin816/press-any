@@ -571,8 +571,7 @@ public final class EmulationSession: @unchecked Sendable {
             return true
         }
         guard due else { return false }
-        let battery = try worker.perform { try $0.persistentSaveData() }
-        guard !battery.isEmpty, battery != lock.withLock({ lastWrittenBattery }) else { return false }
+        guard try batteryIsDirty(worker: worker) else { return false }
         try flushBattery()
         return true
     }
@@ -582,16 +581,21 @@ public final class EmulationSession: @unchecked Sendable {
     @discardableResult
     private func flushBatteryIfDirty() throws -> Bool {
         let (worker, _, _) = try snapshotActive()
-        let battery = try worker.perform { try $0.persistentSaveData() }
-        guard !battery.isEmpty, battery != lock.withLock({ lastWrittenBattery }) else { return false }
+        guard try batteryIsDirty(worker: worker) else { return false }
         try flushBattery()
         return true
     }
 
-    /// Whether the game has saved since its battery save was last written.
+    /// Whether the game has saved since its battery save was last written. A cartridge clock that
+    /// only kept time isn't a save.
     private func batteryIsDirty(worker: SessionWorker) throws -> Bool {
-        let battery = try worker.perform { try $0.persistentSaveData() }
-        return !battery.isEmpty && battery != lock.withLock({ lastWrittenBattery })
+        let written = lock.withLock { lastWrittenBattery }
+        return try worker.perform { core in
+            let battery = try core.persistentSaveData()
+            guard !battery.isEmpty else { return false }
+            return (core as? any PersistentSaveComparing)?.persistentSaveChanged(from: written, to: battery)
+                ?? (battery != written)
+        }
     }
 
     /// Writes the game's save before taking the state, so the state never holds in-game saving

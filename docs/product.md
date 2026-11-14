@@ -260,7 +260,10 @@ not treat them as files.
   or Build.
 - Atomic writes use `F_FULLFSYNC` where available and sync the directory after the rename.
 - The battery save is written whenever the game changes it, checked at most every five seconds of
-  play, on its own queue so writes don't disturb frame pacing.
+  play, on its own queue so writes don't disturb frame pacing. An MBC3 cartridge's clock is saved
+  after its RAM with the time it was read, so the save reads differently every second; a save whose
+  RAM is the same and whose clock only kept time doesn't count as a change, so it isn't rewritten
+  and a state isn't older than it. A game that sets or halts its clock does change it.
 - Battery saves and save states are checked against their recorded SHA-256 before they reach the
   core, hashing the bytes already read. A mismatched battery save stops the launch, and a
   mismatched state isn't loaded, so the game boots from its battery save and says the resume point
@@ -704,8 +707,11 @@ isn't stored.
   than any Auto State, the next launch boots from it.
 - A Game's default profile is starred, as its preferred Build is, and Play names the Build and
   save it will start, reading "New Save" when it will make one.
-- The cartridge clock lives inside SameBoy's save, so games with a clock work. v2.0 adds
-  a per-profile RTC offset and Developer Mode RTC controls.
+- The cartridge clock lives inside SameBoy's save, so games with a clock work. It keeps real
+  time, as the cartridge's own battery does: it runs on while the game is paused, in the
+  background or closed, and loading a state rewinds the Game Boy but not the clock. A clock the
+  game halts stays halted through all of these. v2.0 adds a per-profile RTC offset and Developer
+  Mode RTC controls.
 
 ### Build switching and compatibility
 
