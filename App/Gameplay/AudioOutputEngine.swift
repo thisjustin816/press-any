@@ -3,6 +3,7 @@ import EmulationCore
 import EmulatorDomain
 import Foundation
 import GameplayAudio
+import os
 
 /// Feeds game sound to an AVAudioSourceNode at SameBoy's configured 48 kHz, through a small
 /// buffer that grows when the device can't keep up (`AdaptiveAudioBuffer`).
@@ -19,6 +20,13 @@ final class AudioOutputEngine: @unchecked Sendable {
     /// and this decides whether to start it again. Touched only on the main queue.
     private var wantsRunning = false
     private var observers: [NSObjectProtocol] = []
+    /// How many times buffered sound was dropped by a speed change, a pause or a stop. Guarded by
+    /// `lock`.
+    private var clears = 0
+    /// The counts at the last report, and when it was made. Touched only by `enqueue`.
+    private var reported = AudioReport()
+    private var lastReport = DispatchTime.now()
+    private static let log = Logger(subsystem: "Gameplay", category: "Audio")
     /// Called on the main queue when sound is cut off in a way the player should notice: a call,
     /// an alarm or Siri interrupted the game, or the output device went away, as when headphones
     /// come out. The owner pauses the game, and pausing keeps the engine from starting itself again.
@@ -80,9 +88,32 @@ final class AudioOutputEngine: @unchecked Sendable {
     func enqueue(_ newSamples: [StereoSample]) {
         guard !newSamples.isEmpty else { return }
         lock.lock()
-        defer { lock.unlock() }
-        guard !discardsSound else { return }
-        buffer.write(newSamples)
+        if !discardsSound { buffer.write(newSamples) }
+        let now = DispatchTime.now()
+        let due = now.uptimeNanoseconds - lastReport.uptimeNanoseconds >= 1_000_000_000
+        let current = due ? AudioReport(buffer: buffer, clears: clears) : nil
+        lock.unlock()
+        guard let current else { return }
+        lastReport = now
+        report(current)
+    }
+
+    /// Logs a second in which playback ran dry, skipped stale sound, played silence or was cleared,
+    /// so a gap in a quiet game can be traced from the device log
+    /// (`log collect --device`, then the Gameplay subsystem's Audio category).
+    private func report(_ current: AudioReport) {
+        let last = reported
+        reported = current
+        let shortfalls = current.shortfalls - last.shortfalls
+        let skips = current.skips - last.skips
+        let quiet = current.quietFrames - last.quietFrames
+        let clears = current.clears - last.clears
+        guard shortfalls + skips + quiet + clears > 0 else { return }
+        Self.log.notice("""
+        shortfalls \(shortfalls), skips \(skips), quiet frames \(quiet), clears \(clears), \
+        written \(current.written - last.written), read \(current.read - last.read), \
+        buffered \(current.buffered) of target \(current.target)
+        """)
     }
 
     /// Matches the sound to the game's speed. Accelerated sound plays at the game's speed, which
@@ -108,6 +139,7 @@ final class AudioOutputEngine: @unchecked Sendable {
         discardsSound = discards
         // Sound buffered at the old speed would play late at the new one.
         buffer.removeAll()
+        clears += 1
         lock.unlock()
     }
 
@@ -117,7 +149,9 @@ final class AudioOutputEngine: @unchecked Sendable {
         wantsRunning = false
         engine.pause()
         lock.lock()
-        buffer.removeAll()
+        // The output has stopped, so nothing is left to fade.
+        buffer.removeAll(fadeOut: false)
+        clears += 1
         lock.unlock()
     }
 
@@ -132,7 +166,8 @@ final class AudioOutputEngine: @unchecked Sendable {
         observers.removeAll()
         engine.stop()
         lock.lock()
-        buffer.removeAll()
+        buffer.removeAll(fadeOut: false)
+        clears += 1
         lock.unlock()
     }
 
@@ -187,5 +222,30 @@ final class AudioOutputEngine: @unchecked Sendable {
     private func restartIfWanted() {
         guard wantsRunning, !engine.isRunning else { return }
         try? engine.start()
+    }
+}
+
+/// The buffer's running counts, for the once-a-second report.
+private struct AudioReport {
+    var shortfalls = 0
+    var skips = 0
+    var quietFrames = 0
+    var clears = 0
+    var written = 0
+    var read = 0
+    var buffered = 0
+    var target = 0
+
+    init() {}
+
+    init(buffer: AdaptiveAudioBuffer, clears: Int) {
+        shortfalls = buffer.shortfalls
+        skips = buffer.skippedBursts
+        quietFrames = buffer.quietFrames
+        self.clears = clears
+        written = buffer.framesWritten
+        read = buffer.framesRead
+        buffered = buffer.bufferedFrames
+        target = buffer.targetFrames
     }
 }

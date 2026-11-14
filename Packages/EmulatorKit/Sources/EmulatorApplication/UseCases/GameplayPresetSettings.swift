@@ -6,6 +6,7 @@ public struct GameplayEffectiveValues: Equatable, Sendable {
     public var displayFilter: DisplayFilter
     public var frameBlending: FrameBlending
     public var buttonBounce: Bool
+    public var audioFilter: AudioFilter
     public var colorCorrection: ColorCorrection
     public var advanceColors: AdvanceColors
 
@@ -13,12 +14,14 @@ public struct GameplayEffectiveValues: Equatable, Sendable {
         displayFilter: DisplayFilter,
         frameBlending: FrameBlending,
         buttonBounce: Bool,
+        audioFilter: AudioFilter,
         colorCorrection: ColorCorrection,
         advanceColors: AdvanceColors
     ) {
         self.displayFilter = displayFilter
         self.frameBlending = frameBlending
         self.buttonBounce = buttonBounce
+        self.audioFilter = audioFilter
         self.colorCorrection = colorCorrection
         self.advanceColors = advanceColors
     }
@@ -27,6 +30,7 @@ public struct GameplayEffectiveValues: Equatable, Sendable {
         displayFilter == preset.displayFilter
             && frameBlending == preset.frameBlending
             && buttonBounce == preset.buttonBounce
+            && audioFilter == preset.audioFilter
             && preset.colorCorrection.map { $0 == colorCorrection } ?? true
             && preset.advanceColors.map { $0 == advanceColors } ?? true
     }
@@ -45,7 +49,7 @@ public struct GameplayPresetSettings: Sendable {
     /// The settings the presets set. Editing one by hand needs Plus. The screen palette is not one
     /// of them: choosing it is free and no preset changes it.
     public static let controlledKeys: [SettingKey] = [
-        .lcdFilter, .frameBlending, .buttonBounce, .colorCorrection, .advanceColors,
+        .lcdFilter, .frameBlending, .buttonBounce, .audioFilter, .colorCorrection, .advanceColors,
     ]
 
     public init(store: any SettingsStore) {
@@ -79,6 +83,7 @@ public struct GameplayPresetSettings: Sendable {
             displayFilter: value(.lcdFilter, DisplayFilter.self) ?? standard.displayFilter,
             frameBlending: value(.frameBlending, FrameBlending.self) ?? standard.frameBlending,
             buttonBounce: value(.buttonBounce, Bool.self) ?? standard.buttonBounce,
+            audioFilter: value(.audioFilter, AudioFilter.self) ?? standard.audioFilter,
             colorCorrection: value(.colorCorrection, ColorCorrection.self)
                 ?? standard.colorCorrection ?? .defaultValue,
             advanceColors: value(.advanceColors, AdvanceColors.self)
@@ -244,6 +249,7 @@ public struct GameplayPresetSettings: Sendable {
         case .lcdFilter: encoded(values.displayFilter)
         case .frameBlending: encoded(values.frameBlending)
         case .buttonBounce: encoded(values.buttonBounce)
+        case .audioFilter: encoded(values.audioFilter)
         case .colorCorrection: encoded(values.colorCorrection)
         case .advanceColors: encoded(values.advanceColors)
         default: nil

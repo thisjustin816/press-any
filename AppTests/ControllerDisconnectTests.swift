@@ -119,6 +119,7 @@ private final class FakeRuntime: GameplayRuntime, @unchecked Sendable {
     func drainAudio(maxFrames: Int) throws -> [StereoSample] { [] }
     func setSpeed(_ speed: EmulationSpeed) throws {}
     func setButtonBounce(_ enabled: Bool) throws {}
+    func setAudioFilter(_ filter: AudioFilter) throws {}
     func setDisplaySettings(
         colorCorrection: ColorCorrection,
         dmgPalette: DMGPalette,

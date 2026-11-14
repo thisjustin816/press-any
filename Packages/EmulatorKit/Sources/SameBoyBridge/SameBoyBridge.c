@@ -561,6 +561,9 @@ SBInstance *SBCreate(SBModel model)
     GB_set_rgb_encode_callback(instance->gb, sb_encode_bgra);
     GB_set_pixels_output(instance->gb, instance->pixels);
     GB_set_sample_rate(instance->gb, SB_SAMPLE_RATE);
+    // SameBoy starts with no high-pass filter, which lets a channel left on at volume 0 hold a
+    // constant level at the output.
+    GB_set_highpass_filter_mode(instance->gb, GB_HIGHPASS_ACCURATE);
     GB_apu_set_sample_callback(instance->gb, sb_audio_callback);
     GB_set_rumble_callback(instance->gb, sb_rumble_callback);
     // SameBoy starts with rumble disabled, which never calls the callback. Only cartridges that
@@ -753,6 +756,18 @@ size_t SBDrainAudio(SBInstance *instance, SBStereoSample *output, size_t max_fra
     }
     atomic_store_explicit(&instance->audio_read, read, memory_order_release);
     return count;
+}
+
+// SameBoy's third mode, GB_HIGHPASS_REMOVE_DC_OFFSET, isn't offered: in 1.0.5 it pairs each
+// channel's DAC with another channel's NR51 routing bit, so with uneven routing it removes the
+// wrong level and can itself add one.
+void SBSetHighpassFilter(SBInstance *instance, SBHighpassFilter mode)
+{
+    if (!instance || !instance->gb) return;
+    switch (mode) {
+        case SB_HIGHPASS_OFF: GB_set_highpass_filter_mode(instance->gb, GB_HIGHPASS_OFF); break;
+        case SB_HIGHPASS_ACCURATE: GB_set_highpass_filter_mode(instance->gb, GB_HIGHPASS_ACCURATE); break;
+    }
 }
 
 double SBConsumeRumbleAmplitude(SBInstance *instance)

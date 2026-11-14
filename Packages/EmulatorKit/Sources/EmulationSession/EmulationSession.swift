@@ -200,12 +200,13 @@ public final class EmulationSession: @unchecked Sendable {
             // Recording what Automatic picks is what keeps it from changing once the Build has
             // states; a launch that can't record it still plays on the same choice.
             let model = (try? hardware.recordForStart(build, image: rom)) ?? hardware.hardware(for: build, image: rom)
-            let bounce = buttonBounce(build, hardware: model)
+            let presetValues = buttonAndAudio(build, hardware: model)
 
             func bootedWorker(skipBoot: Bool) throws -> SessionWorker {
                 let newWorker = SessionWorker(core: try coreResolver.execute(buildID: build.id))
                 try newWorker.perform { core in
-                    (core as? any ButtonBounceCapability)?.setButtonBounce(bounce)
+                    (core as? any ButtonBounceCapability)?.setButtonBounce(presetValues.buttonBounce)
+                    (core as? any AudioFilterCapability)?.setAudioFilter(presetValues.audioFilter)
                     try (core as? any HardwareModelCapability)?.setHardwareModel(model)
                     try core.loadImage(rom, system: build.system)
                 }
@@ -336,13 +337,17 @@ public final class EmulationSession: @unchecked Sendable {
         return skip ?? false
     }
 
-    /// Whether buttons chatter after a change on `hardware`, as the setting or gameplay preset
-    /// resolved for this Build says. Unset or unreadable means the standard preset's choice.
-    private func buttonBounce(_ build: Build, hardware: HardwareModel) -> Bool {
-        guard let store = settings?.store else { return GameplayPresetValues.standard(for: hardware).buttonBounce }
-        return GameplayPresetSettings(store: store).effectiveValues(
+    /// Button bounce and the audio filter on `hardware`, as the settings or gameplay preset
+    /// resolved for this Build say. Unset or unreadable means the standard preset's choice.
+    private func buttonAndAudio(_ build: Build, hardware: HardwareModel) -> (buttonBounce: Bool, audioFilter: AudioFilter) {
+        guard let store = settings?.store else {
+            let standard = GameplayPresetValues.standard(for: hardware)
+            return (standard.buttonBounce, standard.audioFilter)
+        }
+        let values = GameplayPresetSettings(store: store).effectiveValues(
             system: build.system, gameID: build.gameID, buildID: build.id, hardware: hardware
-        ).buttonBounce
+        )
+        return (values.buttonBounce, values.audioFilter)
     }
 
     /// The hardware the open game runs on, or nil with no game open.
@@ -417,6 +422,15 @@ public final class EmulationSession: @unchecked Sendable {
         guard let (worker, _, _) = try? snapshotActive() else { return }
         try worker.perform { core in
             (core as? any ButtonBounceCapability)?.setButtonBounce(enabled)
+        }
+    }
+
+    /// Changes the audio filter on the open game. With no game open there is nothing to change: the
+    /// next start reads the setting.
+    public func setAudioFilter(_ filter: AudioFilter) throws {
+        guard let (worker, _, _) = try? snapshotActive() else { return }
+        try worker.perform { core in
+            (core as? any AudioFilterCapability)?.setAudioFilter(filter)
         }
     }
 
@@ -673,9 +687,12 @@ public final class EmulationSession: @unchecked Sendable {
         let build = try builds.fetchBuild(id: context.buildID)
         let skipBoot = build.map(skipsBootAnimation) ?? false
         let model = build.map { hardware.hardware(for: $0) }
-        let bounce = build.flatMap { build in model.map { buttonBounce(build, hardware: $0) } }
+        let presetValues = build.flatMap { build in model.map { buttonAndAudio(build, hardware: $0) } }
         try worker.perform { core in
-            if let bounce { (core as? any ButtonBounceCapability)?.setButtonBounce(bounce) }
+            if let presetValues {
+                (core as? any ButtonBounceCapability)?.setButtonBounce(presetValues.buttonBounce)
+                (core as? any AudioFilterCapability)?.setAudioFilter(presetValues.audioFilter)
+            }
             if let model { try (core as? any HardwareModelCapability)?.setHardwareModel(model) }
             try core.reset()
             if skipBoot { _ = try (core as? any BootSkippingCapability)?.skipBootAnimation() }

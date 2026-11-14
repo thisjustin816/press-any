@@ -27,6 +27,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
     private let registry: CoreRegistry
     /// Quick Play has no Game or Build, so this comes from the App and System settings.
     private let buttonBounce: Bool
+    private let audioFilter: AudioFilter
     /// The Super Game Boy borders setting for the system, which Automatic reads.
     private let superGameBoyBorders: Bool
     private let files: any AssetStore
@@ -47,6 +48,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         coreRegistry: CoreRegistry,
         assetStore: any AssetStore,
         buttonBounce: Bool = true,
+        audioFilter: AudioFilter = .accurate,
         superGameBoyBorders: Bool = false,
         batteryCheckInterval: TimeInterval = 5,
         playtime: PlaytimeClock = PlaytimeClock()
@@ -54,6 +56,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         self.session = session
         self.playtime = playtime
         self.buttonBounce = buttonBounce
+        self.audioFilter = audioFilter
         self.superGameBoyBorders = superGameBoyBorders
         self.registry = coreRegistry
         self.files = assetStore
@@ -104,6 +107,7 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             )
             try worker.perform { core in
                 (core as? any ButtonBounceCapability)?.setButtonBounce(self.buttonBounce)
+                (core as? any AudioFilterCapability)?.setAudioFilter(self.audioFilter)
                 if let hardware = core as? any HardwareModelCapability {
                     try hardware.setHardwareModel(state.flatMap(hardware.hardwareModel(ofState:)) ?? automatic)
                 }
@@ -181,6 +185,14 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
         let worker = try activeWorker(requireRunning: false)
         try worker.perform { $0.setSpeed(speed) }
         lock.withLock { playtime.setSpeed(speed) }
+    }
+
+    /// Changes the audio filter on the running game. With none running there is nothing to change.
+    public func setAudioFilter(_ filter: AudioFilter) throws {
+        guard let worker = try? activeWorker(requireRunning: false) else { return }
+        try worker.perform { core in
+            (core as? any AudioFilterCapability)?.setAudioFilter(filter)
+        }
     }
 
     /// Changes button bounce on the running game. With none running there is nothing to change.

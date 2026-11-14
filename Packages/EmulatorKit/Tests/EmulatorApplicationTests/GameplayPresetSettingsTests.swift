@@ -49,16 +49,16 @@ final class GameplayPresetSettingsTests: XCTestCase {
         func accurate(_ hardware: HardwareModel) -> GameplayPresetValues? {
             GameplayPresetValues.values(for: .accurate, hardware: hardware)
         }
-        XCTAssertEqual(accurate(.gameBoy), GameplayPresetValues(displayFilter: .monochromeLCD, frameBlending: .ghosting, buttonBounce: true))
-        XCTAssertEqual(accurate(.gameBoyPocket), GameplayPresetValues(displayFilter: .monochromeLCD, frameBlending: .blend, buttonBounce: true))
+        XCTAssertEqual(accurate(.gameBoy), GameplayPresetValues(displayFilter: .monochromeLCD, frameBlending: .ghosting, buttonBounce: true, audioFilter: .accurate))
+        XCTAssertEqual(accurate(.gameBoyPocket), GameplayPresetValues(displayFilter: .monochromeLCD, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate))
         XCTAssertEqual(
             accurate(.gameBoyColor),
-            GameplayPresetValues(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, colorCorrection: .reduceContrast)
+            GameplayPresetValues(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate, colorCorrection: .reduceContrast)
         )
         XCTAssertEqual(
             accurate(.gameBoyAdvance),
             GameplayPresetValues(
-                displayFilter: .gbaLCD, frameBlending: .blend, buttonBounce: true,
+                displayFilter: .gbaLCD, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate,
                 colorCorrection: .off, advanceColors: .gameBoyAdvance
             )
         )
@@ -69,7 +69,7 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoy).displayFilter, .lcd1x)
         XCTAssertEqual(
             GameplayPresetValues.standard(for: .gameBoyColor),
-            GameplayPresetValues(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .soft),
+            GameplayPresetValues(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate, colorCorrection: .soft),
             "Nostalgic shows a Game Boy Color's colors softened, as a bright backlit screen does"
         )
         XCTAssertEqual(GameplayPresetValues.standard(for: .gameBoyAdvance).displayFilter, .sp101LCD)
@@ -433,7 +433,7 @@ final class GameplayPresetSettingsTests: XCTestCase {
         XCTAssertEqual(
             GameplayPresetValues.standard(for: listed),
             GameplayPresetValues(
-                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true,
+                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate,
                 colorCorrection: .accurate, advanceColors: .gameBoyAdvance
             )
         )
@@ -494,8 +494,44 @@ final class GameplayPresetSettingsTests: XCTestCase {
     func testControlledKeysAreExactlyTheCustomGameplayEditor() {
         XCTAssertEqual(
             GameplayPresetSettings.controlledKeys,
-            [.lcdFilter, .frameBlending, .buttonBounce, .colorCorrection, .advanceColors]
+            [.lcdFilter, .frameBlending, .buttonBounce, .audioFilter, .colorCorrection, .advanceColors]
         )
+    }
+
+    func testOnlyCleanTurnsTheAudioFilterOffOnEveryModel() {
+        for hardware in HardwareModel.allCases {
+            XCTAssertEqual(GameplayPresetValues.values(for: .clean, hardware: hardware)?.audioFilter, .off, "\(hardware)")
+            XCTAssertEqual(GameplayPresetValues.values(for: .standard, hardware: hardware)?.audioFilter, .accurate, "\(hardware)")
+            XCTAssertEqual(GameplayPresetValues.values(for: .accurate, hardware: hardware)?.audioFilter, .accurate, "\(hardware)")
+        }
+    }
+
+    func testAudioFilterResolvesThroughPresetsAndScopes() throws {
+        let store = InMemorySettingsStore()
+        let presets = GameplayPresetSettings(store: store)
+        let gameID = UUID(), buildID = UUID()
+        func filter() -> AudioFilter {
+            presets.effectiveValues(system: .gameBoy, gameID: gameID, buildID: buildID, hardware: .gameBoy).audioFilter
+        }
+        func preset() -> GameplayPreset {
+            presets.resolvedPreset(system: .gameBoy, gameID: gameID, buildID: buildID, hardware: .gameBoy)
+        }
+        XCTAssertEqual(filter(), .accurate, "unset plays the standard preset's filter")
+
+        try presets.apply(.clean, at: .system(.gameBoy), hardware: .gameBoy, system: .gameBoy)
+        XCTAssertEqual(filter(), .off, "Clean chosen for the system turns it off")
+        XCTAssertEqual(preset(), .clean)
+
+        try store.set(AudioFilter.accurate, key: SettingKey.audioFilter.rawValue, scope: .build(buildID))
+        XCTAssertEqual(filter(), .accurate, "a Build's own value wins over the system's preset")
+        XCTAssertEqual(preset(), .custom, "Clean with the filter on is no built-in preset")
+
+        try presets.reset(at: .build(buildID))
+        XCTAssertEqual(filter(), .off, "resetting the Build reveals the system's Clean")
+
+        try store.setValueJSON("not json", key: SettingKey.audioFilter.rawValue, scope: .app)
+        try presets.reset(at: .system(.gameBoy))
+        XCTAssertEqual(filter(), .accurate, "an unreadable value reads as unset")
     }
 
     func testAllDisplayFiltersAreSelectableAndNamedForWhatTheyShow() {

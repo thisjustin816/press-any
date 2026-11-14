@@ -477,6 +477,22 @@ final class GameplayLifecycleTests: XCTestCase {
         return (gameplay, runtime, monitor)
     }
 
+    func testPresetAudioFilterChangesReachTheOpenGameWithoutRestarting() {
+        let (gameplay, runtime, _) = makeGameplay()
+        gameplay.setCoveredBySheet(true)
+        gameplay.applyDisplaySettings(
+            controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .off,
+            frameBlending: .off, buttonBounce: false, audioFilter: .off
+        )
+        XCTAssertEqual(runtime.audioFilter, .off)
+        gameplay.applyDisplaySettings(
+            controlStyle: .gameBoy, screenScaling: .integer, lcdFilter: .lcd1x,
+            frameBlending: .blend, buttonBounce: true, audioFilter: .accurate
+        )
+        XCTAssertEqual(runtime.audioFilter, .accurate)
+        XCTAssertEqual(runtime.restarts, 0)
+    }
+
     func testPresetButtonBounceChangesReachTheOpenGameWithoutRestarting() {
         let (gameplay, runtime, _) = makeGameplay()
         gameplay.setCoveredBySheet(true)
@@ -1237,6 +1253,8 @@ private class LifecycleRuntime: GameplayRuntime, @unchecked Sendable {
     private var frameCount = 0
     private(set) var buttonBounce = true
     func setButtonBounce(_ enabled: Bool) throws { buttonBounce = enabled }
+    private(set) var audioFilter = AudioFilter.accurate
+    func setAudioFilter(_ filter: AudioFilter) throws { audioFilter = filter }
     private var displayOptions: (correction: ColorCorrection, palette: DMGPalette, advance: AdvanceColors)?
     var displaySettings: (correction: ColorCorrection, palette: DMGPalette, advance: AdvanceColors)? {
         lock.withLock { displayOptions }

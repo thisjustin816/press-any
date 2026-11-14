@@ -112,6 +112,7 @@ public struct GameplayPresetValues: Equatable, Sendable {
     public let displayFilter: DisplayFilter
     public let frameBlending: FrameBlending
     public let buttonBounce: Bool
+    public let audioFilter: AudioFilter
     public let colorCorrection: ColorCorrection?
     public let advanceColors: AdvanceColors?
 
@@ -119,12 +120,14 @@ public struct GameplayPresetValues: Equatable, Sendable {
         displayFilter: DisplayFilter,
         frameBlending: FrameBlending,
         buttonBounce: Bool,
+        audioFilter: AudioFilter,
         colorCorrection: ColorCorrection? = nil,
         advanceColors: AdvanceColors? = nil
     ) {
         self.displayFilter = displayFilter
         self.frameBlending = frameBlending
         self.buttonBounce = buttonBounce
+        self.audioFilter = audioFilter
         self.colorCorrection = colorCorrection
         self.advanceColors = advanceColors
     }
@@ -147,8 +150,8 @@ public struct GameplayPresetValues: Equatable, Sendable {
     /// `hardware` is expected to be resolved; callers pass the model each game runs on. Automatic
     /// arrives only by mistake and reads as a Game Boy Pocket, the model Automatic picks for most
     /// games.
-    /// Only Clean turns button bounce off: Nostalgic and Accurate bounce on every model, the
-    /// television models included. A Game Boy or Pocket shows a palette, which color correction
+    /// Only Clean turns button bounce and the audio filter off: Nostalgic and Accurate bounce and
+    /// filter on every model, the television models included. A Game Boy or Pocket shows a palette, which color correction
     /// doesn't apply to in the way the presets mean, so those presets leave correction alone.
     public static func values(for preset: GameplayPreset, hardware: PresetHardware) -> Self? {
         switch (preset, hardware.model) {
@@ -156,64 +159,64 @@ public struct GameplayPresetValues: Equatable, Sendable {
             return nil
 
         case (.clean, .automatic), (.clean, .gameBoy), (.clean, .gameBoyPocket):
-            return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false)
+            return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false, audioFilter: .off)
         case (.clean, .superGameBoy), (.clean, .superGameBoy2), (.clean, .gameBoyColor):
-            return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false, colorCorrection: .off)
+            return Self(displayFilter: .off, frameBlending: .off, buttonBounce: false, audioFilter: .off, colorCorrection: .off)
         case (.clean, .gameBoyAdvance), (.clean, .gameBoyPlayer):
             return Self(
-                displayFilter: .off, frameBlending: .off, buttonBounce: false,
+                displayFilter: .off, frameBlending: .off, buttonBounce: false, audioFilter: .off,
                 colorCorrection: .off, advanceColors: .gameBoyAdvance
             )
 
         case (.standard, .automatic), (.standard, .gameBoy), (.standard, .gameBoyPocket):
-            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true)
+            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate)
         case (.standard, .superGameBoy), (.standard, .superGameBoy2):
-            return Self(displayFilter: .curvedScanlines, frameBlending: .off, buttonBounce: true, colorCorrection: .balanced)
+            return Self(displayFilter: .curvedScanlines, frameBlending: .off, buttonBounce: true, audioFilter: .accurate, colorCorrection: .balanced)
         case (.standard, .gameBoyColor):
             // The screen as people remember it: Modern Accurate softened, as a bright backlit
             // screen shows it.
-            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, colorCorrection: .soft)
+            return Self(displayFilter: .lcd1x, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate, colorCorrection: .soft)
         case (.standard, .gameBoyAdvance) where hardware.forGameBoyAdvanceFeatures:
             // The game brightens its own colors for the Game Boy Advance's darker screen, which
             // Original would show washed out. Modern Accurate darkens them as that screen does, and
             // with the backlit SP's profile on top comes closest to the same colors on a Game Boy
             // Color in Nostalgic (docs/display-presets.md).
             return Self(
-                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true,
+                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate,
                 colorCorrection: .accurate, advanceColors: .gameBoyAdvance
             )
         case (.standard, .gameBoyAdvance):
             // The backlit SP's profile colors the picture, so the core leaves colors as they are.
             return Self(
-                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true,
+                displayFilter: .sp101LCD, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate,
                 colorCorrection: .off, advanceColors: .gameBoyColor
             )
         case (.standard, .gameBoyPlayer):
             return Self(
-                displayFilter: .slightlyCurvedScanlines, frameBlending: .off, buttonBounce: true,
+                displayFilter: .slightlyCurvedScanlines, frameBlending: .off, buttonBounce: true, audioFilter: .accurate,
                 colorCorrection: .balanced, advanceColors: .gameBoyColor
             )
 
         case (.accurate, .gameBoy):
             // The original screen's slow response leaves a trail behind moving things.
-            return Self(displayFilter: .monochromeLCD, frameBlending: .ghosting, buttonBounce: true)
+            return Self(displayFilter: .monochromeLCD, frameBlending: .ghosting, buttonBounce: true, audioFilter: .accurate)
         case (.accurate, .automatic), (.accurate, .gameBoyPocket):
-            return Self(displayFilter: .monochromeLCD, frameBlending: .blend, buttonBounce: true)
+            return Self(displayFilter: .monochromeLCD, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate)
         case (.accurate, .superGameBoy), (.accurate, .superGameBoy2):
-            return Self(displayFilter: .crt240p, frameBlending: .off, buttonBounce: true, colorCorrection: .balanced)
+            return Self(displayFilter: .crt240p, frameBlending: .off, buttonBounce: true, audioFilter: .accurate, colorCorrection: .balanced)
         case (.accurate, .gameBoyColor):
             // Reduce Contrast's white and black (#dbdfd7, #282420, 40:1) are close to BGB's
             // measured Game Boy Color in light (#d9e1c6, #17282d, 38:1).
-            return Self(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, colorCorrection: .reduceContrast)
+            return Self(displayFilter: .authenticGBC, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate, colorCorrection: .reduceContrast)
         case (.accurate, .gameBoyAdvance):
             // The Game Boy Advance profile darkens the picture as that screen does.
             return Self(
-                displayFilter: .gbaLCD, frameBlending: .blend, buttonBounce: true,
+                displayFilter: .gbaLCD, frameBlending: .blend, buttonBounce: true, audioFilter: .accurate,
                 colorCorrection: .off, advanceColors: .gameBoyAdvance
             )
         case (.accurate, .gameBoyPlayer):
             return Self(
-                displayFilter: .crt480p, frameBlending: .off, buttonBounce: true,
+                displayFilter: .crt480p, frameBlending: .off, buttonBounce: true, audioFilter: .accurate,
                 colorCorrection: .off, advanceColors: .gameBoyAdvance
             )
         }

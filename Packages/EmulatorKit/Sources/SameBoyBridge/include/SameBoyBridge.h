@@ -80,6 +80,15 @@ typedef struct {
     int16_t right;
 } SBStereoSample;
 
+/// SameBoy's high-pass filter on the audio output. A real Game Boy passes its sound through an
+/// output capacitor, which removes the constant level a channel left on at volume 0 holds.
+typedef enum {
+    /// The emulated output as the APU produces it, including any constant level.
+    SB_HIGHPASS_OFF,
+    /// Models the hardware's output capacitor. The default.
+    SB_HIGHPASS_ACCURATE,
+} SBHighpassFilter;
+
 typedef struct {
     uint8_t a, f, b, c, d, e, h, l;
     uint16_t sp, pc;
@@ -115,6 +124,8 @@ void SBSetGBCColorsOnAGB(SBInstance *instance, bool enabled);
 /// Renders a temporary frame, restoring gameplay state and suppressing audio and rumble.
 bool SBRefreshFrame(SBInstance *instance, SBFrameView *frame);
 size_t SBDrainAudio(SBInstance *instance, SBStereoSample *output, size_t max_frames);
+/// Kept through reset and state loads.
+void SBSetHighpassFilter(SBInstance *instance, SBHighpassFilter mode);
 double SBConsumeRumbleAmplitude(SBInstance *instance);
 
 bool SBHasCamera(SBInstance *instance);

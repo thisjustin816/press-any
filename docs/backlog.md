@@ -86,7 +86,7 @@ RTC offsets, rumble routing, Undo, core updates, and the internal registries and
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| missing | Periodic clicks on quiet games (#218) | v1.1.1 | A game that leaves a sound channel's DAC on at volume 0 holds a constant offset, and the bridge sets no SameBoy high-pass filter, so the offset reaches the speaker. The adaptive audio buffer outputs zeros when it runs dry, so each shortfall and refill steps between that offset and silence. Fix: the high-pass mode becomes a Gameplay preset value (Off for Clean, Accurate for Nostalgic and Accurate, Remove DC Offset as a Customize choice), inherited App -> System -> Game -> Build and reapplied on reset, state load and model change; the buffer ramps to and from silence. What sets the 60 Hz click rate is not yet measured |
+| partial | Periodic clicks on quiet games (#218) | v1.1.1 | A game that leaves a sound channel's DAC on at volume 0 holds a constant level: +4082 per channel on Game Boy and Game Boy Color, +12505 on Game Boy Advance, in the headless bridge. Built: the Audio Filter, a Gameplay preset value (Accurate in Nostalgic and Accurate, Off in Clean, both under Customize) that turns on SameBoy's Accurate high-pass filter and lasts through reset, state load and Model change; and 4 ms fades wherever the audio buffer runs dry, skips a burst or is cleared. Measured on Linux: the core's idle output is flat, with no 60 Hz component, and the buffer under steady 60 or 120 Hz pacing never runs dry or goes quiet, so what drops the output once per frame on an iPhone is still open. The device log's Gameplay Audio lines record each second with a shortfall, skip, quiet stretch or clear |
 
 ## Inventory by area
 
