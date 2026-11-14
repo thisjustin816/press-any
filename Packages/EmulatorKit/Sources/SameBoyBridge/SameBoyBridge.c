@@ -827,7 +827,9 @@ bool SBLoadState(SBInstance *instance, const uint8_t *bytes, size_t size)
     if (!instance || !instance->gb || !bytes || size == 0) return false;
     instance->has_run = true;
     if (GB_load_state_from_buffer(instance->gb, bytes, size) != 0) return false;
-    if (!instance->previewing) SBSetPrinterConnected(instance, instance->printer_connected);
+    // The printer is a separate device that a state doesn't hold, so it carries on: a print under
+    // way comes out once, and prints not yet collected stay queued. The serial callbacks that
+    // connect it sit outside SameBoy's state and stay attached.
     instance->camera.next_channel = 0;
     sb_apply_dmg_palette(instance);
     return true;

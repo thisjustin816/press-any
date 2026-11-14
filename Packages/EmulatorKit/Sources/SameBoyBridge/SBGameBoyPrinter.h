@@ -54,6 +54,7 @@ struct SBGameBoyPrinter {
 
     // Link layer.
     uint8_t in_byte, in_bits, out_byte, out_bit;
+    uint64_t last_bit;
     bool any_byte;
     uint64_t last_byte;
     bool quiet_reset_done;

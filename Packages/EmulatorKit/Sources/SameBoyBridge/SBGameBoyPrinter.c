@@ -507,6 +507,14 @@ static void byte_in(SBGameBoyPrinter *p, uint8_t byte)
 void sbp_bit_from_game_boy(SBGameBoyPrinter *p, uint64_t now, bool bit)
 {
     sbp_advance(p, now);
+    // A byte's bits come about 122 us apart, or faster with a Game Boy Color's fast clock. A bit
+    // after a longer quiet than the byte timeout starts a new byte, so the two ends count bits
+    // from the same place again after a state loaded partway through a byte.
+    if (p->in_bits && now - p->last_bit > SBP_BYTE_TIMEOUT) {
+        p->in_bits = 0;
+        p->in_byte = 0;
+    }
+    p->last_bit = now;
     p->in_byte = (uint8_t)(p->in_byte << 1) | (bit ? 1u : 0u);
     if (++p->in_bits < 8u) return;
     p->in_bits = 0;

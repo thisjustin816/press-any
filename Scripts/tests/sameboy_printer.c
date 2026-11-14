@@ -208,6 +208,167 @@ static void test_printer_firmware_rules(void)
     free(rom);
 }
 
+// A game's printing: it sends a job, then polls the printer's status every 50 ms until the band
+// has printed, and starts the job again on an error, up to three attempts. It counts in WRAM.
+#define GAME_DONE 0xc800u     // jobs the printer reported finished
+#define GAME_ERRORS 0xc801u   // error statuses seen
+#define GAME_ATTEMPTS 0xc802u // jobs started
+#define GAME_POLLS 0xc803u    // status polls in the current job; wraps to 0 when polling runs away
+#define GAME_STALLED 0xc804u  // set when polling ran away
+
+static void emit(uint8_t *rom, size_t *pc, const uint8_t *code, size_t size)
+{
+    memcpy(rom + *pc, code, size);
+    *pc += size;
+}
+
+static void jump_to(uint8_t *rom, size_t at, size_t target)
+{
+    rom[at] = target & 255;
+    rom[at + 1] = target >> 8;
+}
+
+static void make_polling_game(uint8_t *rom)
+{
+    size_t pc;
+    start_rom(rom, &pc);
+    const uint8_t clear[] = {0xaf, 0xea, 0x00, 0xc8, 0xea, 0x01, 0xc8, 0xea, 0x02, 0xc8, 0xea, 0x04, 0xc8};
+    emit(rom, &pc, clear, sizeof(clear));
+    size_t job = pc;
+    // ld hl, REPLIES ; ld a, [ATTEMPTS] ; inc a ; ld [ATTEMPTS], a ; xor a ; ld [POLLS], a
+    const uint8_t start_job[] = {0x21, REPLIES & 255, REPLIES >> 8, 0xfa, 0x02, 0xc8, 0x3c, 0xea, 0x02, 0xc8,
+                                 0xaf, 0xea, 0x03, 0xc8};
+    emit(rom, &pc, start_job, sizeof(start_job));
+    packet(rom, &pc, 1, NULL, 0);
+    uint8_t tiles[640];
+    fill_tiles(tiles, sizeof(tiles));
+    packet(rom, &pc, 4, tiles, sizeof(tiles));
+    packet(rom, &pc, 4, NULL, 0);
+    const uint8_t print[] = {1, 0x23, 0xe4, 0x40};
+    packet(rom, &pc, 2, print, sizeof(print));
+    size_t poll = pc;
+    wait_ms(rom, &pc, 50);
+    // A status poll's replies overwrite one place, so a long wait can't run past WRAM.
+    const uint8_t rewind[] = {0x21, 0x00, 0xc4}; // ld hl, $C400
+    emit(rom, &pc, rewind, sizeof(rewind));
+    packet(rom, &pc, 0x0f, NULL, 0);
+    // ld a, [POLLS] ; inc a ; ld [POLLS], a ; jp z, stalled
+    const uint8_t count[] = {0xfa, 0x03, 0xc8, 0x3c, 0xea, 0x03, 0xc8, 0xca, 0, 0};
+    emit(rom, &pc, count, sizeof(count));
+    size_t to_stalled = pc - 2;
+    // The status is the last byte received: dec hl ; ld a, [hl] ; ld b, a
+    // and $F1 ; jp nz, error ; ld a, b ; and $0A ; jp nz, poll (busy or unprocessed data)
+    const uint8_t check[] = {0x2b, 0x7e, 0x47, 0xe6, 0xf1, 0xc2, 0, 0, 0x78, 0xe6, 0x0a, 0xc2, 0, 0};
+    emit(rom, &pc, check, sizeof(check));
+    size_t to_error = pc - 8, to_poll = pc - 2;
+    jump_to(rom, to_poll, poll);
+    // ld a, [DONE] ; inc a ; ld [DONE], a ; jp end
+    const uint8_t done[] = {0xfa, 0x00, 0xc8, 0x3c, 0xea, 0x00, 0xc8, 0xc3, 0, 0};
+    emit(rom, &pc, done, sizeof(done));
+    size_t done_to_end = pc - 2;
+    size_t error = pc;
+    jump_to(rom, to_error, error);
+    // ld a, [ERRORS] ; inc a ; ld [ERRORS], a ; ld a, [ATTEMPTS] ; cp 3 ; jp c, job ; jp end
+    const uint8_t retry[] = {0xfa, 0x01, 0xc8, 0x3c, 0xea, 0x01, 0xc8, 0xfa, 0x02, 0xc8, 0xfe, 0x03,
+                             0xda, 0, 0, 0xc3, 0, 0};
+    emit(rom, &pc, retry, sizeof(retry));
+    jump_to(rom, pc - 5, job);
+    size_t retry_to_end = pc - 2;
+    size_t stalled = pc;
+    jump_to(rom, to_stalled, stalled);
+    // ld a, 1 ; ld [STALLED], a
+    const uint8_t mark[] = {0x3e, 0x01, 0xea, 0x04, 0xc8};
+    emit(rom, &pc, mark, sizeof(mark));
+    size_t end = pc;
+    jump_to(rom, done_to_end, end);
+    jump_to(rom, retry_to_end, end);
+    end_rom(rom, &pc);
+}
+
+typedef struct {
+    unsigned done, errors, attempts, prints, rows;
+    bool stalled;
+} printing_outcome;
+
+static printing_outcome finish_game(SBInstance *instance, unsigned frames, unsigned prints_before, unsigned rows_before)
+{
+    printing_outcome outcome = {.prints = prints_before, .rows = rows_before};
+    SBPrinterOutput output;
+    for (unsigned i = 0; i < frames; i++) {
+        (void)SBRunFrame(instance);
+        while (SBPopPrinterOutput(instance, &output)) { outcome.prints++; outcome.rows += output.height; }
+    }
+    outcome.done = SBReadMemory(instance, GAME_DONE);
+    outcome.errors = SBReadMemory(instance, GAME_ERRORS);
+    outcome.attempts = SBReadMemory(instance, GAME_ATTEMPTS);
+    outcome.stalled = SBReadMemory(instance, GAME_STALLED) != 0;
+    return outcome;
+}
+
+static void print_outcome(const char *what, printing_outcome o)
+{
+    fprintf(stderr, "%s: done %u, errors %u, attempts %u, stalled %d, prints %u (%u rows)\n",
+            what, o.done, o.errors, o.attempts, o.stalled, o.prints, o.rows);
+}
+
+// Saves a state when the printer first reports `activity`, plays `frames_after` more frames,
+// loads the state and plays on.
+static printing_outcome restore_during(const uint8_t *rom, SBPrinterActivity activity, unsigned frames_after)
+{
+    SBInstance *instance = boot(rom);
+    SBPrinterOutput output;
+    unsigned prints = 0, rows = 0;
+    for (unsigned i = 0; i < 600 && SBGetPrinterActivity(instance) != activity; i++) {
+        (void)SBRunFrame(instance);
+        while (SBPopPrinterOutput(instance, &output)) { prints++; rows += output.height; }
+    }
+    assert(SBGetPrinterActivity(instance) == activity);
+    size_t size = SBStateSize(instance);
+    uint8_t *state = malloc(size);
+    assert(state && SBSaveState(instance, state, size));
+    for (unsigned i = 0; i < frames_after; i++) {
+        (void)SBRunFrame(instance);
+        while (SBPopPrinterOutput(instance, &output)) { prints++; rows += output.height; }
+    }
+    assert(SBLoadState(instance, state, size));
+    free(state);
+    printing_outcome outcome = finish_game(instance, 1500, prints, rows);
+    SBDestroy(instance);
+    return outcome;
+}
+
+static void test_printer_state_restore(void)
+{
+    uint8_t rom[32768];
+    make_polling_game(rom);
+    SBInstance *instance = boot(rom);
+    printing_outcome plain = finish_game(instance, 1500, 0, 0);
+    SBDestroy(instance);
+    print_outcome("uninterrupted", plain);
+    assert(plain.done == 1 && plain.errors == 0 && plain.attempts == 1 && !plain.stalled);
+    assert(plain.prints == 1 && plain.rows == 16);
+
+    // A state loaded while the job was being sent: the packet the load cut into fails, and the
+    // game's retry prints, once. The two ends count bits from the same place again after the next
+    // quiet stretch.
+    const unsigned transfer_frames[] = {2, 30};
+    for (size_t i = 0; i < 2; i++) {
+        printing_outcome o = restore_during(rom, SB_PRINTER_RECEIVING, transfer_frames[i]);
+        print_outcome("loaded mid-transfer", o);
+        assert(o.done == 1 && !o.stalled && o.errors <= 1 && o.attempts == o.errors + 1);
+        assert(o.prints == 1 && o.rows == 16);
+    }
+    // A state loaded while the band printed, before or after it came out: the printer finishes
+    // the band once, and the game sees it done.
+    const unsigned print_frames[] = {2, 150};
+    for (size_t i = 0; i < 2; i++) {
+        printing_outcome o = restore_during(rom, SB_PRINTER_PRINTING, print_frames[i]);
+        print_outcome("loaded mid-print", o);
+        assert(o.done == 1 && o.errors == 0 && o.attempts == 1 && !o.stalled);
+        assert(o.prints == 1 && o.rows == 16);
+    }
+}
+
 void test_printer(void)
 {
     uint8_t rom[32768] = {0};
@@ -273,4 +434,5 @@ void test_printer(void)
     SBDestroy(instance);
     test_printer_firmware_rules();
     test_printer_model();
+    test_printer_state_restore();
 }
