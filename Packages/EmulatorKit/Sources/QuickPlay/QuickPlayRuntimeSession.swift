@@ -314,8 +314,14 @@ public final class QuickPlayRuntimeSession: @unchecked Sendable {
             return true
         }
         guard due else { return false }
-        let data = try worker.perform { try $0.persistentSaveData() }
-        guard !data.isEmpty, data != lock.withLock({ lastWrittenBattery }) else { return false }
+        let written = lock.withLock { lastWrittenBattery }
+        // A cartridge clock that only kept time isn't a save.
+        let changed = try worker.perform { core in
+            let data = try core.persistentSaveData()
+            guard !data.isEmpty else { return false }
+            return (core as? any PersistentSaveComparing)?.persistentSaveChanged(from: written, to: data) ?? (data != written)
+        }
+        guard changed else { return false }
         try flushBattery()
         return true
     }
