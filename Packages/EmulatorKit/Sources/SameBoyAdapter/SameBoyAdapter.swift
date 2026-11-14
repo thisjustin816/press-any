@@ -18,7 +18,7 @@ public enum SameBoyAdapterError: Error, Equatable {
     case cheatCodeRefused
 }
 
-public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability, ButtonBounceCapability,
+public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingCapability, DisplaySettingsCapability, ButtonBounceCapability, AudioFilterCapability,
     CheatCapability, HardwareModelCapability, CameraCapability, PrinterCapability, TiltCapability {
     /// SameBoy at the `v1.0.5` release tag THIRD_PARTY_NOTICES.md records.
     public static let coreDescriptor = CoreDescriptor(identifier: "sameboy", version: "1.0.5")
@@ -57,6 +57,20 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
     public func setButtonBounce(_ enabled: Bool) {
         buttonBounce = enabled
         if let instance { SBSetJoypadBouncing(instance, enabled) }
+    }
+
+    public private(set) var audioFilter = AudioFilter.accurate
+
+    public func setAudioFilter(_ filter: AudioFilter) {
+        audioFilter = filter
+        if let instance { SBSetHighpassFilter(instance, Self.highpassFilter(filter)) }
+    }
+
+    private static func highpassFilter(_ filter: AudioFilter) -> SBHighpassFilter {
+        switch filter {
+        case .off: SB_HIGHPASS_OFF
+        case .accurate: SB_HIGHPASS_ACCURATE
+        }
     }
 
     public func setPrinterConnected(_ connected: Bool) {
@@ -196,6 +210,7 @@ public final class SameBoyAdapter: EmulatorCore, RumbleCapability, BootSkippingC
             SBSetCheatsEnabled(created, cheatsEnabled)
             SBSetPrinterConnected(created, printerConnected)
             SBSetJoypadBouncing(created, buttonBounce)
+            SBSetHighpassFilter(created, Self.highpassFilter(audioFilter))
             return created
         } catch {
             SBDestroy(created)

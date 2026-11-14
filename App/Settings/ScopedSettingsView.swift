@@ -8,6 +8,7 @@ import SwiftUI
 /// value it gets and where that value comes from, or holds its own value until it is reset to
 /// inherit.
 struct ScopedSettingsView: View {
+    static let audioFilterExplanation = "Accurate passes the sound through the filter on a Game Boy's own output, which removes the steady level some games leave on a silent sound channel. Off plays the sound as the chip makes it, and in those games it can click."
     static let buttonBounceExplanation = "Button Bounce makes a button chatter briefly after each press and release, as the hardware's contacts do. Turn it off if a game counts one tap twice."
     let title: String
     let scope: SettingsScope
@@ -179,7 +180,7 @@ struct ScopedSettingsView: View {
         }
     }
 
-    static let gameplayFooter = "\(GameplayPreset.standardName), Accurate and Clean each set the screen, frame blending and Button Bounce for the Model. Every preset and Screen Colors are free. Customize changes the settings a preset sets, one by one, with \(PlusProduct.name)."
+    static let gameplayFooter = "\(GameplayPreset.standardName), Accurate and Clean each set the screen, frame blending, Button Bounce and the audio filter for the Model. Every preset and Screen Colors are free. Customize changes the settings a preset sets, one by one, with \(PlusProduct.name)."
 
     static func customizeFooter(_ gate: PlusGate) -> String {
         let rules = gate.isLocked(true)
@@ -257,6 +258,15 @@ struct ScopedSettingsView: View {
             key: .buttonBounce,
             defaultValue: standard(.buttonBounce).buttonBounce,
             options: [(true, "On"), (false, "Off")],
+            reloadToken: settingsRevision,
+            context: context
+        )
+        InheritableSettingRow(
+            title: "Audio Filter",
+            key: .audioFilter,
+            defaultValue: standard(.audioFilter).audioFilter,
+            options: AudioFilter.allCases.map { ($0, $0.displayName) },
+            explanation: Self.audioFilterExplanation,
             reloadToken: settingsRevision,
             context: context
         )

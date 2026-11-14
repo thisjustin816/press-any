@@ -99,6 +99,9 @@ public enum SettingKey: String, Sendable, CaseIterable {
     /// `AdvanceColors`. Unset means the standard gameplay preset's value for the hardware, or
     /// `.gameBoyAdvance` where the preset leaves it alone.
     case advanceColors
+    /// `AudioFilter`. Unset means the standard gameplay preset's value. Also applied to an open
+    /// game when its settings change.
+    case audioFilter
     /// `GameBoyCamera`, unset means `.rear`. Only camera cartridges read it. Test builds saved the
     /// game menu's choice under `gameBoyCamera`; this key leaves those behind.
     case gameBoyCamera = "gameBoyCameraSetting"
@@ -396,6 +399,24 @@ public enum FastForwardAudio: String, Codable, Sendable, CaseIterable {
         switch self {
         case .muted: "Muted"
         case .accelerated: "Accelerated"
+        }
+    }
+}
+
+/// The filter on the game's sound output. A real Game Boy passes its sound through an output
+/// capacitor, which removes the constant level a sound channel left on at volume 0 holds; without
+/// it that level reaches the speaker, and any pause in playback clicks. Raw values are stored in
+/// settings.
+public enum AudioFilter: String, Codable, Sendable, CaseIterable {
+    /// The emulated output as the sound hardware produces it, constant level included.
+    case off
+    /// The hardware's output capacitor.
+    case accurate
+
+    public var displayName: String {
+        switch self {
+        case .off: "Off"
+        case .accurate: "Accurate"
         }
     }
 }

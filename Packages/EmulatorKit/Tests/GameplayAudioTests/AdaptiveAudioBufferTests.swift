@@ -3,7 +3,8 @@ import GameplayAudio
 import XCTest
 
 final class AdaptiveAudioBufferTests: XCTestCase {
-    /// 1 kHz keeps the frame counts small: the target starts at 40 frames and grows by 20.
+    /// 1 kHz keeps the frame counts small: the target starts at 40 frames and grows by 20. With no
+    /// ramp, sound starts and stops at once, so these tests read exact sample values.
     private let configuration = AdaptiveAudioBuffer.Configuration(
         sampleRate: 1_000,
         minimumTarget: 0.040,
@@ -11,8 +12,78 @@ final class AdaptiveAudioBufferTests: XCTestCase {
         targetStep: 0.020,
         settleTime: 1,
         capacity: 0.5,
-        maximumRateAdjustment: 0.005
+        maximumRateAdjustment: 0.005,
+        rampTime: 0
     )
+
+    /// The same with a 10-frame ramp.
+    private var ramped: AdaptiveAudioBuffer.Configuration {
+        var ramped = configuration
+        ramped.rampTime = 0.010
+        return ramped
+    }
+
+    /// A level well above silence: about half of full scale.
+    private let level: Int16 = 16_000
+    /// The most one ramp frame moves `level`, with a little room for rounding.
+    private var rampStep: Float { Float(level) / Float(Int16.max) / 10 + 0.001 }
+
+    private func largestStep(_ output: [Float], after previous: Float? = nil) -> Float {
+        let values = (previous.map { [$0] } ?? []) + output
+        return zip(values, values.dropFirst()).map { abs($1 - $0) }.max() ?? 0
+    }
+
+    func testRunningDryFadesOutInsteadOfDroppingToSilence() {
+        var buffer = AdaptiveAudioBuffer(configuration: ramped)
+        buffer.write(samples(40, value: level))
+        let output = read(&buffer, 60).left
+        XCTAssertEqual(buffer.shortfalls, 1)
+        XCTAssertLessThanOrEqual(largestStep(output), rampStep, "no step to silence")
+        XCTAssertEqual(output.last ?? 1, 0, "silent once the fade ends")
+    }
+
+    func testRefillFadesBackIn() {
+        var buffer = AdaptiveAudioBuffer(configuration: ramped)
+        buffer.write(samples(40, value: level))
+        let first = read(&buffer, 60).left
+        buffer.write(samples(buffer.targetFrames, value: level))
+        let output = read(&buffer, 30).left
+        XCTAssertTrue(buffer.isPlaying)
+        XCTAssertLessThanOrEqual(largestStep(output, after: first.last), rampStep, "no step back to sound")
+        XCTAssertEqual(output.last ?? 0, Float(level) / Float(Int16.max), accuracy: 0.0001, "full level once faded in")
+    }
+
+    func testRemoveAllFadesWhatWasPlayingWithoutReplayingIt() {
+        var buffer = AdaptiveAudioBuffer(configuration: ramped)
+        buffer.write(samples(80, value: level))
+        let before = read(&buffer, 20).left
+        buffer.removeAll()
+        let output = read(&buffer, 20).left
+        XCTAssertLessThanOrEqual(largestStep(output, after: before.last), rampStep)
+        XCTAssertEqual(output.last ?? 1, 0)
+        XCTAssertTrue(zip(output, output.dropFirst()).allSatisfy { $1 <= $0 }, "only fades; no old sound plays again")
+    }
+
+    func testRemoveAllWithoutFadeStartsAgainFromSilence() {
+        var buffer = AdaptiveAudioBuffer(configuration: ramped)
+        buffer.write(samples(80, value: level))
+        _ = read(&buffer, 20)
+        buffer.removeAll(fadeOut: false)
+        XCTAssertEqual(read(&buffer, 5).left, Array(repeating: 0, count: 5))
+        buffer.write(samples(buffer.targetFrames, value: level))
+        XCTAssertLessThanOrEqual(largestStep(read(&buffer, 20).left, after: 0), rampStep, "fades in from silence")
+    }
+
+    func testSkippingAStaleBurstFadesAcrossTheJump() {
+        var buffer = AdaptiveAudioBuffer(configuration: ramped)
+        buffer.write(samples(40, value: level))
+        let before = read(&buffer, 20).left
+        // A burst of the opposite level, more than three targets' worth, while playing.
+        buffer.write(samples(200, value: -level))
+        let output = read(&buffer, 40).left
+        XCTAssertLessThanOrEqual(largestStep(output, after: before.last), rampStep, "no jump between the two levels")
+        XCTAssertEqual(output.last ?? 0, -Float(level) / Float(Int16.max), accuracy: 0.0001, "the newest sound plays")
+    }
 
     func testStaysSilentUntilTheTargetFills() {
         var buffer = AdaptiveAudioBuffer(configuration: configuration)
@@ -120,18 +191,15 @@ final class AdaptiveAudioBufferTests: XCTestCase {
     private func shortfallsAndDrops(drift: Double, configuration: AdaptiveAudioBuffer.Configuration) -> Int {
         var buffer = AdaptiveAudioBuffer(configuration: configuration)
         var produced = 0.0
-        var drops = 0
         buffer.write(samples(buffer.targetFrames, value: 1))
         for _ in 0..<(60 * 60 * 3) {
             produced += 800 * drift
             let whole = Int(produced)
             produced -= Double(whole)
-            let before = buffer.bufferedFrames
             buffer.write(samples(whole, value: 1))
-            if buffer.bufferedFrames < before + whole { drops += 1 }
             _ = read(&buffer, 800)
         }
-        return buffer.shortfalls + drops
+        return buffer.shortfalls + buffer.skippedBursts
     }
 
     func testDropsAStaleBurstDownToTheTarget() {

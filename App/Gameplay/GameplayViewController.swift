@@ -51,6 +51,7 @@ final class GameplayViewController: UIViewController {
     /// The hardware the game shows, so Monochrome LCD draws its screen.
     private var hardware: HardwareModel
     private var buttonBounce: Bool
+    private var audioFilter: AudioFilter
     private var frameBlending: FrameBlending
     private var fastForwardSpeed: FastForwardSpeed
     private var fastForwardAudio: FastForwardAudio
@@ -127,6 +128,7 @@ final class GameplayViewController: UIViewController {
         advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending = .off,
         buttonBounce: Bool = true,
+        audioFilter: AudioFilter = .accurate,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted,
         controllerTheme: ControllerTheme = .matchSystem,
@@ -154,6 +156,7 @@ final class GameplayViewController: UIViewController {
         self.advanceColors = advanceColors
         self.frameBlending = frameBlending
         self.buttonBounce = buttonBounce
+        self.audioFilter = audioFilter
         self.fastForwardSpeed = fastForwardSpeed
         self.fastForwardAudio = fastForwardAudio
         self.screenScaling = screenScaling
@@ -1043,6 +1046,7 @@ final class GameplayViewController: UIViewController {
         advanceColors: AdvanceColors = .gameBoyAdvance,
         frameBlending: FrameBlending,
         buttonBounce: Bool = true,
+        audioFilter: AudioFilter = .accurate,
         fastForwardSpeed: FastForwardSpeed = .x2,
         fastForwardAudio: FastForwardAudio = .muted
     ) {
@@ -1052,6 +1056,14 @@ final class GameplayViewController: UIViewController {
                 self.buttonBounce = buttonBounce
             } catch {
                 showTransientMessage("Could not update button bounce: \(error.localizedDescription)")
+            }
+        }
+        if audioFilter != self.audioFilter {
+            do {
+                try runtime.setAudioFilter(audioFilter)
+                self.audioFilter = audioFilter
+            } catch {
+                showTransientMessage("Could not update the audio filter: \(error.localizedDescription)")
             }
         }
         if dmgPalette != self.dmgPalette || hardware != self.hardware {

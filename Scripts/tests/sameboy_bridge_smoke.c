@@ -9,6 +9,7 @@
 void test_camera_rgb(void);
 void test_printer(void);
 void test_joypad_transitions(void);
+void test_audio_highpass(void);
 void test_sgb_border(void);
 
 static void make_test_rom(uint8_t *rom, size_t size)
@@ -397,6 +398,7 @@ int main(void)
     test_camera_rgb();
     test_printer();
     test_joypad_transitions();
+    test_audio_highpass();
     test_sgb_border();
     puts("sameboy bridge smoke: ok");
     return 0;

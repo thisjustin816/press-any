@@ -52,6 +52,12 @@ public protocol ButtonBounceCapability: AnyObject {
     func setButtonBounce(_ enabled: Bool)
 }
 
+/// A core whose sound output can pass through the hardware's output filter.
+public protocol AudioFilterCapability: AnyObject {
+    /// Takes effect on the next sample and lasts through resets, state loads and model changes.
+    func setAudioFilter(_ filter: AudioFilter)
+}
+
 public protocol HardwareModelCapability: AnyObject {
     /// The model the next image loads on, and with an image loaded, the model it switches to: the
     /// game starts again from its boot on the new hardware, keeping its battery save, cheats and

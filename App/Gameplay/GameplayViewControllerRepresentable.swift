@@ -48,6 +48,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             advanceColors: display.advanceColors,
             frameBlending: display.frameBlending,
             buttonBounce: display.buttonBounce,
+            audioFilter: display.audioFilter,
             fastForwardSpeed: display.fastForwardSpeed,
             fastForwardAudio: display.fastForwardAudio,
             controllerTheme: controllerTheme,
@@ -85,6 +86,7 @@ struct GameplayViewControllerRepresentable: UIViewControllerRepresentable {
             advanceColors: display.advanceColors,
             frameBlending: display.frameBlending,
             buttonBounce: display.buttonBounce,
+            audioFilter: display.audioFilter,
             fastForwardSpeed: display.fastForwardSpeed,
             fastForwardAudio: display.fastForwardAudio
         )

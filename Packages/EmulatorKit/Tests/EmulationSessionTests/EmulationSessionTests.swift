@@ -706,6 +706,47 @@ extension EmulationSessionTests {
         try session.stop(createAutoState: false)
     }
 
+    func testAudioFilterChangesOnThePausedCoreWithoutRestarting() throws {
+        let harness = try SessionHarness.make()
+        let session = harness.makeSession()
+        try session.start(context: harness.contextA)
+        try session.pause()
+        let core = try XCTUnwrap(harness.factory.cores.last)
+        try session.setAudioFilter(.off)
+        XCTAssertEqual(core.audioFilter, .off)
+        try session.setAudioFilter(.accurate)
+        XCTAssertEqual(core.audioFilter, .accurate)
+        XCTAssertEqual(harness.factory.cores.count, 1)
+        try session.stop(createAutoState: false)
+    }
+
+    func testAudioFilterFollowsThePresetsOnStartAndRestart() throws {
+        let harness = try SessionHarness.make()
+        let settings = InMemorySettingsStore()
+        let presets = GameplayPresetSettings(store: settings)
+
+        func filterOnStart(_ context: LaunchContext) throws -> AudioFilter {
+            let session = harness.makeSession(settings: SettingsResolver(store: settings))
+            try session.start(context: context)
+            try session.stop(createAutoState: false)
+            return try XCTUnwrap(harness.factory.cores.last).audioFilter
+        }
+
+        XCTAssertEqual(try filterOnStart(harness.contextA), .accurate, "unset takes the standard preset's filter")
+        try presets.apply(.clean, at: .app, hardware: .gameBoy, system: .gameBoy)
+        XCTAssertEqual(try filterOnStart(harness.contextA), .off, "Clean turns it off")
+        try settings.set(AudioFilter.accurate, key: SettingKey.audioFilter.rawValue, scope: .build(harness.buildB.id))
+        XCTAssertEqual(try filterOnStart(harness.contextB), .accurate, "a Build override wins")
+
+        let session = harness.makeSession(settings: SettingsResolver(store: settings))
+        try session.start(context: harness.contextA)
+        XCTAssertEqual(try XCTUnwrap(harness.factory.cores.last).audioFilter, .off)
+        try presets.apply(.accurate, at: .app, hardware: .gameBoy, system: .gameBoy)
+        try session.restart()
+        XCTAssertEqual(try XCTUnwrap(harness.factory.cores.last).audioFilter, .accurate, "a restart reads the changed preset")
+        try session.stop(createAutoState: false)
+    }
+
     func testButtonBounceFollowsTheStandardPresetUnlessASettingChoosesIt() throws {
         let harness = try SessionHarness.make()
         let settings = InMemorySettingsStore()

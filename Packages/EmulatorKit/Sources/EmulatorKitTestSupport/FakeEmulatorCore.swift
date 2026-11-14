@@ -31,7 +31,7 @@ public struct FakeCoreFactory: EmulatorCoreFactory {
     }
 }
 
-public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability, ButtonBounceCapability, CameraCapability, PrinterCapability {
+public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, CheatCapability, HardwareModelCapability, ButtonBounceCapability, AudioFilterCapability, CameraCapability, PrinterCapability {
     public let descriptor: CoreDescriptor
     public let replacedDescriptors: Set<CoreDescriptor>
     public let supportedSystems: Set<GameSystem>
@@ -193,6 +193,10 @@ public final class FakeEmulatorCore: EmulatorCore, BootSkippingCapability, Cheat
     public private(set) var buttonBounce = true
 
     public func setButtonBounce(_ enabled: Bool) { buttonBounce = enabled }
+
+    public private(set) var audioFilter = AudioFilter.accurate
+
+    public func setAudioFilter(_ filter: AudioFilter) { audioFilter = filter }
 
     public func setHardwareModel(_ model: HardwareModel) throws {
         hardwareModelRequests.append(model)

@@ -797,6 +797,7 @@ final class AppContainer {
             advanceColors: values.advanceColors,
             frameBlending: values.frameBlending,
             buttonBounce: values.buttonBounce,
+            audioFilter: values.audioFilter,
             fastForwardSpeed: fastForwardSpeed(system: target.system, gameID: target.gameID, buildID: target.buildID),
             fastForwardAudio: fastForwardAudio(system: target.system, gameID: target.gameID, buildID: target.buildID),
             camera: gameBoyCamera(system: target.system, gameID: target.gameID, buildID: target.buildID)
@@ -883,6 +884,10 @@ final class AppContainer {
         gameplayDisplay(for: gameplaySettingsTarget(system: system)).buttonBounce
     }
 
+    func quickPlayAudioFilter(system: GameSystem) -> AudioFilter {
+        gameplayDisplay(for: gameplaySettingsTarget(system: system)).audioFilter
+    }
+
     func quickPlayAutoResumePolicy(system: GameSystem) -> AutoResumePolicy {
         launchSetting(AutoResumePolicy.self, .autoResumePolicy, system: system, gameID: nil, buildID: nil) ?? .always
     }
@@ -923,6 +928,7 @@ struct GameplayDisplaySettings: Equatable {
     var advanceColors: AdvanceColors = .gameBoyAdvance
     var frameBlending: FrameBlending
     var buttonBounce: Bool = true
+    var audioFilter: AudioFilter = .accurate
     var fastForwardSpeed: FastForwardSpeed
     var fastForwardAudio: FastForwardAudio
     /// Only camera cartridges read it.

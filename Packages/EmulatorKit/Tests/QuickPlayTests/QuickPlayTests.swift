@@ -27,6 +27,24 @@ final class QuickPlayTests: XCTestCase {
         try runtime.stop(createAutoState: false)
     }
 
+    func testQuickPlayAudioFilterAppliesOnStartAndChangesWithoutRestarting() throws {
+        for filter in AudioFilter.allCases {
+            let harness = try QuickPlayHarness.make()
+            defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
+            let session = try harness.workspace.start(romURL: harness.writeExternalROM(TestROM.make(title: "FILTER")))
+            let factory = CapturingQuickPlayFactory()
+            let runtime = harness.makeRuntime(session, factory: factory, audioFilter: filter)
+            try runtime.start()
+            let core = try XCTUnwrap(factory.cores.last)
+            XCTAssertEqual(core.audioFilter, filter)
+            let other: AudioFilter = filter == .off ? .accurate : .off
+            try runtime.setAudioFilter(other)
+            XCTAssertEqual(core.audioFilter, other)
+            XCTAssertEqual(factory.cores.count, 1)
+            try runtime.stop(createAutoState: false)
+        }
+    }
+
     func testQuickPlayButtonBounceChangeBeforeStartDoesNothing() throws {
         let harness = try QuickPlayHarness.make()
         defer { try? FileManager.default.removeItem(at: harness.store.rootURL) }
@@ -507,10 +525,11 @@ private struct QuickPlayHarness {
         _ session: QuickPlaySession,
         factory: any EmulatorCoreFactory = QuickPlayFakeFactory(),
         store: (any AssetStore)? = nil,
-        buttonBounce: Bool = true
+        buttonBounce: Bool = true,
+        audioFilter: AudioFilter = .accurate
     ) -> QuickPlayRuntimeSession {
         QuickPlayRuntimeSession(session: session, coreRegistry: CoreRegistry(factories: [factory]), assetStore: store ?? self.store,
-            buttonBounce: buttonBounce)
+            buttonBounce: buttonBounce, audioFilter: audioFilter)
     }
 
     func writeExternalROM(_ data: Data) throws -> URL {

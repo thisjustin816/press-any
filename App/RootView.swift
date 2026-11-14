@@ -633,6 +633,7 @@ struct RootView: View {
                     advanceColors: values.advanceColors,
                     frameBlending: values.frameBlending,
                     buttonBounce: values.buttonBounce,
+                    audioFilter: values.audioFilter,
                     fastForwardSpeed: container.fastForwardSpeed(for: launch.context),
                     fastForwardAudio: container.fastForwardAudio(for: launch.context),
                     camera: container.gameBoyCamera(for: launch.context)
@@ -683,13 +684,15 @@ struct RootView: View {
             coreRegistry: container.coreRegistry,
             assetStore: container.fileStore,
             buttonBounce: container.quickPlayButtonBounce(system: session.system),
+            audioFilter: container.quickPlayAudioFilter(system: session.system),
             superGameBoyBorders: container.superGameBoyBorders(system: session.system)
         )
         try runtime.start()
         let target = container.gameplaySettingsTarget(system: session.system, hardware: runtime.runningHardwareModel)
         let display = container.gameplayDisplay(for: target)
-        // The bounce passed in was for the hardware most games of the system play on.
+        // The bounce and filter passed in were for the hardware most games of the system play on.
         try? runtime.setButtonBounce(display.buttonBounce)
+        try? runtime.setAudioFilter(display.audioFilter)
         gameplay = GameplayPresentation(
             kind: .quickPlay(session.id),
             runtime: runtime,

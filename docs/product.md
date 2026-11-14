@@ -61,7 +61,8 @@ lives in App Store Connect, never in code: the app shows the App Store's localiz
 In the v1.1 development build, Plus includes:
 
 - **Custom gameplay**: changing the settings a Gameplay preset sets one by one: Display Filter,
-  Frame Blending, Color Correction, Game Boy Advance Colors and Button Bounce (see Picture). Every
+  Frame Blending, Color Correction, Game Boy Advance Colors, Button Bounce and Audio Filter (see
+  Picture and Sound). Every
   preset (Nostalgic, Accurate and Clean) is free, and so are the Game Boy palettes under Screen
   Colors.
 - **App icons**: Berry, Grape, Teal, Kiwi and Dandelion colorways of the home-screen icon, in
@@ -1054,7 +1055,8 @@ clear of both overlays.
 - **Cheats** opens the Build's cheats over the paused game at half height (see Cheats and memory tools).
 - **Settings** opens over the paused game at half height. A library game edits its Game's
   settings; Quick Play edits its system's. Layout, scaling, the Gameplay preset, display filter,
-  frame blending, Screen Colors and Button Bounce apply at once; the rest at the next launch.
+  frame blending, Screen Colors, Button Bounce and the audio filter apply at once; the rest at the
+  next launch.
 - The controller's Menu button opens the menu; pressing it again closes the menu and resumes.
   The Home button is reserved for the system. Button customization uses iOS Settings (see
   Controllers, haptics and rumble).
@@ -1102,7 +1104,8 @@ Quick Play keeps them temporary until Add to Library.
 
 From System settings down through Game and Build, settings start with **Gameplay**: Preset,
 Model, Screen Colors and Customize. A preset sets the display filter, frame blending, color
-correction, Game Boy Advance Colors and Button Bounce for the hardware the game runs on:
+correction, Game Boy Advance Colors, Button Bounce and the audio filter for the hardware the game
+runs on:
 
 - **Nostalgic**, the standard, "As you remember it, polished for today's screens": the game as
   people remember it, idealized, on a bright modern screen. Every setting no level sets plays as
@@ -1110,14 +1113,14 @@ correction, Game Boy Advance Colors and Button Bounce for the hardware the game 
 - **Accurate**, "As the original looked and felt": the original hardware late in its life, on its
   own screen or on the television a Super Game Boy or Game Boy Player showed on.
 - **Clean**, "Just the game, with no effects added": the game's pixels with no filter, frame
-  blending, color correction or button bounce.
+  blending, color correction or button bounce, and its sound with no audio filter.
 - **Custom** shows when the settings under Customize match no preset. It isn't a choice in the
   menu; changing a setting under Customize makes it, and returning every value to a preset's
   shows that preset again.
 
 Each preset's description shows under the Preset row and under its option in the Preset menu.
 The descriptions name no hardware, since one preset means the same on every model, and speak of
-more than the screen, since a preset also sets frame blending and Button Bounce.
+more than the screen, since a preset also sets frame blending, Button Bounce and the audio filter.
 
 Every preset is free. Customize lists the preset's settings for this hardware, and changing one
 needs Plus: without it, every value there is marked Plus, choosing one opens the Plus screen and
@@ -1148,7 +1151,8 @@ level that inherits keeps inheriting.
 | Game Boy Player | Slightly Curved Scanlines, Balanced, As on a Game Boy Color, bounce on | CRT 480p, Original, As on a Game Boy Advance, bounce on | Off, Original |
 
 Frame blending is Off on the television models and in Clean. Button Bounce is on in Nostalgic and
-Accurate on every model, the television models included, and off only in Clean. On a Game Boy or
+Accurate on every model, the television models included, and off only in Clean. So is the audio
+filter: Accurate in Nostalgic and Accurate, Off in Clean. On a Game Boy or
 Pocket the presets leave color correction alone, since those show a palette. On a Game Boy Color,
 Nostalgic's Soft is Modern Accurate made softer, the game's colors as a bright backlit screen
 shows them, and Accurate's Reduce Contrast is close to BGB's measurement of a Game Boy Color in light (see
@@ -1288,6 +1292,17 @@ emulation is later work.
   instead of crackle; after 30 seconds without a shortfall it shrinks 20 ms. Playback runs up to
   0.5% fast or slow to track clock drift. The game's speed never changes for the sound. Sound more
   than three times the target behind is skipped. The app asks for 10 ms hardware buffers.
+- Sound never jumps to or from silence: when playback runs dry, skips stale sound or is cleared for
+  a speed change, the last sound fades out over 4 ms, and sound fades back in over 4 ms. A pause
+  or stop cuts the output, so sound after it fades in from silence. Each second with a shortfall,
+  a skip, a silent stretch or a clear is written to the device log (Gameplay, Audio) with the
+  frames written and read.
+- **Audio Filter** (under Customize; the preset's value by default): Accurate passes the sound
+  through the output capacitor a Game Boy has, which removes the steady level a game leaves on a
+  sound channel switched on at volume 0; Off plays the sound as the chip makes it, steady level
+  included, and in those games any gap in playback clicks. Changes apply to the open game at once
+  and last through restarts, state loads and Model changes. SameBoy's third mode, Remove DC
+  Offset, isn't offered: in 1.0.5 it removes the wrong level when a game routes channels unevenly.
 - **Sound** (app-wide): Follow Silent Switch by default, Always On, or Always Off, which mutes the
   game. Every choice plays alongside other apps' audio, so music keeps playing under a game and a
   system sound such as Background Sounds doesn't interrupt it. It's in App Settings and in the

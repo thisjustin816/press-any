@@ -17,6 +17,8 @@ protocol GameplayRuntime: AnyObject {
     func setSpeed(_ speed: EmulationSpeed) throws
     /// Applies a changed Button Bounce to the open game without restarting it.
     func setButtonBounce(_ enabled: Bool) throws
+    /// Applies a changed audio filter to the open game without restarting it.
+    func setAudioFilter(_ filter: AudioFilter) throws
     func setDisplaySettings(
         colorCorrection: ColorCorrection,
         dmgPalette: DMGPalette,
