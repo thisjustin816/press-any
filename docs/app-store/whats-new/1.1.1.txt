@@ -1,0 +1,7 @@
+Quieter sound
+Games that leave a sound channel on at zero volume no longer click on quiet screens. Sound now passes through the same filter a Game Boy's own output has, and it fades out and back in instead of cutting off when playback briefly runs out. The filter is part of the gameplay presets: Nostalgic and Accurate use it, and Clean plays the sound as the chip makes it. Plus lets you change it under Customize.
+
+Fixes
+- Games with a clock, such as Pokémon Gold, Silver and Crystal, no longer rewrite their save every few seconds, and Load State no longer asks about an older state when the game hasn't saved
+- Loading a state while a game prints no longer loses the print or leaves the printer unable to answer
+- Homebrew made with GBDK, GB Studio or ZGB is no longer named "Rev 1"; Builds named that way are corrected unless you changed the revision yourself
