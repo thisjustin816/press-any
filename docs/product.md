@@ -45,8 +45,8 @@ Game Boy Printer emulation with printed-slip image export is prioritized for v1.
 v1 is a good core experience: the library model with search, sorting and favorites, saves and
 states with Library Backup, patching, cheats, Quick Play, Fast Forward, rumble, Bluetooth controllers,
 landscape, the built-in layouts, clean screenshot sharing and artwork from a chosen game frame.
-The larger roadmap tentatively targets v2.0: iCloud sync, the Community Catalog and metadata providers,
-tags and collections, broader archive and multi-asset imports, additional artwork providers and
+Collections the player names and fills come in v1.2. The larger roadmap tentatively targets v2.0:
+iCloud sync, the Community Catalog and metadata providers, tags and smart collections, broader archive and multi-asset imports, additional artwork providers and
 documents, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
 curated shaders, the layout editor and skin import, a capture gallery and gameplay notes, external displays,
 crash reporting and usage counts, and Developer Mode. The Plus screen's roadmap lists these
@@ -157,7 +157,7 @@ suggests keeps the suggestion as an alias the same way, unless it's a generic na
 
 A Game stores whether it is a favorite. Merging Games keeps the survivor a favorite if either
 was, and Make Separate Game carries the source Game's favorite state. Game titles and Build
-metadata keep provenance. Tags, collections, documents and typed artwork follow in v2.0.
+metadata keep provenance. Collections follow in v1.2; tags, documents and typed artwork in v2.0.
 
 A Game's statistics sum playtime across its live Builds and session counts across its live Save
 Profiles. Last Played is the latest profile's last-played date; Added is the Game's creation date.
@@ -1693,11 +1693,13 @@ Game Boy Player). The list shows no model numbers. App Settings has it on the Pl
   menu" once. v1 has nothing to opt into; the v2.0 opt-ins (crash reports, usage counts) and
   Developer Mode bring their own introductions.
 - v1: a separate statistics screen (no permanent session log).
+- v1.2: collections the player names and fills, browsed one at a time with search, Sort By and
+  Favorites Only still applying.
 - v2.0: sorting by release year, developer and publisher, which metadata providers supply; SQLite
   FTS5 live search across titles, aliases, filenames, hack title, author, version,
-  system, region, Build names, tags and document titles, title matches ranked first; manual and
-  smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with
-  updates); tags on Games and Builds behind long-press and overflow; an optional Developer view.
+  system, region, Build names, tags and document titles, title matches ranked first; smart
+  collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates);
+  tags on Games and Builds behind long-press and overflow; an optional Developer view.
 
 ## Toolchain detection
 

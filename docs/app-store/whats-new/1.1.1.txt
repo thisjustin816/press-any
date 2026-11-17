@@ -5,3 +5,4 @@ Fixes
 - Games with a clock, such as Pokémon Gold, Silver and Crystal, no longer rewrite their save every few seconds, and Load State no longer asks about an older state when the game hasn't saved
 - Loading a state while a game prints no longer loses the print or leaves the printer unable to answer
 - Homebrew made with GBDK, GB Studio or ZGB is no longer named "Rev 1"; Builds named that way are corrected unless you changed the revision yourself
+- A ROM hack moved into a Game of its own exports under that Game's name instead of the original game's
