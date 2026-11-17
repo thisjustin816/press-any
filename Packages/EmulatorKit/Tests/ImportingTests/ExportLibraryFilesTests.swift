@@ -72,7 +72,14 @@ final class ExportLibraryFilesTests: XCTestCase {
         let bare = fixture.build(kind: .patchRecipe, parent: base.id)
         // Import Review titles a hack left blank with its Game's title, and records no base.
         let untitled = fixture.build(kind: .patchRecipe, parent: base.id, hackTitle: "Moon Garden", author: "Jane")
-        let exporter = fixture.exporter(builds: [base, bad, hack, bare, untitled], knownDumps: index)
+        // A hack moved to a Game of its own, titled as the hack.
+        let ownGame = Game(id: UUID(), primaryTitle: "Moon Garden Night", systemFamily: "gameboy",
+                           createdAt: fixture.now, modifiedAt: fixture.now)
+        try fixture.games.insertGame(ownGame)
+        var separate = fixture.build(kind: .patchRecipe, parent: base.id, baseTitle: "Moon Garden",
+                                     hackTitle: "Moon Garden Night", author: "Jane", version: "2.7.8")
+        separate.gameID = ownGame.id
+        let exporter = fixture.exporter(builds: [base, bad, hack, bare, untitled, separate], knownDumps: index)
         let name = { (build: Build) in try exporter.exportROM(buildID: build.id, to: fixture.exports).lastPathComponent }
 
         XCTAssertEqual(try name(base), "Moon Garden (USA) (Rev 1) [!].gbc")
@@ -80,6 +87,7 @@ final class ExportLibraryFilesTests: XCTestCase {
         XCTAssertEqual(try name(hack), "Moon Garden (USA) (Rev 1) [Night patch by Jane v0.3].gbc")
         XCTAssertEqual(try name(bare), "Moon Garden (USA) (Rev 1) [Hack].gbc", "a patched copy never passes for the dump")
         XCTAssertEqual(try name(untitled), "Moon Garden (USA) (Rev 1) [Hack by Jane].gbc")
+        XCTAssertEqual(try name(separate), "Moon Garden Night (v2.7.8) [by Jane].gbc", "named for the Game it was moved to")
     }
 
     func testANameCannotEscapeTheFolderOrHideTheFile() {

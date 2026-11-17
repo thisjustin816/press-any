@@ -2,7 +2,9 @@ import Foundation
 
 /// Names a ROM file the way No-Intro names a dump, then a hack or translation in brackets after
 /// the base game's name, a translation in GoodTools' form:
-/// "Title (Region) (Languages) (Rev X) (vX.Y) (Status) [Night patch by Jane v0.3] [T+Eng1.03_Jane]".
+/// "Title (Region) (Languages) (Rev X) (vX.Y) (Status) [Hack by Jane v0.3] [T+Eng1.03_Jane]".
+/// A hack in a Game of its own, titled as the hack, is named by that title instead:
+/// "Pokemon PureGreen (v2.7.8) [by Jane]".
 extension FilenameMetadataParser {
     public static func canonicalFilename(
         fileExtension: String,
@@ -15,6 +17,13 @@ extension FilenameMetadataParser {
         // is no title of its own.
         var metadata = metadata
         if modified { metadata.baseTitle = metadata.baseTitle ?? title }
+        if modified, let ownTitle = ownGameTitle(title, for: metadata) {
+            // The region, languages and revision are the base dump's, so they stay out.
+            let named = BuildImportMetadata(versionString: metadata.versionString, author: metadata.author, status: metadata.status)
+            let translation = metadata.translation.map { ["T+\(goodToolsLanguage(for: $0))"] } ?? []
+            return canonicalFilename(fileExtension: fileExtension, title: ownTitle, metadata: named,
+                                     unknownGroups: translation + unknownGroups)
+        }
         var groups: [String] = []
         if let region = metadata.region { groups.append("(\(region))") }
         if let language = metadata.language { groups.append("(\(noIntroLanguages(language)))") }
@@ -57,6 +66,16 @@ extension FilenameMetadataParser {
         }
         if let status = metadata.status { groups.append("[\(noIntroStatus(status))]") }
         return groups
+    }
+
+    /// `title`, the Game's, when the hack lives in a Game of its own: one titled as the hack, not
+    /// as its base game. A hack in its base game's Game, or a patch named for what it fixes, keeps
+    /// the base game's name.
+    static func ownGameTitle(_ title: String, for metadata: BuildImportMetadata) -> String? {
+        guard let hackTitle = metadata.hackTitle, let baseTitle = metadata.baseTitle else { return nil }
+        let key = GameMatcher.normalized(title)
+        guard key == GameMatcher.normalized(hackTitle), key != GameMatcher.normalized(baseTitle) else { return nil }
+        return title
     }
 
     private static func isModification(_ metadata: BuildImportMetadata) -> Bool {
