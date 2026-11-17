@@ -331,7 +331,11 @@ Names use No-Intro for the game and GoodTools' codes for what was done to it:
   "(Beta) (2000-02-21)", an ASCII title, a leading article moved to the end ("Legend of Zelda,
   The") and "Proto" for a prototype. Only letters that become ASCII lose their accents, so
   Japanese titles keep their kana as written. A hack keeps the base game's name with the
-  modification after it, as above. Import Review's Suggested Filename follows the same rules.
+  modification after it, as above, unless it lives in a Game of its own titled as the hack: then
+  it's named by that title, with its version, status, author and translation, "Pokemon PureGreen
+  (v2.7.8).gbc", and the base dump's region and revision stay out. A patch named for what it
+  fixes, or a hack in its base game's Game, keeps the base name. Import Review's Suggested
+  Filename follows the same rules.
   Title matching folds accents and reads "Moon Garden, The" as "The Moon Garden", so an exported
   file finds its own Game again.
 

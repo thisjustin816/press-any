@@ -211,7 +211,12 @@ final class FilenameMetadataParserTests: XCTestCase {
         XCTAssertEqual(parsed.buildMetadata.hackTitle, "Crystal Clear")
         XCTAssertEqual(parsed.buildMetadata.translation, "Spanish")
         XCTAssertEqual(parsed.buildMetadata.author, "ShockSlayer")
-        XCTAssertEqual(parsed.normalizedFilename, "Pokemon Crystal [Crystal Clear by ShockSlayer v2.5.10] [T+Spa].gbc")
+        // Its Game is titled as the hack, so it's named by that title, without the base's.
+        XCTAssertEqual(parsed.normalizedFilename, "Crystal Clear (v2.5.10) [by ShockSlayer] [T+Spa].gbc")
+        let again = FilenameMetadataParser.parse(filename: parsed.normalizedFilename)
+        XCTAssertEqual(again.suggestedTitle, "Crystal Clear", "the name finds its own Game again")
+        XCTAssertEqual(again.buildMetadata.versionString, "2.5.10")
+        XCTAssertEqual(again.buildMetadata.author, "ShockSlayer")
         XCTAssertEqual(parsed.unknownGroups, [])
     }
 

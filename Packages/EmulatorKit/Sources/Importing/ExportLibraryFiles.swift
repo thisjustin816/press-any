@@ -86,11 +86,18 @@ public struct ExportLibraryFiles: Sendable {
             name = "\(dump.name) [b].\(fileExtension)"
         case .modified(let dump):
             // A hack without a recorded base is a hack of its Game, so a hack title that repeats
-            // the Game's is no title of its own: "[Hack by Jane]".
+            // the Game's is no title of its own: "[Hack by Jane]". One in a Game of its own is named
+            // for that Game, as canonicalFilename names it.
             var modification = metadata
             modification.baseTitle = modification.baseTitle ?? game.primaryTitle
-            let groups = FilenameMetadataParser.modificationGroups(for: modification)
-            name = "\(([dump.name] + groups).joined(separator: " ")).\(fileExtension)"
+            if FilenameMetadataParser.ownGameTitle(game.primaryTitle, for: modification) != nil {
+                name = FilenameMetadataParser.canonicalFilename(
+                    fileExtension: fileExtension, title: game.primaryTitle, metadata: modification, unknownGroups: []
+                )
+            } else {
+                let groups = FilenameMetadataParser.modificationGroups(for: modification)
+                name = "\(([dump.name] + groups).joined(separator: " ")).\(fileExtension)"
+            }
         case .unknown, nil:
             name = FilenameMetadataParser.canonicalFilename(
                 fileExtension: fileExtension,
