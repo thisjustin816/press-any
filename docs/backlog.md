@@ -22,11 +22,14 @@ roadmap; its final scope and timing are not fixed.
   Known bugs, and stops naming GBDK, GB Studio and ZGB homebrew "Rev 1" from its header (#224).
   It also checks the Game Boy Printer after a save state loads during a print (#219) and the
   cartridge clock across pause, relaunch and state restore (#220). A problem either check finds is
-  fixed in v1.1.1 when the fix is small, and moves to a later release otherwise. New features wait for later releases.
+  fixed in v1.1.1 when the fix is small, and moves to a later release otherwise. A ROM hack moved
+  into a Game of its own exports under that Game's title (#230). New features wait for later
+  releases.
 - **v1.2:** minor features before v2.0: rewind (#221), local link cable play between two emulated
-  systems (#222) and infrared between those linked games (#223).
+  systems (#222), infrared between those linked games (#223) and collections in the library
+  (#231).
 - **v2.0:** the larger unfinished roadmap, including save migration, broader multi-asset
-  import, documents, rewind, skins, sync and catalog services. Partial rows describe what
+  import, documents, skins, sync and catalog services. Partial rows describe what
   is already built and what remains for this target.
 
 The v1.1 fixes cover import names and matching after restore, exported-name round trips,
@@ -77,7 +80,7 @@ The v1.1 artwork work adds automatic Libretro lookup after import and a reviewed
 check. The rest waits for v2.0: 7z and multi-asset import, additional artwork providers and documents with the
 manual reader, slow motion, frame advance and Quick Actions, Super Game Boy borders,
 shaders and the layout editor with skin import,
-a screenshot gallery and gameplay notes, external displays, tags and collections, iCloud sync once the schema has
+a screenshot gallery and gameplay notes, external displays, tags and smart collections, iCloud sync once the schema has
 settled, the Community Catalog and metadata providers, crash reporting and usage counts, Developer
 Mode, editable patch stacks, the Build timeline and comparison screen, in-game Build switching,
 RTC offsets, rumble routing, Undo, core updates, and the internal registries and descriptors.
@@ -182,7 +185,7 @@ recently played first, when less than 500 MB is free, at launch and before a pat
 | done | Per-Build playtime | v1.0 | session time added to Build and Save Profile together on background and close, without double counting; shown in Build Details and Game rollups; a separate statistics screen comes later |
 | missing | Documents model (Game/Build/both; Manual/README/Changelog/Guide/Map/Other) | v2.0 |  |
 | missing | Typed multi-artwork model with primary selection | v2.0 | Game.artworkAssetID is a single image |
-| missing | Tags and collections | v2.0 |  |
+| missing | Tags and collections | v1.2 collections / v2.0 tags | collections the player names and fills (#231); tags and smart collections remain v2.0 |
 
 Done: Game: UUID, primary title, system family, preferred Build/Profile, timestamps; Build: UUID,
 gameID, system, concise name, immutable hash, sourceKind, parent lineage, Base marker, preferred
@@ -199,7 +202,7 @@ ManagedAsset: hash, kind, length, relative path, original filename, provenance, 
 | Status | Item | Target | Notes |
 |---|---|---|---|
 | missing | Optional Developer view (Build/version/profile details) | v2.0 |  |
-| missing | Manual collections/folders | v2.0 |  |
+| missing | Manual collections/folders | v1.2 | #231: name, fill and browse collections; in backups and Game packages |
 | missing | Smart collections (GB, GBC, Homebrew, ROM Hacks, Favorites, Recently Played, Builds with updates) | v2.0 |  |
 | missing | Tags on Games/Builds via long-press/overflow | v2.0 |  |
 | done | Sorting | v1.0 | remembered Sort By in the More menu: title, recent play, added, last Build change, playtime, system, hack author, Build version and date, and manual order; Recently Played uses the later of date added and last played so new imports appear at the top; list second lines follow the sort; Reorder drags Games in the list under Manual, positions survive Recently Deleted; release year/developer/publisher move to v2.0 with metadata providers |
