@@ -10,7 +10,8 @@ roadmap; its final scope and timing are not fixed.
 - **v1.0:** published on the App Store: build 110 at `3c4a76f`. Its submission tag is
   `app-store-review/1.0-build-110`, and its stable release, `v1.0.0`, is at the same commit.
   Submission and stable release tags follow `docs/testflight.md`.
-- **v1.1:** work completed after build 110. This includes revised branding and app icons;
+- **v1.1:** published on the App Store: build 232 at `2be3a99`, submitted as
+  `app-store-review/1.1-build-232` and released as `v1.1.0`. It holds the work completed after build 110: revised branding and app icons;
   the Model setting, hardware-family checks and the header-based Automatic model; free Nostalgic/Accurate/Clean gameplay presets, Custom with Plus, and model-specific display filters; automatic artwork previews, missing-artwork
   review, provenance and grouped Library settings; Game Boy Camera with Photo! DX color
   capture; Playtiles landscape controls and compatibility checks; and the fixes listed below.
@@ -18,7 +19,8 @@ roadmap; its final scope and timing are not fixed.
   as are the older-version save warning and the copy kept before switching Builds.
   Game Boy Printer emulation is built for this release, with a printed-slip preview, image
   export, a Printer Log and prints kept in each Game's Captures.
-- **v1.1.1:** a fix release on v1.1. It fixes the quiet-game audio clicks (#218) and stops
+- **v1.1.1:** published on the App Store: build 248 at `5c3f6d9`, released as `v1.1.1`. A
+  fix release on v1.1, it fixes the quiet-game audio clicks (#218) and stops
   naming GBDK, GB Studio and ZGB homebrew "Rev 1" from its header (#224). It also checks the Game Boy Printer after a save state loads during a print (#219) and the
   cartridge clock across pause, relaunch and state restore (#220). A problem either check finds is
   fixed in v1.1.1 when the fix is small, and moves to a later release otherwise. A ROM hack moved
