@@ -205,31 +205,11 @@ newest upload is the published candidate. If `main` has newer uploads, use Tag r
 submission remains manual. The earlier `v0.1.0-beta.N` tags stay; beta numbering starts again at 1
 for each version.
 
-### App Store submission tags
-
-For every candidate actually submitted to App Store review, create and push an annotated tag:
-`app-store-review/<marketing-version>-build-<build-number>`. Confirm the version and build in App
-Store Connect, then resolve its existing `testflight/<build-number>` tag to the exact uploaded
-commit. Tag that commit after submission. A successful upload alone does not mean it was submitted.
-
-For example, the submitted 1.0 (110) candidate is commit `3c4a76f`:
-
-```sh
-git fetch origin --tags
-git rev-parse 'testflight/110^{commit}'
-git tag -a app-store-review/1.0-build-110 'testflight/110^{commit}' -m 'Submitted for App Store review: 1.0 (110)'
-git push origin refs/tags/app-store-review/1.0-build-110
-```
-
-The annotation records the submitted version and build. A replacement candidate gets a new tag
-for its new build number; retain earlier submission tags and never move them. If a tag already
-exists, check its commit rather than recreating it. Creating this tag triggers neither Release
-nor TestFlight and does not publish a GitHub release.
-
-After the owner confirms App Store publication, publish the stable release at that same candidate
-commit, such as `v1.0.0` for 1.0 (110), even if `main` has newer TestFlight builds. Tag release
-(below) does this. The backlog uses the submitted candidate as the boundary between that release
-and subsequent development.
+After the owner confirms App Store publication, publish the stable release at the published
+build's commit, such as `v1.0.0` for 1.0 (110), even if `main` has newer TestFlight builds. Tag
+release (below) does this. The backlog uses the published build as the boundary between that
+release and subsequent development. Submission isn't tagged; App Store Connect records which
+build went to review, and the `app-store-review/...` tags for 1.0 and 1.1 stay as they are.
 
 ### Stable release at an earlier build
 
@@ -246,8 +226,7 @@ release → Run workflow** on `main`:
 
 Before it writes anything, the run checks that the commit is on `main` and has a
 `testflight/<build>` tag, that the tag is new, and that it matches `MARKETING_VERSION` in
-`project.yml` at that commit. If the build has an `app-store-review/<version>-build-<build>` tag,
-that tag must be at the same commit, and the run summary names it. The run never moves an
+`project.yml` at that commit. The run never moves an
 existing tag, and it uses only the workflow's own token, without the App Store Connect key or
 signing secrets. Its release doesn't start the Release workflow. If the tag is created but the
 release fails, publish the release from that tag by hand.

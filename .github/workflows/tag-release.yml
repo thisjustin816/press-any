@@ -92,16 +92,6 @@ jobs:
           fi
           [[ $TAG == "v$full" ]] || fail "Build $build is version $version, so its tag is v$full, not $TAG."
 
-          review="app-store-review/$version-build-$build"
-          if git rev-parse -q --verify "refs/tags/$review" >/dev/null; then
-            reviewed="$(git rev-parse "$review^{commit}")"
-            [[ $reviewed == "$COMMIT" ]] || fail "$review is at $reviewed, not $COMMIT."
-            review_note="$review is at the same commit."
-          else
-            echo "::warning::There's no $review tag, so build $build may not have been submitted for App Store review."
-            review_note="There's no $review tag."
-          fi
-
           # A release for an older version than one already out doesn't become Latest.
           newest="$({ git tag --list 'v*' | grep -v -- - || true; echo "$TAG"; } | sort -V | tail -n 1)"
           latest=false
@@ -111,7 +101,6 @@ jobs:
             echo "version=$version"
             echo "build=$build"
             echo "latest=$latest"
-            echo "review_note=$review_note"
           } >>"$GITHUB_OUTPUT"
           echo "Build $build ($version) at $COMMIT is on main and has no stable tag yet."
       - name: Write the description
@@ -135,7 +124,6 @@ jobs:
           VERSION: ${{ steps.check.outputs.version }}
           BUILD: ${{ steps.check.outputs.build }}
           LATEST: ${{ steps.check.outputs.latest }}
-          REVIEW_NOTE: ${{ steps.check.outputs.review_note }}
         run: |
           tag_object="$(gh api "repos/$GITHUB_REPOSITORY/git/tags" -f "tag=$TAG" -f "object=$COMMIT" -f type=commit \
             -f "message=Released on the App Store: $VERSION ($BUILD)" --jq .sha)"
@@ -146,8 +134,4 @@ jobs:
             echo "::error::$TAG is created, but its release isn't. Publish the release from the existing tag by hand."
             exit 1
           }
-          {
-            echo "Tagged build $BUILD ($VERSION) at \`$COMMIT\` as \`$TAG\` and published the release: $url"
-            echo
-            echo "$REVIEW_NOTE"
-          } >>"$GITHUB_STEP_SUMMARY"
+          echo "Tagged build $BUILD ($VERSION) at \`$COMMIT\` as \`$TAG\` and published the release: $url" >>"$GITHUB_STEP_SUMMARY"
