@@ -167,10 +167,10 @@ Verify with a user-supplied legal ROM:
 - [x] Pull down Control Center and Notification Center mid-game: the game stops, and picks up again when they close. With a button held when they open, nothing stays pressed. Lock and unlock, and switch apps, with Resume Games set to Always, Ask and Never in turn. A game paused from the menu stays paused through all of these.
 - [x] At the largest accessibility text size, the library shows one column with full titles, and a Game's Builds, saves and Technical Info hashes stay readable.
 - [x] In a game, Fast Forward from the game menu runs at the Fast Forward Speed setting: change it between 1.5×, 4× and Unlimited in the game menu's Settings while Fast Forward is on, and the speed follows at once. A Game's own setting overrides App Settings.
-- [ ] Play Kirby Tilt 'n' Tumble (or another MBC7 game): tilting the phone moves Kirby the way the tilt goes, in portrait and both landscape orientations. Recenter Tilt in the game menu makes the current position level. A game without a tilt sensor has no Recenter Tilt.
-- [ ] Print from a game, then open Game Boy Printer > Printer Log: each packet shows with its status byte and named flags, newest first, and Copy puts the log on the clipboard. A game that sends data while printing shows "Data sent while printing was ignored" in the log and a message over the game.
-- [ ] Print twice in a library game, close it, and open the Game: Captures shows both prints. Open one, change the background and share it. Pin one, delete the other, and restore it from Recently Deleted. Print in Quick Play, Add to Library, and the print appears in the new Game's Captures.
-- [ ] Start a print and cancel it in the game partway: the Prints sheet shows the paper fed before the stop. Discard it: the sheet asks first, the print leaves the sheet and the Game's Captures and shows in Recently Deleted, and the next print starts a new slip. Discard in Quick Play removes it from the session.
+- [x] Play Kirby Tilt 'n' Tumble (or another MBC7 game): tilting the phone moves Kirby the way the tilt goes, in portrait and both landscape orientations. Recenter Tilt in the game menu makes the current position level. A game without a tilt sensor has no Recenter Tilt.
+- [x] Print from a game, then open Game Boy Printer > Printer Log: each packet shows with its status byte and named flags, newest first, and Copy puts the log on the clipboard. A game that sends data while printing shows "Data sent while printing was ignored" in the log and a message over the game.
+- [x] Print twice in a library game, close it, and open the Game: Captures shows both prints. Open one, change the background and share it. Pin one, delete the other, and restore it from Recently Deleted. Print in Quick Play, Add to Library, and the print appears in the new Game's Captures.
+- [x] Start a print and cancel it in the game partway: the Prints sheet shows the paper fed before the stop. Discard it: the sheet asks first, the print leaves the sheet and the Game's Captures and shows in Recently Deleted, and the next print starts a new slip. Discard in Quick Play removes it from the session.
 - [ ] Note a Build's Playtime in Build Details, then play one timed minute with Fast Forward on at 4× and close the game: Playtime grows by about a minute, not four.
 - [x] Fast Forward Audio Muted is silent while Fast Forward runs, and the sound returns at normal speed with no burst of old sound. Accelerated plays the sound sped up with the game at 2× and 4×, and stays muted at 8× and Unlimited.
 - [x] On both layouts, in Classic and Dark, the D-pad, A, B, SELECT and START look raised like the menu button, lit along their top edges. A, B, SELECT and START sink when pressed; the Game Boy D-pad tips instead, its held arm shading toward the end with no hard edge, diagonals included. On Playtiles the alignment guide also looks raised, lit along its top edge with a shadow below. Pausing from the menu shows Resume centered on the game picture on both layouts, clear of the guide and controls.
@@ -225,10 +225,10 @@ to the App Store. These checks passed on a physical iPhone and remain as regress
 - [ ] On a fresh install without Plus, import `sgb-packets.gb`, `header-licensee-01.gb` and `rgbds-dmg.gb` from `TestROMs/roms`. `sgb-packets.gb` boots the Super Game Boy 2 logo and plays in cream, orange and teal with navy text, with no border; `header-licensee-01.gb` boots the Game Boy Color logo and plays in a Game Boy Color boot palette; `rgbds-dmg.gb` boots the Game Boy Pocket logo in Green (DMG). Under Automatic the Model list reads "Game Boy Color for color and Nintendo games, Game Boy Advance for color games with extras there, Super Game Boy 2 for Super Game Boy games, Game Boy Pocket for the rest". In Game Boy settings choose Accurate: the three play CRT 240p, the Game Boy Color LCD and the Monochrome LCD, and the Preset menu reads Accurate. Game Boy settings show the Game Boy palettes under Screen Colors and Color Correction under Customize.
 - [ ] Update over a build from before this one: first, on the older build, leave an Auto State and a Save State in `header-licensee-01.gb` and in `sgb-packets.gb`, and import `rgbds-dmg.gb` without playing it. Install this build: both played games open on a Game Boy, resume where they were and load their states; `rgbds-dmg.gb` opens on a Game Boy Pocket. With Plus, set one of the played games to Game Boy Color and back to Automatic: it returns to the Game Boy.
 - [ ] Without Plus, import your own cartridge dumps of Wendy: Every Witch Way, Shantae, and The Legend of Zelda: Oracle of Seasons and Oracle of Ages, each a release Technical Info shows as Verified. Each boots the Game Boy Advance logo under Automatic and reaches its Game Boy Advance feature: Advance World in Wendy, "GBA Enhanced!" on Shantae's title screen and the Tinkerbat transformation in Bandit Town, the Advance Shop open in Horon Village (Seasons) and in Lynna Village in the past (Ages). Their Preset row reads Nostalgic. Screenshot each game's feature screen in Nostalgic, Accurate and Clean, and the same scene with Model set to Game Boy Color in Nostalgic: Nostalgic on the Game Boy Advance isn't washed out next to the Game Boy Color, nor darker than it. A patched Build made from one of them, and a Build imported into the same Game, also boot the Game Boy Advance logo. Updating from v1.0 with a state left in one of them keeps that game on the Game Boy Color.
-- [ ] Without Plus, print in a library game and open the preview: Transparent, Light and Dark select, show and export as they do with Plus. Wood, Printer, Game Artwork and Custom stay in the row with a Plus badge, and tapping each, or the empty Custom tile, opens the Plus screen once and leaves the selection as it was. No Plus screen opens on its own while printing, viewing prints or browsing Captures, and Save or Share, Discard, All Prints, Pin and the Printer Log all work.
-- [ ] With Plus, choose Wood, then take the purchase back as above: the open preview and the next one show and export Transparent, and Wood comes back when Plus is bought or restored. With a saved Custom image and no Plus, touch and hold the Custom tile: Remove Background works and Replace isn't offered.
-- [ ] Without Plus, Settings > Playing > Keep Prints reads 10 with a Plus badge, and each number opens the Plus screen and saves nothing. Pin one print, then print 12 more in one library game: Captures keeps the latest 10 and the pinned one, and the 2 oldest are in Recently Deleted as Cleaned-up Prints and restore from there. With Plus, Keep Prints at 25, 50 and 100 each keeps that many after the next print.
-- [ ] With Plus and Keep Prints at 100, make 15 prints in a Game, then take the purchase back. Captures still shows all 15 after relaunching, after changing Keep Prints and after a failed Restore Purchases. The next print leaves the latest 10 unpinned prints and every pinned one, and the rest restore from Recently Deleted. Buying again shows Keep Prints at 100.
+- [x] Without Plus, print in a library game and open the preview: Transparent, Light and Dark select, show and export as they do with Plus. Wood, Printer, Game Artwork and Custom stay in the row with a Plus badge, and tapping each, or the empty Custom tile, opens the Plus screen once and leaves the selection as it was. No Plus screen opens on its own while printing, viewing prints or browsing Captures, and Save or Share, Discard, All Prints, Pin and the Printer Log all work.
+- [x] With Plus, choose Wood, then take the purchase back as above: the open preview and the next one show and export Transparent, and Wood comes back when Plus is bought or restored. With a saved Custom image and no Plus, touch and hold the Custom tile: Remove Background works and Replace isn't offered.
+- [x] Without Plus, Settings > Playing > Keep Prints reads 10 with a Plus badge, and each number opens the Plus screen and saves nothing. Pin one print, then print 12 more in one library game: Captures keeps the latest 10 and the pinned one, and the 2 oldest are in Recently Deleted as Cleaned-up Prints and restore from there. With Plus, Keep Prints at 25, 50 and 100 each keeps that many after the next print.
+- [x] With Plus and Keep Prints at 100, make 15 prints in a Game, then take the purchase back. Captures still shows all 15 after relaunching, after changing Keep Prints and after a failed Restore Purchases. The next print leaves the latest 10 unpinned prints and every pinned one, and the rest restore from Recently Deleted. Buying again shows Keep Prints at 100.
 
 ## Capture device checks
 
@@ -343,27 +343,27 @@ Those checks remain unchecked above.
 
 ## Game Boy Printer
 
-- [ ] In library play and Quick Play, verify the printer starts connected and print through
+- [x] In library play and Quick Play, verify the printer starts connected and print through
   a game's own menus. Disconnect and reconnect from the game menu. Check that the game reports success and View Prints opens the output.
-- [ ] Print a multi-command image with zero feed margins between sections. Verify one continuous
+- [x] Print a multi-command image with zero feed margins between sections. Verify one continuous
   slip, followed by a separate slip for the next print with a top margin.
-- [ ] On a fresh install with Plus, verify Transparent is selected initially; check Light, Dark, Wood, Game Artwork (library play with artwork) and Custom backgrounds, each shown as a preview tile. Compare preview and exported PNGs, including
+- [x] On a fresh install with Plus, verify Transparent is selected initially; check Light, Dark, Wood, Game Artwork (library play with artwork) and Custom backgrounds, each shown as a preview tile. Compare preview and exported PNGs, including
   transparent corners, paper edges, feed spacing and sharp print pixels.
-- [ ] Use Save Image and Save to Files. Cancel sharing, switch backgrounds and export again.
+- [x] Use Save Image and Save to Files. Cancel sharing, switch backgrounds and export again.
   Confirm the exported file is readable after the share sheet closes.
-- [ ] With low storage, check that a failed share-file write shows an error. A failed preview
+- [x] With low storage, check that a failed share-file write shows an error. A failed preview
   render offers Try Again; retry after storage is available.
-- [ ] Close the preview with Done and by swiping. Gameplay stays paused, orientation returns to
+- [x] Close the preview with Done and by swiping. Gameplay stays paused, orientation returns to
   the gameplay policy and Resume works.
 - [x] Print, disconnect, restart and load a state. Completed slips stay available until closing
   the game; output from another run starts new paper. Closing and reopening clears the feed.
 - [x] Save a state while a print is printing, wait, then load it: exactly one print comes out. Print
   again: the printer answers and prints.
-- [ ] While receiving and printing, verify the progress banner is visible. When output arrives,
+- [x] While receiving and printing, verify the progress banner is visible. When output arrives,
   tap View Print directly, without opening the game menu. With a game's multi-part print,
   confirm the banner stays on Receiving/Printing until the last page, then shows View Print once, with page numbers from the second page. Dismiss a ready banner and print again;
   the new progress and View Print action appear. Repeat after pausing and resuming, and in landscape.
-- [ ] Generate more than 10 separate prints and confirm the oldest leaves the session feed.
+- [x] Generate more than 10 separate prints and confirm the oldest leaves the session feed.
 
 Headless checks cover serial packet decoding, completed output, feed margins, reset and
 attachment, queue overflow, library and Quick Play worker forwarding, slip assembly, retention
@@ -375,11 +375,11 @@ behavior or Apple SDK compilation.
 
 ### Quick Play launch timing
 
-- [ ] From a running Quick Play game, share another ROM and choose Quick Play. Wait at least
+- [x] From a running Quick Play game, share another ROM and choose Quick Play. Wait at least
   10 seconds on the close-session prompt before confirming. The new game's first-frame time
   excludes that wait while still measuring ROM loading and startup.
-- [ ] Cancel the close-session prompt. No new launch or first-frame report occurs.
-- [ ] Start Quick Play from the file picker and with a copied save. Both report launch time;
+- [x] Cancel the close-session prompt. No new launch or first-frame report occurs.
+- [x] Start Quick Play from the file picker and with a copied save. Both report launch time;
   resuming a kept session still shows no first-frame timer.
 
 
@@ -387,18 +387,18 @@ behavior or Apple SDK compilation.
 
 These checks need Plus. The Press Any Plus device checks cover the backgrounds without it.
 
-- [ ] Choose the bundled Wood background offline and verify the photograph and credit in Settings.
-- [ ] With no custom image, the last tile is an empty dashed Custom tile. Tap it and choose From
+- [x] Choose the bundled Wood background offline and verify the photograph and credit in Settings.
+- [x] With no custom image, the last tile is an empty dashed Custom tile. Tap it and choose From
   Photos… and From Files…: each opens its picker over the preview, and the imported image fills the
   Custom tile and is selected. There is no separate Add tile. Touch and hold Custom: Replace from Photos…
   and Replace from Files… open their pickers.
   Import a custom image from Photos, then Files. Cancel each picker and verify the previous
   background remains available. Export Custom and confirm the image fills the area behind paper.
-- [ ] Choose Custom, then close and reopen the preview, print in another game and relaunch the app:
+- [x] Choose Custom, then close and reopen the preview, print in another game and relaunch the app:
   Custom is still selected. Choose Game Artwork, then print in Quick Play: Transparent shows, and
   Game Artwork returns in a library game with artwork. Remove Custom while selected: Transparent
   is selected.
-- [ ] Try an invalid image and an oversized file. The import shows an error and keeps the previous
+- [x] Try an invalid image and an oversized file. The import shows an error and keeps the previous
   saved image. Check portrait/landscape images, orientation metadata and transparent PNG input.
 
 ## Gameplay presets and display filters
