@@ -477,7 +477,6 @@ diagonals, sliding A/B, multitouch A+B; Subtle pressed-state visuals.
 | done | Controller Menu opens and closes the game menu | v1.0 | Menu opens the game menu with no combo; pressing it again closes and resumes, including with touch controls hidden. X or PlayStation Triangle stays START; Y or Square stays SELECT; Home is never taken |
 | done | App haptics outside gameplay: a tap as a selection changes and as an alert reports a failure | v1.1 | follows Touch Haptics (Off silences them) and the iOS haptics switch; selection in the library, Game Details and Recently Deleted, the favorite star and a badge pick; failure alerts across the library, Game Details, Build Details, Metadata, Cheats, Captures, Save States, Quick Play and the root; Library Backup's success and failure follow the setting; a finished import, rename or delete taps nothing; app tests |
 | missing | Rumble routing override Phone / Controller / Both / Off | v2.0 |  |
-| partial | Tilt cartridges (MBC7) from the phone's motion | v1.1 | `TiltCapability` and the bridge's `SBHasAccelerometer`/`SBSetAccelerometer` feed Core Motion gravity before each frame, turned to the interface orientation and measured from how the phone was held at start, a rotation or Recenter Tilt in the game menu; clamped to ±2 g; the sensor runs only while the game runs (SameBoy #201, #490). Bridge smoke test with an MBC7 header and an axis test. |
 | missing | Opposite D-pad directions resolve to the last one pressed | v2.0 | The core lets Right win over Left and Up over Down; a sliding touch D-pad can press both for a moment (SameBoy #101). Resolve in `SBSetInput` or GameplayInput |
 | missing | Separate phone and controller intensity | v2.0 |  |
 
@@ -488,7 +487,8 @@ X = START, Options or Y = SELECT (Triangle and Square on PlayStation), shoulders
 Boy and follow Orientation even with Playtiles chosen; Disconnect releases input, restores the
 chosen layout, pauses and shows a notice without restarting; A controller hides the touch
 controls, a touch brings them back until its next button press, and Settings can keep them;
-Cartridge rumble routed controller-first, phone fallback. Physical-device customization checks
+Cartridge rumble routed controller-first, phone fallback; Tilt cartridges (MBC7, v1.1) from Core
+Motion gravity turned to the interface orientation, with Recenter Tilt in the game menu. Physical-device customization and tilt checks
 passed and remain as regression coverage in mvp-verification.md.
 
 ### Quick Actions
@@ -702,10 +702,7 @@ build/tests).
 | missing | Link cable, local dual-core first; nearby/SharePlay initiation; no Multipeer | v1.2 local / v2.0 nearby and SharePlay | no LinkCableCapability. SameBoy's core links two Game Boys, but its own apps can't connect them (SameBoy #18, #691, #416). The bridge can run two `GB_gameboy_t` in lockstep with each one's serial bit callbacks wired to the other, the way it drives the printer |
 | missing | Infrared between linked games: Mystery Gift in Pokémon Gold, Silver and Crystal, Card Pop in Pokémon TCG | v1.2 | with the link cable, through `GB_set_infrared_callback` and `GB_set_infrared_input` on each core (SameBoy #74, #488). Uses the infrared sensor model SameBoy 1.0.5, the current pin, rewrote |
 | missing | GB Studio save migration with old/new variable maps | v2.0 |  |
-| partial | Game Boy Printer emulation with printed-slip preview/save/share | v1.1 | SameBoy attachment, completed-output queue, library/Quick Play integration, slip assembly and paper renderer implemented. Game-menu controls, preview and PNG share flow added; Connected and Transparent by default, latest 10 slips per session in the preview, every print kept in the Game's Captures; receiving/printing progress and direct View Print action; CC0 Wood Table photo, a drawn Press Any printer the slip comes out of, plus one saved custom image from Photos/Files with replace/remove, and the Game's library artwork as a background; Wood, Printer, Game Artwork and Custom need Plus, with a remembered one shown and exported as Transparent without it and Transparent, Light and Dark free; the ready banner waits for a multi-page print to finish. The printer follows the printer firmware's timeouts, status bits, errors, copies and Break (`SBGameBoyPrinter.c`), checked byte for byte against the firmware running in an emulator, except data after a finished print: it needs an Init first, as on a physical printer, which refused it with status 0x14. Synthetic serial-ROM, session and renderer tests. A state load leaves the printer running (#219): a print under way comes out once, and after a load mid-packet the printer realigns at the next quiet stretch, so the game's retry prints; `sameboy_printer.c` checks both with a game that polls and retries |
 | done | Copies feed their top margin once | v1.1 | A Print's copies come out as one slip: its top margin once, then each copy with its bottom margin after it. The model reports the top margin with the first copy only and marks each later copy as following one, which joins the slip after a bottom margin; another Print still starts a new slip. The short feed before each later copy adds no paper, like the feed before every copy's first band, since how far either moves the paper is not known. C model, bridge, feed, renderer and archive tests. No game seen prints more than one copy, so no game or device has checked it |
-| partial | Printer status and a session Printer Log | v1.1 | The printer model reports each packet with the status the game read, plus dropped and refused traffic (data while printing, packet and checksum errors, byte timeouts, idle resets, lost sync); the bridge holds up to 64 between frames and the app keeps the newest 200. Printer Log in the printer menu with Copy; a message on a reported problem. C model test and event description tests. |
-| partial | Prints kept in a Game's Captures | v1.1 | Captures section in Game Details with the newest prints and Show All; a grid newest first with a Build menu, Pin and Delete, opening the print preview; prints saved as paper comes out, with the Build and Save Profile, as printer archives (`captures` table, `UserData/Captures`); the latest 10 unpinned per Game, or 25/50/100 with Plus through the App-only Keep Prints (`keepPrints`, a stored choice kept without Plus), with older ones moved to one Recently Deleted entry at the next print and never on a settings or Plus change or an unpin, and kept while StoreKit hasn't answered at launch; deleted with their Game; Library Backup and Game packages; Quick Play prints kept in the session and moved on Add to Library; the Prints sheet's All Prints and Discard. Screenshots join the same section later. |
 | missing | RAR import (tentative) | v2.0 |  |
 | missing | Visual skin/layout authoring beyond the lightweight editor | v2.0 |  |
 | missing | Video/GIF capture; screenshots and clips framed like a Game Boy, shared from the game menu | v2.0 | saved recordings also land in the Files folder |
@@ -723,6 +720,13 @@ path. Photo! DX's version-1 RGB handshake provides automatic color with a frozen
 the three exposures. Synthetic cartridge, adapter, session, camera-policy and sampling tests
 cover the path; real Photo! DX RGB capture, color gallery pixels and battery reloads pass on
 the CGB and AGB bridge models (evidence in `docs/mvp-verification.md`).
+Game Boy Printer (v1.1): SameBoy attachment following the printer firmware's timeouts, status
+bits, errors, copies and Break (`SBGameBoyPrinter.c`); printed-slip preview with Save Image,
+Save to Files and share; Transparent, Light and Dark free, with Wood, Printer, Game Artwork and
+Custom backgrounds for Plus; a session Printer Log with Copy; prints kept in each Game's Captures
+with Pin, Delete and Recently Deleted, the latest 10 per Game or 25/50/100 with Plus through Keep
+Prints; Quick Play prints moved on Add to Library; a state load leaves the printer running
+(#219). Device checks passed and remain as regression coverage in mvp-verification.md.
 Apple SDK, simulator integration and physical-camera checks remain in `docs/mvp-verification.md`.
 
 ### Later
