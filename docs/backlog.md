@@ -140,7 +140,7 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 | done | Automatic picks Game Boy Advance hardware for Game Boy Color games with Game Boy Advance features | v1.1 | #196: `GameBoyAdvanceFeatures` lists every cartridge release of Wendy: Every Witch Way, Shantae and both Oracle games by No-Intro name and SHA-1 (9 images); the bundled No-Intro data checks the list and that no family member is missed. A Build counts by its own image, its patch chain, its Game's Base Build, or a base game matched to a listed release; same-title homebrew doesn't. Automatic plays them on the Game Boy Advance before the header rule, borders or not; Builds whose states keep other hardware stay on it, and Quick Play checks the image. Nostalgic on that GBA is Modern Accurate with As on a Game Boy Advance under the SP filter, so the game's own brightening doesn't wash it out (`PresetHardware`; comparison in `docs/display-presets.md`). |
 | missing | Let the owner's own games detect Press Any with a knock on an unused register | later | #197: after a fixed byte sequence written to an unused I/O address, reads there return an ID, a format version and the app version, from the adapter; without the knock the address behaves as SameBoy emulates it. Needs a hook in SameBoy's memory path, carried as a small patch in this repository and noted in `THIRD_PARTY_NOTICES.md`. The protocol is written down in `docs/` before any game uses it |
 | missing | User-chosen alternate core per Build | later |  |
-| missing | mGBA/GBA adapter | later | after GB/GBC is feature complete |
+| missing | mGBA/GBA adapter | later | after GB/GBC is feature complete; sound driver and toolchain detection references are pinned under SDK / toolchain detection |
 | missing | The Game Boy Printer model as a libretro core | later | The bridge's printer (`SBGameBoyPrinter.c`) is plain C on SameBoy's serial bit callbacks, with no Swift or Apple dependency. A libretro build of SameBoy with it attached would give RetroArch and desktop test harnesses the firmware-timed printer: busy and idle timing, copies, Break and RLE. Prints could come out as PNG files beside the save, with each print's margins in the name or a sidecar, so a script can tell one job from the next. The other route is offering the model to SameBoy upstream |
 
 Done: SameBoy 1.0.5 GB/GBC behind `EmulatorCore`, pinned at the `v1.0.5` release tag (`ea667ad`), with Builds pinned to earlier SameBoy versions running on it, no SameBoy types leak; Latest compatible core on
@@ -666,8 +666,9 @@ name.
 
 ### SDK / toolchain detection
 
-
-Nothing open.
+| Status | Item | Target | Notes |
+|---|---|---|---|
+| missing | Game Boy Advance sound driver and toolchain detection | later (with the GBA adapter) | Reference sources, pinned at the commits reviewed on 2026-11-18: [loveemu/agbinator](https://github.com/loveemu/agbinator) at `ec56b1e` (Python; Game Boy Advance sound drivers, with GAX and MusyX scanners in `tools/`); [turboboy215/vgmid](https://github.com/turboboy215/vgmid) at `0202e02` (C; SIDId-based driver signatures per system, Game Boy Advance in `gba.cfg`, Game Boy and Game Boy Color in `gb.cfg`); and the fork [Igoreshazhu/vgmid](https://github.com/Igoreshazhu/vgmid) at `5d525aa`, whose `gba.cfg` adds a few Frontline signatures not yet upstream. vgmid's code carries SIDId's BSD-style license; its `.cfg` signature files and agbinator have no license, so porting their data, as with gbtoolsid, waits on the authors' permission. vgmid's `gb.cfg` could also be compared with the gbtoolsid port's music drivers. |
 
 Done: Standalone detector seam + gbtoolsid port (engines, toolchains, music/SFX drivers,
 version/range, evidence, detector version, corpus revision), differential CI vs upstream; GB Studio
