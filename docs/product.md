@@ -45,10 +45,12 @@ Game Boy Printer emulation with printed-slip image export is prioritized for v1.
 v1 is a good core experience: the library model with search, sorting and favorites, saves and
 states with Library Backup, patching, cheats, Quick Play, Fast Forward, rumble, Bluetooth controllers,
 landscape, the built-in layouts, clean screenshot sharing and artwork from a chosen game frame.
-Collections the player names and fills come in v1.2. The larger roadmap tentatively targets v2.0:
-iCloud sync, the Community Catalog and metadata providers, tags and smart collections, broader archive and multi-asset imports, additional artwork providers and
-documents, rewind, slow motion, frame advance and Quick Actions, Super Game Boy borders,
-curated shaders, the layout editor and skin import, a capture gallery and gameplay notes, external displays,
+v1.2 adds collections the player names and fills, rewind and slow motion, local link cable play
+and infrared between linked games, screenshots kept in a Game's Captures, custom Game Boy
+palettes and Super Game Boy borders. The larger roadmap tentatively targets v2.0: iCloud sync,
+the Community Catalog and metadata providers, tags and smart collections, broader archive and
+multi-asset imports, additional artwork providers and documents, frame advance and Quick
+Actions, curated shaders, the layout editor and skin import, gameplay notes, external displays,
 crash reporting and usage counts, and Developer Mode. The Plus screen's roadmap lists these
 features, so change it with this paragraph (see Pricing).
 
@@ -923,8 +925,8 @@ fresh build.
   a session with only a resume point can keep it in a new profile. Keeping the existing profile
   brings no state, since the state holds the discarded save. If the resume point can't move, the
   Build and save are still added and the session is kept.
-- v2.0: a screenshot gallery, notes and debug captures in a session, moved over transactionally on
-  promotion.
+- v1.2: screenshots in a session, moved over on promotion as prints are.
+- v2.0: notes and debug captures in a session, moved over transactionally on promotion.
 
 ## Gameplay
 
@@ -1327,11 +1329,11 @@ emulation is later work.
   Unlimited, inheritable, applied at once when changed from the game's Settings.
 - **Fast Forward Audio**: Muted by default; Accelerated plays the sound sped up, pitch rising, up
   to 4×, and stays muted beyond.
-- v2.0: Fast Forward from layouts, controller buttons and gestures through Quick Actions, hold or
-  toggle; slow motion at 0.25×, 0.5× and 0.75×; rewind with 5 s, 15 s, 30 s, 1 min, 2 min and 5 min
+- v1.2: slow motion at 0.25×, 0.5× and 0.75×; rewind with 5 s, 15 s, 30 s, 1 min, 2 min and 5 min
   presets, memory-budgeted so the effective length can shrink on smaller devices, muted by
-  default, surviving a brief trip to the background but never saved as a timeline; frame advance
-  and a frame counter.
+  default, surviving a brief trip to the background but never saved as a timeline.
+- v2.0: Fast Forward from layouts, controller buttons and gestures through Quick Actions, hold or
+  toggle; frame advance and a frame counter.
 
 ### Tilt cartridges
 
