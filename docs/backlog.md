@@ -18,9 +18,8 @@ roadmap; its final scope and timing are not fixed.
   as are the older-version save warning and the copy kept before switching Builds.
   Game Boy Printer emulation is built for this release, with a printed-slip preview, image
   export, a Printer Log and prints kept in each Game's Captures.
-- **v1.1.1:** a fix release on v1.1. It fixes the quiet-game audio clicks (#218), listed under
-  Known bugs, and stops naming GBDK, GB Studio and ZGB homebrew "Rev 1" from its header (#224).
-  It also checks the Game Boy Printer after a save state loads during a print (#219) and the
+- **v1.1.1:** a fix release on v1.1. It fixes the quiet-game audio clicks (#218) and stops
+  naming GBDK, GB Studio and ZGB homebrew "Rev 1" from its header (#224). It also checks the Game Boy Printer after a save state loads during a print (#219) and the
   cartridge clock across pause, relaunch and state restore (#220). A problem either check finds is
   fixed in v1.1.1 when the fix is small, and moves to a later release otherwise. A ROM hack moved
   into a Game of its own exports under that Game's title (#230). New features wait for later
@@ -87,9 +86,7 @@ RTC offsets, rumble routing, Undo, core updates, and the internal registries and
 
 ## Known bugs
 
-| Status | Item | Target | Notes |
-|---|---|---|---|
-| partial | Periodic clicks on quiet games (#218) | v1.1.1 | A game that leaves a sound channel's DAC on at volume 0 holds a constant level: +4082 per channel on Game Boy and Game Boy Color, +12505 on Game Boy Advance, in the headless bridge. Built: the Audio Filter, a Gameplay preset value (Accurate in Nostalgic and Accurate, Off in Clean, both under Customize) that turns on SameBoy's Accurate high-pass filter and lasts through reset, state load and Model change; and 4 ms fades wherever the audio buffer runs dry, skips a burst or is cleared. Measured on Linux: the core's idle output is flat, with no 60 Hz component, and the buffer under steady 60 or 120 Hz pacing never runs dry or goes quiet, so what drops the output once per frame on an iPhone is still open. The device log's Gameplay Audio lines record each second with a shortfall, skip, quiet stretch or clear |
+None known.
 
 ## Inventory by area
 
@@ -133,7 +130,6 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 
 | Status | Item | Target | Notes |
 |---|---|---|---|
-| partial | Move the SameBoy pin to the 1.0.5 release | v1.1 | Pinned at the `v1.0.5` tag (`ea667ad`, 2026-11-02), the first release with the fixes the previous pin, master `19a7b14`, was taken for: the WX write fix that stops corrupting the Game Boy Camera's dither matrix (`ecd0b5f`), MBC3 and TPP1 RTC halt fixes, six-digit Game Genie codes, cheats in RAM banks, camera shoot flags, Super Game Boy command and MLT_REQ fixes, MMM01 detection, hardening against damaged states and a closer infrared sensor model. Since `19a7b14` it adds the DMG audio rework (upstream #790), keeps NR50 and NR51 writes from changing a silent channel's DC offset, and applies key changes in the emulation loop (upstream #774). Checked on Linux: the package tests, the bridge smoke test and the accuracy ROMs, whose results are unchanged (185 of 231 runs pass, as before); states saved by `19a7b14` load with the same registers and memory on DMG, CGB, SGB2 and AGB and run on identically for 600 frames; a press still reaches JOYP within the first instruction of the next frame, and the bounce test counts the same transitions. Headless audio: CGB and AGB output is unchanged except for a short click the old core made on an NR50 or NR51 write; DMG keeps its level, and the noise channel plays the same spectrum with a different sample sequence. New Builds pin `sameboy 1.0.5`. The core names `sameboy 1.0.3`, `sameboy 1.0.4` and `sameboy 1.0.5-prerelease.53+19a7b14` as versions it replaces (`replacedDescriptors`), so Builds pinned to them run on it and their states load, and Build Technical Info keeps showing the version each Build was pinned to. |
 | missing | Nonintrusive "core update available" notice | v2.0 | none |
 | missing | Explicit, reversible core-migration checkpoint (new state lineage, rollback when old core available) | v2.0 | none |
 | done | Automatic model selection | v1.1 | A listed Game Boy Color game with Game Boy Advance features -> AGB (#196), then the header rule in `CartridgeHints.automaticModel(superGameBoyBorders:)`: CGB flag -> GBC (GBP for a GBC game with SGB support when the hidden `superGameBoyBorders` setting is on); SGB flag with old licensee 0x33 -> SGB2; Nintendo licensee (0x01, or 0x33 with new licensee "01") -> GBC; else Pocket. A Build with save states at its first start after the change keeps its newest state's model (`automaticHardware`, recorded per Build); presets are stored as `gameplayPreset` and resolve per game; Quick Play resumes its autosave on the autosave's model. Test ROMs in `TestROMs/src/sgb-automatic`. |
@@ -146,7 +142,7 @@ Done: Neutral platform IDs `gb`/`gbc`; Generic `GameImage`/`PersistentSave` cont
 | missing | mGBA/GBA adapter | later | after GB/GBC is feature complete |
 | missing | The Game Boy Printer model as a libretro core | later | The bridge's printer (`SBGameBoyPrinter.c`) is plain C on SameBoy's serial bit callbacks, with no Swift or Apple dependency. A libretro build of SameBoy with it attached would give RetroArch and desktop test harnesses the firmware-timed printer: busy and idle timing, copies, Break and RLE. Prints could come out as PNG files beside the save, with each print's margins in the name or a sidecar, so a script can tell one job from the next. The other route is offering the model to SameBoy upstream |
 
-Done: SameBoy 1.0.5 GB/GBC behind `EmulatorCore`, no SameBoy types leak; Latest compatible core on
+Done: SameBoy 1.0.5 GB/GBC behind `EmulatorCore`, pinned at the `v1.0.5` release tag (`ea667ad`), with Builds pinned to earlier SameBoy versions running on it, no SameBoy types leak; Latest compatible core on
 first launch, then pinned per Build; Open SameBoy boot ROMs incl. cgb_boot_fast; Skip Boot Logo:
 Quick Play always, library via inheritable setting (default shows logo); Optional capability
 protocols: rumble, boot skipping, cheats and camera input implemented; rewind, memory access, RTC,
@@ -623,7 +619,7 @@ Save Profile and save state rows and to discard a Quick Play session, asking fir
 | missing | Thermal-aware degradation | v2.0 |  |
 | missing | Default shader sustains full speed on minimum QA device | v2.0 | The default is Nostalgic: Pixel Grid on handhelds (one texture read per pixel, as v1.0's LCD 1×), the backlit SP grid on a Game Boy Advance and curved scanlines on the television models (four reads) |
 
-Done: Native timing authoritative; audio never sets game speed; Sound setting: Follow Silent Switch
+Done: Native timing authoritative; the Audio Filter gameplay preset value and 4 ms fades where playback runs dry, skips or is cleared (#218); audio never sets game speed; Sound setting: Follow Silent Switch
 (default) / Always On / Always Off; Low-latency adaptive audio (40 ms target growing to 160 ms
 after shortfalls); frames run on the display refresh at native speed, up to 120 Hz, or 60 Hz in
 Low Power Mode or under heat.
