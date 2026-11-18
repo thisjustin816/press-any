@@ -19,8 +19,8 @@ decision entries, plans or history, which git already keeps.
 
 Keep status out of the docs. A build number, the build a draft has selected, a review or submission
 state, a CI run ID, the commit a screenshot was captured at, and wording such as "pending" or
-"waiting for" go stale, and they repeat what App Store Connect, the git tags (`testflight/<build>`,
-`app-store-review/...`), the GitHub releases and the device checklist already hold. Only two files
+"waiting for" go stale, and they repeat what App Store Connect, the git tags (`testflight/<build>`
+and the stable `v<version>`), the GitHub releases and the device checklist already hold. Only two files
 track state: the status column in `docs/backlog.md` and the checkboxes in
 `docs/mvp-verification.md`. A sentence anywhere else saying a check is pending or a build is under
 review is a second copy of what those say. A build number used as a worked example, as in
@@ -93,12 +93,9 @@ The owner accepted the working MVP on 2026-10-06, so v1 work may proceed. Keep t
 
 ## App Store submissions
 
-Follow the submission-tag convention in `docs/testflight.md` under App Store submission tags.
-After an actual submission, create and push `app-store-review/<version>-build-<build>` at the
-exact uploaded commit identified by its `testflight/<build>` tag. Keep submission tags immutable.
-Create the stable release only after the owner confirms App Store publication, at that same
-candidate commit even when `main` has advanced. Use the submitted candidate as the backlog's
-release boundary.
+Submission to App Store review isn't tagged. Create the stable release only after the owner
+confirms App Store publication, at the published build's commit (its `testflight/<build>` tag)
+even when `main` has advanced. Use the published build as the backlog's release boundary.
 
 ## Product UX principle
 
