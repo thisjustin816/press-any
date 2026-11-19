@@ -3,8 +3,9 @@
 Press Any is an iPhone-first Game Boy and Game Boy Color emulator for players and for people
 making Game Boy games. Its library keeps one Game across every ROM revision, patch and hack.
 
-Try the [public beta on TestFlight](https://testflight.apple.com/join/Csv8kc87). It needs iOS 17.4
-or later.
+Get it on the [App Store](https://apps.apple.com/us/app/press-any-retro-game-emulator/id6819330326).
+It needs iOS 17.4 or later. A [public beta](https://testflight.apple.com/join/Csv8kc87) is also open
+on TestFlight.
 
 ## Features
 
