@@ -421,6 +421,12 @@ Done: Pause / Resume from menu with paused overlay; any fresh non-directional co
 or on-screen A, B, START or SELECT press resumes the exposed overlay and is consumed until
 released. Directional input leaves it paused.
 
+### Soundtrack player (investigation)
+
+| Status | Item | Target | Notes |
+|---|---|---|---|
+| missing | Investigate playing game soundtracks as selectable tracks, independently of gameplay | v2.x | #242; evaluate SameBoy's GBS support, optional imported `.gbs` files, and direct playback from library ROMs through verified music-engine/track compatibility profiles. Assess background audio, lock-screen controls, per-game track lists, playlists, optional channel isolation and export, and rights/coverage limits. Feasibility, scope, release and entitlement are undecided. |
+
 ### Rendering, shaders, display
 
 | Status | Item | Target | Notes |
